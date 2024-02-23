@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,11 @@ import org.springframework.util.ClassUtils;
  *
  * @author Chris Beams
  * @author Juergen Hoeller
- * @since 3.1
  * @see EnableTransactionManagement
  * @see ProxyTransactionManagementConfiguration
  * @see TransactionManagementConfigUtils#TRANSACTION_ASPECT_CONFIGURATION_CLASS_NAME
  * @see TransactionManagementConfigUtils#JTA_TRANSACTION_ASPECT_CONFIGURATION_CLASS_NAME
+ * @since 3.1
  */
 public class TransactionManagementConfigurationSelector extends AdviceModeImportSelector<EnableTransactionManagement> {
 
@@ -45,15 +45,19 @@ public class TransactionManagementConfigurationSelector extends AdviceModeImport
 	 */
 	@Override
 	protected String[] selectImports(AdviceMode adviceMode) {
-		return switch (adviceMode) {
-			case PROXY -> new String[] {AutoProxyRegistrar.class.getName(),
-					ProxyTransactionManagementConfiguration.class.getName()};
-			case ASPECTJ -> new String[] {determineTransactionAspectClass()};
-		};
+		switch (adviceMode) {
+			case PROXY:
+				return new String[]{AutoProxyRegistrar.class.getName(),
+						ProxyTransactionManagementConfiguration.class.getName()};
+			case ASPECTJ:
+				return new String[]{determineTransactionAspectClass()};
+			default:
+				return null;
+		}
 	}
 
 	private String determineTransactionAspectClass() {
-		return (ClassUtils.isPresent("jakarta.transaction.Transactional", getClass().getClassLoader()) ?
+		return (ClassUtils.isPresent("javax.transaction.Transactional", getClass().getClassLoader()) ?
 				TransactionManagementConfigUtils.JTA_TRANSACTION_ASPECT_CONFIGURATION_CLASS_NAME :
 				TransactionManagementConfigUtils.TRANSACTION_ASPECT_CONFIGURATION_CLASS_NAME);
 	}

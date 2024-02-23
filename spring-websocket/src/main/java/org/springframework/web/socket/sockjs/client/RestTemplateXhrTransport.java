@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,26 @@
 
 package org.springframework.web.socket.sockjs.client;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.concurrent.CompletableFuture;
-
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.StreamingHttpOutputMessage;
+import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RequestCallback;
-import org.springframework.web.client.ResponseExtractor;
-import org.springframework.web.client.RestOperations;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.util.concurrent.SettableListenableFuture;
+import org.springframework.web.client.*;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.sockjs.frame.SockJsFrame;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 
 /**
  * An {@code XhrTransport} implementation that uses a
@@ -99,7 +90,7 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 	@Override
 	protected void connectInternal(final TransportRequest transportRequest, final WebSocketHandler handler,
 			final URI receiveUrl, final HttpHeaders handshakeHeaders, final XhrClientSockJsSession session,
-			final CompletableFuture<WebSocketSession> connectFuture) {
+			final SettableListenableFuture<WebSocketSession> connectFuture) {
 
 		getTaskExecutor().execute(() -> {
 			HttpHeaders httpHeaders = transportRequest.getHttpRequestHeaders();
@@ -117,12 +108,10 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 					}
 					getRestTemplate().execute(receiveUrl, HttpMethod.POST, requestCallback, responseExtractor);
 					requestCallback = requestCallbackAfterHandshake;
-				}
-				catch (Exception ex) {
+				} catch (Throwable ex) {
 					if (!connectFuture.isDone()) {
-						connectFuture.completeExceptionally(ex);
-					}
-					else {
+						connectFuture.setException(ex);
+					} else {
 						session.handleTransportError(ex);
 						session.afterTransportClosed(new CloseStatus(1006, ex.getMessage()));
 					}
@@ -156,7 +145,7 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 	private static final ResponseExtractor<ResponseEntity<String>> textResponseExtractor =
 			response -> {
 				String body = StreamUtils.copyToString(response.getBody(), SockJsFrame.CHARSET);
-				return ResponseEntity.status(response.getStatusCode()).headers(response.getHeaders()).body(body);
+				return ResponseEntity.status(response.getRawStatusCode()).headers(response.getHeaders()).body(body);
 			};
 
 
@@ -183,8 +172,8 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 		public void doWithRequest(ClientHttpRequest request) throws IOException {
 			request.getHeaders().putAll(this.headers);
 			if (this.body != null) {
-				if (request instanceof StreamingHttpOutputMessage streamingOutputMessage) {
-					streamingOutputMessage.setBody(outputStream ->
+				if (request instanceof StreamingHttpOutputMessage) {
+					((StreamingHttpOutputMessage) request).setBody(outputStream ->
 							StreamUtils.copy(this.body, SockJsFrame.CHARSET, outputStream));
 				}
 				else {
@@ -208,7 +197,11 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 
 		@Override
 		public Object extractData(ClientHttpResponse response) throws IOException {
-			HttpStatusCode httpStatus = response.getStatusCode();
+			HttpStatus httpStatus = HttpStatus.resolve(response.getRawStatusCode());
+			if (httpStatus == null) {
+				throw new UnknownHttpStatusCodeException(
+						response.getRawStatusCode(), response.getStatusText(), response.getHeaders(), null, null);
+			}
 			if (httpStatus != HttpStatus.OK) {
 				throw new HttpServerErrorException(
 						httpStatus, response.getStatusText(), response.getHeaders(), null, null);
@@ -240,8 +233,7 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 				}
 				if (b == '\n') {
 					handleFrame(os);
-				}
-				else {
+				} else {
 					os.write(b);
 				}
 			}
@@ -249,13 +241,14 @@ public class RestTemplateXhrTransport extends AbstractXhrTransport {
 		}
 
 		private void handleFrame(ByteArrayOutputStream os) {
-			String content = os.toString(SockJsFrame.CHARSET);
+			byte[] bytes = os.toByteArray();
 			os.reset();
+			String content = new String(bytes, SockJsFrame.CHARSET);
 			if (logger.isTraceEnabled()) {
 				logger.trace("XHR receive content: " + content);
 			}
 			if (!PRELUDE.equals(content)) {
-				this.sockJsSession.handleFrame(content);
+				this.sockJsSession.handleFrame(new String(bytes, SockJsFrame.CHARSET));
 			}
 		}
 	}

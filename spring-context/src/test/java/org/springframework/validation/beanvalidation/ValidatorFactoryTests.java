@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,30 +20,29 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import jakarta.validation.Constraint;
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
-import jakarta.validation.ConstraintValidatorFactory;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Payload;
-import jakarta.validation.Valid;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.Constraint;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+import javax.validation.ConstraintViolation;
+import javax.validation.Payload;
+import javax.validation.Valid;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
+import javax.validation.constraints.NotNull;
+
 import org.hibernate.validator.HibernateValidator;
 import org.hibernate.validator.HibernateValidatorFactory;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -58,17 +57,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Juergen Hoeller
  */
-class ValidatorFactoryTests {
+public class ValidatorFactoryTests {
 
 	@Test
-	void simpleValidation() {
-		@SuppressWarnings("resource")
+	public void testSimpleValidation() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
 		ValidPerson person = new ValidPerson();
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(2);
+		assertThat(result.size()).isEqualTo(2);
 		for (ConstraintViolation<ValidPerson> cv : result) {
 			String path = cv.getPropertyPath().toString();
 			assertThat(path).matches(actual -> "name".equals(actual) || "address.street".equals(actual));
@@ -76,7 +74,7 @@ class ValidatorFactoryTests {
 		}
 
 		Validator nativeValidator = validator.unwrap(Validator.class);
-		assertThat(nativeValidator.getClass().getName()).startsWith("org.hibernate");
+		assertThat(nativeValidator.getClass().getName().startsWith("org.hibernate")).isTrue();
 		assertThat(validator.unwrap(ValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 		assertThat(validator.unwrap(HibernateValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 
@@ -84,15 +82,14 @@ class ValidatorFactoryTests {
 	}
 
 	@Test
-	void simpleValidationWithCustomProvider() {
-		@SuppressWarnings("resource")
+	public void testSimpleValidationWithCustomProvider() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.setProviderClass(HibernateValidator.class);
 		validator.afterPropertiesSet();
 
 		ValidPerson person = new ValidPerson();
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(2);
+		assertThat(result.size()).isEqualTo(2);
 		for (ConstraintViolation<ValidPerson> cv : result) {
 			String path = cv.getPropertyPath().toString();
 			assertThat(path).matches(actual -> "name".equals(actual) || "address.street".equals(actual));
@@ -100,7 +97,7 @@ class ValidatorFactoryTests {
 		}
 
 		Validator nativeValidator = validator.unwrap(Validator.class);
-		assertThat(nativeValidator.getClass().getName()).startsWith("org.hibernate");
+		assertThat(nativeValidator.getClass().getName().startsWith("org.hibernate")).isTrue();
 		assertThat(validator.unwrap(ValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 		assertThat(validator.unwrap(HibernateValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 
@@ -108,8 +105,7 @@ class ValidatorFactoryTests {
 	}
 
 	@Test
-	void simpleValidationWithClassLevel() {
-		@SuppressWarnings("resource")
+	public void testSimpleValidationWithClassLevel() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -117,18 +113,15 @@ class ValidatorFactoryTests {
 		person.setName("Juergen");
 		person.getAddress().setStreet("Juergen's Street");
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(1);
+		assertThat(result.size()).isEqualTo(1);
 		Iterator<ConstraintViolation<ValidPerson>> iterator = result.iterator();
 		ConstraintViolation<?> cv = iterator.next();
-		assertThat(cv.getPropertyPath().toString()).isEmpty();
-		assertThat(cv.getConstraintDescriptor().getAnnotation()).isInstanceOf(NameAddressValid.class);
-
-		validator.destroy();
+		assertThat(cv.getPropertyPath().toString()).isEqualTo("");
+		assertThat(cv.getConstraintDescriptor().getAnnotation() instanceof NameAddressValid).isTrue();
 	}
 
 	@Test
-	void springValidationFieldType() {
-		@SuppressWarnings("resource")
+	public void testSpringValidationFieldType() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -141,13 +134,10 @@ class ValidatorFactoryTests {
 		assertThat(errors.getFieldError("address").getRejectedValue())
 				.as("Field/Value type mismatch")
 				.isInstanceOf(ValidAddress.class);
-
-		validator.destroy();
 	}
 
 	@Test
-	void springValidation() {
-		@SuppressWarnings("resource")
+	public void testSpringValidation() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -158,27 +148,24 @@ class ValidatorFactoryTests {
 		FieldError fieldError = result.getFieldError("name");
 		assertThat(fieldError.getField()).isEqualTo("name");
 		List<String> errorCodes = Arrays.asList(fieldError.getCodes());
-		assertThat(errorCodes).hasSize(4);
-		assertThat(errorCodes).contains("NotNull.person.name");
-		assertThat(errorCodes).contains("NotNull.name");
-		assertThat(errorCodes).contains("NotNull.java.lang.String");
-		assertThat(errorCodes).contains("NotNull");
+		assertThat(errorCodes.size()).isEqualTo(4);
+		assertThat(errorCodes.contains("NotNull.person.name")).isTrue();
+		assertThat(errorCodes.contains("NotNull.name")).isTrue();
+		assertThat(errorCodes.contains("NotNull.java.lang.String")).isTrue();
+		assertThat(errorCodes.contains("NotNull")).isTrue();
 		fieldError = result.getFieldError("address.street");
 		assertThat(fieldError.getField()).isEqualTo("address.street");
 		errorCodes = Arrays.asList(fieldError.getCodes());
-		assertThat(errorCodes).hasSize(5);
-		assertThat(errorCodes).contains("NotNull.person.address.street");
-		assertThat(errorCodes).contains("NotNull.address.street");
-		assertThat(errorCodes).contains("NotNull.street");
-		assertThat(errorCodes).contains("NotNull.java.lang.String");
-		assertThat(errorCodes).contains("NotNull");
-
-		validator.destroy();
+		assertThat(errorCodes.size()).isEqualTo(5);
+		assertThat(errorCodes.contains("NotNull.person.address.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.address.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.java.lang.String")).isTrue();
+		assertThat(errorCodes.contains("NotNull")).isTrue();
 	}
 
 	@Test
-	void springValidationWithClassLevel() {
-		@SuppressWarnings("resource")
+	public void testSpringValidationWithClassLevel() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -190,15 +177,13 @@ class ValidatorFactoryTests {
 		assertThat(result.getErrorCount()).isEqualTo(1);
 		ObjectError globalError = result.getGlobalError();
 		List<String> errorCodes = Arrays.asList(globalError.getCodes());
-		assertThat(errorCodes).hasSize(2);
-		assertThat(errorCodes).contains("NameAddressValid.person");
-		assertThat(errorCodes).contains("NameAddressValid");
-
-		validator.destroy();
+		assertThat(errorCodes.size()).isEqualTo(2);
+		assertThat(errorCodes.contains("NameAddressValid.person")).isTrue();
+		assertThat(errorCodes.contains("NameAddressValid")).isTrue();
 	}
 
 	@Test
-	void springValidationWithAutowiredValidator() {
+	public void testSpringValidationWithAutowiredValidator() {
 		ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext(
 				LocalValidatorFactoryBean.class);
 		LocalValidatorFactoryBean validator = ctx.getBean(LocalValidatorFactoryBean.class);
@@ -212,17 +197,14 @@ class ValidatorFactoryTests {
 		assertThat(result.getErrorCount()).isEqualTo(1);
 		ObjectError globalError = result.getGlobalError();
 		List<String> errorCodes = Arrays.asList(globalError.getCodes());
-		assertThat(errorCodes).hasSize(2);
-		assertThat(errorCodes).contains("NameAddressValid.person");
-		assertThat(errorCodes).contains("NameAddressValid");
-
-		validator.destroy();
+		assertThat(errorCodes.size()).isEqualTo(2);
+		assertThat(errorCodes.contains("NameAddressValid.person")).isTrue();
+		assertThat(errorCodes.contains("NameAddressValid")).isTrue();
 		ctx.close();
 	}
 
 	@Test
-	void springValidationWithErrorInListElement() {
-		@SuppressWarnings("resource")
+	public void testSpringValidationWithErrorInListElement() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -237,13 +219,10 @@ class ValidatorFactoryTests {
 		assertThat(fieldError.getField()).isEqualTo("address.street");
 		fieldError = result.getFieldError("addressList[0].street");
 		assertThat(fieldError.getField()).isEqualTo("addressList[0].street");
-
-		validator.destroy();
 	}
 
 	@Test
-	void springValidationWithErrorInSetElement() {
-		@SuppressWarnings("resource")
+	public void testSpringValidationWithErrorInSetElement() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -258,13 +237,10 @@ class ValidatorFactoryTests {
 		assertThat(fieldError.getField()).isEqualTo("address.street");
 		fieldError = result.getFieldError("addressSet[].street");
 		assertThat(fieldError.getField()).isEqualTo("addressSet[].street");
-
-		validator.destroy();
 	}
 
 	@Test
-	void innerBeanValidation() {
-		@SuppressWarnings("resource")
+	public void testInnerBeanValidation() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -273,13 +249,10 @@ class ValidatorFactoryTests {
 		validator.validate(mainBean, errors);
 		Object rejected = errors.getFieldValue("inner.value");
 		assertThat(rejected).isNull();
-
-		validator.destroy();
 	}
 
 	@Test
-	void validationWithOptionalField() {
-		@SuppressWarnings("resource")
+	public void testValidationWithOptionalField() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -288,13 +261,10 @@ class ValidatorFactoryTests {
 		validator.validate(mainBean, errors);
 		Object rejected = errors.getFieldValue("inner.value");
 		assertThat(rejected).isNull();
-
-		validator.destroy();
 	}
 
 	@Test
-	void listValidation() {
-		@SuppressWarnings("resource")
+	public void testListValidation() {
 		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
 		validator.afterPropertiesSet();
 
@@ -310,34 +280,6 @@ class ValidatorFactoryTests {
 		assertThat(fieldError).isNotNull();
 		assertThat(fieldError.getRejectedValue()).isEqualTo("X");
 		assertThat(errors.getFieldValue("list[1]")).isEqualTo("X");
-
-		validator.destroy();
-	}
-
-	@Test
-	void withConstraintValidatorFactory() {
-		ConstraintValidatorFactory cvf = new SpringConstraintValidatorFactory(new DefaultListableBeanFactory());
-
-		@SuppressWarnings("resource")
-		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-		validator.setConstraintValidatorFactory(cvf);
-		validator.afterPropertiesSet();
-
-		assertThat(validator.getConstraintValidatorFactory()).isSameAs(cvf);
-		validator.destroy();
-	}
-
-	@Test
-	void withCustomInitializer() {
-		ConstraintValidatorFactory cvf = new SpringConstraintValidatorFactory(new DefaultListableBeanFactory());
-
-		@SuppressWarnings("resource")
-		LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
-		validator.setConfigurationInitializer(configuration -> configuration.constraintValidatorFactory(cvf));
-		validator.afterPropertiesSet();
-
-		assertThat(validator.getConstraintValidatorFactory()).isSameAs(cvf);
-		validator.destroy();
 	}
 
 
@@ -351,7 +293,7 @@ class ValidatorFactoryTests {
 		private ValidAddress address = new ValidAddress();
 
 		@Valid
-		private List<ValidAddress> addressList = new ArrayList<>();
+		private List<ValidAddress> addressList = new LinkedList<>();
 
 		@Valid
 		private Set<ValidAddress> addressSet = new LinkedHashSet<>();
@@ -436,8 +378,8 @@ class ValidatorFactoryTests {
 			}
 			boolean valid = (value.name == null || !value.address.street.contains(value.name));
 			if (!valid && "Phil".equals(value.name)) {
-				context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-						.addPropertyNode("address").addConstraintViolation().disableDefaultConstraintViolation();
+				context.buildConstraintViolationWithTemplate(
+						context.getDefaultConstraintMessageTemplate()).addPropertyNode("address").addConstraintViolation().disableDefaultConstraintViolation();
 			}
 			return valid;
 		}
@@ -473,7 +415,6 @@ class ValidatorFactoryTests {
 		public String getValue() {
 			return value;
 		}
-
 		public void setValue(String value) {
 			this.value = value;
 		}
@@ -482,7 +423,7 @@ class ValidatorFactoryTests {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.FIELD)
-	@Constraint(validatedBy = InnerValidator.class)
+	@Constraint(validatedBy=InnerValidator.class)
 	public @interface InnerValid {
 
 		String message() default "NOT VALID";
@@ -503,8 +444,7 @@ class ValidatorFactoryTests {
 		public boolean isValid(InnerBean bean, ConstraintValidatorContext context) {
 			context.disableDefaultConstraintViolation();
 			if (bean.getValue() == null) {
-				context.buildConstraintViolationWithTemplate("NULL")
-						.addPropertyNode("value").addConstraintViolation();
+				context.buildConstraintViolationWithTemplate("NULL").addPropertyNode("value").addConstraintViolation();
 				return false;
 			}
 			return true;
@@ -515,7 +455,7 @@ class ValidatorFactoryTests {
 	public static class ListContainer {
 
 		@NotXList
-		private List<String> list = new ArrayList<>();
+		private List<String> list = new LinkedList<>();
 
 		public void addString(String value) {
 			list.add(value);
@@ -552,8 +492,7 @@ class ValidatorFactoryTests {
 			boolean valid = true;
 			for (int i = 0; i < list.size(); i++) {
 				if ("X".equals(list.get(i))) {
-					context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-							.addBeanNode().inIterable().atIndex(i).addConstraintViolation();
+					context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate()).addBeanNode().inIterable().atIndex(i).addConstraintViolation();
 					valid = false;
 				}
 			}

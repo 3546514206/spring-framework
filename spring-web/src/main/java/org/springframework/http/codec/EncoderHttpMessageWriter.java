@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,15 @@
 
 package org.springframework.http.codec;
 
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.AbstractEncoder;
 import org.springframework.core.codec.Encoder;
 import org.springframework.core.codec.Hints;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.http.HttpLogging;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
@@ -38,6 +33,11 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@code HttpMessageWriter} that wraps and delegates to an {@link Encoder}.
@@ -55,9 +55,6 @@ import org.springframework.util.StringUtils;
  * @param <T> the type of objects in the input stream
  */
 public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
-
-	private static final Log logger = HttpLogging.forLogName(EncoderHttpMessageWriter.class);
-
 
 	private final Encoder<T> encoder;
 
@@ -79,10 +76,10 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 	}
 
 	private static void initLogger(Encoder<?> encoder) {
-		if (encoder instanceof AbstractEncoder<?> abstractEncoder &&
+		if (encoder instanceof AbstractEncoder &&
 				encoder.getClass().getName().startsWith("org.springframework.core.codec")) {
-			Log logger = HttpLogging.forLog(abstractEncoder.getLogger());
-			abstractEncoder.setLogger(logger);
+			Log logger = HttpLogging.forLog(((AbstractEncoder<?>) encoder).getLogger());
+			((AbstractEncoder<?>) encoder).setLogger(logger);
 		}
 	}
 
@@ -104,10 +101,6 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 		return this.mediaTypes;
 	}
 
-	@Override
-	public List<MediaType> getWritableMediaTypes(ResolvableType elementType) {
-		return MediaType.asMediaTypes(getEncoder().getEncodableMimeTypes(elementType));
-	}
 
 	@Override
 	public boolean canWrite(ResolvableType elementType, @Nullable MediaType mediaType) {
@@ -120,35 +113,29 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 
 		MediaType contentType = updateContentType(message, mediaType);
 
-		Flux<DataBuffer> body = this.encoder.encode(
-				inputStream, message.bufferFactory(), elementType, contentType, hints);
-
 		if (inputStream instanceof Mono) {
-			return body
-					.singleOrEmpty()
+			return Mono.from(inputStream)
 					.switchIfEmpty(Mono.defer(() -> {
 						message.getHeaders().setContentLength(0);
 						return message.setComplete().then(Mono.empty());
 					}))
-					.flatMap(buffer -> {
-						Hints.touchDataBuffer(buffer, hints, logger);
+					.flatMap(value -> {
+						DataBufferFactory factory = message.bufferFactory();
+						DataBuffer buffer = this.encoder.encodeValue(value, factory, elementType, contentType, hints);
 						message.getHeaders().setContentLength(buffer.readableByteCount());
 						return message.writeWith(Mono.just(buffer)
-								.doOnDiscard(DataBuffer.class, DataBufferUtils::release));
-					})
-					.doOnDiscard(DataBuffer.class, DataBufferUtils::release);
+								.doOnDiscard(PooledDataBuffer.class, PooledDataBuffer::release));
+					});
 		}
+
+		Flux<DataBuffer> body = this.encoder.encode(
+				inputStream, message.bufferFactory(), elementType, contentType, hints);
 
 		if (isStreamingMediaType(contentType)) {
-			return message.writeAndFlushWith(body.map(buffer -> {
-				Hints.touchDataBuffer(buffer, hints, logger);
-				return Mono.just(buffer).doOnDiscard(DataBuffer.class, DataBufferUtils::release);
-			}));
+			return message.writeAndFlushWith(body.map(buffer ->
+					Mono.just(buffer).doOnDiscard(PooledDataBuffer.class, PooledDataBuffer::release)));
 		}
 
-		if (logger.isDebugEnabled()) {
-			body = body.doOnNext(buffer -> Hints.touchDataBuffer(buffer, hints, logger));
-		}
 		return message.writeWith(body);
 	}
 
@@ -180,10 +167,10 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 	}
 
 	private boolean isStreamingMediaType(@Nullable MediaType mediaType) {
-		if (mediaType == null || !(this.encoder instanceof HttpMessageEncoder<?> httpMessageEncoder)) {
+		if (mediaType == null || !(this.encoder instanceof HttpMessageEncoder)) {
 			return false;
 		}
-		for (MediaType streamingMediaType : httpMessageEncoder.getStreamingMediaTypes()) {
+		for (MediaType streamingMediaType : ((HttpMessageEncoder<?>) this.encoder).getStreamingMediaTypes()) {
 			if (mediaType.isCompatibleWith(streamingMediaType) && matchParameters(mediaType, streamingMediaType)) {
 				return true;
 			}
@@ -224,8 +211,9 @@ public class EncoderHttpMessageWriter<T> implements HttpMessageWriter<T> {
 	protected Map<String, Object> getWriteHints(ResolvableType streamType, ResolvableType elementType,
 			@Nullable MediaType mediaType, ServerHttpRequest request, ServerHttpResponse response) {
 
-		if (this.encoder instanceof HttpMessageEncoder<?> httpMessageEncoder) {
-			return httpMessageEncoder.getEncodeHints(streamType, elementType, mediaType, request, response);
+		if (this.encoder instanceof HttpMessageEncoder) {
+			HttpMessageEncoder<?> encoder = (HttpMessageEncoder<?>) this.encoder;
+			return encoder.getEncodeHints(streamType, elementType, mediaType, request, response);
 		}
 		return Hints.none();
 	}

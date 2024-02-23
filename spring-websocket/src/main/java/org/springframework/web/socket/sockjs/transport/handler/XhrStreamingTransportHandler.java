@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.web.socket.sockjs.transport.handler;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Map;
-
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
@@ -30,6 +26,10 @@ import org.springframework.web.socket.sockjs.transport.SockJsSession;
 import org.springframework.web.socket.sockjs.transport.TransportHandler;
 import org.springframework.web.socket.sockjs.transport.TransportType;
 import org.springframework.web.socket.sockjs.transport.session.StreamingSockJsSession;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * A {@link TransportHandler} that sends messages over an HTTP streaming request.
@@ -59,7 +59,7 @@ public class XhrStreamingTransportHandler extends AbstractHttpSendingTransportHa
 
 	@Override
 	public boolean checkSessionType(SockJsSession session) {
-		return (session instanceof XhrStreamingSockJsSession);
+		return session instanceof XhrStreamingSockJsSession;
 	}
 
 	@Override
@@ -75,7 +75,7 @@ public class XhrStreamingTransportHandler extends AbstractHttpSendingTransportHa
 	}
 
 
-	private static class XhrStreamingSockJsSession extends StreamingSockJsSession {
+	private class XhrStreamingSockJsSession extends StreamingSockJsSession {
 
 		public XhrStreamingSockJsSession(String sessionId, SockJsServiceConfig config,
 				WebSocketHandler wsHandler, Map<String, Object> attributes) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,9 @@
 
 package org.springframework.context.event;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanCreationException;
@@ -47,18 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.context.event.test.AbstractIdentifiable;
-import org.springframework.context.event.test.AnotherTestEvent;
-import org.springframework.context.event.test.EventCollector;
-import org.springframework.context.event.test.GenericEventPojo;
-import org.springframework.context.event.test.Identifiable;
-import org.springframework.context.event.test.TestEvent;
+import org.springframework.context.annotation.*;
+import org.springframework.context.event.test.*;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.annotation.Order;
@@ -66,18 +37,29 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.util.concurrent.SettableListenableFuture;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.validation.beanvalidation.MethodValidationPostProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import javax.annotation.PostConstruct;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Stephane Nicoll
  * @author Juergen Hoeller
  */
-class AnnotationDrivenEventListenerTests {
+public class AnnotationDrivenEventListenerTests {
 
 	private ConfigurableApplicationContext context;
 
@@ -87,7 +69,7 @@ class AnnotationDrivenEventListenerTests {
 
 
 	@AfterEach
-	void closeContext() {
+	public void closeContext() {
 		if (this.context != null) {
 			this.context.close();
 		}
@@ -95,7 +77,7 @@ class AnnotationDrivenEventListenerTests {
 
 
 	@Test
-	void simpleEventJavaConfig() {
+	public void simpleEventJavaConfig() {
 		load(TestEventListener.class);
 		TestEvent event = new TestEvent(this, "test");
 		TestEventListener listener = this.context.getBean(TestEventListener.class);
@@ -109,16 +91,10 @@ class AnnotationDrivenEventListenerTests {
 		this.context.publishEvent(event);
 		this.eventCollector.assertEvent(listener, event);
 		this.eventCollector.assertTotalEventsCount(1);
-
-		context.getBean(ApplicationEventMulticaster.class).removeApplicationListeners(l ->
-				l instanceof SmartApplicationListener sal && sal.getListenerId().contains("TestEvent"));
-		this.eventCollector.clear();
-		this.context.publishEvent(event);
-		this.eventCollector.assertNoEventReceived(listener);
 	}
 
 	@Test
-	void simpleEventXmlConfig() {
+	public void simpleEventXmlConfig() {
 		this.context = new ClassPathXmlApplicationContext(
 				"org/springframework/context/event/simple-event-configuration.xml");
 
@@ -130,16 +106,10 @@ class AnnotationDrivenEventListenerTests {
 		this.context.publishEvent(event);
 		this.eventCollector.assertEvent(listener, event);
 		this.eventCollector.assertTotalEventsCount(1);
-
-		context.getBean(ApplicationEventMulticaster.class).removeApplicationListeners(l ->
-				l instanceof SmartApplicationListener sal && sal.getListenerId().contains("TestEvent"));
-		this.eventCollector.clear();
-		this.context.publishEvent(event);
-		this.eventCollector.assertNoEventReceived(listener);
 	}
 
 	@Test
-	void metaAnnotationIsDiscovered() {
+	public void metaAnnotationIsDiscovered() {
 		load(MetaAnnotationListenerTestBean.class);
 		MetaAnnotationListenerTestBean bean = this.context.getBean(MetaAnnotationListenerTestBean.class);
 		this.eventCollector.assertNoEventReceived(bean);
@@ -148,61 +118,40 @@ class AnnotationDrivenEventListenerTests {
 		this.context.publishEvent(event);
 		this.eventCollector.assertEvent(bean, event);
 		this.eventCollector.assertTotalEventsCount(1);
-
-		context.getBean(ApplicationEventMulticaster.class).removeApplicationListeners(l ->
-				l instanceof SmartApplicationListener sal && sal.getListenerId().equals("foo"));
-		this.eventCollector.clear();
-		this.context.publishEvent(event);
-		this.eventCollector.assertNoEventReceived(bean);
 	}
 
 	@Test
-	void contextEventsAreReceived() {
+	public void contextEventsAreReceived() {
 		load(ContextEventListener.class);
 		ContextEventListener listener = this.context.getBean(ContextEventListener.class);
 
 		List<Object> events = this.eventCollector.getEvents(listener);
-		assertThat(events).as("Wrong number of initial context events").hasSize(1);
+		assertThat(events.size()).as("Wrong number of initial context events").isEqualTo(1);
 		assertThat(events.get(0).getClass()).isEqualTo(ContextRefreshedEvent.class);
-
-		this.context.start();
-		List<Object> eventsAfterStart = this.eventCollector.getEvents(listener);
-		assertThat(eventsAfterStart).as("Wrong number of context events on start").hasSize(2);
-		assertThat(eventsAfterStart.get(1).getClass()).isEqualTo(ContextStartedEvent.class);
-		this.eventCollector.assertTotalEventsCount(2);
 
 		this.context.stop();
 		List<Object> eventsAfterStop = this.eventCollector.getEvents(listener);
-		assertThat(eventsAfterStop).as("Wrong number of context events on stop").hasSize(3);
-		assertThat(eventsAfterStop.get(2).getClass()).isEqualTo(ContextStoppedEvent.class);
-		this.eventCollector.assertTotalEventsCount(3);
-
-		this.context.close();
-		List<Object> eventsAfterClose = this.eventCollector.getEvents(listener);
-		assertThat(eventsAfterClose).as("Wrong number of context events on close").hasSize(4);
-		assertThat(eventsAfterClose.get(3).getClass()).isEqualTo(ContextClosedEvent.class);
-		this.eventCollector.assertTotalEventsCount(4);
-
-		// Further events are supposed to be ignored after context close
-		this.context.publishEvent(new ContextClosedEvent(this.context));
-		this.eventCollector.assertTotalEventsCount(4);
+		assertThat(eventsAfterStop.size()).as("Wrong number of context events on shutdown").isEqualTo(2);
+		assertThat(eventsAfterStop.get(1).getClass()).isEqualTo(ContextStoppedEvent.class);
+		this.eventCollector.assertTotalEventsCount(2);
 	}
 
 	@Test
-	void methodSignatureNoEvent() {
+	public void methodSignatureNoEvent() {
 		@SuppressWarnings("resource")
 		AnnotationConfigApplicationContext failingContext =
 				new AnnotationConfigApplicationContext();
 		failingContext.register(BasicConfiguration.class,
 				InvalidMethodSignatureEventListener.class);
 
-		assertThatExceptionOfType(BeanInitializationException.class).isThrownBy(failingContext::refresh)
+		assertThatExceptionOfType(BeanInitializationException.class).isThrownBy(() ->
+				failingContext.refresh())
 			.withMessageContaining(InvalidMethodSignatureEventListener.class.getName())
 			.withMessageContaining("cannotBeCalled");
 	}
 
 	@Test
-	void simpleReply() {
+	public void simpleReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, "dummy");
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -217,7 +166,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void nullReplyIgnored() {
+	public void nullReplyIgnored() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, null); // No response
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -232,7 +181,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void arrayReply() {
+	public void arrayReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, new String[]{"first", "second"});
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -247,7 +196,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void collectionReply() {
+	public void collectionReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		Set<Object> replies = new LinkedHashSet<>();
 		replies.add("first");
@@ -266,7 +215,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void collectionReplyNullValue() {
+	public void collectionReplyNullValue() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, Arrays.asList(null, "test"));
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -281,11 +230,9 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void listenableFutureReply() {
+	public void listenableFutureReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
-		org.springframework.util.concurrent.SettableListenableFuture<String> future =
-				new org.springframework.util.concurrent.SettableListenableFuture<>();
+		SettableListenableFuture<String> future = new SettableListenableFuture<>();
 		future.set("dummy");
 		AnotherTestEvent event = new AnotherTestEvent(this, future);
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -300,7 +247,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void completableFutureReply() {
+	public void completableFutureReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, CompletableFuture.completedFuture("dummy"));
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -315,7 +262,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void monoReply() {
+	public void monoReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, Mono.just("dummy"));
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -330,7 +277,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void fluxReply() {
+	public void fluxReply() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, Flux.just("dummy1", "dummy2"));
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
@@ -345,11 +292,11 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void eventListenerWorksWithSimpleInterfaceProxy() {
+	public void eventListenerWorksWithSimpleInterfaceProxy() {
 		load(ScopedProxyTestBean.class);
 
 		SimpleService proxy = this.context.getBean(SimpleService.class);
-		assertThat(proxy).as("bean should be a proxy").isInstanceOf(Advised.class);
+		assertThat(proxy instanceof Advised).as("bean should be a proxy").isTrue();
 		this.eventCollector.assertNoEventReceived(proxy.getId());
 
 		this.context.publishEvent(new ContextRefreshedEvent(this.context));
@@ -362,11 +309,11 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void eventListenerWorksWithAnnotatedInterfaceProxy() {
+	public void eventListenerWorksWithAnnotatedInterfaceProxy() {
 		load(AnnotatedProxyTestBean.class);
 
 		AnnotatedSimpleService proxy = this.context.getBean(AnnotatedSimpleService.class);
-		assertThat(proxy).as("bean should be a proxy").isInstanceOf(Advised.class);
+		assertThat(proxy instanceof Advised).as("bean should be a proxy").isTrue();
 		this.eventCollector.assertNoEventReceived(proxy.getId());
 
 		this.context.publishEvent(new ContextRefreshedEvent(this.context));
@@ -379,7 +326,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void eventListenerWorksWithCglibProxy() {
+	public void eventListenerWorksWithCglibProxy() {
 		load(CglibProxyTestBean.class);
 
 		CglibProxyTestBean proxy = this.context.getBean(CglibProxyTestBean.class);
@@ -396,14 +343,14 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void privateMethodOnCglibProxyFails() {
+	public void privateMethodOnCglibProxyFails() {
 		assertThatExceptionOfType(BeanInitializationException.class).isThrownBy(() ->
 				load(CglibProxyWithPrivateMethod.class))
 			.withCauseInstanceOf(IllegalStateException.class);
 	}
 
 	@Test
-	void eventListenerWorksWithCustomScope() {
+	public void eventListenerWorksWithCustomScope() {
 		load(CustomScopeTestBean.class);
 		CustomScope customScope = new CustomScope();
 		this.context.getBeanFactory().registerScope("custom", customScope);
@@ -432,7 +379,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void asyncProcessingApplied() throws InterruptedException {
+	public void asyncProcessingApplied() throws InterruptedException {
 		loadAsync(AsyncEventListener.class);
 
 		String threadName = Thread.currentThread().getName();
@@ -447,7 +394,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void asyncProcessingAppliedWithInterfaceProxy() throws InterruptedException {
+	public void asyncProcessingAppliedWithInterfaceProxy() throws InterruptedException {
 		doLoad(AsyncConfigurationWithInterfaces.class, SimpleProxyTestBean.class);
 
 		String threadName = Thread.currentThread().getName();
@@ -462,7 +409,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void asyncProcessingAppliedWithScopedProxy() throws InterruptedException {
+	public void asyncProcessingAppliedWithScopedProxy() throws InterruptedException {
 		doLoad(AsyncConfigurationWithInterfaces.class, ScopedProxyTestBean.class);
 
 		String threadName = Thread.currentThread().getName();
@@ -477,7 +424,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void exceptionPropagated() {
+	public void exceptionPropagated() {
 		load(ExceptionEventListener.class);
 		TestEvent event = new TestEvent(this, "fail");
 		ExceptionEventListener listener = this.context.getBean(ExceptionEventListener.class);
@@ -490,7 +437,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void exceptionNotPropagatedWithAsync() throws InterruptedException {
+	public void exceptionNotPropagatedWithAsync() throws InterruptedException {
 		loadAsync(ExceptionEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, "fail");
 		ExceptionEventListener listener = this.context.getBean(ExceptionEventListener.class);
@@ -504,7 +451,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void listenerWithSimplePayload() {
+	public void listenerWithSimplePayload() {
 		load(TestEventListener.class);
 		TestEventListener listener = this.context.getBean(TestEventListener.class);
 
@@ -515,7 +462,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void listenerWithNonMatchingPayload() {
+	public void listenerWithNonMatchingPayload() {
 		load(TestEventListener.class);
 		TestEventListener listener = this.context.getBean(TestEventListener.class);
 
@@ -526,11 +473,12 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void replyWithPayload() {
+	public void replyWithPayload() {
 		load(TestEventListener.class, ReplyEventListener.class);
 		AnotherTestEvent event = new AnotherTestEvent(this, "String");
 		ReplyEventListener replyEventListener = this.context.getBean(ReplyEventListener.class);
 		TestEventListener listener = this.context.getBean(TestEventListener.class);
+
 
 		this.eventCollector.assertNoEventReceived(listener);
 		this.eventCollector.assertNoEventReceived(replyEventListener);
@@ -541,7 +489,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void listenerWithGenericApplicationEvent() {
+	public void listenerWithGenericApplicationEvent() {
 		load(GenericEventListener.class);
 		GenericEventListener listener = this.context.getBean(GenericEventListener.class);
 
@@ -552,7 +500,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void listenerWithResolvableTypeEvent() {
+	public void listenerWithResolvableTypeEvent() {
 		load(ResolvableTypeEventListener.class);
 		ResolvableTypeEventListener listener = this.context.getBean(ResolvableTypeEventListener.class);
 
@@ -564,7 +512,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void listenerWithResolvableTypeEventWrongGeneric() {
+	public void listenerWithResolvableTypeEventWrongGeneric() {
 		load(ResolvableTypeEventListener.class);
 		ResolvableTypeEventListener listener = this.context.getBean(ResolvableTypeEventListener.class);
 
@@ -576,12 +524,12 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void conditionMatch() {
+	public void conditionMatch() {
 		validateConditionMatch(ConditionalEventListener.class);
 	}
 
 	@Test
-	void conditionMatchWithProxy() {
+	public void conditionMatchWithProxy() {
 		validateConditionMatch(ConditionalEventListener.class, MethodValidationPostProcessor.class);
 	}
 
@@ -614,7 +562,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void conditionDoesNotMatch() {
+	public void conditionDoesNotMatch() {
 		long maxLong = Long.MAX_VALUE;
 		load(ConditionalEventListener.class);
 		TestEvent event = new TestEvent(this, "KO");
@@ -639,39 +587,21 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 	@Test
-	void orderedListeners() {
+	public void orderedListeners() {
 		load(OrderedTestListener.class);
 		OrderedTestListener listener = this.context.getBean(OrderedTestListener.class);
 
-		assertThat(listener.order).isEmpty();
+		assertThat(listener.order.isEmpty()).isTrue();
 		this.context.publishEvent("whatever");
 		assertThat(listener.order).contains("first", "second", "third");
 	}
 
-	@Test
-	void publicSubclassWithInheritedEventListener() {
-		load(PublicSubclassWithInheritedEventListener.class);
-		TestEventListener listener = this.context.getBean(PublicSubclassWithInheritedEventListener.class);
-
-		this.eventCollector.assertNoEventReceived(listener);
-		this.context.publishEvent("test");
-		this.eventCollector.assertEvent(listener, "test");
-		this.eventCollector.assertTotalEventsCount(1);
-	}
-
 	@Test @Disabled  // SPR-15122
-	void listenersReceiveEarlyEvents() {
+	public void listenersReceiveEarlyEvents() {
 		load(EventOnPostConstruct.class, OrderedTestListener.class);
 		OrderedTestListener listener = this.context.getBean(OrderedTestListener.class);
 
 		assertThat(listener.order).contains("first", "second", "third");
-	}
-
-	@Test
-	void missingListenerBeanIgnored() {
-		load(MissingEventListener.class);
-		context.getBean(UseMissingEventListener.class);
-		context.publishEvent(new TestEvent(this));
 	}
 
 
@@ -679,14 +609,14 @@ class AnnotationDrivenEventListenerTests {
 		List<Class<?>> allClasses = new ArrayList<>();
 		allClasses.add(BasicConfiguration.class);
 		allClasses.addAll(Arrays.asList(classes));
-		doLoad(allClasses.toArray(new Class<?>[0]));
+		doLoad(allClasses.toArray(new Class<?>[allClasses.size()]));
 	}
 
 	private void loadAsync(Class<?>... classes) {
 		List<Class<?>> allClasses = new ArrayList<>();
 		allClasses.add(AsyncConfiguration.class);
 		allClasses.addAll(Arrays.asList(classes));
-		doLoad(allClasses.toArray(new Class<?>[0]));
+		doLoad(allClasses.toArray(new Class<?>[allClasses.size()]));
 	}
 
 	private void doLoad(Class<?>... classes) {
@@ -722,13 +652,13 @@ class AnnotationDrivenEventListenerTests {
 		static class TestConditionEvaluator {
 
 			public boolean valid(Double ratio) {
-				return Double.valueOf(42).equals(ratio);
+				return new Double(42).equals(ratio);
 			}
 		}
 	}
 
 
-	abstract static class AbstractTestEventListener extends AbstractIdentifiable {
+	static abstract class AbstractTestEventListener extends AbstractIdentifiable {
 
 		@Autowired
 		private EventCollector eventCollector;
@@ -754,7 +684,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 
-	@EventListener(id = "foo")
+	@EventListener
 	@Target(ElementType.METHOD)
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface FooListener {
@@ -778,6 +708,7 @@ class AnnotationDrivenEventListenerTests {
 		public void handleContextEvent(ApplicationContextEvent event) {
 			collectEvent(event);
 		}
+
 	}
 
 
@@ -799,7 +730,8 @@ class AnnotationDrivenEventListenerTests {
 			if (event.content == null) {
 				return null;
 			}
-			else if (event.content instanceof String s) {
+			else if (event.content instanceof String) {
+				String s = (String) event.content;
 				if (s.equals("String")) {
 					return event.content;
 				}
@@ -891,9 +823,9 @@ class AnnotationDrivenEventListenerTests {
 			this.eventCollector.addEvent(this, event);
 		}
 
+		@Override
 		@EventListener
 		@Async
-		@Override
 		public void handleAsync(AnotherTestEvent event) {
 			assertThat(Thread.currentThread().getName()).isNotEqualTo(event.content);
 			this.eventCollector.addEvent(this, event);
@@ -918,9 +850,9 @@ class AnnotationDrivenEventListenerTests {
 			this.eventCollector.addEvent(this, event);
 		}
 
+		@Override
 		@EventListener
 		@Async
-		@Override
 		public void handleAsync(AnotherTestEvent event) {
 			assertThat(Thread.currentThread().getName()).isNotEqualTo(event.content);
 			this.eventCollector.addEvent(this, event);
@@ -1003,6 +935,7 @@ class AnnotationDrivenEventListenerTests {
 	}
 
 
+
 	@EventListener
 	@Retention(RetentionPolicy.RUNTIME)
 	public @interface ConditionalEvent {
@@ -1034,27 +967,27 @@ class AnnotationDrivenEventListenerTests {
 			super.handle(event);
 		}
 
-		@EventListener(condition = "#payload.startsWith('OK')")
 		@Override
+		@EventListener(condition = "#payload.startsWith('OK')")
 		public void handleString(String payload) {
 			super.handleString(payload);
 		}
 
-		@ConditionalEvent("#root.event.timestamp > #p0")
 		@Override
+		@ConditionalEvent("#root.event.timestamp > #p0")
 		public void handleTimestamp(Long timestamp) {
 			collectEvent(timestamp);
 		}
 
-		@ConditionalEvent("@conditionEvaluator.valid(#p0)")
 		@Override
+		@ConditionalEvent("@conditionEvaluator.valid(#p0)")
 		public void handleRatio(Double ratio) {
 			collectEvent(ratio);
 		}
 	}
 
 
-	@Component
+	@Configuration
 	static class OrderedTestListener extends TestEventListener {
 
 		public final List<String> order = new ArrayList<>();
@@ -1075,11 +1008,6 @@ class AnnotationDrivenEventListenerTests {
 		public void handleSecond(String payload) {
 			this.order.add("second");
 		}
-	}
-
-
-	@Component
-	public static class PublicSubclassWithInheritedEventListener extends TestEventListener {
 	}
 
 
@@ -1127,38 +1055,6 @@ class AnnotationDrivenEventListenerTests {
 		@Override
 		public String getConversationId() {
 			return null;
-		}
-	}
-
-
-	@Configuration
-	@Import(UseMissingEventListener.class)
-	public static class MissingEventListener {
-
-		@Bean
-		public MyEventListener missing() {
-			return null;
-		}
-	}
-
-
-	@Component
-	public static class MyEventListener {
-
-		@EventListener
-		public void hear(TestEvent e) {
-			throw new AssertionError();
-		}
-	}
-
-
-	public static class UseMissingEventListener {
-
-		@Inject
-		public UseMissingEventListener(Optional<MyEventListener> notHere) {
-			if (notHere.isPresent()) {
-				throw new AssertionError();
-			}
 		}
 	}
 

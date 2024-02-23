@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,23 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.lang.Nullable;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.result.view.View;
 import org.springframework.web.reactive.result.view.ViewResolver;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.i18n.FixedLocaleContextResolver;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,16 +65,16 @@ class LocaleContextResolverIntegrationTests extends AbstractRouterFunctionIntegr
 	void fixedLocale(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		Mono<ResponseEntity<Void>> result = webClient
+		Mono<ClientResponse> result = webClient
 				.get()
 				.uri("http://localhost:" + this.port + "/")
-				.retrieve().toBodilessEntity();
+				.exchange();
 
 		StepVerifier
 				.create(result)
-				.consumeNextWith(entity -> {
-					assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.OK);
-					assertThat(entity.getHeaders().getContentLanguage()).isEqualTo(Locale.GERMANY);
+				.consumeNextWith(response -> {
+					assertThat(response.statusCode()).isEqualTo(HttpStatus.OK);
+					assertThat(response.headers().asHttpHeaders().getContentLanguage()).isEqualTo(Locale.GERMANY);
 				})
 				.verifyComplete();
 	}

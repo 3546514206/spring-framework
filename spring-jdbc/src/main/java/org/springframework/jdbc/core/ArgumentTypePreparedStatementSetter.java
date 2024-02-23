@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 
 /**
- * Simple adapter for {@link PreparedStatementSetter} that applies the given
- * arrays of arguments and JDBC argument types.
+ * Simple adapter for {@link PreparedStatementSetter} that applies
+ * given arrays of arguments and JDBC argument types.
  *
  * @author Juergen Hoeller
  * @since 3.2.3
@@ -41,8 +41,7 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 
 
 	/**
-	 * Create a new {@code ArgumentTypePreparedStatementSetter} for the given
-	 * arguments and types.
+	 * Create a new ArgTypePreparedStatementSetter for the given arguments.
 	 * @param args the arguments to set
 	 * @param argTypes the corresponding SQL types of the arguments
 	 */
@@ -62,9 +61,11 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 		if (this.args != null && this.argTypes != null) {
 			for (int i = 0; i < this.args.length; i++) {
 				Object arg = this.args[i];
-				if (arg instanceof Collection<?> entries && this.argTypes[i] != Types.ARRAY) {
+				if (arg instanceof Collection && this.argTypes[i] != Types.ARRAY) {
+					Collection<?> entries = (Collection<?>) arg;
 					for (Object entry : entries) {
-						if (entry instanceof Object[] valueArray) {
+						if (entry instanceof Object[]) {
+							Object[] valueArray = ((Object[]) entry);
 							for (Object argValue : valueArray) {
 								doSetValue(ps, parameterPosition, this.argTypes[i], argValue);
 								parameterPosition++;
@@ -85,16 +86,15 @@ public class ArgumentTypePreparedStatementSetter implements PreparedStatementSet
 	}
 
 	/**
-	 * Set the value for the prepared statement's specified parameter position
-	 * using the supplied value and type.
-	 * <p>This method can be overridden by subclasses if needed.
+	 * Set the value for the prepared statement's specified parameter position using the passed in
+	 * value and type. This method can be overridden by sub-classes if needed.
 	 * @param ps the PreparedStatement
 	 * @param parameterPosition index of the parameter position
 	 * @param argType the argument type
 	 * @param argValue the argument value
 	 * @throws SQLException if thrown by PreparedStatement methods
 	 */
-	protected void doSetValue(PreparedStatement ps, int parameterPosition, int argType, @Nullable Object argValue)
+	protected void doSetValue(PreparedStatement ps, int parameterPosition, int argType, Object argValue)
 			throws SQLException {
 
 		StatementCreatorUtils.setParameterValue(ps, parameterPosition, argType, argValue);

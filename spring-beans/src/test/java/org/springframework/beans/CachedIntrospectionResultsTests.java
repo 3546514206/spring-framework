@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package org.springframework.beans;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.OverridingClassLoader;
+import org.springframework.tests.sample.beans.TestBean;
+
 import java.beans.BeanInfo;
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.core.OverridingClassLoader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,17 +31,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @author Arjen Poutsma
  */
-class CachedIntrospectionResultsTests {
+public class CachedIntrospectionResultsTests {
 
 	@Test
-	void acceptAndClearClassLoader() throws Exception {
+	public void acceptAndClearClassLoader() throws Exception {
 		BeanWrapper bw = new BeanWrapperImpl(TestBean.class);
 		assertThat(bw.isWritableProperty("name")).isTrue();
 		assertThat(bw.isWritableProperty("age")).isTrue();
 		assertThat(CachedIntrospectionResults.strongClassCache.containsKey(TestBean.class)).isTrue();
 
 		ClassLoader child = new OverridingClassLoader(getClass().getClassLoader());
-		Class<?> tbClass = child.loadClass("org.springframework.beans.testfixture.beans.TestBean");
+		Class<?> tbClass = child.loadClass("org.springframework.tests.sample.beans.TestBean");
 		assertThat(CachedIntrospectionResults.strongClassCache.containsKey(tbClass)).isFalse();
 		CachedIntrospectionResults.acceptClassLoader(child);
 		bw = new BeanWrapperImpl(tbClass);
@@ -56,7 +55,7 @@ class CachedIntrospectionResultsTests {
 	}
 
 	@Test
-	void clearClassLoaderForSystemClassLoader() {
+	public void clearClassLoaderForSystemClassLoader() throws Exception {
 		BeanUtils.getPropertyDescriptors(ArrayList.class);
 		assertThat(CachedIntrospectionResults.strongClassCache.containsKey(ArrayList.class)).isTrue();
 		CachedIntrospectionResults.clearClassLoader(ArrayList.class.getClassLoader());
@@ -64,7 +63,7 @@ class CachedIntrospectionResultsTests {
 	}
 
 	@Test
-	void shouldUseExtendedBeanInfoWhenApplicable() throws NoSuchMethodException, SecurityException {
+	public void shouldUseExtendedBeanInfoWhenApplicable() throws NoSuchMethodException, SecurityException {
 		// given a class with a non-void returning setter method
 		@SuppressWarnings("unused")
 		class C {

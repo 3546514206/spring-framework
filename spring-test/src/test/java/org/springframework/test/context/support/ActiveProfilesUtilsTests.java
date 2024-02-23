@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,12 @@
 
 package org.springframework.test.context.support;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.annotation.AnnotationConfigurationException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ActiveProfilesResolver;
+import org.springframework.util.StringUtils;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -24,20 +30,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.annotation.AnnotationConfigurationException;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ActiveProfilesResolver;
-import org.springframework.util.StringUtils;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.context.support.ActiveProfilesUtils.resolveActiveProfiles;
 
 /**
- * Tests for {@link ActiveProfilesUtils} involving resolution of active bean
+ * Unit tests for {@link ActiveProfilesUtils} involving resolution of active bean
  * definition profiles.
  *
  * @author Sam Brannen
@@ -168,8 +165,8 @@ class ActiveProfilesUtilsTests extends AbstractContextConfigurationUtilsTests {
 	 * @since 4.0
 	 */
 	@Test
-	void resolveActiveProfilesWithOverriddenInheritedResolver() {
-		assertResolvedProfiles(OverriddenInheritedFooActiveProfilesResolverTestCase.class, "bar");
+	void resolveActiveProfilesWithOverridenInheritedResolver() {
+		assertResolvedProfiles(OverridenInheritedFooActiveProfilesResolverTestCase.class, "bar");
 	}
 
 	/**
@@ -264,13 +261,13 @@ class ActiveProfilesUtilsTests extends AbstractContextConfigurationUtilsTests {
 	@ActiveProfiles(profiles = { "dog", "cat" }, inheritProfiles = false)
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.TYPE)
-	private @interface MetaAnimalsConfig {
+	private static @interface MetaAnimalsConfig {
 	}
 
 	@ActiveProfiles(resolver = TestClassVerifyingActiveProfilesResolver.class)
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.TYPE)
-	private @interface MetaResolverConfig {
+	private static @interface MetaResolverConfig {
 	}
 
 	@MetaAnimalsConfig
@@ -304,7 +301,7 @@ class ActiveProfilesUtilsTests extends AbstractContextConfigurationUtilsTests {
 	}
 
 	@ActiveProfiles(resolver = BarActiveProfilesResolver.class, inheritProfiles = false)
-	private static class OverriddenInheritedFooActiveProfilesResolverTestCase extends
+	private static class OverridenInheritedFooActiveProfilesResolverTestCase extends
 			InheritedFooActiveProfilesResolverTestCase {
 	}
 

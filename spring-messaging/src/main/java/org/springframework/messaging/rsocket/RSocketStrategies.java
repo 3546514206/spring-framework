@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 package org.springframework.messaging.rsocket;
 
-import java.util.List;
-import java.util.function.Consumer;
-
 import io.rsocket.Payload;
-
+import io.rsocket.RSocketFactory.ClientRSocketFactory;
+import io.rsocket.RSocketFactory.ServerRSocketFactory;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Decoder;
@@ -33,6 +31,9 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.MimeType;
 import org.springframework.util.RouteMatcher;
 import org.springframework.util.SimpleRouteMatcher;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Access to strategies for use by RSocket requester and responder components.
@@ -183,7 +184,7 @@ public interface RSocketStrategies {
 		Builder routeMatcher(@Nullable RouteMatcher routeMatcher);
 
 		/**
-		 * Configure the registry for reactive type support. This can be used
+		 * Configure the registry for reactive type support. This can be used to
 		 * to adapt to, and/or determine the semantics of a given
 		 * {@link org.reactivestreams.Publisher Publisher}.
 		 * <p>By default this {@link ReactiveAdapterRegistry#getSharedInstance()}.
@@ -198,10 +199,9 @@ public interface RSocketStrategies {
 		 * <a href="https://github.com/rsocket/rsocket-java#zero-copy">configured</a>
 		 * for zero copy. For client setup, {@link RSocketRequester.Builder}
 		 * adapts automatically to the {@code DataBufferFactory} configured
-		 * here, and sets the frame decoder in
-		 * {@link io.rsocket.core.RSocketConnector RSocketConnector}
-		 * accordingly. For server setup, the
-		 * {@link io.rsocket.core.RSocketServer RSocketServer} must be configured
+		 * here, and sets the frame decoder in {@link ClientRSocketFactory
+		 * ClientRSocketFactory} accordingly. For server setup, the
+		 * {@link ServerRSocketFactory ServerRSocketFactory} must be configured
 		 * accordingly for zero copy too.
 		 * <p>If using {@link DefaultDataBufferFactory} instead, there is no
 		 * need for related config changes in RSocket.

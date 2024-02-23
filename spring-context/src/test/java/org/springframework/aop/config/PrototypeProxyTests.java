@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2007 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,16 @@
 package org.springframework.aop.config;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class PrototypeProxyTests {
+public class PrototypeProxyTests {
 
 	@Test
-	@SuppressWarnings("resource")
-	void injectionBeforeWrappingCheckDoesNotKickInForPrototypeProxy() {
+	public void testInjectionBeforeWrappingCheckDoesNotKickInForPrototypeProxy() {
 		new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
 	}
 

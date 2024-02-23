@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,11 @@ import org.springframework.aop.target.CommonsPool2TargetSource;
 /**
  * @author Juergen Hoeller
  */
-class Spr15042Tests {
+public class Spr15042Tests {
 
 	@Test
-	void poolingTargetSource() {
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(PoolingTargetSourceConfig.class);
-		context.close();
+	public void poolingTargetSource() {
+		new AnnotationConfigApplicationContext(PoolingTargetSourceConfig.class);
 	}
 
 
@@ -37,7 +36,7 @@ class Spr15042Tests {
 	static class PoolingTargetSourceConfig {
 
 		@Bean
-		@Scope(scopeName = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
+		@Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
 		public ProxyFactoryBean myObject() {
 			ProxyFactoryBean pfb = new ProxyFactoryBean();
 			pfb.setTargetSource(poolTargetSource());

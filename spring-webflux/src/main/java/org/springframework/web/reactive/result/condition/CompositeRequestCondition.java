@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.server.ServerWebExchange;
 
 /**
  * Implements the {@link RequestCondition} contract by delegating to multiple
- * {@code RequestCondition} types and using a logical conjunction ({@code ' && '}) to
+ * {@code RequestCondition} types and using a logical conjunction (' && ') to
  * ensure all conditions match a given request.
  *
  * <p>When {@code CompositeRequestCondition} instances are combined or compared
- * is expected that (a) they contain the same number of conditions and (b)
- * conditions at the same index are of the same type. It is acceptable to
+ * they are expected to (a) contain the same number of conditions and (b) that
+ * conditions in the respective index are of the same type. It is acceptable to
  * provide {@code null} conditions or no conditions at all to the constructor.
  *
  * @author Rossen Stoyanchev
@@ -106,7 +105,7 @@ public class CompositeRequestCondition extends AbstractRequestCondition<Composit
 
 	/**
 	 * If one instance is empty, return the other.
-	 * <p>If both instances have conditions, combine the individual conditions
+	 * If both instances have conditions, combine the individual conditions
 	 * after ensuring they are of the same type and number.
 	 */
 	@Override
@@ -132,8 +131,8 @@ public class CompositeRequestCondition extends AbstractRequestCondition<Composit
 
 	private void assertNumberOfConditions(CompositeRequestCondition other) {
 		Assert.isTrue(getLength() == other.getLength(),
-				() -> "Cannot combine CompositeRequestConditions with a different number of conditions. " +
-				ObjectUtils.nullSafeToString(this.requestConditions) + " and " +
+				"Cannot combine CompositeRequestConditions with a different number of conditions. " +
+				ObjectUtils.nullSafeToString(this.requestConditions) + " and  " +
 				ObjectUtils.nullSafeToString(other.requestConditions));
 	}
 
@@ -143,7 +142,6 @@ public class CompositeRequestCondition extends AbstractRequestCondition<Composit
 	 * <p>An empty {@code CompositeRequestCondition} matches to all requests.
 	 */
 	@Override
-	@Nullable
 	public CompositeRequestCondition getMatchingCondition(ServerWebExchange exchange) {
 		if (isEmpty()) {
 			return this;

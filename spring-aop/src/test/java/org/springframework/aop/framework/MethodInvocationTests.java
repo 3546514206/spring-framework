@@ -16,14 +16,13 @@
 
 package org.springframework.aop.framework;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.junit.jupiter.api.Test;
+import org.springframework.tests.sample.beans.TestBean;
+
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-
-import org.aopalliance.intercept.MethodInterceptor;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

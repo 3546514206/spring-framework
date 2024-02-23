@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import org.springframework.lang.Nullable;
  * <p>The LOB creation part is where {@link LobHandler} implementations usually
  * differ. Possible strategies include usage of
  * {@code PreparedStatement.setBinaryStream/setCharacterStream} but also
- * {@code PreparedStatement.setBlob/setClob} with either a stream argument or
- * {@code java.sql.Blob/Clob} wrapper objects.
+ * {@code PreparedStatement.setBlob/setClob} with either a stream argument
+ * (requires JDBC 4.0) or {@code java.sql.Blob/Clob} wrapper objects.
  *
  * <p>A LobCreator represents a session for creating BLOBs: It is <i>not</i>
  * thread-safe and needs to be instantiated for each statement execution or for
@@ -57,10 +57,7 @@ import org.springframework.lang.Nullable;
  * @see java.sql.PreparedStatement#setString
  * @see java.sql.PreparedStatement#setAsciiStream
  * @see java.sql.PreparedStatement#setCharacterStream
- * @deprecated as of 6.2, in favor of {@link org.springframework.jdbc.core.support.SqlBinaryValue}
- * and {@link org.springframework.jdbc.core.support.SqlCharacterValue}
  */
-@Deprecated(since = "6.2")
 public interface LobCreator extends Closeable {
 
 	/**

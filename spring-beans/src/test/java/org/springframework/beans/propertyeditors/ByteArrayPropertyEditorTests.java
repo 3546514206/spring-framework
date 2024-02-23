@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,21 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ByteArrayPropertyEditor}.
+ * Unit tests for the {@link ByteArrayPropertyEditor} class.
  *
  * @author Rick Evans
  */
-class ByteArrayPropertyEditorTests {
+public class ByteArrayPropertyEditorTests {
 
 	private final PropertyEditor byteEditor = new ByteArrayPropertyEditor();
 
 	@Test
-	void sunnyDaySetAsText() {
+	public void sunnyDaySetAsText() throws Exception {
 		final String text = "Hideous towns make me throw... up";
 		byteEditor.setAsText(text);
 
 		Object value = byteEditor.getValue();
-		assertThat(value).isInstanceOf(byte[].class);
+		assertThat(value).isNotNull().isInstanceOf(byte[].class);
 		byte[] bytes = (byte[]) value;
 		for (int i = 0; i < text.length(); ++i) {
 			assertThat(bytes[i]).as("cyte[] differs at index '" + i + "'").isEqualTo((byte) text.charAt(i));
@@ -46,11 +46,11 @@ class ByteArrayPropertyEditorTests {
 	}
 
 	@Test
-	void getAsTextReturnsEmptyStringIfValueIsNull() {
-		assertThat(byteEditor.getAsText()).isEmpty();
+	public void getAsTextReturnsEmptyStringIfValueIsNull() throws Exception {
+		assertThat(byteEditor.getAsText()).isEqualTo("");
 
 		byteEditor.setAsText(null);
-		assertThat(byteEditor.getAsText()).isEmpty();
+		assertThat(byteEditor.getAsText()).isEqualTo("");
 	}
 
 }

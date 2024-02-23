@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,20 +29,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link SimpleTraceInterceptor}.
+ * Unit tests for the {@link SimpleTraceInterceptor} class.
  *
  * @author Rick Evans
  * @author Chris Beams
  */
-class SimpleTraceInterceptorTests {
+public class SimpleTraceInterceptorTests {
 
 	@Test
-	void testSunnyDayPathLogsCorrectly() throws Throwable {
-		MethodInvocation mi = mock();
+	public void testSunnyDayPathLogsCorrectly() throws Throwable {
+		MethodInvocation mi = mock(MethodInvocation.class);
 		given(mi.getMethod()).willReturn(String.class.getMethod("toString"));
 		given(mi.getThis()).willReturn(this);
 
-		Log log = mock();
+		Log log = mock(Log.class);
 
 		SimpleTraceInterceptor interceptor = new SimpleTraceInterceptor(true);
 		interceptor.invokeUnderTrace(mi, log);
@@ -51,14 +51,14 @@ class SimpleTraceInterceptorTests {
 	}
 
 	@Test
-	void testExceptionPathStillLogsCorrectly() throws Throwable {
-		MethodInvocation mi = mock();
+	public void testExceptionPathStillLogsCorrectly() throws Throwable {
+		MethodInvocation mi = mock(MethodInvocation.class);
 		given(mi.getMethod()).willReturn(String.class.getMethod("toString"));
 		given(mi.getThis()).willReturn(this);
 		IllegalArgumentException exception = new IllegalArgumentException();
 		given(mi.proceed()).willThrow(exception);
 
-		Log log = mock();
+		Log log = mock(Log.class);
 
 		final SimpleTraceInterceptor interceptor = new SimpleTraceInterceptor(true);
 		assertThatIllegalArgumentException().isThrownBy(() ->

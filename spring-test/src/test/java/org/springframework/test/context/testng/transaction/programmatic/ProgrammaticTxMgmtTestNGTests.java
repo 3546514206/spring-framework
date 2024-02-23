@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ import static org.springframework.test.transaction.TransactionAssert.assertThatT
  * @since 4.1
  */
 @ContextConfiguration
-class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringContextTests {
+public class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringContextTests {
 
 	private String methodName;
 
@@ -65,65 +65,78 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 	}
 
 	@BeforeTransaction
-	void beforeTransaction() {
+	public void beforeTransaction() {
 		deleteFromTables("user");
 		executeSqlScript("classpath:/org/springframework/test/context/jdbc/data.sql", false);
 	}
 
 	@AfterTransaction
-	void afterTransaction() {
+	public void afterTransaction() {
 		switch (this.methodName) {
-			case "commitTxAndStartNewTx", "commitTxButDoNotStartNewTx" -> assertUsers("Dogbert");
-			case "rollbackTxAndStartNewTx", "rollbackTxButDoNotStartNewTx", "startTxWithExistingTransaction" ->
-					assertUsers("Dilbert");
-			case "rollbackTxAndStartNewTxWithDefaultCommitSemantics" -> assertUsers("Dilbert", "Dogbert");
-			default -> fail("missing 'after transaction' assertion for test method: " + this.methodName);
+			case "commitTxAndStartNewTx":
+			case "commitTxButDoNotStartNewTx": {
+				assertUsers("Dogbert");
+				break;
+			}
+			case "rollbackTxAndStartNewTx":
+			case "rollbackTxButDoNotStartNewTx":
+			case "startTxWithExistingTransaction": {
+				assertUsers("Dilbert");
+				break;
+			}
+			case "rollbackTxAndStartNewTxWithDefaultCommitSemantics": {
+				assertUsers("Dilbert", "Dogbert");
+				break;
+			}
+			default: {
+				fail("missing 'after transaction' assertion for test method: " + this.methodName);
+			}
 		}
 	}
 
 	@Test
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void isActiveWithNonExistentTransactionContext() {
+	public void isActiveWithNonExistentTransactionContext() {
 		assertThat(TestTransaction.isActive()).isFalse();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void flagForRollbackWithNonExistentTransactionContext() {
+	public void flagForRollbackWithNonExistentTransactionContext() {
 		TestTransaction.flagForRollback();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void flagForCommitWithNonExistentTransactionContext() {
+	public void flagForCommitWithNonExistentTransactionContext() {
 		TestTransaction.flagForCommit();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void isFlaggedForRollbackWithNonExistentTransactionContext() {
+	public void isFlaggedForRollbackWithNonExistentTransactionContext() {
 		TestTransaction.isFlaggedForRollback();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void startTxWithNonExistentTransactionContext() {
+	public void startTxWithNonExistentTransactionContext() {
 		TestTransaction.start();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
-	void startTxWithExistingTransaction() {
+	public void startTxWithExistingTransaction() {
 		TestTransaction.start();
 	}
 
 	@Test(expectedExceptions = IllegalStateException.class)
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
-	void endTxWithNonExistentTransactionContext() {
+	public void endTxWithNonExistentTransactionContext() {
 		TestTransaction.end();
 	}
 
 	@Test
-	void commitTxAndStartNewTx() {
+	public void commitTxAndStartNewTx() {
 		assertThatTransaction().isActive();
 		assertThat(TestTransaction.isActive()).isTrue();
 		assertUsers("Dilbert");
@@ -147,7 +160,7 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 	}
 
 	@Test
-	void commitTxButDoNotStartNewTx() {
+	public void commitTxButDoNotStartNewTx() {
 		assertThatTransaction().isActive();
 		assertThat(TestTransaction.isActive()).isTrue();
 		assertUsers("Dilbert");
@@ -167,7 +180,7 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 	}
 
 	@Test
-	void rollbackTxAndStartNewTx() {
+	public void rollbackTxAndStartNewTx() {
 		assertThatTransaction().isActive();
 		assertThat(TestTransaction.isActive()).isTrue();
 		assertUsers("Dilbert");
@@ -192,7 +205,7 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 	}
 
 	@Test
-	void rollbackTxButDoNotStartNewTx() {
+	public void rollbackTxButDoNotStartNewTx() {
 		assertThatTransaction().isActive();
 		assertThat(TestTransaction.isActive()).isTrue();
 		assertUsers("Dilbert");
@@ -209,7 +222,7 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 
 	@Test
 	@Commit
-	void rollbackTxAndStartNewTxWithDefaultCommitSemantics() {
+	public void rollbackTxAndStartNewTxWithDefaultCommitSemantics() {
 		assertThatTransaction().isActive();
 		assertThat(TestTransaction.isActive()).isTrue();
 		assertUsers("Dilbert");
@@ -251,16 +264,16 @@ class ProgrammaticTxMgmtTestNGTests extends AbstractTransactionalTestNGSpringCon
 	static class Config {
 
 		@Bean
-		PlatformTransactionManager transactionManager() {
+		public PlatformTransactionManager transactionManager() {
 			return new DataSourceTransactionManager(dataSource());
 		}
 
 		@Bean
-		DataSource dataSource() {
-			return new EmbeddedDatabaseBuilder()
-					.generateUniqueName(true)
-					.addScript("classpath:/org/springframework/test/context/jdbc/schema.sql")
-					.build();
+		public DataSource dataSource() {
+			return new EmbeddedDatabaseBuilder()//
+			.setName("programmatic-tx-mgmt-test-db")//
+			.addScript("classpath:/org/springframework/test/context/jdbc/schema.sql") //
+			.build();
 		}
 	}
 

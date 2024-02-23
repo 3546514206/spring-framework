@@ -5,7 +5,7 @@
 			targetNamespace="http://www.springframework.org/schema/beans/test"
 			elementFormDefault="qualified">
 	
-	<xsd:element name="person">
+	<xsd:element name="man">
 		<xsd:complexType>
 			<xsd:attribute name="id" type="xsd:string" use="optional" form="unqualified"/>
 			<xsd:attribute name="name" type="xsd:string" use="required" form="unqualified"/>

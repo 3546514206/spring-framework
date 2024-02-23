@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,23 +35,23 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for SpEL's plus operator.
+ * Unit tests for SpEL's plus operator.
  *
  * @author Ivo Smid
  * @author Chris Beams
  * @since 3.2
  * @see OpPlus
  */
-class OpPlusTests {
+public class OpPlusTests {
 
 	@Test
-	void test_emptyOperands() {
+	public void test_emptyOperands() {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new OpPlus(-1, -1));
 	}
 
 	@Test
-	void test_unaryPlusWithStringLiteral() {
+	public void test_unaryPlusWithStringLiteral() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		StringLiteral str = new StringLiteral("word", -1, -1, "word");
@@ -62,7 +62,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_unaryPlusWithNumberOperand() {
+	public void test_unaryPlusWithNumberOperand() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		{
@@ -97,7 +97,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_binaryPlusWithNumberOperands() {
+	public void test_binaryPlusWithNumberOperands() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		{
@@ -108,7 +108,7 @@ class OpPlusTests {
 
 			assertThat(value.getTypeDescriptor().getObjectType()).isEqualTo(Double.class);
 			assertThat(value.getTypeDescriptor().getType()).isEqualTo(Double.class);
-			assertThat(value.getValue()).isEqualTo(123.0 + 456.0);
+			assertThat(value.getValue()).isEqualTo(Double.valueOf(123.0 + 456.0));
 		}
 
 		{
@@ -119,7 +119,7 @@ class OpPlusTests {
 
 			assertThat(value.getTypeDescriptor().getObjectType()).isEqualTo(Long.class);
 			assertThat(value.getTypeDescriptor().getType()).isEqualTo(Long.class);
-			assertThat(value.getValue()).isEqualTo(123L + 456L);
+			assertThat(value.getValue()).isEqualTo(Long.valueOf(123L + 456L));
 		}
 
 		{
@@ -130,12 +130,12 @@ class OpPlusTests {
 
 			assertThat(value.getTypeDescriptor().getObjectType()).isEqualTo(Integer.class);
 			assertThat(value.getTypeDescriptor().getType()).isEqualTo(Integer.class);
-			assertThat(value.getValue()).isEqualTo(123 + 456);
+			assertThat(value.getValue()).isEqualTo(Integer.valueOf(123 + 456));
 		}
 	}
 
 	@Test
-	void test_binaryPlusWithStringOperands() {
+	public void test_binaryPlusWithStringOperands() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		StringLiteral n1 = new StringLiteral("\"foo\"", -1, -1, "\"foo\"");
@@ -149,7 +149,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_binaryPlusWithLeftStringOperand() {
+	public void test_binaryPlusWithLeftStringOperand() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		StringLiteral n1 = new StringLiteral("\"number is \"", -1, -1, "\"number is \"");
@@ -163,7 +163,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_binaryPlusWithRightStringOperand() {
+	public void test_binaryPlusWithRightStringOperand() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 
 		LongLiteral n1 = new LongLiteral("123", -1, -1, 123);
@@ -177,7 +177,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_binaryPlusWithTime_ToString() {
+	public void test_binaryPlusWithTime_ToString() {
 		ExpressionState expressionState = new ExpressionState(new StandardEvaluationContext());
 		Time time = new Time(new Date().getTime());
 
@@ -194,7 +194,7 @@ class OpPlusTests {
 	}
 
 	@Test
-	void test_binaryPlusWithTimeConverted() {
+	public void test_binaryPlusWithTimeConverted() {
 		SimpleDateFormat format = new SimpleDateFormat("hh :--: mm :--: ss", Locale.ENGLISH);
 
 		GenericConversionService conversionService = new GenericConversionService();

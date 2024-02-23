@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.util.JsonPathExpectationsHelper;
 import org.springframework.test.web.client.RequestMatcher;
-import org.springframework.util.Assert;
 
 /**
  * Factory for assertions on the request content using
@@ -53,9 +52,8 @@ public class JsonPathRequestMatchers {
 	 * @param args arguments to parameterize the {@code JsonPath} expression with,
 	 * using formatting specifiers defined in {@link String#format(String, Object...)}
 	 */
-	protected JsonPathRequestMatchers(String expression, Object... args) {
-		Assert.hasText(expression, "expression must not be null or empty");
-		this.jsonPathHelper = new JsonPathExpectationsHelper(expression.formatted(args));
+	protected JsonPathRequestMatchers(String expression, Object ... args) {
+		this.jsonPathHelper = new JsonPathExpectationsHelper(expression, args);
 	}
 
 
@@ -63,7 +61,7 @@ public class JsonPathRequestMatchers {
 	 * Evaluate the JSON path expression against the request content and
 	 * assert the resulting value with the given Hamcrest {@link Matcher}.
 	 */
-	public <T> RequestMatcher value(Matcher<? super T> matcher) {
+	public <T> RequestMatcher value(Matcher<T> matcher) {
 		return new AbstractJsonPathRequestMatcher() {
 			@Override
 			protected void matchInternal(MockClientHttpRequest request) throws IOException, ParseException {
@@ -80,7 +78,7 @@ public class JsonPathRequestMatchers {
 	 * to coerce an integer into a double.
 	 * @since 4.3.3
 	 */
-	public <T> RequestMatcher value(Matcher<? super T> matcher, Class<T> targetType) {
+	public <T> RequestMatcher value(Matcher<T> matcher, Class<T> targetType) {
 		return new AbstractJsonPathRequestMatcher() {
 			@Override
 			protected void matchInternal(MockClientHttpRequest request) throws IOException, ParseException {

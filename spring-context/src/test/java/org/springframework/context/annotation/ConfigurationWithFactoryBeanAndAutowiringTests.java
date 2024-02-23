@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,70 +32,63 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @since 3.1
  */
-class ConfigurationWithFactoryBeanAndAutowiringTests {
+public class ConfigurationWithFactoryBeanAndAutowiringTests {
 
 	@Test
-	void withConcreteFactoryBeanImplementationAsReturnType() {
+	public void withConcreteFactoryBeanImplementationAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(ConcreteFactoryBeanImplementationConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withParameterizedFactoryBeanImplementationAsReturnType() {
+	public void withParameterizedFactoryBeanImplementationAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(ParameterizedFactoryBeanImplementationConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withParameterizedFactoryBeanInterfaceAsReturnType() {
+	public void withParameterizedFactoryBeanInterfaceAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(ParameterizedFactoryBeanInterfaceConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withNonPublicParameterizedFactoryBeanInterfaceAsReturnType() {
+	public void withNonPublicParameterizedFactoryBeanInterfaceAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(NonPublicParameterizedFactoryBeanInterfaceConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withRawFactoryBeanInterfaceAsReturnType() {
+	public void withRawFactoryBeanInterfaceAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(RawFactoryBeanInterfaceConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withWildcardParameterizedFactoryBeanInterfaceAsReturnType() {
+	public void withWildcardParameterizedFactoryBeanInterfaceAsReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(WildcardParameterizedFactoryBeanInterfaceConfig.class);
 		ctx.refresh();
-		ctx.close();
 	}
 
 	@Test
-	void withFactoryBeanCallingBean() {
+	public void withFactoryBeanCallingBean() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(AppConfig.class);
 		ctx.register(FactoryBeanCallingConfig.class);
 		ctx.refresh();
 		assertThat(ctx.getBean("myString")).isEqualTo("true");
-		ctx.close();
 	}
 
 
@@ -108,12 +101,12 @@ class ConfigurationWithFactoryBeanAndAutowiringTests {
 		private boolean initialized = false;
 
 		@Override
-		public void afterPropertiesSet() {
+		public void afterPropertiesSet() throws Exception {
 			this.initialized = true;
 		}
 
 		@Override
-		public String getObject() {
+		public String getObject() throws Exception {
 			return "foo";
 		}
 
@@ -142,7 +135,7 @@ class ConfigurationWithFactoryBeanAndAutowiringTests {
 		}
 
 		@Override
-		public T getObject() {
+		public T getObject() throws Exception {
 			return obj;
 		}
 

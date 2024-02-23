@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,55 +16,48 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import io.reactivex.rxjava3.core.Single;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.ui.Model;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.validation.Validator;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.SessionAttributes;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.support.ConfigurableWebBindingInitializer;
 import org.springframework.web.bind.support.WebBindingInitializer;
 import org.springframework.web.bind.support.WebExchangeDataBinder;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.method.ResolvableMethod;
 import org.springframework.web.reactive.result.method.SyncInvocableHandlerMethod;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebSession;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.method.ResolvableMethod;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+import rx.Single;
+
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link ModelInitializer}.
+ * Unit tests for {@link ModelInitializer}.
  *
  * @author Rossen Stoyanchev
  */
-class ModelInitializerTests {
-
-	private static final Duration TIMEOUT = Duration.ofMillis(5000);
-
+public class ModelInitializerTests {
 
 	private ModelInitializer modelInitializer;
 
@@ -72,23 +65,22 @@ class ModelInitializerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		ReactiveAdapterRegistry adapterRegistry = ReactiveAdapterRegistry.getSharedInstance();
 
 		ArgumentResolverConfigurer resolverConfigurer = new ArgumentResolverConfigurer();
 		resolverConfigurer.addCustomResolver(new ModelMethodArgumentResolver(adapterRegistry));
 
 		ControllerMethodResolver methodResolver = new ControllerMethodResolver(
-				resolverConfigurer, adapterRegistry, new StaticApplicationContext(),
-				Collections.emptyList(), null);
+				resolverConfigurer, adapterRegistry, new StaticApplicationContext(), Collections.emptyList());
 
 		this.modelInitializer = new ModelInitializer(methodResolver, adapterRegistry);
 	}
 
 
 	@Test
-	void initBinderMethod() {
-		Validator validator = mock();
+	public void initBinderMethod() {
+		Validator validator = mock(Validator.class);
 
 		TestController controller = new TestController();
 		controller.setValidator(validator);
@@ -96,7 +88,7 @@ class ModelInitializerTests {
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(GetMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT);
+		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000));
 
 		WebExchangeDataBinder binder = context.createDataBinder(this.exchange, "name");
 		assertThat(binder.getValidators()).isEqualTo(Collections.singletonList(validator));
@@ -104,25 +96,25 @@ class ModelInitializerTests {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	void modelAttributeMethods() {
+	public void modelAttributeMethods() {
 		TestController controller = new TestController();
 		InitBinderBindingContext context = getBindingContext(controller);
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(GetMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT);
+		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000));
 
 		Map<String, Object> model = context.getModel().asMap();
-		assertThat(model).hasSize(5);
+		assertThat(model.size()).isEqualTo(5);
 
 		Object value = model.get("bean");
 		assertThat(((TestBean) value).getName()).isEqualTo("Bean");
 
 		value = model.get("monoBean");
-		assertThat(((Mono<TestBean>) value).block(TIMEOUT).getName()).isEqualTo("Mono Bean");
+		assertThat(((Mono<TestBean>) value).block(Duration.ofMillis(5000)).getName()).isEqualTo("Mono Bean");
 
 		value = model.get("singleBean");
-		assertThat(((Single<TestBean>) value).blockingGet().getName()).isEqualTo("Single Bean");
+		assertThat(((Single<TestBean>) value).toBlocking().value().getName()).isEqualTo("Single Bean");
 
 		value = model.get("voidMethodBean");
 		assertThat(((TestBean) value).getName()).isEqualTo("Void Method Bean");
@@ -132,26 +124,26 @@ class ModelInitializerTests {
 	}
 
 	@Test
-	void saveModelAttributeToSession() {
+	public void saveModelAttributeToSession() {
 		TestController controller = new TestController();
 		InitBinderBindingContext context = getBindingContext(controller);
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(GetMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT);
+		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000));
 
 		WebSession session = this.exchange.getSession().block(Duration.ZERO);
 		assertThat(session).isNotNull();
-		assertThat(session.getAttributes()).isEmpty();
+		assertThat(session.getAttributes().size()).isEqualTo(0);
 
-		context.updateModel(this.exchange);
-		assertThat(session.getAttributes()).hasSize(1);
+		context.saveModel();
+		assertThat(session.getAttributes().size()).isEqualTo(1);
 		assertThat(((TestBean) session.getRequiredAttribute("bean")).getName()).isEqualTo("Bean");
 	}
 
 	@Test
-	void retrieveModelAttributeFromSession() {
-		WebSession session = this.exchange.getSession().block(TIMEOUT);
+	public void retrieveModelAttributeFromSession() {
+		WebSession session = this.exchange.getSession().block(Duration.ZERO);
 		assertThat(session).isNotNull();
 
 		TestBean testBean = new TestBean("Session Bean");
@@ -162,28 +154,28 @@ class ModelInitializerTests {
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(GetMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT);
+		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000));
 
-		context.updateModel(this.exchange);
-		assertThat(session.getAttributes()).hasSize(1);
+		context.saveModel();
+		assertThat(session.getAttributes().size()).isEqualTo(1);
 		assertThat(((TestBean) session.getRequiredAttribute("bean")).getName()).isEqualTo("Session Bean");
 	}
 
 	@Test
-	void requiredSessionAttributeMissing() {
+	public void requiredSessionAttributeMissing() {
 		TestController controller = new TestController();
 		InitBinderBindingContext context = getBindingContext(controller);
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(PostMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
 		assertThatIllegalArgumentException().isThrownBy(() ->
-				this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT))
+						this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000)))
 			.withMessage("Required attribute 'missing-bean' is missing.");
 	}
 
 	@Test
-	void clearModelAttributeFromSession() {
-		WebSession session = this.exchange.getSession().block(TIMEOUT);
+	public void clearModelAttributeFromSession() {
+		WebSession session = this.exchange.getSession().block(Duration.ZERO);
 		assertThat(session).isNotNull();
 
 		TestBean testBean = new TestBean("Session Bean");
@@ -194,12 +186,12 @@ class ModelInitializerTests {
 
 		Method method = ResolvableMethod.on(TestController.class).annotPresent(GetMapping.class).resolveMethod();
 		HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(TIMEOUT);
+		this.modelInitializer.initModel(handlerMethod, context, this.exchange).block(Duration.ofMillis(5000));
 
 		context.getSessionStatus().setComplete();
-		context.updateModel(this.exchange);
+		context.saveModel();
 
-		assertThat(session.getAttributes()).isEmpty();
+		assertThat(session.getAttributes().size()).isEqualTo(0);
 	}
 
 
@@ -208,11 +200,10 @@ class ModelInitializerTests {
 				MethodIntrospector.selectMethods(controller.getClass(), BINDER_METHODS)
 						.stream()
 						.map(method -> new SyncInvocableHandlerMethod(controller, method))
-						.toList();
+						.collect(Collectors.toList());
 
 		WebBindingInitializer bindingInitializer = new ConfigurableWebBindingInitializer();
-		return new InitBinderBindingContext(
-				bindingInitializer, binderMethods, false, ReactiveAdapterRegistry.getSharedInstance());
+		return new InitBinderBindingContext(bindingInitializer, binderMethods);
 	}
 
 

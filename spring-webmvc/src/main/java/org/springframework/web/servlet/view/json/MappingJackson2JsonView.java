@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.web.servlet.view.json;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,9 +39,11 @@ import org.springframework.web.servlet.View;
  *
  * <p>By default, the entire contents of the model map (with the exception of framework-specific classes)
  * will be encoded as JSON. If the model contains only one key, you can have it extracted encoded as JSON
- * alone via {@link #setExtractValueFromSingleKeyModel}.
+ * alone via  {@link #setExtractValueFromSingleKeyModel}.
  *
  * <p>The default constructor uses the default configuration provided by {@link Jackson2ObjectMapperBuilder}.
+ *
+ * <p>Compatible with Jackson 2.6 and higher, as of Spring 4.3.
  *
  * @author Jeremy Grelle
  * @author Arjen Poutsma
@@ -95,7 +98,7 @@ public class MappingJackson2JsonView extends AbstractJackson2View {
 	}
 
 	/**
-	 * Indicates whether the JSON output by this view should be prefixed with <code>")]}', "</code>.
+	 * Indicates whether the JSON output by this view should be prefixed with <tt>")]}', "</tt>.
 	 * Default is {@code false}.
 	 * <p>Prefixing the JSON string in this manner is used to help prevent JSON Hijacking.
 	 * The prefix renders the string syntactically invalid as a script so that it cannot be hijacked.
@@ -106,6 +109,9 @@ public class MappingJackson2JsonView extends AbstractJackson2View {
 		this.jsonPrefix = (prefixJson ? ")]}', " : null);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void setModelKey(String modelKey) {
 		this.modelKeys = Collections.singleton(modelKey);
@@ -149,7 +155,7 @@ public class MappingJackson2JsonView extends AbstractJackson2View {
 	 */
 	@Override
 	protected Object filterModel(Map<String, Object> model) {
-		Map<String, Object> result = CollectionUtils.newHashMap(model.size());
+		Map<String, Object> result = new HashMap<>(model.size());
 		Set<String> modelKeys = (!CollectionUtils.isEmpty(this.modelKeys) ? this.modelKeys : model.keySet());
 		model.forEach((clazz, value) -> {
 			if (!(value instanceof BindingResult) && modelKeys.contains(clazz) &&

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,32 +36,32 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  */
-class AnnotationExceptionHandlerMethodResolverTests {
+public class AnnotationExceptionHandlerMethodResolverTests {
 
 	private final AnnotationExceptionHandlerMethodResolver resolver =
 			new AnnotationExceptionHandlerMethodResolver(ExceptionController.class);
 
 
 	@Test
-	void resolveMethodFromAnnotation() {
+	public void resolveMethodFromAnnotation() {
 		IOException exception = new IOException();
 		assertThat(this.resolver.resolveMethod(exception).getName()).isEqualTo("handleIOException");
 	}
 
 	@Test
-	void resolveMethodFromArgument() {
+	public void resolveMethodFromArgument() {
 		IllegalArgumentException exception = new IllegalArgumentException();
 		assertThat(this.resolver.resolveMethod(exception).getName()).isEqualTo("handleIllegalArgumentException");
 	}
 
 	@Test
-	void resolveMethodFromArgumentWithErrorType() {
+	public void resolveMethodFromArgumentWithErrorType() {
 		AssertionError exception = new AssertionError();
 		assertThat(this.resolver.resolveMethod(new IllegalStateException(exception)).getName()).isEqualTo("handleAssertionError");
 	}
 
 	@Test
-	void resolveMethodExceptionSubType() {
+	public void resolveMethodExceptionSubType() {
 		IOException ioException = new FileNotFoundException();
 		assertThat(this.resolver.resolveMethod(ioException).getName()).isEqualTo("handleIOException");
 		SocketException bindException = new BindException();
@@ -69,38 +69,38 @@ class AnnotationExceptionHandlerMethodResolverTests {
 	}
 
 	@Test
-	void resolveMethodBestMatch() {
+	public void resolveMethodBestMatch() {
 		SocketException exception = new SocketException();
 		assertThat(this.resolver.resolveMethod(exception).getName()).isEqualTo("handleSocketException");
 	}
 
 	@Test
-	void resolveMethodNoMatch() {
+	public void resolveMethodNoMatch() {
 		Exception exception = new Exception();
 		assertThat(this.resolver.resolveMethod(exception)).as("1st lookup").isNull();
 		assertThat(this.resolver.resolveMethod(exception)).as("2nd lookup from cache").isNull();
 	}
 
 	@Test
-	void resolveMethodInherited() {
+	public void resolveMethodInherited() {
 		IOException exception = new IOException();
 		assertThat(this.resolver.resolveMethod(exception).getName()).isEqualTo("handleIOException");
 	}
 
 	@Test
-	void resolveMethodAgainstCause() {
+	public void resolveMethodAgainstCause() {
 		IllegalStateException exception = new IllegalStateException(new IOException());
 		assertThat(this.resolver.resolveMethod(exception).getName()).isEqualTo("handleIOException");
 	}
 
 	@Test
-	void ambiguousExceptionMapping() {
+	public void ambiguousExceptionMapping() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				new AnnotationExceptionHandlerMethodResolver(AmbiguousController.class));
 	}
 
 	@Test
-	void noExceptionMapping() {
+	public void noExceptionMapping() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				new AnnotationExceptionHandlerMethodResolver(NoExceptionController.class));
 	}
@@ -134,7 +134,7 @@ class AnnotationExceptionHandlerMethodResolverTests {
 	static class InheritedController extends ExceptionController {
 
 		@Override
-		public void handleIOException() {
+		public void handleIOException()	{
 		}
 	}
 

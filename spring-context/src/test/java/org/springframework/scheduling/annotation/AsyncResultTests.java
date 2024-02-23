@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,23 @@ import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Juergen Hoeller
  */
-class AsyncResultTests {
+public class AsyncResultTests {
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void asyncResultWithCallbackAndValue() throws Exception {
 		String value = "val";
 		final Set<String> values = new HashSet<>(1);
-		org.springframework.util.concurrent.ListenableFuture<String> future = AsyncResult.forValue(value);
-		future.addCallback(new org.springframework.util.concurrent.ListenableFutureCallback<>() {
+		ListenableFuture<String> future = AsyncResult.forValue(value);
+		future.addCallback(new ListenableFutureCallback<String>() {
 			@Override
 			public void onSuccess(String result) {
 				values.add(result);
@@ -47,19 +49,18 @@ class AsyncResultTests {
 				throw new AssertionError("Failure callback not expected: " + ex, ex);
 			}
 		});
-		assertThat(values).singleElement().isSameAs(value);
+		assertThat(values.iterator().next()).isSameAs(value);
 		assertThat(future.get()).isSameAs(value);
 		assertThat(future.completable().get()).isSameAs(value);
 		future.completable().thenAccept(v -> assertThat(v).isSameAs(value));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void asyncResultWithCallbackAndException() {
+	public void asyncResultWithCallbackAndException() throws Exception {
 		IOException ex = new IOException();
 		final Set<Throwable> values = new HashSet<>(1);
-		org.springframework.util.concurrent.ListenableFuture<String> future = AsyncResult.forExecutionException(ex);
-		future.addCallback(new org.springframework.util.concurrent.ListenableFutureCallback<>() {
+		ListenableFuture<String> future = AsyncResult.forExecutionException(ex);
+		future.addCallback(new ListenableFutureCallback<String>() {
 			@Override
 			public void onSuccess(String result) {
 				throw new AssertionError("Success callback not expected: " + result);
@@ -69,41 +70,39 @@ class AsyncResultTests {
 				values.add(ex);
 			}
 		});
-		assertThat(values).singleElement().isSameAs(ex);
-		assertThatExceptionOfType(ExecutionException.class)
-			.isThrownBy(future::get)
+		assertThat(values.iterator().next()).isSameAs(ex);
+		assertThatExceptionOfType(ExecutionException.class).isThrownBy(
+				future::get)
 			.withCause(ex);
-		assertThatExceptionOfType(ExecutionException.class)
-			.isThrownBy(future.completable()::get)
+		assertThatExceptionOfType(ExecutionException.class).isThrownBy(
+				future.completable()::get)
 			.withCause(ex);
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void asyncResultWithSeparateCallbacksAndValue() throws Exception {
 		String value = "val";
 		final Set<String> values = new HashSet<>(1);
-		org.springframework.util.concurrent.ListenableFuture<String> future = AsyncResult.forValue(value);
+		ListenableFuture<String> future = AsyncResult.forValue(value);
 		future.addCallback(values::add, ex -> new AssertionError("Failure callback not expected: " + ex));
-		assertThat(values).singleElement().isSameAs(value);
+		assertThat(values.iterator().next()).isSameAs(value);
 		assertThat(future.get()).isSameAs(value);
 		assertThat(future.completable().get()).isSameAs(value);
 		future.completable().thenAccept(v -> assertThat(v).isSameAs(value));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	public void asyncResultWithSeparateCallbacksAndException() {
+	public void asyncResultWithSeparateCallbacksAndException() throws Exception {
 		IOException ex = new IOException();
 		final Set<Throwable> values = new HashSet<>(1);
-		org.springframework.util.concurrent.ListenableFuture<String> future = AsyncResult.forExecutionException(ex);
+		ListenableFuture<String> future = AsyncResult.forExecutionException(ex);
 		future.addCallback(result -> new AssertionError("Success callback not expected: " + result), values::add);
-		assertThat(values).singleElement().isSameAs(ex);
-		assertThatExceptionOfType(ExecutionException.class)
-			.isThrownBy(future::get)
+		assertThat(values.iterator().next()).isSameAs(ex);
+		assertThatExceptionOfType(ExecutionException.class).isThrownBy(
+				future::get)
 			.withCause(ex);
-		assertThatExceptionOfType(ExecutionException.class)
-			.isThrownBy(future.completable()::get)
+		assertThatExceptionOfType(ExecutionException.class).isThrownBy(
+				future.completable()::get)
 			.withCause(ex);
 	}
 

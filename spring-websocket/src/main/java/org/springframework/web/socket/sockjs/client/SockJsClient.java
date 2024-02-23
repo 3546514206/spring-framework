@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,8 @@
 
 package org.springframework.web.socket.sockjs.client;
 
-import java.net.URI;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.context.Lifecycle;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
@@ -35,6 +25,8 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.SettableListenableFuture;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
@@ -44,18 +36,21 @@ import org.springframework.web.socket.sockjs.frame.SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.transport.TransportType;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+import java.security.Principal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * A SockJS implementation of
  * {@link org.springframework.web.socket.client.WebSocketClient WebSocketClient}
  * with fallback alternatives that simulate a WebSocket interaction through plain
- * HTTP streaming and long polling techniques.
+ * HTTP streaming and long polling techniques..
  *
  * <p>Implements {@link Lifecycle} in order to propagate lifecycle events to
  * the transports it is configured with.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
- * @author Juergen Hoeller
  * @since 4.1
  * @see <a href="https://github.com/sockjs/sockjs-client">https://github.com/sockjs/sockjs-client</a>
  * @see org.springframework.web.socket.sockjs.client.Transport
@@ -67,7 +62,14 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 
 	private static final Log logger = LogFactory.getLog(SockJsClient.class);
 
-	private static final Set<String> supportedProtocols = Set.of("ws", "wss", "http", "https");
+	private static final Set<String> supportedProtocols = new HashSet<>(4);
+
+	static {
+		supportedProtocols.add("ws");
+		supportedProtocols.add("wss");
+		supportedProtocols.add("http");
+		supportedProtocols.add("https");
+	}
 
 
 	private final List<Transport> transports;
@@ -83,7 +85,7 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 	@Nullable
 	private TaskScheduler connectTimeoutScheduler;
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 	private final Map<URI, ServerInfo> serverInfoCache = new ConcurrentHashMap<>();
 
@@ -107,8 +109,8 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 
 	private static InfoReceiver initInfoReceiver(List<Transport> transports) {
 		for (Transport transport : transports) {
-			if (transport instanceof InfoReceiver infoReceiver) {
-				return infoReceiver;
+			if (transport instanceof InfoReceiver) {
+				return ((InfoReceiver) transport);
 			}
 		}
 		return new RestTemplateXhrTransport();
@@ -195,8 +197,11 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 		if (!isRunning()) {
 			this.running = true;
 			for (Transport transport : this.transports) {
-				if (transport instanceof Lifecycle lifecycle && !lifecycle.isRunning()) {
-					lifecycle.start();
+				if (transport instanceof Lifecycle) {
+					Lifecycle lifecycle = (Lifecycle) transport;
+					if (!lifecycle.isRunning()) {
+						lifecycle.start();
+					}
 				}
 			}
 		}
@@ -207,8 +212,11 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 		if (isRunning()) {
 			this.running = false;
 			for (Transport transport : this.transports) {
-				if (transport instanceof Lifecycle lifecycle && lifecycle.isRunning()) {
-					lifecycle.stop();
+				if (transport instanceof Lifecycle) {
+					Lifecycle lifecycle = (Lifecycle) transport;
+					if (lifecycle.isRunning()) {
+						lifecycle.stop();
+					}
 				}
 			}
 		}
@@ -221,16 +229,16 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 
 
 	@Override
-	public CompletableFuture<WebSocketSession> execute(
+	public ListenableFuture<WebSocketSession> doHandshake(
 			WebSocketHandler handler, String uriTemplate, Object... uriVars) {
 
 		Assert.notNull(uriTemplate, "uriTemplate must not be null");
 		URI uri = UriComponentsBuilder.fromUriString(uriTemplate).buildAndExpand(uriVars).encode().toUri();
-		return execute(handler, null, uri);
+		return doHandshake(handler, null, uri);
 	}
 
 	@Override
-	public final CompletableFuture<WebSocketSession> execute(
+	public final ListenableFuture<WebSocketSession> doHandshake(
 			WebSocketHandler handler, @Nullable WebSocketHttpHeaders headers, URI url) {
 
 		Assert.notNull(handler, "WebSocketHandler is required");
@@ -241,31 +249,18 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 			throw new IllegalArgumentException("Invalid scheme: '" + scheme + "'");
 		}
 
-		CompletableFuture<WebSocketSession> connectFuture = new CompletableFuture<>();
+		SettableListenableFuture<WebSocketSession> connectFuture = new SettableListenableFuture<>();
 		try {
-			SockJsUrlInfo sockJsUrlInfo = buildSockJsUrlInfo(url);
+			SockJsUrlInfo sockJsUrlInfo = new SockJsUrlInfo(url);
 			ServerInfo serverInfo = getServerInfo(sockJsUrlInfo, getHttpRequestHeaders(headers));
 			createRequest(sockJsUrlInfo, headers, serverInfo).connect(handler, connectFuture);
-		}
-		catch (Exception exception) {
+		} catch (Throwable exception) {
 			if (logger.isErrorEnabled()) {
 				logger.error("Initial SockJS \"Info\" request to server failed, url=" + url, exception);
 			}
-			connectFuture.completeExceptionally(exception);
+			connectFuture.setException(exception);
 		}
 		return connectFuture;
-	}
-
-	/**
-	 * Create a new {@link SockJsUrlInfo} for the current client execution.
-	 * <p>The default implementation builds a {@code SockJsUrlInfo} which
-	 * calculates a random server id and session id if necessary.
-	 * @param url the target URL
-	 * @since 6.1.3
-	 * @see SockJsUrlInfo#SockJsUrlInfo(URI)
-	 */
-	protected SockJsUrlInfo buildSockJsUrlInfo(URI url) {
-		return new SockJsUrlInfo(url);
 	}
 
 	@Nullable
@@ -341,7 +336,7 @@ public class SockJsClient implements WebSocketClient, Lifecycle {
 	}
 
 	/**
-	 * By default, the result of a SockJS "Info" request, including whether the
+	 * By default the result of a SockJS "Info" request, including whether the
 	 * server has WebSocket disabled and how long the request took (used for
 	 * calculating transport timeout time) is cached. This method can be used to
 	 * clear that cache hence causing it to re-populate.

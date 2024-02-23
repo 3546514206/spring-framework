@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,33 +17,32 @@
 package org.springframework.aop.support;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.Advised;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.aop.testfixture.interceptor.SerializableNopInterceptor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.Person;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.io.Resource;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.aop.interceptor.SerializableNopInterceptor;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.Person;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.util.SerializationTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
  * @author Rod Johnson
  * @author Chris Beams
  */
-class RegexpMethodPointcutAdvisorIntegrationTests {
+public class RegexpMethodPointcutAdvisorIntegrationTests {
 
 	private static final Resource CONTEXT =
 			qualifiedResource(RegexpMethodPointcutAdvisorIntegrationTests.class, "context.xml");
 
 
 	@Test
-	void testSinglePattern() throws Throwable {
+	public void testSinglePattern() throws Throwable {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(CONTEXT);
 		ITestBean advised = (ITestBean) bf.getBean("settersAdvised");
@@ -62,7 +61,7 @@ class RegexpMethodPointcutAdvisorIntegrationTests {
 	}
 
 	@Test
-	void testMultiplePatterns() throws Throwable {
+	public void testMultiplePatterns() throws Throwable {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(CONTEXT);
 		// This is a CGLIB proxy, so we can proxy it to the target class
@@ -86,7 +85,7 @@ class RegexpMethodPointcutAdvisorIntegrationTests {
 	}
 
 	@Test
-	void testSerialization() throws Throwable {
+	public void testSerialization() throws Throwable {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(CONTEXT);
 		// This is a CGLIB proxy, so we can proxy it to the target class
@@ -109,7 +108,7 @@ class RegexpMethodPointcutAdvisorIntegrationTests {
 		assertThat(nop.getCount()).isEqualTo(2);
 
 		// Serialize and continue...
-		p = SerializationTestUtils.serializeAndDeserialize(p);
+		p = (Person) SerializationTestUtils.serializeAndDeserialize(p);
 		assertThat(p.getAge()).isEqualTo(newAge);
 		// Remembers count, but we need to get a new reference to nop...
 		nop = (SerializableNopInterceptor) ((Advised) p).getAdvisors()[0].getAdvice();

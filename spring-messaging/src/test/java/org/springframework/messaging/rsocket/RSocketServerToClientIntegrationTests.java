@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,14 @@
 
 package org.springframework.messaging.rsocket;
 
-import java.time.Duration;
-
+import io.rsocket.RSocketFactory;
 import io.rsocket.SocketAcceptor;
-import io.rsocket.core.RSocketServer;
 import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.TcpServerTransport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
-import reactor.test.StepVerifier;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,14 +31,22 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Schedulers;
+import reactor.test.StepVerifier;
+
+import java.time.Duration;
 
 /**
  * Client-side handling of requests initiated from the server side.
  *
- * @author Rossen Stoyanchev
+ *  @author Rossen Stoyanchev
  * @author Brian Clozel
  */
-class RSocketServerToClientIntegrationTests {
+public class RSocketServerToClientIntegrationTests {
 
 	private static AnnotationConfigApplicationContext context;
 
@@ -55,85 +55,89 @@ class RSocketServerToClientIntegrationTests {
 
 	@BeforeAll
 	@SuppressWarnings("ConstantConditions")
-	static void setupOnce() {
+	public static void setupOnce() {
+
 		context = new AnnotationConfigApplicationContext(RSocketConfig.class);
 		RSocketMessageHandler messageHandler = context.getBean(RSocketMessageHandler.class);
 		SocketAcceptor responder = messageHandler.responder();
 
-		server = RSocketServer.create(responder)
-				.payloadDecoder(PayloadDecoder.ZERO_COPY)
-				.bind(TcpServerTransport.create("localhost", 0))
+		server = RSocketFactory.receive()
+				.frameDecoder(PayloadDecoder.ZERO_COPY)
+				.acceptor(responder)
+				.transport(TcpServerTransport.create("localhost", 0))
+				.start()
 				.block();
 	}
 
 	@AfterAll
-	static void tearDownOnce() {
+	public static void tearDownOnce() {
 		server.dispose();
 	}
 
 
 	@Test
-	void echo() {
+	public void echo() {
 		connectAndRunTest("echo");
 	}
 
 	@Test
-	void echoAsync() {
+	public void echoAsync() {
 		connectAndRunTest("echo-async");
 	}
 
 	@Test
-	void echoStream() {
+	public void echoStream() {
 		connectAndRunTest("echo-stream");
 	}
 
 	@Test
-	void echoChannel() {
+	public void echoChannel() {
 		connectAndRunTest("echo-channel");
 	}
 
 
 	private static void connectAndRunTest(String connectionRoute) {
-		context.getBean(ServerController.class).reset();
+
+		ServerController serverController = context.getBean(ServerController.class);
+		serverController.reset();
 
 		RSocketStrategies strategies = context.getBean(RSocketStrategies.class);
-		SocketAcceptor responder = RSocketMessageHandler.responder(strategies, new ClientHandler());
+		ClientRSocketFactoryConfigurer clientResponderConfigurer =
+				RSocketMessageHandler.clientResponder(strategies, new ClientHandler());
 
 		RSocketRequester requester = null;
 		try {
 			requester = RSocketRequester.builder()
 					.setupRoute(connectionRoute)
 					.rsocketStrategies(strategies)
-					.rsocketConnector(connector -> connector.acceptor(responder))
-					.tcp("localhost", server.address().getPort());
+					.rsocketFactory(clientResponderConfigurer)
+					.connectTcp("localhost", server.address().getPort())
+					.block();
 
-			// Trigger connection establishment.
-			requester.rsocketClient().source().block();
-
-			context.getBean(ServerController.class).await(Duration.ofSeconds(5));
+			serverController.await(Duration.ofSeconds(5));
 		}
 		finally {
 			if (requester != null) {
-				requester.rsocketClient().dispose();
+				requester.rsocket().dispose();
 			}
 		}
 	}
 
 
 	@Controller
-	@SuppressWarnings("unused")
+	@SuppressWarnings({"unused", "NullableProblems"})
 	static class ServerController {
 
 		// Must be initialized by @Test method...
-		volatile Sinks.Empty<Void> resultSink;
+		volatile MonoProcessor<Void> result;
 
 
-		void reset() {
-			this.resultSink = Sinks.empty();
+		public void reset() {
+			this.result = MonoProcessor.create();
 		}
 
-		void await(Duration duration) {
-			this.resultSink.asMono().block(duration);
+		public void await(Duration duration) {
+			this.result.block(duration);
 		}
 
 
@@ -198,29 +202,24 @@ class RSocketServerToClientIntegrationTests {
 			});
 		}
 
+
 		private void runTest(Runnable testEcho) {
 			Mono.fromRunnable(testEcho)
-					.subscribeOn(Schedulers.boundedElastic()) // StepVerifier will block
-					.subscribe(
-							aVoid -> {},
-							ex -> resultSink.tryEmitError(ex), // Ignore result: signals cannot compete
-							() -> resultSink.tryEmitEmpty()
-					);
-		}
-
-		@MessageMapping("fnf")
-		void handleFireAndForget() {
+					.doOnError(ex -> result.onError(ex))
+					.doOnSuccess(o -> result.onComplete())
+					.subscribeOn(Schedulers.elastic()) // StepVerifier will block
+					.subscribe();
 		}
 	}
 
 
 	private static class ClientHandler {
 
-		final Sinks.Many<String> fireForgetPayloads = Sinks.many().replay().all();
+		final ReplayProcessor<String> fireForgetPayloads = ReplayProcessor.create();
 
 		@MessageMapping("receive")
 		void receive(String payload) {
-			this.fireForgetPayloads.emitNext(payload, Sinks.EmitFailureHandler.FAIL_FAST);
+			this.fireForgetPayloads.onNext(payload);
 		}
 
 		@MessageMapping("echo")
@@ -249,19 +248,19 @@ class RSocketServerToClientIntegrationTests {
 	static class RSocketConfig {
 
 		@Bean
-		ServerController serverController() {
+		public ServerController serverController() {
 			return new ServerController();
 		}
 
 		@Bean
-		RSocketMessageHandler serverMessageHandler() {
+		public RSocketMessageHandler serverMessageHandler() {
 			RSocketMessageHandler handler = new RSocketMessageHandler();
 			handler.setRSocketStrategies(rsocketStrategies());
 			return handler;
 		}
 
 		@Bean
-		RSocketStrategies rsocketStrategies() {
+		public RSocketStrategies rsocketStrategies() {
 			return RSocketStrategies.create();
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,6 @@
 
 package org.springframework.scheduling.quartz;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-
-import javax.sql.DataSource;
-
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
@@ -32,7 +24,6 @@ import org.quartz.impl.SchedulerRepository;
 import org.quartz.impl.StdSchedulerFactory;
 import org.quartz.simpl.SimpleThreadPool;
 import org.quartz.spi.JobFactory;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
@@ -48,6 +39,13 @@ import org.springframework.lang.Nullable;
 import org.springframework.scheduling.SchedulingException;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+
+import javax.sql.DataSource;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link FactoryBean} that creates and configures a Quartz {@link org.quartz.Scheduler},
@@ -310,11 +308,9 @@ public class SchedulerFactoryBean extends SchedulerAccessor implements FactoryBe
 
 	/**
 	 * Set the default {@link DataSource} to be used by the Scheduler.
+	 * If set, this will override corresponding settings in Quartz properties.
 	 * <p>Note: If this is set, the Quartz settings should not define
 	 * a job store "dataSource" to avoid meaningless double configuration.
-	 * Also, do not define a "org.quartz.jobStore.class" property at all.
-	 * (You may explicitly define Spring's {@link LocalDataSourceJobStore}
-	 * but that's the default when using this method anyway.)
 	 * <p>A Spring-specific subclass of Quartz' JobStoreCMT will be used.
 	 * It is therefore strongly recommended to perform all operations on
 	 * the Scheduler within Spring-managed (or plain JTA) transactions.
@@ -527,8 +523,8 @@ public class SchedulerFactoryBean extends SchedulerAccessor implements FactoryBe
 		if (schedulerFactory == null) {
 			// Create local SchedulerFactory instance (typically a StdSchedulerFactory)
 			schedulerFactory = BeanUtils.instantiateClass(this.schedulerFactoryClass);
-			if (schedulerFactory instanceof StdSchedulerFactory stdSchedulerFactory) {
-				initSchedulerFactory(stdSchedulerFactory);
+			if (schedulerFactory instanceof StdSchedulerFactory) {
+				initSchedulerFactory((StdSchedulerFactory) schedulerFactory);
 			}
 			else if (this.configLocation != null || this.quartzProperties != null ||
 					this.taskExecutor != null || this.dataSource != null) {
@@ -572,7 +568,7 @@ public class SchedulerFactoryBean extends SchedulerAccessor implements FactoryBe
 
 		CollectionUtils.mergePropertiesIntoMap(this.quartzProperties, mergedProps);
 		if (this.dataSource != null) {
-			mergedProps.putIfAbsent(StdSchedulerFactory.PROP_JOB_STORE_CLASS, LocalDataSourceJobStore.class.getName());
+			mergedProps.setProperty(StdSchedulerFactory.PROP_JOB_STORE_CLASS, LocalDataSourceJobStore.class.getName());
 		}
 
 		// Determine scheduler name across local settings and Quartz properties...
@@ -622,11 +618,11 @@ public class SchedulerFactoryBean extends SchedulerAccessor implements FactoryBe
 				this.jobFactory = new AdaptableJobFactory();
 			}
 			if (this.jobFactory != null) {
-				if (this.applicationContext != null && this.jobFactory instanceof ApplicationContextAware applicationContextAware) {
-					applicationContextAware.setApplicationContext(this.applicationContext);
+				if (this.applicationContext != null && this.jobFactory instanceof ApplicationContextAware) {
+					((ApplicationContextAware) this.jobFactory).setApplicationContext(this.applicationContext);
 				}
-				if (this.jobFactory instanceof SchedulerContextAware schedulerContextAware) {
-					schedulerContextAware.setSchedulerContext(scheduler.getContext());
+				if (this.jobFactory instanceof SchedulerContextAware) {
+					((SchedulerContextAware) this.jobFactory).setSchedulerContext(scheduler.getContext());
 				}
 				scheduler.setJobFactory(this.jobFactory);
 			}
@@ -736,24 +732,27 @@ public class SchedulerFactoryBean extends SchedulerAccessor implements FactoryBe
 			}
 			// Not using the Quartz startDelayed method since we explicitly want a daemon
 			// thread here, not keeping the JVM alive in case of all other threads ending.
-			Thread schedulerThread = new Thread(() -> {
-				try {
-					TimeUnit.SECONDS.sleep(startupDelay);
+			Thread schedulerThread = new Thread() {
+				@Override
+				public void run() {
+					try {
+						TimeUnit.SECONDS.sleep(startupDelay);
+					}
+					catch (InterruptedException ex) {
+						Thread.currentThread().interrupt();
+						// simply proceed
+					}
+					if (logger.isInfoEnabled()) {
+						logger.info("Starting Quartz Scheduler now, after delay of " + startupDelay + " seconds");
+					}
+					try {
+						scheduler.start();
+					}
+					catch (SchedulerException ex) {
+						throw new SchedulingException("Could not start Quartz Scheduler after delay", ex);
+					}
 				}
-				catch (InterruptedException ex) {
-					Thread.currentThread().interrupt();
-					// simply proceed
-				}
-				if (logger.isInfoEnabled()) {
-					logger.info("Starting Quartz Scheduler now, after delay of " + startupDelay + " seconds");
-				}
-				try {
-					scheduler.start();
-				}
-				catch (SchedulerException ex) {
-					throw new SchedulingException("Could not start Quartz Scheduler after delay", ex);
-				}
-			});
+			};
 			schedulerThread.setName("Quartz Scheduler [" + scheduler.getSchedulerName() + "]");
 			schedulerThread.setDaemon(true);
 			schedulerThread.start();

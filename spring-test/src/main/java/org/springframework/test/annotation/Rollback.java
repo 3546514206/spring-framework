@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,12 @@ import java.lang.annotation.Target;
  *
  * <p>When declared as a class-level annotation, {@code @Rollback} defines
  * the default rollback semantics for all test methods within the test class
- * hierarchy or nested class hierarchy. When declared as a method-level annotation,
- * {@code @Rollback} defines rollback semantics for the specific test method,
- * potentially overriding class-level default commit or rollback semantics.
+ * hierarchy. When declared as a method-level annotation, {@code @Rollback}
+ * defines rollback semantics for the specific test method, potentially
+ * overriding class-level default commit or rollback semantics.
  *
- * <p>{@code @Commit} can be used as direct replacement for {@code @Rollback(false)}.
+ * <p>As of Spring Framework 4.2, {@code @Commit} can be used as direct
+ * replacement for {@code @Rollback(false)}.
  *
  * <p><strong>Warning</strong>: Declaring {@code @Commit} and {@code @Rollback}
  * on the same test method or on the same test class is unsupported and may
@@ -47,11 +48,6 @@ import java.lang.annotation.Target;
  * <p>This annotation may be used as a <em>meta-annotation</em> to create
  * custom <em>composed annotations</em>. Consult the source code for
  * {@link Commit @Commit} for a concrete example.
- *
- * <p>As of Spring Framework 5.3, this annotation will be inherited from an
- * enclosing test class by default. See
- * {@link org.springframework.test.context.NestedTestConfiguration @NestedTestConfiguration}
- * for details.
  *
  * @author Sam Brannen
  * @since 2.5

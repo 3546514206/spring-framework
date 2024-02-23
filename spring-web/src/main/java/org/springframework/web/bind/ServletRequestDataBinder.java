@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,49 +16,26 @@
 
 package org.springframework.web.bind;
 
-import java.lang.reflect.Array;
-import java.util.Enumeration;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.Part;
-
 import org.springframework.beans.MutablePropertyValues;
-import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartRequest;
-import org.springframework.web.multipart.support.StandardServletPartUtils;
 import org.springframework.web.util.WebUtils;
+
+import javax.servlet.ServletRequest;
 
 /**
  * Special {@link org.springframework.validation.DataBinder} to perform data binding
  * from servlet request parameters to JavaBeans, including support for multipart files.
  *
- * <p><strong>WARNING</strong>: Data binding can lead to security issues by exposing
- * parts of the object graph that are not meant to be accessed or modified by
- * external clients. Therefore the design and use of data binding should be considered
- * carefully with regard to security. For more details, please refer to the dedicated
- * sections on data binding for
- * <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-initbinder-model-design">Spring Web MVC</a> and
- * <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html#webflux-ann-initbinder-model-design">Spring WebFlux</a>
- * in the reference manual.
- *
  * <p>See the DataBinder/WebDataBinder superclasses for customization options,
  * which include specifying allowed/required fields, and registering custom
  * property editors.
  *
- * <p>Can also be used for manual data binding. Simply instantiate a
- * ServletRequestDataBinder for each binding process, and invoke {@code bind}
- * with the current ServletRequest as argument:
+ * <p>Can also be used for manual data binding in custom web controllers:
+ * for example, in a plain Controller implementation or in a MultiActionController
+ * handler method. Simply instantiate a ServletRequestDataBinder for each binding
+ * process, and invoke {@code bind} with the current ServletRequest as argument:
  *
  * <pre class="code">
  * MyBean myBean = new MyBean();
@@ -74,7 +51,7 @@ import org.springframework.web.util.WebUtils;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @see #bind(jakarta.servlet.ServletRequest)
+ * @see #bind(javax.servlet.ServletRequest)
  * @see #registerCustomEditor
  * @see #setAllowedFields
  * @see #setRequiredFields
@@ -104,34 +81,6 @@ public class ServletRequestDataBinder extends WebDataBinder {
 
 
 	/**
-	 * Use a default or single data constructor to create the target by
-	 * binding request parameters, multipart files, or parts to constructor args.
-	 * <p>After the call, use {@link #getBindingResult()} to check for bind errors.
-	 * If there are none, the target is set, and {@link #bind(ServletRequest)}
-	 * can be called for further initialization via setters.
-	 * @param request the request to bind
-	 * @since 6.1
-	 */
-	public void construct(ServletRequest request) {
-		construct(createValueResolver(request));
-	}
-
-	/**
-	 * Allow subclasses to create the {@link ValueResolver} instance to use.
-	 * @since 6.1
-	 */
-	protected ServletRequestValueResolver createValueResolver(ServletRequest request) {
-		return new ServletRequestValueResolver(request, this);
-	}
-
-	@Override
-	protected boolean shouldConstructArgument(MethodParameter param) {
-		Class<?> type = param.nestedIfOptional().getNestedParameterType();
-		return (super.shouldConstructArgument(param) &&
-				!MultipartFile.class.isAssignableFrom(type) && !Part.class.isAssignableFrom(type));
-	}
-
-	/**
 	 * Bind the parameters of the given request to this binder's target,
 	 * also binding multipart files in case of a multipart request.
 	 * <p>This call can create field errors, representing basic binding
@@ -141,36 +90,21 @@ public class ServletRequestDataBinder extends WebDataBinder {
 	 * HTTP parameters: i.e. "uploadedFile" to an "uploadedFile" bean property,
 	 * invoking a "setUploadedFile" setter method.
 	 * <p>The type of the target property for a multipart file can be MultipartFile,
-	 * byte[], or String. Servlet Part binding is also supported when the
-	 * request has not been parsed to MultipartRequest via MultipartResolver.
-	 * @param request the request with parameters to bind (can be multipart)
+	 * byte[], or String. The latter two receive the contents of the uploaded file;
+	 * all metadata like original file name, content type, etc are lost in those cases.
+	 * @param request request with parameters to bind (can be multipart)
 	 * @see org.springframework.web.multipart.MultipartHttpServletRequest
-	 * @see org.springframework.web.multipart.MultipartRequest
 	 * @see org.springframework.web.multipart.MultipartFile
-	 * @see jakarta.servlet.http.Part
 	 * @see #bind(org.springframework.beans.PropertyValues)
 	 */
 	public void bind(ServletRequest request) {
-		if (shouldNotBindPropertyValues()) {
-			return;
-		}
 		MutablePropertyValues mpvs = new ServletRequestParameterPropertyValues(request);
 		MultipartRequest multipartRequest = WebUtils.getNativeRequest(request, MultipartRequest.class);
 		if (multipartRequest != null) {
 			bindMultipart(multipartRequest.getMultiFileMap(), mpvs);
 		}
-		else if (isFormDataPost(request)) {
-			HttpServletRequest httpServletRequest = WebUtils.getNativeRequest(request, HttpServletRequest.class);
-			if (httpServletRequest != null && HttpMethod.POST.matches(httpServletRequest.getMethod())) {
-				StandardServletPartUtils.bindParts(httpServletRequest, mpvs, isBindEmptyMultipartFiles());
-			}
-		}
 		addBindValues(mpvs, request);
 		doBind(mpvs);
-	}
-
-	private static boolean isFormDataPost(ServletRequest request) {
-		return StringUtils.startsWithIgnoreCase(request.getContentType(), MediaType.MULTIPART_FORM_DATA_VALUE);
 	}
 
 	/**
@@ -194,95 +128,6 @@ public class ServletRequestDataBinder extends WebDataBinder {
 			throw new ServletRequestBindingException(
 					"Errors binding onto object '" + getBindingResult().getObjectName() + "'",
 					new BindException(getBindingResult()));
-		}
-	}
-
-	/**
-	 * Return a {@code ServletRequest} {@link ValueResolver}. Mainly for use from
-	 * {@link org.springframework.web.bind.support.WebRequestDataBinder}.
-	 * @since 6.1
-	 */
-	public static ValueResolver valueResolver(ServletRequest request, WebDataBinder binder) {
-		return new ServletRequestValueResolver(request, binder);
-	}
-
-
-	/**
-	 * Resolver that looks up values to bind in a {@link ServletRequest}.
-	 */
-	protected static class ServletRequestValueResolver implements ValueResolver {
-
-		private final ServletRequest request;
-
-		private final WebDataBinder dataBinder;
-
-		@Nullable
-		private Set<String> parameterNames;
-
-		protected ServletRequestValueResolver(ServletRequest request, WebDataBinder dataBinder) {
-			this.request = request;
-			this.dataBinder = dataBinder;
-		}
-
-		protected ServletRequest getRequest() {
-			return this.request;
-		}
-
-		@Nullable
-		@Override
-		public final Object resolveValue(String name, Class<?> paramType) {
-			Object value = getRequestParameter(name, paramType);
-			if (value == null) {
-				value = this.dataBinder.resolvePrefixValue(name, paramType, this::getRequestParameter);
-			}
-			if (value == null) {
-				value = getMultipartValue(name);
-			}
-			return value;
-		}
-
-		@Nullable
-		protected Object getRequestParameter(String name, Class<?> type) {
-			Object value = this.request.getParameterValues(name);
-			return (ObjectUtils.isArray(value) && Array.getLength(value) == 1 ? Array.get(value, 0) : value);
-		}
-
-		@Nullable
-		private Object getMultipartValue(String name) {
-			MultipartRequest multipartRequest = WebUtils.getNativeRequest(this.request, MultipartRequest.class);
-			if (multipartRequest != null) {
-				List<MultipartFile> files = multipartRequest.getFiles(name);
-				if (!files.isEmpty()) {
-					return (files.size() == 1 ? files.get(0) : files);
-				}
-			}
-			else if (isFormDataPost(this.request)) {
-				HttpServletRequest httpRequest = WebUtils.getNativeRequest(this.request, HttpServletRequest.class);
-				if (httpRequest != null && HttpMethod.POST.matches(httpRequest.getMethod())) {
-					List<Part> parts = StandardServletPartUtils.getParts(httpRequest, name);
-					if (!parts.isEmpty()) {
-						return (parts.size() == 1 ? parts.get(0) : parts);
-					}
-				}
-			}
-			return null;
-		}
-
-		@Override
-		public Set<String> getNames() {
-			if (this.parameterNames == null) {
-				this.parameterNames = initParameterNames(this.request);
-			}
-			return this.parameterNames;
-		}
-
-		protected Set<String> initParameterNames(ServletRequest request) {
-			Set<String> set = new LinkedHashSet<>();
-			Enumeration<String> enumeration = request.getParameterNames();
-			while (enumeration.hasMoreElements()) {
-				set.add(enumeration.nextElement());
-			}
-			return set;
 		}
 	}
 

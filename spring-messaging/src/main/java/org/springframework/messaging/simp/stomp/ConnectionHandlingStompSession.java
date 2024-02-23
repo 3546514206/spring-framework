@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.messaging.simp.stomp;
 
-import java.util.concurrent.CompletableFuture;
+import org.springframework.messaging.tcp.TcpConnectionHandler;
+import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * A {@link StompSession} that implements
@@ -29,22 +30,11 @@ import java.util.concurrent.CompletableFuture;
  * @author Rossen Stoyanchev
  * @since 4.2
  */
-public interface ConnectionHandlingStompSession extends StompSession, StompTcpConnectionHandler<byte[]> {
+public interface ConnectionHandlingStompSession extends StompSession, TcpConnectionHandler<byte[]> {
 
 	/**
 	 * Return a future that will complete when the session is ready for use.
-	 * @deprecated as of 6.0, in favor of {@link #getSession()}
 	 */
-	@Deprecated(since = "6.0")
-	default org.springframework.util.concurrent.ListenableFuture<StompSession> getSessionFuture() {
-		return new org.springframework.util.concurrent.CompletableToListenableFutureAdapter<>(
-				getSession());
-	}
-
-	/**
-	 * Return a future that will complete when the session is ready for use.
-	 * @since 6.0
-	 */
-	CompletableFuture<StompSession> getSession();
+	ListenableFuture<StompSession> getSessionFuture();
 
 }

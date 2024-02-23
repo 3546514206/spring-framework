@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,19 @@
 package org.springframework.cache.jcache.config;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.jcache.interceptor.DefaultJCacheOperationSource;
 import org.springframework.cache.jcache.interceptor.JCacheInterceptor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.contextsupport.testfixture.jcache.AbstractJCacheAnnotationTests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Stephane Nicoll
  */
-class JCacheNamespaceDrivenTests extends AbstractJCacheAnnotationTests {
+public class JCacheNamespaceDrivenTests extends AbstractJCacheAnnotationTests {
 
 	@Override
 	protected ApplicationContext getApplicationContext() {
@@ -40,7 +38,7 @@ class JCacheNamespaceDrivenTests extends AbstractJCacheAnnotationTests {
 	}
 
 	@Test
-	void cacheResolver() {
+	public void cacheResolver() {
 		ConfigurableApplicationContext context = new GenericXmlApplicationContext(
 				"/org/springframework/cache/jcache/config/jCacheNamespaceDriven-resolver.xml");
 
@@ -50,7 +48,7 @@ class JCacheNamespaceDrivenTests extends AbstractJCacheAnnotationTests {
 	}
 
 	@Test
-	void testCacheErrorHandler() {
+	public void testCacheErrorHandler() {
 		JCacheInterceptor ci = ctx.getBean(JCacheInterceptor.class);
 		assertThat(ci.getErrorHandler()).isSameAs(ctx.getBean("errorHandler", CacheErrorHandler.class));
 	}

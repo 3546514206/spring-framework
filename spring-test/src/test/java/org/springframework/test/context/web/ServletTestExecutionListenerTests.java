@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.BDDMockito;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
@@ -38,7 +39,7 @@ import static org.springframework.test.context.web.ServletTestExecutionListener.
 import static org.springframework.test.context.web.ServletTestExecutionListener.RESET_REQUEST_CONTEXT_HOLDER_ATTRIBUTE;
 
 /**
- * Tests for {@link ServletTestExecutionListener}.
+ * Unit tests for {@link ServletTestExecutionListener}.
  *
  * @author Sam Brannen
  * @author Phillip Webb
@@ -48,9 +49,9 @@ class ServletTestExecutionListenerTests {
 
 	private static final String SET_UP_OUTSIDE_OF_STEL = "setUpOutsideOfStel";
 
-	private final WebApplicationContext wac = mock();
+	private final WebApplicationContext wac = mock(WebApplicationContext.class);
 	private final MockServletContext mockServletContext = new MockServletContext();
-	private final TestContext testContext = mock();
+	private final TestContext testContext = mock(TestContext.class);
 	private final ServletTestExecutionListener listener = new ServletTestExecutionListener();
 
 
@@ -72,7 +73,7 @@ class ServletTestExecutionListenerTests {
 	@Test
 	void standardApplicationContext() throws Exception {
 		BDDMockito.<Class<?>> given(testContext.getTestClass()).willReturn(getClass());
-		given(testContext.getApplicationContext()).willReturn(mock());
+		given(testContext.getApplicationContext()).willReturn(mock(ApplicationContext.class));
 
 		listener.beforeTestClass(testContext);
 		assertSetUpOutsideOfStelAttributeExists();

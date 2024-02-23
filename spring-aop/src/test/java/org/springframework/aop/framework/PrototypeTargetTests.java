@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,26 +19,25 @@ package org.springframework.aop.framework;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.Resource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
  * @author Juergen Hoeller
  * @author Chris Beams
  * @since 03.09.2004
  */
-class PrototypeTargetTests {
+public class PrototypeTargetTests {
 
 	private static final Resource CONTEXT = qualifiedResource(PrototypeTargetTests.class, "context.xml");
 
 
 	@Test
-	void testPrototypeProxyWithPrototypeTarget() {
+	public void testPrototypeProxyWithPrototypeTarget() {
 		TestBeanImpl.constructionCount = 0;
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(CONTEXT);
@@ -52,7 +51,7 @@ class PrototypeTargetTests {
 	}
 
 	@Test
-	void testSingletonProxyWithPrototypeTarget() {
+	public void testSingletonProxyWithPrototypeTarget() {
 		TestBeanImpl.constructionCount = 0;
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(CONTEXT);

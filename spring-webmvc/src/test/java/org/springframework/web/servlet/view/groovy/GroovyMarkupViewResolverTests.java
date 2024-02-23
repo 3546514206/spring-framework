@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,15 @@ import org.springframework.beans.DirectFieldAccessor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link GroovyMarkupViewResolver}.
+ * Unit tests for
+ * {@link org.springframework.web.servlet.view.groovy.GroovyMarkupViewResolver}.
  *
  * @author Brian Clozel
  */
-class GroovyMarkupViewResolverTests {
+public class GroovyMarkupViewResolverTests {
 
 	@Test
-	void viewClass() {
+	public void viewClass() throws Exception {
 		GroovyMarkupViewResolver resolver = new GroovyMarkupViewResolver();
 		assertThat(resolver.requiredViewClass()).isEqualTo(GroovyMarkupView.class);
 		DirectFieldAccessor viewAccessor = new DirectFieldAccessor(resolver);
@@ -41,7 +42,7 @@ class GroovyMarkupViewResolverTests {
 	}
 
 	@Test
-	void cacheKey() {
+	public void cacheKey() throws Exception {
 		GroovyMarkupViewResolver resolver = new GroovyMarkupViewResolver();
 		String cacheKey = (String) resolver.getCacheKey("test", Locale.US);
 		assertThat(cacheKey).isNotNull();

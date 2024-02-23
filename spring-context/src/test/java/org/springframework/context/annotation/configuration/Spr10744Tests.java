@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Phillip Webb
  */
-class Spr10744Tests {
+public class Spr10744Tests {
 
 	private static int createCount = 0;
 
@@ -41,7 +41,7 @@ class Spr10744Tests {
 
 
 	@Test
-	void testSpr10744() {
+	public void testSpr10744() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.getBeanFactory().registerScope("myTestScope", new MyTestScope());
 		context.register(MyTestConfiguration.class);
@@ -122,7 +122,7 @@ class Spr10744Tests {
 	static class MyTestConfiguration extends MyConfiguration {
 
 		@Bean
-		@Scope(value = "myTestScope", proxyMode = ScopedProxyMode.TARGET_CLASS)
+		@Scope(value = "myTestScope",  proxyMode = ScopedProxyMode.TARGET_CLASS)
 		@Override
 		public Foo foo() {
 			return new Foo();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,8 @@ import org.springframework.http.HttpMethod;
 /**
  * @author Roy Clarkson
  */
-class OkHttp3ClientHttpRequestFactoryTests extends AbstractHttpRequestFactoryTests {
+public class OkHttp3ClientHttpRequestFactoryTests extends AbstractHttpRequestFactoryTests {
 
-	@SuppressWarnings("removal")
 	@Override
 	protected ClientHttpRequestFactory createRequestFactory() {
 		return new OkHttp3ClientHttpRequestFactory();
@@ -33,7 +32,7 @@ class OkHttp3ClientHttpRequestFactoryTests extends AbstractHttpRequestFactoryTes
 
 	@Override
 	@Test
-	void httpMethods() throws Exception {
+	public void httpMethods() throws Exception {
 		super.httpMethods();
 		assertHttpMethod("patch", HttpMethod.PATCH);
 	}

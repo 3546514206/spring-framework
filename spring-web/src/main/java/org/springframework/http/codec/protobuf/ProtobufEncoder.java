@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 package org.springframework.http.codec.protobuf;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.protobuf.Message;
 import org.reactivestreams.Publisher;
@@ -30,10 +30,10 @@ import reactor.core.publisher.Mono;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.HttpMessageEncoder;
 import org.springframework.lang.Nullable;
-import org.springframework.util.FastByteArrayOutputStream;
 import org.springframework.util.MimeType;
 
 /**
@@ -51,16 +51,17 @@ import org.springframework.util.MimeType;
  * {@code "application/x-protobuf"} and {@code "application/octet-stream"} with the official
  * {@code "com.google.protobuf:protobuf-java"} library.
  *
- * @author Sebastien Deleuze
+ * @author Sébastien Deleuze
  * @since 5.1
  * @see ProtobufDecoder
  */
 public class ProtobufEncoder extends ProtobufCodecSupport implements HttpMessageEncoder<Message> {
 
-	private static final List<MediaType> streamingMediaTypes = Arrays.stream(MIME_TYPES)
+	private static final List<MediaType> streamingMediaTypes = MIME_TYPES
+			.stream()
 			.map(mimeType -> new MediaType(mimeType.getType(), mimeType.getSubtype(),
 					Collections.singletonMap(DELIMITED_KEY, DELIMITED_VALUE)))
-			.toList();
+			.collect(Collectors.toList());
 
 
 	@Override
@@ -85,19 +86,25 @@ public class ProtobufEncoder extends ProtobufCodecSupport implements HttpMessage
 
 	private DataBuffer encodeValue(Message message, DataBufferFactory bufferFactory, boolean delimited) {
 
-		FastByteArrayOutputStream bos = new FastByteArrayOutputStream();
+		DataBuffer buffer = bufferFactory.allocateBuffer();
+		boolean release = true;
 		try {
 			if (delimited) {
-				message.writeDelimitedTo(bos);
+				message.writeDelimitedTo(buffer.asOutputStream());
 			}
 			else {
-				message.writeTo(bos);
+				message.writeTo(buffer.asOutputStream());
 			}
-			byte[] bytes = bos.toByteArrayUnsafe();
-			return bufferFactory.wrap(bytes);
+			release = false;
+			return buffer;
 		}
 		catch (IOException ex) {
 			throw new IllegalStateException("Unexpected I/O error while writing to data buffer", ex);
+		}
+		finally {
+			if (release) {
+				DataBufferUtils.release(buffer);
+			}
 		}
 	}
 

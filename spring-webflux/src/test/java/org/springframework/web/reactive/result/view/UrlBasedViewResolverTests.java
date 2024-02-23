@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,26 +33,26 @@ import org.springframework.web.server.ServerWebExchange;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link UrlBasedViewResolver}.
+ * Unit tests for {@link UrlBasedViewResolver}.
  *
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
  * @author Sam Brannen
  */
-class UrlBasedViewResolverTests {
+public class UrlBasedViewResolverTests {
 
 	private final UrlBasedViewResolver resolver = new UrlBasedViewResolver();
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		context.refresh();
 		this.resolver.setApplicationContext(context);
 	}
 
 	@Test
-	void urlBasedViewResolverOverridesCustomRequestContextAttributeWithNonNullValue() {
+	public void urlBasedViewResolverOverridesCustomRequestContextAttributeWithNonNullValue() throws Exception {
 		assertThat(new TestView().getRequestContextAttribute())
 			.as("requestContextAttribute when instantiated directly")
 			.isEqualTo("testRequestContext");
@@ -73,7 +73,7 @@ class UrlBasedViewResolverTests {
 	}
 
 	@Test
-	void urlBasedViewResolverDoesNotOverrideCustomRequestContextAttributeWithNull() {
+	public void urlBasedViewResolverDoesNotOverrideCustomRequestContextAttributeWithNull() throws Exception {
 		assertThat(new TestView().getRequestContextAttribute())
 			.as("requestContextAttribute when instantiated directly")
 			.isEqualTo("testRequestContext");
@@ -93,7 +93,7 @@ class UrlBasedViewResolverTests {
 	}
 
 	@Test
-	void viewNames() {
+	public void viewNames() throws Exception {
 		this.resolver.setViewClass(TestView.class);
 		this.resolver.setViewNames("my*");
 
@@ -105,7 +105,7 @@ class UrlBasedViewResolverTests {
 	}
 
 	@Test
-	void redirectView() {
+	public void redirectView() throws Exception {
 		Mono<View> mono = this.resolver.resolveViewName("redirect:foo", Locale.US);
 
 		StepVerifier.create(mono)
@@ -120,7 +120,7 @@ class UrlBasedViewResolverTests {
 	}
 
 	@Test
-	void customizedRedirectView() {
+	public void customizedRedirectView() throws Exception {
 		this.resolver.setRedirectViewProvider(url -> new RedirectView(url, HttpStatus.FOUND));
 		Mono<View> mono = this.resolver.resolveViewName("redirect:foo", Locale.US);
 
@@ -143,7 +143,7 @@ class UrlBasedViewResolverTests {
 		}
 
 		@Override
-		public boolean checkResourceExists(Locale locale) {
+		public boolean checkResourceExists(Locale locale) throws Exception {
 			return true;
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,20 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
+import org.springframework.transaction.*;
+import org.springframework.transaction.reactive.TransactionContext;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.transaction.CannotCreateTransactionException;
-import org.springframework.transaction.ReactiveTransaction;
-import org.springframework.transaction.ReactiveTransactionManager;
-import org.springframework.transaction.TransactionSystemException;
-import org.springframework.transaction.UnexpectedRollbackException;
-import org.springframework.transaction.reactive.TransactionContext;
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 /**
  * Abstract support class to test {@link TransactionAspectSupport} with reactive methods.
@@ -55,7 +47,7 @@ public abstract class AbstractReactiveTransactionAspectTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		getNameMethod = TestBean.class.getMethod("getName");
 		setNameMethod = TestBean.class.getMethod("setName", String.class);
 		exceptionalMethod = TestBean.class.getMethod("exceptional", Throwable.class);
@@ -63,8 +55,8 @@ public abstract class AbstractReactiveTransactionAspectTests {
 
 
 	@Test
-	void noTransaction() throws Exception {
-		ReactiveTransactionManager rtm = mock();
+	public void noTransaction() throws Exception {
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 
 		DefaultTestBean tb = new DefaultTestBean();
 		TransactionAttributeSource tas = new MapTransactionAttributeSource();
@@ -79,21 +71,21 @@ public abstract class AbstractReactiveTransactionAspectTests {
 		checkReactiveTransaction(false);
 
 		// expect no calls
-		verifyNoInteractions(rtm);
+		verifyZeroInteractions(rtm);
 	}
 
 	/**
 	 * Check that a transaction is created and committed.
 	 */
 	@Test
-	void transactionShouldSucceed() throws Exception {
+	public void transactionShouldSucceed() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(getNameMethod, txatt);
 
-		ReactiveTransaction status = mock();
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransaction status = mock(ReactiveTransaction.class);
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 		// expect a transaction
 		given(rtm.getReactiveTransaction(txatt)).willReturn(Mono.just(status));
 		given(rtm.commit(status)).willReturn(Mono.empty());
@@ -112,7 +104,7 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	 * Check that two transactions are created and committed.
 	 */
 	@Test
-	void twoTransactionsShouldSucceed() throws Exception {
+	public void twoTransactionsShouldSucceed() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas1 = new MapTransactionAttributeSource();
@@ -120,8 +112,8 @@ public abstract class AbstractReactiveTransactionAspectTests {
 		MapTransactionAttributeSource tas2 = new MapTransactionAttributeSource();
 		tas2.register(setNameMethod, txatt);
 
-		ReactiveTransaction status = mock();
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransaction status = mock(ReactiveTransaction.class);
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 		// expect a transaction
 		given(rtm.getReactiveTransaction(txatt)).willReturn(Mono.just(status));
 		given(rtm.commit(status)).willReturn(Mono.empty());
@@ -144,14 +136,14 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	 * Check that a transaction is created and committed.
 	 */
 	@Test
-	void transactionShouldSucceedWithNotNew() throws Exception {
+	public void transactionShouldSucceedWithNotNew() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(getNameMethod, txatt);
 
-		ReactiveTransaction status = mock();
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransaction status = mock(ReactiveTransaction.class);
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 		// expect a transaction
 		given(rtm.getReactiveTransaction(txatt)).willReturn(Mono.just(status));
 		given(rtm.commit(status)).willReturn(Mono.empty());
@@ -168,42 +160,42 @@ public abstract class AbstractReactiveTransactionAspectTests {
 
 
 	@Test
-	void rollbackOnCheckedException() throws Throwable {
+	public void rollbackOnCheckedException() throws Throwable {
 		doTestRollbackOnException(new Exception(), true, false);
 	}
 
 	@Test
-	void noRollbackOnCheckedException() throws Throwable {
+	public void noRollbackOnCheckedException() throws Throwable {
 		doTestRollbackOnException(new Exception(), false, false);
 	}
 
 	@Test
-	void rollbackOnUncheckedException() throws Throwable {
+	public void rollbackOnUncheckedException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), true, false);
 	}
 
 	@Test
-	void noRollbackOnUncheckedException() throws Throwable {
+	public void noRollbackOnUncheckedException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), false, false);
 	}
 
 	@Test
-	void rollbackOnCheckedExceptionWithRollbackException() throws Throwable {
+	public void rollbackOnCheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new Exception(), true, true);
 	}
 
 	@Test
-	void noRollbackOnCheckedExceptionWithRollbackException() throws Throwable {
+	public void noRollbackOnCheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new Exception(), false, true);
 	}
 
 	@Test
-	void rollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
+	public void rollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), true, true);
 	}
 
 	@Test
-	void noRollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
+	public void noRollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), false, true);
 	}
 
@@ -229,8 +221,8 @@ public abstract class AbstractReactiveTransactionAspectTests {
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(m, txatt);
 
-		ReactiveTransaction status = mock();
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransaction status = mock(ReactiveTransaction.class);
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 		// Gets additional call(s) from TransactionControl
 
 		given(rtm.getReactiveTransaction(txatt)).willReturn(Mono.just(status));
@@ -278,14 +270,14 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	 * Shouldn't invoke target method.
 	 */
 	@Test
-	void cannotCreateTransaction() throws Exception {
+	public void cannotCreateTransaction() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		Method m = getNameMethod;
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(m, txatt);
 
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 		// Expect a transaction
 		CannotCreateTransactionException ex = new CannotCreateTransactionException("foobar", null);
 		given(rtm.getReactiveTransaction(txatt)).willThrow(ex);
@@ -311,7 +303,7 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	 * infrastructure exception was thrown to the client
 	 */
 	@Test
-	void cannotCommitTransaction() throws Exception {
+	public void cannotCommitTransaction() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		Method m = setNameMethod;
@@ -320,9 +312,9 @@ public abstract class AbstractReactiveTransactionAspectTests {
 		// Method m2 = getNameMethod;
 		// No attributes for m2
 
-		ReactiveTransactionManager rtm = mock();
+		ReactiveTransactionManager rtm = mock(ReactiveTransactionManager.class);
 
-		ReactiveTransaction status = mock();
+		ReactiveTransaction status = mock(ReactiveTransaction.class);
 		given(rtm.getReactiveTransaction(txatt)).willReturn(Mono.just(status));
 		UnexpectedRollbackException ex = new UnexpectedRollbackException("foobar", null);
 		given(rtm.commit(status)).willReturn(Mono.error(ex));
@@ -335,7 +327,11 @@ public abstract class AbstractReactiveTransactionAspectTests {
 
 		Mono.from(itb.setName(name))
 				.as(StepVerifier::create)
-				.verifyErrorSatisfies(actual -> assertThat(actual).isEqualTo(ex));
+				.consumeErrorWith(throwable -> {
+					assertThat(throwable.getClass()).isEqualTo(RuntimeException.class);
+					assertThat(throwable.getCause()).isEqualTo(ex);
+				})
+				.verify();
 
 		// Should have invoked target and changed name
 
@@ -346,14 +342,12 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	}
 
 	private void checkReactiveTransaction(boolean expected) {
-		Mono.deferContextual(Mono::just)
-				.handle((context, sink) -> {
-					if (context.hasKey(TransactionContext.class) != expected) {
-						fail("Should have thrown NoTransactionException");
-					}
-					sink.complete();
-				})
-				.block();
+		Mono.subscriberContext().handle((context, sink) -> {
+			if (context.hasKey(TransactionContext.class) != expected) {
+				fail("Should have thrown NoTransactionException");
+			}
+			sink.complete();
+		}).block();
 	}
 
 
@@ -369,8 +363,9 @@ public abstract class AbstractReactiveTransactionAspectTests {
 	 * have been created, as there's no distinction between target and proxy.
 	 * In the case of Spring's own AOP framework, a proxy must be created
 	 * using a suitably configured transaction interceptor
-	 * @param target the target if there's a distinct target. If not (AspectJ),
-	 * return target.
+	 *
+	 * @param target target if there's a distinct target. If not (AspectJ),
+	 *               return target.
 	 * @return transactional advised object
 	 */
 	protected abstract Object advised(

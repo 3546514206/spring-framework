@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,14 @@
 
 package org.springframework.http.server.reactive;
 
-import java.net.URI;
-
-import reactor.core.publisher.Mono;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,7 +42,7 @@ class ServerHttpRequestIntegrationTests extends AbstractHttpHandlerIntegrationTe
 	void checkUri(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		URI url = URI.create("http://localhost:" + port + "/foo?param=bar");
+		URI url = new URI("http://localhost:" + port + "/foo?param=bar");
 		RequestEntity<Void> request = RequestEntity.post(url).build();
 		ResponseEntity<Void> response = new RestTemplate().exchange(request, Void.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -58,7 +56,7 @@ class ServerHttpRequestIntegrationTests extends AbstractHttpHandlerIntegrationTe
 			URI uri = request.getURI();
 			assertThat(uri.getScheme()).isEqualTo("http");
 			assertThat(uri.getHost()).isNotNull();
-			assertThat(uri.getPort()).isNotEqualTo(-1);
+			assertThat(uri.getPort()).isNotEqualTo((long) -1);
 			assertThat(request.getRemoteAddress()).isNotNull();
 			assertThat(uri.getPath()).isEqualTo("/foo");
 			assertThat(uri.getQuery()).isEqualTo("param=bar");

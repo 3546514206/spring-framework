@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,6 @@ package org.springframework.util;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
  * <p>Designed for use as a base class, with the subclass invoking
  * the {@link #beforeAccess()} and {@link #afterAccess()} methods at
  * appropriate points of its workflow. Note that {@code afterAccess}
- * should usually be called in a {@code finally} block!
+ * should usually be called in a finally block!
  *
  * <p>The default concurrency limit of this support class is -1
  * ("unbounded concurrency"). Subclasses may override this default;
@@ -63,9 +60,7 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 	/** Transient to optimize serialization. */
 	protected transient Log logger = LogFactory.getLog(getClass());
 
-	private final Lock concurrencyLock = new ReentrantLock();
-
-	private final Condition concurrencyCondition = this.concurrencyLock.newCondition();
+	private transient Object monitor = new Object();
 
 	private int concurrencyLimit = UNBOUNDED_CONCURRENCY;
 
@@ -74,7 +69,7 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 
 	/**
 	 * Set the maximum number of concurrent access attempts allowed.
-	 * The default of -1 indicates no concurrency limit at all.
+	 * -1 indicates unbounded concurrency.
 	 * <p>In principle, this limit can be changed at runtime,
 	 * although it is generally designed as a config time setting.
 	 * <p>NOTE: Do not switch between -1 and any concrete limit at runtime,
@@ -114,8 +109,7 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 		}
 		if (this.concurrencyLimit > 0) {
 			boolean debug = logger.isDebugEnabled();
-			this.concurrencyLock.lock();
-			try {
+			synchronized (this.monitor) {
 				boolean interrupted = false;
 				while (this.concurrencyCount >= this.concurrencyLimit) {
 					if (interrupted) {
@@ -127,7 +121,7 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 								" has reached limit " + this.concurrencyLimit + " - blocking");
 					}
 					try {
-						this.concurrencyCondition.await();
+						this.monitor.wait();
 					}
 					catch (InterruptedException ex) {
 						// Re-interrupt current thread, to allow other threads to react.
@@ -140,9 +134,6 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 				}
 				this.concurrencyCount++;
 			}
-			finally {
-				this.concurrencyLock.unlock();
-			}
 		}
 	}
 
@@ -152,17 +143,12 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 	 */
 	protected void afterAccess() {
 		if (this.concurrencyLimit >= 0) {
-			boolean debug = logger.isDebugEnabled();
-			this.concurrencyLock.lock();
-			try {
+			synchronized (this.monitor) {
 				this.concurrencyCount--;
-				if (debug) {
+				if (logger.isDebugEnabled()) {
 					logger.debug("Returning from throttle at concurrency count " + this.concurrencyCount);
 				}
-				this.concurrencyCondition.signal();
-			}
-			finally {
-				this.concurrencyLock.unlock();
+				this.monitor.notify();
 			}
 		}
 	}
@@ -178,6 +164,7 @@ public abstract class ConcurrencyThrottleSupport implements Serializable {
 
 		// Initialize transient fields.
 		this.logger = LogFactory.getLog(getClass());
+		this.monitor = new Object();
 	}
 
 }

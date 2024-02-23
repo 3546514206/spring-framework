@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,63 +22,63 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link BeanWiringInfo}.
+ * Unit tests for the BeanWiringInfo class.
  *
  * @author Rick Evans
  * @author Sam Brannen
  */
-class BeanWiringInfoTests {
+public class BeanWiringInfoTests {
 
 	@Test
-	void ctorWithNullBeanName() {
+	public void ctorWithNullBeanName() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new BeanWiringInfo(null));
 	}
 
 	@Test
-	void ctorWithWhitespacedBeanName() {
+	public void ctorWithWhitespacedBeanName() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new BeanWiringInfo("   \t"));
 	}
 
 	@Test
-	void ctorWithEmptyBeanName() {
+	public void ctorWithEmptyBeanName() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new BeanWiringInfo(""));
 	}
 
 	@Test
-	void ctorWithNegativeIllegalAutowiringValue() {
+	public void ctorWithNegativeIllegalAutowiringValue() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new BeanWiringInfo(-1, true));
 	}
 
 	@Test
-	void ctorWithPositiveOutOfRangeAutowiringValue() {
+	public void ctorWithPositiveOutOfRangeAutowiringValue() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new BeanWiringInfo(123871, true));
 	}
 
 	@Test
-	void usingAutowireCtorIndicatesAutowiring() {
+	public void usingAutowireCtorIndicatesAutowiring() throws Exception {
 		BeanWiringInfo info = new BeanWiringInfo(BeanWiringInfo.AUTOWIRE_BY_NAME, true);
 		assertThat(info.indicatesAutowiring()).isTrue();
 	}
 
 	@Test
-	void usingBeanNameCtorDoesNotIndicateAutowiring() {
+	public void usingBeanNameCtorDoesNotIndicateAutowiring() throws Exception {
 		BeanWiringInfo info = new BeanWiringInfo("fooService");
 		assertThat(info.indicatesAutowiring()).isFalse();
 	}
 
 	@Test
-	void noDependencyCheckValueIsPreserved() {
+	public void noDependencyCheckValueIsPreserved() throws Exception {
 		BeanWiringInfo info = new BeanWiringInfo(BeanWiringInfo.AUTOWIRE_BY_NAME, true);
 		assertThat(info.getDependencyCheck()).isTrue();
 	}
 
 	@Test
-	void dependencyCheckValueIsPreserved() {
+	public void dependencyCheckValueIsPreserved() throws Exception {
 		BeanWiringInfo info = new BeanWiringInfo(BeanWiringInfo.AUTOWIRE_BY_TYPE, false);
 		assertThat(info.getDependencyCheck()).isFalse();
 	}

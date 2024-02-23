@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,23 @@
 
 package org.springframework.context.support;
 
+import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
-import java.util.Locale;
-import java.util.Map;
-import java.util.MissingResourceException;
-import java.util.PropertyResourceBundle;
-import java.util.ResourceBundle;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 /**
  * {@link org.springframework.context.MessageSource} implementation that
@@ -68,7 +66,6 @@ import org.springframework.util.ClassUtils;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @author Qimiao Chen
  * @see #setBasenames
  * @see ReloadableResourceBundleMessageSource
  * @see java.util.ResourceBundle
@@ -181,8 +178,8 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 
 
 	/**
-	 * Return a ResourceBundle for the given basename and Locale,
-	 * fetching already generated ResourceBundle from the cache.
+	 * Return a ResourceBundle for the given basename and code,
+	 * fetching already generated MessageFormats from the cache.
 	 * @param basename the basename of the ResourceBundle
 	 * @param locale the Locale to find the ResourceBundle for
 	 * @return the resulting ResourceBundle, or {@code null} if none
@@ -207,7 +204,11 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 			try {
 				ResourceBundle bundle = doGetBundle(basename, locale);
 				if (localeMap == null) {
-					localeMap = this.cachedResourceBundles.computeIfAbsent(basename, bn -> new ConcurrentHashMap<>());
+					localeMap = new ConcurrentHashMap<>();
+					Map<Locale, ResourceBundle> existing = this.cachedResourceBundles.putIfAbsent(basename, localeMap);
+					if (existing != null) {
+						localeMap = existing;
+					}
 				}
 				localeMap.put(locale, bundle);
 				return bundle;
@@ -329,10 +330,19 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 		String msg = getStringOrNull(bundle, code);
 		if (msg != null) {
 			if (codeMap == null) {
-				codeMap = this.cachedBundleMessageFormats.computeIfAbsent(bundle, b -> new ConcurrentHashMap<>());
+				codeMap = new ConcurrentHashMap<>();
+				Map<String, Map<Locale, MessageFormat>> existing =
+						this.cachedBundleMessageFormats.putIfAbsent(bundle, codeMap);
+				if (existing != null) {
+					codeMap = existing;
+				}
 			}
 			if (localeMap == null) {
-				localeMap = codeMap.computeIfAbsent(code, c -> new ConcurrentHashMap<>());
+				localeMap = new ConcurrentHashMap<>();
+				Map<Locale, MessageFormat> existing = codeMap.putIfAbsent(code, localeMap);
+				if (existing != null) {
+					localeMap = existing;
+				}
 			}
 			MessageFormat result = createMessageFormat(msg, locale);
 			localeMap.put(locale, result);
@@ -397,19 +407,28 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 				final String resourceName = toResourceName(bundleName, "properties");
 				final ClassLoader classLoader = loader;
 				final boolean reloadFlag = reload;
-				InputStream inputStream = null;
-				if (reloadFlag) {
-					URL url = classLoader.getResource(resourceName);
-					if (url != null) {
-						URLConnection connection = url.openConnection();
-						if (connection != null) {
-							connection.setUseCaches(false);
-							inputStream = connection.getInputStream();
+				InputStream inputStream;
+				try {
+					inputStream = AccessController.doPrivileged((PrivilegedExceptionAction<InputStream>) () -> {
+						InputStream is = null;
+						if (reloadFlag) {
+							URL url = classLoader.getResource(resourceName);
+							if (url != null) {
+								URLConnection connection = url.openConnection();
+								if (connection != null) {
+									connection.setUseCaches(false);
+									is = connection.getInputStream();
+								}
+							}
 						}
-					}
+						else {
+							is = classLoader.getResourceAsStream(resourceName);
+						}
+						return is;
+					});
 				}
-				else {
-					inputStream = classLoader.getResourceAsStream(resourceName);
+				catch (PrivilegedActionException ex) {
+					throw (IOException) ex.getException();
 				}
 				if (inputStream != null) {
 					String encoding = getDefaultEncoding();
@@ -437,8 +456,7 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 		@Override
 		@Nullable
 		public Locale getFallbackLocale(String baseName, Locale locale) {
-			Locale defaultLocale = getDefaultLocale();
-			return (defaultLocale != null && !defaultLocale.equals(locale) ? defaultLocale : null);
+			return (isFallbackToSystemLocale() ? super.getFallbackLocale(baseName, locale) : null);
 		}
 
 		@Override

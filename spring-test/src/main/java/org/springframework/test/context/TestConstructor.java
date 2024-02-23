@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.lang.Nullable;
-
 /**
  * {@code @TestConstructor} is a type-level annotation that is used to configure
  * how the parameters of a test class constructor are autowired from components
@@ -38,10 +33,9 @@ import org.springframework.lang.Nullable;
  * on a test class, the default <em>test constructor autowire mode</em> will be
  * used. See {@link #TEST_CONSTRUCTOR_AUTOWIRE_MODE_PROPERTY_NAME} for details on
  * how to change the default mode. Note, however, that a local declaration of
- * {@link org.springframework.beans.factory.annotation.Autowired @Autowired}
- * {@link jakarta.inject.Inject @jakarta.inject.Inject}, or
- * {@link javax.inject.Inject @javax.inject.Inject} on a constructor takes
- * precedence over both {@code @TestConstructor} and the default mode.
+ * {@link org.springframework.beans.factory.annotation.Autowired @Autowired} on
+ * a constructor takes precedence over both {@code @TestConstructor} and the default
+ * mode.
  *
  * <p>This annotation may be used as a <em>meta-annotation</em> to create custom
  * <em>composed annotations</em>.
@@ -54,15 +48,9 @@ import org.springframework.lang.Nullable;
  * {@link org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig @SpringJUnitWebConfig}
  * or various test-related annotations from Spring Boot Test.
  *
- * <p>As of Spring Framework 5.3, this annotation will be inherited from an
- * enclosing test class by default. See
- * {@link NestedTestConfiguration @NestedTestConfiguration} for details.
- *
  * @author Sam Brannen
  * @since 5.2
  * @see org.springframework.beans.factory.annotation.Autowired @Autowired
- * @see jakarta.inject.Inject @jakarta.inject.Inject
- * @see javax.inject.Inject @javax.inject.Inject
  * @see org.springframework.test.context.junit.jupiter.SpringExtension SpringExtension
  * @see org.springframework.test.context.junit.jupiter.SpringJUnitConfig @SpringJUnitConfig
  * @see org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig @SpringJUnitWebConfig
@@ -79,7 +67,7 @@ public @interface TestConstructor {
 
 	/**
 	 * JVM system property used to change the default <em>test constructor
-	 * autowire mode</em>: {@value}.
+	 * autowire mode</em>: {@value #TEST_CONSTRUCTOR_AUTOWIRE_MODE_PROPERTY_NAME}.
 	 * <p>Acceptable values include enum constants defined in {@link AutowireMode},
 	 * ignoring case. For example, the default may be changed to {@link AutowireMode#ALL}
 	 * by supplying the following JVM system property via the command line.
@@ -90,9 +78,6 @@ public @interface TestConstructor {
 	 * <p>May alternatively be configured via the
 	 * {@link org.springframework.core.SpringProperties SpringProperties}
 	 * mechanism.
-	 * <p>As of Spring Framework 5.3, this property may also be configured as a
-	 * <a href="https://junit.org/junit5/docs/current/user-guide/#running-tests-config-params">JUnit
-	 * Platform configuration parameter</a>.
 	 * @see #autowireMode
 	 */
 	String TEST_CONSTRUCTOR_AUTOWIRE_MODE_PROPERTY_NAME = "spring.test.constructor.autowire.mode";
@@ -107,8 +92,6 @@ public @interface TestConstructor {
 	 * @return an {@link AutowireMode} to take precedence over the global default
 	 * @see #TEST_CONSTRUCTOR_AUTOWIRE_MODE_PROPERTY_NAME
 	 * @see org.springframework.beans.factory.annotation.Autowired @Autowired
-	 * @see jakarta.inject.Inject @jakarta.inject.Inject
-	 * @see javax.inject.Inject @javax.inject.Inject
 	 * @see AutowireMode#ALL
 	 * @see AutowireMode#ANNOTATED
 	 */
@@ -125,9 +108,7 @@ public @interface TestConstructor {
 		/**
 		 * All test constructor parameters will be autowired as if the constructor
 		 * itself were annotated with
-		 * {@link org.springframework.beans.factory.annotation.Autowired @Autowired},
-		 * {@link jakarta.inject.Inject @jakarta.inject.Inject}, or
-		 * {@link javax.inject.Inject @javax.inject.Inject}.
+		 * {@link org.springframework.beans.factory.annotation.Autowired @Autowired}.
 		 * @see #ANNOTATED
 		 */
 		ALL,
@@ -138,39 +119,11 @@ public @interface TestConstructor {
 		 * {@link org.springframework.beans.factory.annotation.Autowired @Autowired},
 		 * {@link org.springframework.beans.factory.annotation.Qualifier @Qualifier},
 		 * or {@link org.springframework.beans.factory.annotation.Value @Value},
-		 * or if the constructor itself is annotated with
-		 * {@link org.springframework.beans.factory.annotation.Autowired @Autowired},
-		 * {@link jakarta.inject.Inject @jakarta.inject.Inject}, or
-		 * {@link javax.inject.Inject @javax.inject.Inject}.
+		 * or if the constructor itself is annotated with {@code @Autowired}.
 		 * @see #ALL
 		 */
 		ANNOTATED;
 
-
-		/**
-		 * Get the {@code AutowireMode} enum constant with the supplied name,
-		 * ignoring case.
-		 * @param name the name of the enum constant to retrieve
-		 * @return the corresponding enum constant or {@code null} if not found
-		 * @since 5.3
-		 * @see AutowireMode#valueOf(String)
-		 */
-		@Nullable
-		public static AutowireMode from(@Nullable String name) {
-			if (name == null) {
-				return null;
-			}
-			try {
-				return AutowireMode.valueOf(name.trim().toUpperCase());
-			}
-			catch (IllegalArgumentException ex) {
-				Log logger = LogFactory.getLog(AutowireMode.class);
-				if (logger.isDebugEnabled()) {
-					logger.debug(String.format("Failed to parse autowire mode from '%s': %s", name, ex.getMessage()));
-				}
-				return null;
-			}
-		}
 	}
 
 }

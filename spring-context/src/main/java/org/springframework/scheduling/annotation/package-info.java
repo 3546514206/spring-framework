@@ -1,5 +1,5 @@
 /**
- * Annotation support for asynchronous method execution.
+ * Java 5 annotation for asynchronous method execution.
  */
 @NonNullApi
 @NonNullFields

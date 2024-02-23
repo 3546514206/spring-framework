@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,12 @@
 
 package org.springframework.test.context.junit.jupiter;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -32,16 +29,17 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit.SpringJUnitJupiterTestSuite;
 import org.springframework.test.context.transaction.AfterTransaction;
 import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-import static org.junit.platform.testkit.engine.EventConditions.event;
-import static org.junit.platform.testkit.engine.EventConditions.finishedWithFailure;
-import static org.junit.platform.testkit.engine.EventConditions.test;
+import static org.junit.platform.testkit.engine.EventConditions.*;
 import static org.junit.platform.testkit.engine.TestExecutionResultConditions.instanceOf;
 import static org.junit.platform.testkit.engine.TestExecutionResultConditions.message;
 
@@ -56,6 +54,9 @@ import static org.junit.platform.testkit.engine.TestExecutionResultConditions.me
  *
  * <p>Indirectly, this class also verifies that all {@code TestExecutionListener}
  * lifecycle callbacks are called.
+ *
+ * <p>To run these tests in an IDE that does not have built-in support for the JUnit
+ * Platform, simply run {@link SpringJUnitJupiterTestSuite} as a JUnit 4 test.
  *
  * @author Sam Brannen
  * @since 5.0
@@ -76,9 +77,9 @@ class FailingBeforeAndAfterMethodsSpringExtensionTests {
 	})
 	void failingBeforeAndAfterCallbacks(Class<?> testClass) {
 		Events events = EngineTestKit.engine("junit-jupiter")
-			.selectors(selectClass(testClass))
-			.execute()
-			.testEvents()
+				.selectors(selectClass(testClass))
+				.execute()
+				.tests()
 			.assertStatistics(stats -> stats
 				.skipped(0)
 				.aborted(0)
@@ -135,7 +136,7 @@ class FailingBeforeAndAfterMethodsSpringExtensionTests {
 	private static class AlwaysFailingPrepareTestInstanceTestExecutionListener implements TestExecutionListener {
 
 		@Override
-		public void prepareTestInstance(TestContext testContext) {
+		public void prepareTestInstance(TestContext testContext) throws Exception {
 			fail("always failing prepareTestInstance()");
 		}
 	}
@@ -174,7 +175,7 @@ class FailingBeforeAndAfterMethodsSpringExtensionTests {
 
 	@FailingTestCase
 	@ExtendWith(SpringExtension.class)
-	private abstract static class BaseTestCase {
+	private static abstract class BaseTestCase {
 
 		@Test
 		void testNothing() {

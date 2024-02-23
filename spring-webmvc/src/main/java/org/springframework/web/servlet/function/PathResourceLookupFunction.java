@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package org.springframework.web.servlet.function;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-import java.util.function.Function;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -32,6 +26,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+import java.util.function.Function;
+
 /**
  * Lookup function used by {@link RouterFunctions#resources(String, Resource)}.
  *
@@ -39,6 +39,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
  * @since 5.2
  */
 class PathResourceLookupFunction implements Function<ServerRequest, Optional<Resource>> {
+
+	private static final PathPatternParser PATTERN_PARSER = new PathPatternParser();
 
 	private final PathPattern pattern;
 
@@ -48,14 +50,14 @@ class PathResourceLookupFunction implements Function<ServerRequest, Optional<Res
 	public PathResourceLookupFunction(String pattern, Resource location) {
 		Assert.hasLength(pattern, "'pattern' must not be empty");
 		Assert.notNull(location, "'location' must not be null");
-		this.pattern = PathPatternParser.defaultInstance.parse(pattern);
+		this.pattern = PATTERN_PARSER.parse(pattern);
 		this.location = location;
 	}
 
 
 	@Override
 	public Optional<Resource> apply(ServerRequest request) {
-		PathContainer pathContainer = request.requestPath().pathWithinApplication();
+		PathContainer pathContainer = request.pathContainer();
 		if (!this.pattern.matches(pathContainer)) {
 			return Optional.empty();
 		}
@@ -71,10 +73,9 @@ class PathResourceLookupFunction implements Function<ServerRequest, Optional<Res
 
 		try {
 			Resource resource = this.location.createRelative(path);
-			if (resource.isReadable() && isResourceUnderLocation(resource)) {
+			if (resource.exists() && resource.isReadable() && isResourceUnderLocation(resource)) {
 				return Optional.of(resource);
-			}
-			else {
+			} else {
 				return Optional.empty();
 			}
 		}
@@ -110,7 +111,10 @@ class PathResourceLookupFunction implements Function<ServerRequest, Optional<Res
 				return true;
 			}
 		}
-		return path.contains("..") && StringUtils.cleanPath(path).contains("../");
+		if (path.contains("..") && StringUtils.cleanPath(path).contains("../")) {
+			return true;
+		}
+		return false;
 	}
 
 	private boolean isResourceUnderLocation(Resource resource) throws IOException {
@@ -125,8 +129,8 @@ class PathResourceLookupFunction implements Function<ServerRequest, Optional<Res
 			resourcePath = resource.getURL().toExternalForm();
 			locationPath = StringUtils.cleanPath(this.location.getURL().toString());
 		}
-		else if (resource instanceof ClassPathResource classPathResource) {
-			resourcePath = classPathResource.getPath();
+		else if (resource instanceof ClassPathResource) {
+			resourcePath = ((ClassPathResource) resource).getPath();
 			locationPath = StringUtils.cleanPath(((ClassPathResource) this.location).getPath());
 		}
 		else {
@@ -141,8 +145,10 @@ class PathResourceLookupFunction implements Function<ServerRequest, Optional<Res
 		if (!resourcePath.startsWith(locationPath)) {
 			return false;
 		}
-		return !resourcePath.contains("%") ||
-				!StringUtils.uriDecode(resourcePath, StandardCharsets.UTF_8).contains("../");
+		if (resourcePath.contains("%") && StringUtils.uriDecode(resourcePath, StandardCharsets.UTF_8).contains("../")) {
+			return false;
+		}
+		return true;
 	}
 
 

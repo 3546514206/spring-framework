@@ -19,8 +19,7 @@ package org.springframework.web.reactive.function.server;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

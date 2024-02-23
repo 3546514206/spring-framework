@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,17 @@
 
 package org.springframework.jmx.export;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.management.Attribute;
-import javax.management.AttributeChangeNotification;
-import javax.management.Notification;
-import javax.management.NotificationListener;
-import javax.management.ObjectName;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.jmx.AbstractMBeanServerTests;
 import org.springframework.jmx.JmxTestBean;
 import org.springframework.jmx.access.NotificationListenerRegistrar;
 import org.springframework.jmx.export.naming.SelfNaming;
 import org.springframework.jmx.support.ObjectNameManager;
+
+import javax.management.*;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -42,11 +36,11 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Mark Fisher
  * @author Sam Brannen
  */
-class NotificationListenerTests extends AbstractMBeanServerTests {
+public class NotificationListenerTests extends AbstractMBeanServerTests {
 
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Test
-	void testRegisterNotificationListenerForMBean() throws Exception {
+	public void testRegisterNotificationListenerForMBean() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		JmxTestBean bean = new JmxTestBean();
 
@@ -72,7 +66,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithWildcard() throws Exception {
+	public void testRegisterNotificationListenerWithWildcard() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		JmxTestBean bean = new JmxTestBean();
 
@@ -97,7 +91,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testRegisterNotificationListenerWithHandback() throws Exception {
+	public void testRegisterNotificationListenerWithHandback() throws Exception {
 		String objectName = "spring:name=Test";
 		JmxTestBean bean = new JmxTestBean();
 
@@ -115,7 +109,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		MBeanExporter exporter = new MBeanExporter();
 		exporter.setServer(server);
 		exporter.setBeans(beans);
-		exporter.setNotificationListeners(listenerBean);
+		exporter.setNotificationListeners(new NotificationListenerBean[] { listenerBean });
 		start(exporter);
 
 		// update the attribute
@@ -128,7 +122,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testRegisterNotificationListenerForAllMBeans() throws Exception {
+	public void testRegisterNotificationListenerForAllMBeans() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		JmxTestBean bean = new JmxTestBean();
 
@@ -143,7 +137,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		MBeanExporter exporter = new MBeanExporter();
 		exporter.setServer(server);
 		exporter.setBeans(beans);
-		exporter.setNotificationListeners(listenerBean);
+		exporter.setNotificationListeners(new NotificationListenerBean[] { listenerBean });
 		start(exporter);
 
 		// update the attribute
@@ -155,7 +149,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 
 	@SuppressWarnings("serial")
 	@Test
-	void testRegisterNotificationListenerWithFilter() throws Exception {
+	public void testRegisterNotificationListenerWithFilter() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		JmxTestBean bean = new JmxTestBean();
 
@@ -166,19 +160,23 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 
 		NotificationListenerBean listenerBean = new NotificationListenerBean();
 		listenerBean.setNotificationListener(listener);
-		listenerBean.setNotificationFilter(notification -> {
-			if (notification instanceof AttributeChangeNotification changeNotification) {
-				return "Name".equals(changeNotification.getAttributeName());
-			}
-			else {
-				return false;
+		listenerBean.setNotificationFilter(new NotificationFilter() {
+			@Override
+			public boolean isNotificationEnabled(Notification notification) {
+				if (notification instanceof AttributeChangeNotification) {
+					AttributeChangeNotification changeNotification = (AttributeChangeNotification) notification;
+					return "Name".equals(changeNotification.getAttributeName());
+				}
+				else {
+					return false;
+				}
 			}
 		});
 
 		MBeanExporter exporter = new MBeanExporter();
 		exporter.setServer(server);
 		exporter.setBeans(beans);
-		exporter.setNotificationListeners(listenerBean);
+		exporter.setNotificationListeners(new NotificationListenerBean[] { listenerBean });
 		start(exporter);
 
 		// update the attributes
@@ -186,21 +184,21 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		String ageAttribute = "Age";
 
 		server.setAttribute(objectName, new Attribute(nameAttribute, "Rob Harrop"));
-		server.setAttribute(objectName, new Attribute(ageAttribute, 90));
+		server.setAttribute(objectName, new Attribute(ageAttribute, new Integer(90)));
 
 		assertThat(listener.getCount(nameAttribute)).as("Listener not notified for Name").isEqualTo(1);
 		assertThat(listener.getCount(ageAttribute)).as("Listener incorrectly notified for Age").isEqualTo(0);
 	}
 
 	@Test
-	void testCreationWithNoNotificationListenerSet() {
+	public void testCreationWithNoNotificationListenerSet() {
 		assertThatIllegalArgumentException().as("no NotificationListener supplied").isThrownBy(
 				new NotificationListenerBean()::afterPropertiesSet);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithBeanNameAndBeanNameInBeansMap() throws Exception {
+	public void testRegisterNotificationListenerWithBeanNameAndBeanNameInBeansMap() throws Exception {
 		String beanName = "testBean";
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 
@@ -225,13 +223,13 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		start(exporter);
 		assertIsRegistered("Should have registered MBean", objectName);
 
-		server.setAttribute(objectName, new Attribute("Age", 77));
+		server.setAttribute(objectName, new Attribute("Age", new Integer(77)));
 		assertThat(listener.getCount("Age")).as("Listener not notified").isEqualTo(1);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithBeanNameAndBeanInstanceInBeansMap() throws Exception {
+	public void testRegisterNotificationListenerWithBeanNameAndBeanInstanceInBeansMap() throws Exception {
 		String beanName = "testBean";
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 
@@ -256,13 +254,13 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		start(exporter);
 		assertIsRegistered("Should have registered MBean", objectName);
 
-		server.setAttribute(objectName, new Attribute("Age", 77));
+		server.setAttribute(objectName, new Attribute("Age", new Integer(77)));
 		assertThat(listener.getCount("Age")).as("Listener not notified").isEqualTo(1);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithBeanNameBeforeObjectNameMappedToSameBeanInstance() throws Exception {
+	public void testRegisterNotificationListenerWithBeanNameBeforeObjectNameMappedToSameBeanInstance() throws Exception {
 		String beanName = "testBean";
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 
@@ -288,13 +286,13 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		start(exporter);
 		assertIsRegistered("Should have registered MBean", objectName);
 
-		server.setAttribute(objectName, new Attribute("Age", 77));
+		server.setAttribute(objectName, new Attribute("Age", new Integer(77)));
 		assertThat(listener.getCount("Age")).as("Listener should have been notified exactly once").isEqualTo(1);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithObjectNameBeforeBeanNameMappedToSameBeanInstance() throws Exception {
+	public void testRegisterNotificationListenerWithObjectNameBeforeBeanNameMappedToSameBeanInstance() throws Exception {
 		String beanName = "testBean";
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 
@@ -320,13 +318,13 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		start(exporter);
 		assertIsRegistered("Should have registered MBean", objectName);
 
-		server.setAttribute(objectName, new Attribute("Age", 77));
+		server.setAttribute(objectName, new Attribute("Age", new Integer(77)));
 		assertThat(listener.getCount("Age")).as("Listener should have been notified exactly once").isEqualTo(1);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Test
-	void testRegisterNotificationListenerWithTwoBeanNamesMappedToDifferentBeanInstances() throws Exception {
+	public void testRegisterNotificationListenerWithTwoBeanNamesMappedToDifferentBeanInstances() throws Exception {
 		String beanName1 = "testBean1";
 		String beanName2 = "testBean2";
 
@@ -361,15 +359,15 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		assertIsRegistered("Should have registered MBean", objectName1);
 		assertIsRegistered("Should have registered MBean", objectName2);
 
-		server.setAttribute(ObjectNameManager.getInstance(objectName1), new Attribute("Age", 77));
+		server.setAttribute(ObjectNameManager.getInstance(objectName1), new Attribute("Age", new Integer(77)));
 		assertThat(listener.getCount("Age")).as("Listener not notified for testBean1").isEqualTo(1);
 
-		server.setAttribute(ObjectNameManager.getInstance(objectName2), new Attribute("Age", 33));
+		server.setAttribute(ObjectNameManager.getInstance(objectName2), new Attribute("Age", new Integer(33)));
 		assertThat(listener.getCount("Age")).as("Listener not notified for testBean2").isEqualTo(2);
 	}
 
 	@Test
-	void testNotificationListenerRegistrar() throws Exception {
+	public void testNotificationListenerRegistrar() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		JmxTestBean bean = new JmxTestBean();
 
@@ -402,7 +400,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testNotificationListenerRegistrarWithMultipleNames() throws Exception {
+	public void testNotificationListenerRegistrarWithMultipleNames() throws Exception {
 		ObjectName objectName = ObjectName.getInstance("spring:name=Test");
 		ObjectName objectName2 = ObjectName.getInstance("spring:name=Test2");
 		JmxTestBean bean = new JmxTestBean();
@@ -448,17 +446,18 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 
 		@Override
 		public void handleNotification(Notification notification, Object handback) {
-			if (notification instanceof AttributeChangeNotification attNotification) {
+			if (notification instanceof AttributeChangeNotification) {
+				AttributeChangeNotification attNotification = (AttributeChangeNotification) notification;
 				String attributeName = attNotification.getAttributeName();
 
 				Integer currentCount = (Integer) this.attributeCounts.get(attributeName);
 
 				if (currentCount != null) {
-					int count = currentCount + 1;
-					this.attributeCounts.put(attributeName, count);
+					int count = currentCount.intValue() + 1;
+					this.attributeCounts.put(attributeName, new Integer(count));
 				}
 				else {
-					this.attributeCounts.put(attributeName, 1);
+					this.attributeCounts.put(attributeName, new Integer(1));
 				}
 
 				this.attributeHandbacks.put(attributeName, handback);
@@ -467,7 +466,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 
 		public int getCount(String attribute) {
 			Integer count = (Integer) this.attributeCounts.get(attribute);
-			return (count == null ? 0 : count);
+			return (count == null) ? 0 : count.intValue();
 		}
 
 		public Object getLastHandback(String attributeName) {
@@ -487,7 +486,7 @@ class NotificationListenerTests extends AbstractMBeanServerTests {
 		}
 
 		@Override
-		public ObjectName getObjectName() {
+		public ObjectName getObjectName() throws MalformedObjectNameException {
 			return this.objectName;
 		}
 

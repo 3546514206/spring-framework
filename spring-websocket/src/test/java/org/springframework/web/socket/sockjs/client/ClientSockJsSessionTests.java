@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 
 package org.springframework.web.socket.sockjs.client;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.util.concurrent.SettableListenableFuture;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketExtension;
@@ -42,32 +43,35 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
- * Tests for {@link AbstractClientSockJsSession}.
+ * Unit tests for
+ * {@link org.springframework.web.socket.sockjs.client.AbstractClientSockJsSession}.
  *
  * @author Rossen Stoyanchev
  */
-class ClientSockJsSessionTests {
+public class ClientSockJsSessionTests {
 
 	private static final Jackson2SockJsMessageCodec CODEC = new Jackson2SockJsMessageCodec();
 
-	private WebSocketHandler handler = mock();
-
-	private CompletableFuture<WebSocketSession> connectFuture = new CompletableFuture<>();
-
 	private TestClientSockJsSession session;
+
+	private WebSocketHandler handler;
+
+	private SettableListenableFuture<WebSocketSession> connectFuture;
 
 
 	@BeforeEach
-	void setup() {
-		SockJsUrlInfo urlInfo = new SockJsUrlInfo(URI.create("https://example.com"));
-		Transport transport = mock();
+	public void setup() throws Exception {
+		SockJsUrlInfo urlInfo = new SockJsUrlInfo(new URI("https://example.com"));
+		Transport transport = mock(Transport.class);
 		TransportRequest request = new DefaultTransportRequest(urlInfo, null, null, transport, TransportType.XHR, CODEC);
+		this.handler = mock(WebSocketHandler.class);
+		this.connectFuture = new SettableListenableFuture<>();
 		this.session = new TestClientSockJsSession(request, this.handler, this.connectFuture);
 	}
 
 
 	@Test
-	void handleFrameOpen() throws Exception {
+	public void handleFrameOpen() throws Exception {
 		assertThat(this.session.isOpen()).isFalse();
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		assertThat(this.session.isOpen()).isTrue();
@@ -78,7 +82,7 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void handleFrameOpenWhenStatusNotNew() {
+	public void handleFrameOpenWhenStatusNotNew() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		assertThat(this.session.isOpen()).isTrue();
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
@@ -86,14 +90,14 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void handleFrameOpenWithWebSocketHandlerException() throws Exception {
+	public void handleFrameOpenWithWebSocketHandlerException() throws Exception {
 		willThrow(new IllegalStateException("Fake error")).given(this.handler).afterConnectionEstablished(this.session);
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		assertThat(this.session.isOpen()).isTrue();
 	}
 
 	@Test
-	void handleFrameMessage() throws Exception {
+	public void handleFrameMessage() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.handleFrame(SockJsFrame.messageFrame(CODEC, "foo", "bar").getContent());
 		verify(this.handler).afterConnectionEstablished(this.session);
@@ -103,7 +107,7 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void handleFrameMessageWhenNotOpen() throws Exception {
+	public void handleFrameMessageWhenNotOpen() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.close();
 		reset(this.handler);
@@ -112,24 +116,24 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void handleFrameMessageWithBadData() throws Exception {
+	public void handleFrameMessageWithBadData() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.handleFrame("a['bad data");
-		assertThat(this.session.isOpen()).isFalse();
+		assertThat(this.session.isOpen()).isEqualTo(false);
 		assertThat(this.session.disconnectStatus).isEqualTo(CloseStatus.BAD_DATA);
 		verify(this.handler).afterConnectionEstablished(this.session);
 		verifyNoMoreInteractions(this.handler);
 	}
 
 	@Test
-	void handleFrameMessageWithWebSocketHandlerException() throws Exception {
+	public void handleFrameMessageWithWebSocketHandlerException() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		willThrow(new IllegalStateException("Fake error")).given(this.handler)
 				.handleMessage(this.session, new TextMessage("foo"));
 		willThrow(new IllegalStateException("Fake error")).given(this.handler)
 				.handleMessage(this.session, new TextMessage("bar"));
 		this.session.handleFrame(SockJsFrame.messageFrame(CODEC, "foo", "bar").getContent());
-		assertThat(this.session.isOpen()).isTrue();
+		assertThat(this.session.isOpen()).isEqualTo(true);
 		verify(this.handler).afterConnectionEstablished(this.session);
 		verify(this.handler).handleMessage(this.session, new TextMessage("foo"));
 		verify(this.handler).handleMessage(this.session, new TextMessage("bar"));
@@ -137,17 +141,17 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void handleFrameClose() throws Exception {
+	public void handleFrameClose() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.handleFrame(SockJsFrame.closeFrame(1007, "").getContent());
-		assertThat(this.session.isOpen()).isFalse();
+		assertThat(this.session.isOpen()).isEqualTo(false);
 		assertThat(this.session.disconnectStatus).isEqualTo(new CloseStatus(1007, ""));
 		verify(this.handler).afterConnectionEstablished(this.session);
 		verifyNoMoreInteractions(this.handler);
 	}
 
 	@Test
-	void handleTransportError() throws Exception {
+	public void handleTransportError() throws Exception {
 		final IllegalStateException ex = new IllegalStateException("Fake error");
 		this.session.handleTransportError(ex);
 		verify(this.handler).handleTransportError(this.session, ex);
@@ -155,56 +159,56 @@ class ClientSockJsSessionTests {
 	}
 
 	@Test
-	void afterTransportClosed() throws Exception {
+	public void afterTransportClosed() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.afterTransportClosed(CloseStatus.SERVER_ERROR);
-		assertThat(this.session.isOpen()).isFalse();
+		assertThat(this.session.isOpen()).isEqualTo(false);
 		verify(this.handler).afterConnectionEstablished(this.session);
 		verify(this.handler).afterConnectionClosed(this.session, CloseStatus.SERVER_ERROR);
 		verifyNoMoreInteractions(this.handler);
 	}
 
 	@Test
-	void close() throws Exception {
+	public void close() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.close();
-		assertThat(this.session.isOpen()).isFalse();
+		assertThat(this.session.isOpen()).isEqualTo(false);
 		assertThat(this.session.disconnectStatus).isEqualTo(CloseStatus.NORMAL);
 		verify(this.handler).afterConnectionEstablished(this.session);
 		verifyNoMoreInteractions(this.handler);
 	}
 
 	@Test
-	void closeWithStatus() throws Exception {
+	public void closeWithStatus() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.close(new CloseStatus(3000, "reason"));
 		assertThat(this.session.disconnectStatus).isEqualTo(new CloseStatus(3000, "reason"));
 	}
 
 	@Test
-	void closeWithNullStatus() {
+	public void closeWithNullStatus() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> this.session.close(null))
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				this.session.close(null))
 			.withMessageContaining("Invalid close status");
 	}
 
 	@Test
-	void closeWithStatusOutOfRange() {
+	public void closeWithStatusOutOfRange() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> this.session.close(new CloseStatus(2999, "reason")))
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				this.session.close(new CloseStatus(2999, "reason")))
 			.withMessageContaining("Invalid close status");
 	}
 
 	@Test
-	void timeoutTask() {
+	public void timeoutTask() {
 		this.session.getTimeoutTask().run();
 		assertThat(this.session.disconnectStatus).isEqualTo(new CloseStatus(2007, "Transport timed out"));
 	}
 
 	@Test
-	void send() throws Exception {
+	public void send() throws Exception {
 		this.session.handleFrame(SockJsFrame.openFrame().getContent());
 		this.session.sendMessage(new TextMessage("foo"));
 		assertThat(this.session.sentMessage).isEqualTo(new TextMessage("[\"foo\"]"));
@@ -219,17 +223,17 @@ class ClientSockJsSessionTests {
 
 
 		protected TestClientSockJsSession(TransportRequest request, WebSocketHandler handler,
-				CompletableFuture<WebSocketSession> connectFuture) {
+				SettableListenableFuture<WebSocketSession> connectFuture) {
 			super(request, handler, connectFuture);
 		}
 
 		@Override
-		protected void sendInternal(TextMessage textMessage) {
+		protected void sendInternal(TextMessage textMessage) throws IOException {
 			this.sentMessage = textMessage;
 		}
 
 		@Override
-		protected void disconnect(CloseStatus status) {
+		protected void disconnect(CloseStatus status) throws IOException {
 			this.disconnectStatus = status;
 		}
 

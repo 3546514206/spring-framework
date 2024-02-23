@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,18 +28,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Arjen Poutsma
  */
-class HttpEntityTests {
+public class HttpEntityTests {
 
 	@Test
-	void noHeaders() {
+	public void noHeaders() {
 		String body = "foo";
 		HttpEntity<String> entity = new HttpEntity<>(body);
 		assertThat(entity.getBody()).isSameAs(body);
-		assertThat(entity.getHeaders()).isEmpty();
+		assertThat(entity.getHeaders().isEmpty()).isTrue();
 	}
 
 	@Test
-	void httpHeaders() {
+	public void httpHeaders() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.TEXT_PLAIN);
 		String body = "foo";
@@ -50,7 +50,7 @@ class HttpEntityTests {
 	}
 
 	@Test
-	void multiValueMap() {
+	public void multiValueMap() {
 		MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
 		map.set("Content-Type", "text/plain");
 		String body = "foo";
@@ -61,30 +61,30 @@ class HttpEntityTests {
 	}
 
 	@Test
-	void testEquals() {
+	public void testEquals() {
 		MultiValueMap<String, String> map1 = new LinkedMultiValueMap<>();
 		map1.set("Content-Type", "text/plain");
 
 		MultiValueMap<String, String> map2 = new LinkedMultiValueMap<>();
 		map2.set("Content-Type", "application/json");
 
-		assertThat(new HttpEntity<>().equals(new HttpEntity<>())).isTrue();
-		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<>())).isFalse();
-		assertThat(new HttpEntity<>().equals(new HttpEntity<>(map2))).isFalse();
+		assertThat(new HttpEntity<>().equals(new HttpEntity<Object>())).isTrue();
+		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<Object>())).isFalse();
+		assertThat(new HttpEntity<>().equals(new HttpEntity<Object>(map2))).isFalse();
 
-		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<>(map1))).isTrue();
-		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<>(map2))).isFalse();
+		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<Object>(map1))).isTrue();
+		assertThat(new HttpEntity<>(map1).equals(new HttpEntity<Object>(map2))).isFalse();
 
 		assertThat(new HttpEntity<String>(null, null).equals(new HttpEntity<String>(null, null))).isTrue();
 		assertThat(new HttpEntity<>("foo", null).equals(new HttpEntity<String>(null, null))).isFalse();
 		assertThat(new HttpEntity<String>(null, null).equals(new HttpEntity<>("bar", null))).isFalse();
 
-		assertThat(new HttpEntity<>("foo", map1).equals(new HttpEntity<>("foo", map1))).isTrue();
-		assertThat(new HttpEntity<>("foo", map1).equals(new HttpEntity<>("bar", map1))).isFalse();
+		assertThat(new HttpEntity<>("foo", map1).equals(new HttpEntity<String>("foo", map1))).isTrue();
+		assertThat(new HttpEntity<>("foo", map1).equals(new HttpEntity<String>("bar", map1))).isFalse();
 	}
 
 	@Test
-	void responseEntity() {
+	public void responseEntity() {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.TEXT_PLAIN);
 		String body = "foo";
@@ -97,30 +97,30 @@ class HttpEntityTests {
 		assertThat(responseEntity.getHeaders().getFirst("Content-Type")).isEqualTo("text/plain");
 		assertThat(responseEntity.getHeaders().getFirst("Content-Type")).isEqualTo("text/plain");
 
-		assertThat(httpEntity).isNotEqualTo(responseEntity);
-		assertThat(responseEntity).isNotEqualTo(httpEntity);
-		assertThat(responseEntity).isEqualTo(responseEntity2);
-		assertThat(responseEntity2).isEqualTo(responseEntity);
+		assertThat(httpEntity.equals(responseEntity)).isFalse();
+		assertThat(responseEntity.equals(httpEntity)).isFalse();
+		assertThat(responseEntity.equals(responseEntity2)).isTrue();
+		assertThat(responseEntity2.equals(responseEntity)).isTrue();
 	}
 
 	@Test
-	void requestEntity() {
+	public void requestEntity() throws Exception {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.TEXT_PLAIN);
 		String body = "foo";
 		HttpEntity<String> httpEntity = new HttpEntity<>(body, headers);
-		RequestEntity<String> requestEntity = new RequestEntity<>(body, headers, HttpMethod.GET, URI.create("/"));
-		RequestEntity<String> requestEntity2 = new RequestEntity<>(body, headers, HttpMethod.GET, URI.create("/"));
+		RequestEntity<String> requestEntity = new RequestEntity<>(body, headers, HttpMethod.GET, new URI("/"));
+		RequestEntity<String> requestEntity2 = new RequestEntity<>(body, headers, HttpMethod.GET, new URI("/"));
 
 		assertThat(requestEntity.getBody()).isEqualTo(body);
 		assertThat(requestEntity.getHeaders().getContentType()).isEqualTo(MediaType.TEXT_PLAIN);
 		assertThat(requestEntity.getHeaders().getFirst("Content-Type")).isEqualTo("text/plain");
 		assertThat(requestEntity.getHeaders().getFirst("Content-Type")).isEqualTo("text/plain");
 
-		assertThat(httpEntity).isNotEqualTo(requestEntity);
-		assertThat(requestEntity).isNotEqualTo(httpEntity);
-		assertThat(requestEntity).isEqualTo(requestEntity2);
-		assertThat(requestEntity2).isEqualTo(requestEntity);
+		assertThat(httpEntity.equals(requestEntity)).isFalse();
+		assertThat(requestEntity.equals(httpEntity)).isFalse();
+		assertThat(requestEntity.equals(requestEntity2)).isTrue();
+		assertThat(requestEntity2.equals(requestEntity)).isTrue();
 	}
 
 }

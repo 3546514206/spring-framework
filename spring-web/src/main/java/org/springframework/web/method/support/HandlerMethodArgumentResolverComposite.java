@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package org.springframework.web.method.support;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Resolves method parameters by delegating to a list of registered
@@ -38,7 +38,7 @@ import org.springframework.web.context.request.NativeWebRequest;
  */
 public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgumentResolver {
 
-	private final List<HandlerMethodArgumentResolver> argumentResolvers = new ArrayList<>();
+	private final List<HandlerMethodArgumentResolver> argumentResolvers = new LinkedList<>();
 
 	private final Map<MethodParameter, HandlerMethodArgumentResolver> argumentResolverCache =
 			new ConcurrentHashMap<>(256);
@@ -85,12 +85,11 @@ public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgu
 	}
 
 	/**
-	 * Clear the list of configured resolvers and the resolver cache.
+	 * Clear the list of configured resolvers.
 	 * @since 4.3
 	 */
 	public void clear() {
 		this.argumentResolvers.clear();
-		this.argumentResolverCache.clear();
 	}
 
 
@@ -127,7 +126,7 @@ public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgu
 	 * the given method parameter.
 	 */
 	@Nullable
-	public HandlerMethodArgumentResolver getArgumentResolver(MethodParameter parameter) {
+	private HandlerMethodArgumentResolver getArgumentResolver(MethodParameter parameter) {
 		HandlerMethodArgumentResolver result = this.argumentResolverCache.get(parameter);
 		if (result == null) {
 			for (HandlerMethodArgumentResolver resolver : this.argumentResolvers) {

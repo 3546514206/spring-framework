@@ -49,7 +49,7 @@ public abstract class SqlCall extends RdbmsOperation {
 
 	/**
 	 * Flag used to indicate that the sql for this call should be used exactly as
-	 * it is defined. No need to add the escape syntax and parameter placeholders.
+	 * it is defined. No need to add the escape syntax and parameter place holders.
 	 */
 	private boolean sqlReadyForUse = false;
 
@@ -184,7 +184,7 @@ public abstract class SqlCall extends RdbmsOperation {
 
 	/**
 	 * Return a CallableStatementCreator to perform an operation
-	 * with these parameters.
+	 * with this parameters.
 	 * @param inParams parameters. May be {@code null}.
 	 */
 	protected CallableStatementCreator newCallableStatementCreator(@Nullable Map<String, ?> inParams) {

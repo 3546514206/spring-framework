@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.http.codec;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -60,8 +61,13 @@ import org.springframework.util.MultiValueMap;
 public class FormHttpMessageWriter extends LoggingCodecSupport
 		implements HttpMessageWriter<MultiValueMap<String, String>> {
 
-	/** The default charset used by the writer. */
+	/**
+	 * The default charset used by the writer.
+	 */
 	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+
+	private static final MediaType DEFAULT_FORM_DATA_MEDIA_TYPE =
+			new MediaType(MediaType.APPLICATION_FORM_URLENCODED, DEFAULT_CHARSET);
 
 	private static final List<MediaType> MEDIA_TYPES =
 			Collections.singletonList(MediaType.APPLICATION_FORM_URLENCODED);
@@ -121,7 +127,7 @@ public class FormHttpMessageWriter extends LoggingCodecSupport
 		mediaType = getMediaType(mediaType);
 		message.getHeaders().setContentType(mediaType);
 
-		Charset charset = (mediaType.getCharset() != null ? mediaType.getCharset() : getDefaultCharset());
+		Charset charset = mediaType.getCharset() != null ? mediaType.getCharset() : getDefaultCharset();
 
 		return Mono.from(inputStream).flatMap(form -> {
 			logFormData(form, hints);
@@ -133,22 +139,16 @@ public class FormHttpMessageWriter extends LoggingCodecSupport
 		});
 	}
 
-	/**
-	 * Return the content type used to write forms, either the given media type
-	 * or otherwise {@code application/x-www-form-urlencoded}.
-	 * @param mediaType the media type passed to {@link #write}, or {@code null}
-	 * @return the content type to use
-	 */
 	protected MediaType getMediaType(@Nullable MediaType mediaType) {
 		if (mediaType == null) {
-			return MediaType.APPLICATION_FORM_URLENCODED;
+			return DEFAULT_FORM_DATA_MEDIA_TYPE;
 		}
-		// Some servers don't handle charset parameter and spec is unclear,
-		// Add it only if it is not DEFAULT_CHARSET.
-		if (mediaType.getCharset() == null && this.defaultCharset != DEFAULT_CHARSET) {
-			return new MediaType(mediaType, this.defaultCharset);
+		else if (mediaType.getCharset() == null) {
+			return new MediaType(mediaType, getDefaultCharset());
 		}
-		return mediaType;
+		else {
+			return mediaType;
+		}
 	}
 
 	private void logFormData(MultiValueMap<String, String> form, Map<String, Object> hints) {
@@ -162,13 +162,18 @@ public class FormHttpMessageWriter extends LoggingCodecSupport
 		StringBuilder builder = new StringBuilder();
 		formData.forEach((name, values) ->
 				values.forEach(value -> {
-					if (builder.length() != 0) {
-						builder.append('&');
+					try {
+						if (builder.length() != 0) {
+							builder.append('&');
+						}
+						builder.append(URLEncoder.encode(name, charset.name()));
+						if (value != null) {
+							builder.append('=');
+							builder.append(URLEncoder.encode(value, charset.name()));
+						}
 					}
-					builder.append(URLEncoder.encode(name, charset));
-					if (value != null) {
-						builder.append('=');
-						builder.append(URLEncoder.encode(value, charset));
+					catch (UnsupportedEncodingException ex) {
+						throw new IllegalStateException(ex);
 					}
 				}));
 		return builder.toString();

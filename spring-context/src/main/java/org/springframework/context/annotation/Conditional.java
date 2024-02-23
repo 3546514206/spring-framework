@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Indicates that a component is only eligible for registration when all
@@ -62,7 +58,7 @@ import java.lang.annotation.Target;
 public @interface Conditional {
 
 	/**
-	 * All {@link Condition} classes that must {@linkplain Condition#matches match}
+	 * All {@link Condition Conditions} that must {@linkplain Condition#matches match}
 	 * in order for the component to be registered.
 	 */
 	Class<? extends Condition>[] value();

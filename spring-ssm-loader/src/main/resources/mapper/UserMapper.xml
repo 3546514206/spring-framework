@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="edu.zjnu.biz.dao.IUserDao">
+
+	<update id="updateById" parameterType="edu.zjnu.biz.entity.User">
+		update user
+		<set>
+			<if test="updateUser.name != null">
+				name = #{updateUser.name},
+			</if>
+			<if test="updateUser.age != null">
+				age = #{updateUser.age},
+			</if>
+			<if test="updateUser.uuid != null">
+				uuid = #{updateUser.uuid},
+			</if>
+		</set>
+		where id = #{updateUser.id}
+	</update>
+
+	<select id="getUserInfoById" parameterType="java.lang.Long" resultType="edu.zjnu.biz.entity.User">
+		select t.id, t.name, t.age, t.uuid
+		from user t
+		where id = #{id};
+	</select>
+
+	<select id="getUserVOS" parameterType="java.lang.Long" resultType="edu.zjnu.biz.entity.User">
+		select t.id, t.name, t.uuid, t.age, b.id as book_id, b.name as book_name
+		from user t
+				 left join book b on t.id = b.user_id
+		where t.id = #{id};
+	</select>
+
+	<select id="selectAll" resultType="edu.zjnu.biz.entity.User">
+		select t.*
+		from user t
+	</select>
+
+	<select id="compareMybatisVersion" resultType="edu.zjnu.biz.entity.User">
+		select * from user
+		<where>
+			<if test="_parameter!=null and _parameter!=''">
+				name like concat('%',#{blurName},'%');
+			</if>
+		</where>
+	</select>
+
+	<insert id="insertBatch">
+		INSERT INTO user
+		(name, uuid,age)
+		VALUES
+		<foreach collection="users" item="user" separator=",">
+			(#{user.name}, #{user.uuid}, #{user.age})
+		</foreach>
+	</insert>
+</mapper>

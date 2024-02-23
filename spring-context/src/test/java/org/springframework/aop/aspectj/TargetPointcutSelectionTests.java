@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.aop.aspectj;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,39 +32,37 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Ramnivas Laddad
  * @author Chris Beams
  */
-class TargetPointcutSelectionTests {
+public class TargetPointcutSelectionTests {
 
-	private ClassPathXmlApplicationContext ctx;
+	public TestInterface testImpl1;
 
-	private TestInterface testImpl1;
+	public TestInterface testImpl2;
 
-	private TestInterface testImpl2;
+	public TestAspect testAspectForTestImpl1;
 
-	private TestAspect testAspectForTestImpl1;
+	public TestAspect testAspectForAbstractTestImpl;
 
-	private TestAspect testAspectForAbstractTestImpl;
-
-	private TestInterceptor testInterceptor;
+	public TestInterceptor testInterceptor;
 
 
 	@BeforeEach
-	void setup() {
-		this.ctx = new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
+	public void setup() {
+		ClassPathXmlApplicationContext ctx =
+				new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
 		testImpl1 = (TestInterface) ctx.getBean("testImpl1");
 		testImpl2 = (TestInterface) ctx.getBean("testImpl2");
 		testAspectForTestImpl1 = (TestAspect) ctx.getBean("testAspectForTestImpl1");
 		testAspectForAbstractTestImpl = (TestAspect) ctx.getBean("testAspectForAbstractTestImpl");
 		testInterceptor = (TestInterceptor) ctx.getBean("testInterceptor");
-	}
 
-	@AfterEach
-	void tearDown() {
-		this.ctx.close();
+		testAspectForTestImpl1.count = 0;
+		testAspectForAbstractTestImpl.count = 0;
+		testInterceptor.count = 0;
 	}
 
 
 	@Test
-	void targetSelectionForMatchedType() {
+	public void targetSelectionForMatchedType() {
 		testImpl1.interfaceMethod();
 		assertThat(testAspectForTestImpl1.count).as("Should have been advised by POJO advice for impl").isEqualTo(1);
 		assertThat(testAspectForAbstractTestImpl.count).as("Should have been advised by POJO advice for base type").isEqualTo(1);
@@ -73,43 +70,49 @@ class TargetPointcutSelectionTests {
 	}
 
 	@Test
-	void targetNonSelectionForMismatchedType() {
+	public void targetNonSelectionForMismatchedType() {
 		testImpl2.interfaceMethod();
-		assertThat(testAspectForTestImpl1.count).as("Shouldn't have been advised by POJO advice for impl").isZero();
+		assertThat(testAspectForTestImpl1.count).as("Shouldn't have been advised by POJO advice for impl").isEqualTo(0);
 		assertThat(testAspectForAbstractTestImpl.count).as("Should have been advised by POJO advice for base type").isEqualTo(1);
-		assertThat(testInterceptor.count).as("Shouldn't have been advised by advisor").isZero();
+		assertThat(testInterceptor.count).as("Shouldn't have been advised by advisor").isEqualTo(0);
 	}
 
 
-	interface TestInterface {
-		void interfaceMethod();
+	public static interface TestInterface {
+
+		public void interfaceMethod();
 	}
+
 
 	// Reproducing bug requires that the class specified in target() pointcut doesn't
 	// include the advised method's implementation (instead a base class should include it)
-	abstract static class AbstractTestImpl implements TestInterface {
+	public static abstract class AbstractTestImpl implements TestInterface {
 
 		@Override
 		public void interfaceMethod() {
 		}
 	}
 
-	static class TestImpl1 extends AbstractTestImpl {
+
+	public static class TestImpl1 extends AbstractTestImpl {
 	}
 
-	static class TestImpl2 extends AbstractTestImpl {
+
+	public static class TestImpl2 extends AbstractTestImpl {
 	}
 
-	static class TestAspect {
 
-		int count;
+	public static class TestAspect {
 
-		void increment() {
+		public int count;
+
+		public void increment() {
 			count++;
 		}
 	}
 
-	static class TestInterceptor extends TestAspect implements MethodInterceptor {
+
+	public static class TestInterceptor extends TestAspect implements MethodInterceptor {
 
 		@Override
 		public Object invoke(MethodInvocation mi) throws Throwable {

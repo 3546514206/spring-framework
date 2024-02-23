@@ -22,7 +22,7 @@ import reactor.core.publisher.Flux;
 import org.springframework.core.io.buffer.DataBuffer;
 
 /**
- * A "reactive" HTTP input message that exposes the input as {@link Publisher}.
+ * An "reactive" HTTP input message that exposes the input as {@link Publisher}.
  *
  * <p>Typically implemented by an HTTP request on the server-side or a response
  * on the client-side.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.beans.factory.config;
 
-import java.io.Serializable;
-
 import org.springframework.lang.Nullable;
+
+import java.io.Serializable;
 
 /**
  * Simple marker class for an individually autowired property value, to be added
@@ -34,7 +34,6 @@ import org.springframework.lang.Nullable;
  * @see BeanDefinition#getPropertyValues()
  * @see org.springframework.beans.factory.support.BeanDefinitionBuilder#addAutowiredProperty
  */
-@SuppressWarnings("serial")
 public final class AutowiredPropertyMarker implements Serializable {
 
 	/**
@@ -52,8 +51,8 @@ public final class AutowiredPropertyMarker implements Serializable {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other);
+	public boolean equals(@Nullable Object obj) {
+		return (this == obj);
 	}
 
 	@Override

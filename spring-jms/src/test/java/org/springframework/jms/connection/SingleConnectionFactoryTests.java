@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,21 @@
 
 package org.springframework.jms.connection;
 
-import java.lang.reflect.Field;
-import java.util.concurrent.atomic.AtomicInteger;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.ExceptionListener;
+import javax.jms.JMSException;
+import javax.jms.QueueConnection;
+import javax.jms.QueueConnectionFactory;
+import javax.jms.QueueSession;
+import javax.jms.Session;
+import javax.jms.TopicConnection;
+import javax.jms.TopicConnectionFactory;
+import javax.jms.TopicSession;
 
-import jakarta.jms.Connection;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.ExceptionListener;
-import jakarta.jms.JMSException;
-import jakarta.jms.QueueConnection;
-import jakarta.jms.QueueConnectionFactory;
-import jakarta.jms.QueueSession;
-import jakarta.jms.Session;
-import jakarta.jms.TopicConnection;
-import jakarta.jms.TopicConnectionFactory;
-import jakarta.jms.TopicSession;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.util.ReflectionUtils;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -46,11 +41,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
  * @author Juergen Hoeller
  * @since 26.07.2004
  */
-class SingleConnectionFactoryTests {
+public class SingleConnectionFactoryTests {
 
 	@Test
-	void testWithConnection() throws JMSException {
-		Connection con = mock();
+	public void testWithConnection() throws JMSException {
+		Connection con = mock(Connection.class);
 
 		SingleConnectionFactory scf = new SingleConnectionFactory(con);
 		Connection con1 = scf.createConnection();
@@ -70,8 +65,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithQueueConnection() throws JMSException {
-		QueueConnection con = mock();
+	public void testWithQueueConnection() throws JMSException {
+		Connection con = mock(QueueConnection.class);
 
 		SingleConnectionFactory scf = new SingleConnectionFactory(con);
 		QueueConnection con1 = scf.createQueueConnection();
@@ -91,8 +86,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithTopicConnection() throws JMSException {
-		TopicConnection con = mock();
+	public void testWithTopicConnection() throws JMSException {
+		Connection con = mock(TopicConnection.class);
 
 		SingleConnectionFactory scf = new SingleConnectionFactory(con);
 		TopicConnection con1 = scf.createTopicConnection();
@@ -112,9 +107,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactory() throws JMSException {
-		ConnectionFactory cf = mock();
-		Connection con = mock();
+	public void testWithConnectionFactory() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
+		Connection con = mock(Connection.class);
 
 		given(cf.createConnection()).willReturn(con);
 
@@ -134,9 +129,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithQueueConnectionFactoryAndJms11Usage() throws JMSException {
-		QueueConnectionFactory cf = mock();
-		QueueConnection con = mock();
+	public void testWithQueueConnectionFactoryAndJms11Usage() throws JMSException {
+		QueueConnectionFactory cf = mock(QueueConnectionFactory.class);
+		QueueConnection con = mock(QueueConnection.class);
 
 		given(cf.createConnection()).willReturn(con);
 
@@ -156,9 +151,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithQueueConnectionFactoryAndJms102Usage() throws JMSException {
-		QueueConnectionFactory cf = mock();
-		QueueConnection con = mock();
+	public void testWithQueueConnectionFactoryAndJms102Usage() throws JMSException {
+		QueueConnectionFactory cf = mock(QueueConnectionFactory.class);
+		QueueConnection con = mock(QueueConnection.class);
 
 		given(cf.createQueueConnection()).willReturn(con);
 
@@ -178,9 +173,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithTopicConnectionFactoryAndJms11Usage() throws JMSException {
-		TopicConnectionFactory cf = mock();
-		TopicConnection con = mock();
+	public void testWithTopicConnectionFactoryAndJms11Usage() throws JMSException {
+		TopicConnectionFactory cf = mock(TopicConnectionFactory.class);
+		TopicConnection con = mock(TopicConnection.class);
 
 		given(cf.createConnection()).willReturn(con);
 
@@ -200,9 +195,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithTopicConnectionFactoryAndJms102Usage() throws JMSException {
-		TopicConnectionFactory cf = mock();
-		TopicConnection con = mock();
+	public void testWithTopicConnectionFactoryAndJms102Usage() throws JMSException {
+		TopicConnectionFactory cf = mock(TopicConnectionFactory.class);
+		TopicConnection con = mock(TopicConnection.class);
 
 		given(cf.createTopicConnection()).willReturn(con);
 
@@ -222,8 +217,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionAggregatedStartStop() throws JMSException {
-		Connection con = mock();
+	public void testWithConnectionAggregatedStartStop() throws JMSException {
+		Connection con = mock(Connection.class);
 
 		SingleConnectionFactory scf = new SingleConnectionFactory(con);
 		Connection con1 = scf.createConnection();
@@ -254,9 +249,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndClientId() throws JMSException {
-		ConnectionFactory cf = mock();
-		Connection con = mock();
+	public void testWithConnectionFactoryAndClientId() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
+		Connection con = mock(Connection.class);
 		given(cf.createConnection()).willReturn(con);
 
 		SingleConnectionFactory scf = new SingleConnectionFactory(cf);
@@ -277,9 +272,9 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndExceptionListener() throws JMSException {
-		ConnectionFactory cf = mock();
-		Connection con = mock();
+	public void testWithConnectionFactoryAndExceptionListener() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
+		Connection con = mock(Connection.class);
 
 		ExceptionListener listener = new ChainedExceptionListener();
 		given(cf.createConnection()).willReturn(con);
@@ -305,8 +300,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndReconnectOnException() throws JMSException {
-		ConnectionFactory cf = mock();
+	public void testWithConnectionFactoryAndReconnectOnException() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
 		TestConnection con = new TestConnection();
 		given(cf.createConnection()).willReturn(con);
 
@@ -325,8 +320,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndExceptionListenerAndReconnectOnException() throws JMSException {
-		ConnectionFactory cf = mock();
+	public void testWithConnectionFactoryAndExceptionListenerAndReconnectOnException() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
 		TestConnection con = new TestConnection();
 		given(cf.createConnection()).willReturn(con);
 
@@ -348,107 +343,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndExceptionListenerAndReconnectOnExceptionWithJMSException() throws Exception {
-		// Throws JMSException on setExceptionListener() method, but only at the first time
-		class FailingTestConnection extends TestConnection {
-			private int setExceptionListenerInvocationCounter;
-
-			@Override
-			public void setExceptionListener(ExceptionListener exceptionListener) throws JMSException {
-				setExceptionListenerInvocationCounter++;
-				// Throw JMSException on first invocation
-				if (setExceptionListenerInvocationCounter == 1) {
-					throw new JMSException("Test JMSException (setExceptionListener())");
-				}
-				super.setExceptionListener(exceptionListener);
-			}
-		}
-
-		// Prepare base JMS ConnectionFactory
-		// - createConnection(1st) -> TestConnection,
-		// - createConnection(2nd and next) -> FailingTestConnection
-		FailingTestConnection failingCon = new FailingTestConnection();
-		AtomicInteger createConnectionMethodCounter = new AtomicInteger();
+	public void testWithConnectionFactoryAndLocalExceptionListenerWithCleanup() throws JMSException {
 		ConnectionFactory cf = mock(ConnectionFactory.class);
-		given(cf.createConnection()).willAnswer(invocation -> {
-			int methodInvocationCounter = createConnectionMethodCounter.incrementAndGet();
-			return (methodInvocationCounter >= 4 ? failingCon : new TestConnection());
-		});
-
-		// Prepare SingleConnectionFactory (setReconnectOnException())
-		// - internal connection exception listener should be registered
-		SingleConnectionFactory scf = new SingleConnectionFactory(cf);
-		scf.setReconnectOnException(true);
-		Field conField = ReflectionUtils.findField(SingleConnectionFactory.class, "connection");
-		conField.setAccessible(true);
-		assertThat(scf.isRunning()).isFalse();
-
-		// Get connection (1st)
-		Connection con1 = scf.getConnection();
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(1);
-		assertThat(con1.getExceptionListener()).isNotNull();
-		assertThat(con1).isSameAs(conField.get(scf));
-		assertThat(scf.isRunning()).isTrue();
-
-		// Get connection again, the same should be returned (shared connection till some problem)
-		Connection con2 = scf.getConnection();
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(1);
-		assertThat(con2.getExceptionListener()).isNotNull();
-		assertThat(con2).isSameAs(con1);
-		assertThat(scf.isRunning()).isTrue();
-
-		// Explicit stop should reset connection
-		scf.stop();
-		assertThat(conField.get(scf)).isNull();
-		assertThat(scf.isRunning()).isFalse();
-		Connection con3 = scf.getConnection();
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(2);
-		assertThat(con3.getExceptionListener()).isNotNull();
-		assertThat(con3).isNotSameAs(con2);
-		assertThat(scf.isRunning()).isTrue();
-
-		// Explicit stop-and-restart should refresh connection
-		scf.stop();
-		assertThat(conField.get(scf)).isNull();
-		assertThat(scf.isRunning()).isFalse();
-		scf.start();
-		assertThat(scf.isRunning()).isTrue();
-		assertThat(conField.get(scf)).isNotNull();
-		Connection con4 = scf.getConnection();
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(3);
-		assertThat(con4.getExceptionListener()).isNotNull();
-		assertThat(con4).isNotSameAs(con3);
-
-		// Invoke reset connection to simulate problem with connection
-		// - SCF exception listener should be invoked -> connection should be set to null
-		// - next attempt to invoke getConnection() must create new connection
-		scf.resetConnection();
-		assertThat(conField.get(scf)).isNull();
-
-		// Attempt to get connection again
-		// - JMSException should be returned from FailingTestConnection
-		// - connection should be still null (no new connection without exception listener like before fix)
-		assertThatExceptionOfType(JMSException.class).isThrownBy(() -> scf.getConnection());
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(4);
-		assertThat(conField.get(scf)).isNull();
-
-		// Attempt to get connection again -> FailingTestConnection should be returned
-		// - no JMSException is thrown, exception listener should be present
-		Connection con5 = scf.getConnection();
-		assertThat(createConnectionMethodCounter.get()).isEqualTo(5);
-		assertThat(con5).isNotNull();
-		assertThat(con5).isSameAs(failingCon);
-		assertThat(con5.getExceptionListener()).isNotNull();
-		assertThat(con5).isNotSameAs(con4);
-
-		scf.destroy();
-		assertThat(conField.get(scf)).isNull();
-		assertThat(scf.isRunning()).isFalse();
-	}
-
-	@Test
-	void testWithConnectionFactoryAndLocalExceptionListenerWithCleanup() throws JMSException {
-		ConnectionFactory cf = mock();
 		TestConnection con = new TestConnection();
 		given(cf.createConnection()).willReturn(con);
 
@@ -485,8 +381,8 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testWithConnectionFactoryAndLocalExceptionListenerWithReconnect() throws JMSException {
-		ConnectionFactory cf = mock();
+	public void testWithConnectionFactoryAndLocalExceptionListenerWithReconnect() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
 		TestConnection con = new TestConnection();
 		given(cf.createConnection()).willReturn(con);
 
@@ -519,11 +415,11 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testCachingConnectionFactory() throws JMSException {
-		ConnectionFactory cf = mock();
-		Connection con = mock();
-		Session txSession = mock();
-		Session nonTxSession = mock();
+	public void testCachingConnectionFactory() throws JMSException {
+		ConnectionFactory cf = mock(ConnectionFactory.class);
+		Connection con = mock(Connection.class);
+		Session txSession = mock(Session.class);
+		Session nonTxSession = mock(Session.class);
 
 		given(cf.createConnection()).willReturn(con);
 		given(con.createSession(true, Session.AUTO_ACKNOWLEDGE)).willReturn(txSession);
@@ -559,11 +455,11 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testCachingConnectionFactoryWithQueueConnectionFactoryAndJms102Usage() throws JMSException {
-		QueueConnectionFactory cf = mock();
-		QueueConnection con = mock();
-		QueueSession txSession = mock();
-		QueueSession nonTxSession = mock();
+	public void testCachingConnectionFactoryWithQueueConnectionFactoryAndJms102Usage() throws JMSException {
+		QueueConnectionFactory cf = mock(QueueConnectionFactory.class);
+		QueueConnection con = mock(QueueConnection.class);
+		QueueSession txSession = mock(QueueSession.class);
+		QueueSession nonTxSession = mock(QueueSession.class);
 
 		given(cf.createQueueConnection()).willReturn(con);
 		given(con.createQueueSession(true, Session.AUTO_ACKNOWLEDGE)).willReturn(txSession);
@@ -599,11 +495,11 @@ class SingleConnectionFactoryTests {
 	}
 
 	@Test
-	void testCachingConnectionFactoryWithTopicConnectionFactoryAndJms102Usage() throws JMSException {
-		TopicConnectionFactory cf = mock();
-		TopicConnection con = mock();
-		TopicSession txSession = mock();
-		TopicSession nonTxSession = mock();
+	public void testCachingConnectionFactoryWithTopicConnectionFactoryAndJms102Usage() throws JMSException {
+		TopicConnectionFactory cf = mock(TopicConnectionFactory.class);
+		TopicConnection con = mock(TopicConnection.class);
+		TopicSession txSession = mock(TopicSession.class);
+		TopicSession nonTxSession = mock(TopicSession.class);
 
 		given(cf.createTopicConnection()).willReturn(con);
 		given(con.createTopicSession(true, Session.AUTO_ACKNOWLEDGE)).willReturn(txSession);

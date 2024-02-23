@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,6 @@
 
 package org.springframework.jmx.support;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-
-import javax.management.MBeanServerConnection;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
-
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.target.AbstractLazyCreationTargetSource;
@@ -38,6 +27,16 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
+
+import javax.management.MBeanServerConnection;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * {@link FactoryBean} that creates a JMX 1.2 {@code MBeanServerConnection}
@@ -58,7 +57,7 @@ public class MBeanServerConnectionFactoryBean
 	@Nullable
 	private JMXServiceURL serviceUrl;
 
-	private final Map<String, Object> environment = new HashMap<>();
+	private Map<String, Object> environment = new HashMap<>();
 
 	private boolean connectOnStartup = true;
 
@@ -101,8 +100,7 @@ public class MBeanServerConnectionFactoryBean
 	}
 
 	/**
-	 * Set whether to connect to the server on startup.
-	 * <p>Default is {@code true}.
+	 * Set whether to connect to the server on startup. Default is "true".
 	 * <p>Can be turned off to allow for late start of the JMX server.
 	 * In this case, the JMX connector will be fetched on first access.
 	 */

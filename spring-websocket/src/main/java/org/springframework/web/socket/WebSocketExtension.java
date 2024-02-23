@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,13 @@
 
 package org.springframework.web.socket;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.util.StringUtils;
+
+import java.util.*;
 
 /**
  * Represents a WebSocket extension as defined in the RFC 6455.
@@ -83,7 +79,7 @@ public class WebSocketExtension {
 
 
 	/**
-	 * Return the name of the extension (never {@code null} or empty).
+	 * Return the name of the extension (never {@code null) or empty}.
 	 */
 	public String getName() {
 		return this.name;
@@ -97,16 +93,28 @@ public class WebSocketExtension {
 	}
 
 
-	@Override
-	public boolean equals(@Nullable Object other) {
-		if (this == other) {
-			return true;
+	private static WebSocketExtension parseExtension(String extension) {
+		if (extension.contains(",")) {
+			throw new IllegalArgumentException("Expected single extension value: [" + extension + "]");
 		}
-		if (other == null || !WebSocketExtension.class.isAssignableFrom(other.getClass())) {
-			return false;
+		String[] parts = StringUtils.tokenizeToStringArray(extension, ";");
+		String name = parts[0].trim();
+
+		Map<String, String> parameters = null;
+		if (parts.length > 1) {
+			parameters = new LinkedHashMap<>(parts.length - 1);
+			for (int i = 1; i < parts.length; i++) {
+				String parameter = parts[i];
+				int eqIndex = parameter.indexOf('=');
+				if (eqIndex != -1) {
+					String attribute = parameter.substring(0, eqIndex);
+					String value = parameter.substring(eqIndex + 1, parameter.length());
+					parameters.put(attribute, value);
+				}
+			}
 		}
-		WebSocketExtension otherExt = (WebSocketExtension) other;
-		return (this.name.equals(otherExt.name) && this.parameters.equals(otherExt.parameters));
+
+		return new WebSocketExtension(name, parameters);
 	}
 
 	@Override
@@ -138,34 +146,21 @@ public class WebSocketExtension {
 				result.add(parseExtension(token));
 			}
 			return result;
-		}
-		else {
+		} else {
 			return Collections.emptyList();
 		}
 	}
 
-	private static WebSocketExtension parseExtension(String extension) {
-		if (extension.contains(",")) {
-			throw new IllegalArgumentException("Expected single extension value: [" + extension + "]");
+	@Override
+	public boolean equals(@Nullable Object other) {
+		if (this == other) {
+			return true;
 		}
-		String[] parts = StringUtils.tokenizeToStringArray(extension, ";");
-		String name = parts[0].trim();
-
-		Map<String, String> parameters = null;
-		if (parts.length > 1) {
-			parameters = CollectionUtils.newLinkedHashMap(parts.length - 1);
-			for (int i = 1; i < parts.length; i++) {
-				String parameter = parts[i];
-				int eqIndex = parameter.indexOf('=');
-				if (eqIndex != -1) {
-					String attribute = parameter.substring(0, eqIndex);
-					String value = parameter.substring(eqIndex + 1);
-					parameters.put(attribute, value);
-				}
-			}
+		if (other == null || getClass() != other.getClass()) {
+			return false;
 		}
-
-		return new WebSocketExtension(name, parameters);
+		WebSocketExtension otherExt = (WebSocketExtension) other;
+		return (this.name.equals(otherExt.name) && this.parameters.equals(otherExt.parameters));
 	}
 
 }

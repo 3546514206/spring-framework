@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ public class DestinationPatternsMessageCondition
 
 	private static Set<String> prependLeadingSlash(String[] patterns, RouteMatcher routeMatcher) {
 		boolean slashSeparator = routeMatcher.combine("a", "a").equals("a/a");
-		Set<String> result = CollectionUtils.newLinkedHashSet(patterns.length);
+		Set<String> result = new LinkedHashSet<>(patterns.length);
 		for (String pattern : patterns) {
 			if (slashSeparator && StringUtils.hasLength(pattern) && !pattern.startsWith("/")) {
 				pattern = "/" + pattern;
@@ -188,12 +188,14 @@ public class DestinationPatternsMessageCondition
 	}
 
 	private boolean matchPattern(String pattern, Object destination) {
-		return destination instanceof RouteMatcher.Route route ? this.routeMatcher.match(pattern, route) :
+		return destination instanceof RouteMatcher.Route ?
+				this.routeMatcher.match(pattern, (RouteMatcher.Route) destination) :
 				((SimpleRouteMatcher) this.routeMatcher).getPathMatcher().match(pattern, (String) destination);
 	}
 
 	private Comparator<String> getPatternComparator(Object destination) {
-		return destination instanceof RouteMatcher.Route route ? this.routeMatcher.getPatternComparator(route) :
+		return destination instanceof RouteMatcher.Route ?
+			this.routeMatcher.getPatternComparator((RouteMatcher.Route) destination) :
 			((SimpleRouteMatcher) this.routeMatcher).getPathMatcher().getPatternComparator((String) destination);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@
 package org.springframework.web.servlet.theme;
 
 import org.junit.jupiter.api.Test;
-
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.servlet.ThemeResolver;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @since 19.06.2003
  */
-@SuppressWarnings("deprecation")
 public class ThemeResolverTests {
 
 	private static final String TEST_THEME_NAME = "test.theme";
@@ -61,22 +59,22 @@ public class ThemeResolverTests {
 	}
 
 	@Test
-	void fixedThemeResolver() {
+	public void fixedThemeResolver() {
 		internalTest(new FixedThemeResolver(), false, AbstractThemeResolver.ORIGINAL_DEFAULT_THEME_NAME);
 	}
 
 	@Test
-	void cookieThemeResolver() {
+	public void cookieThemeResolver() {
 		internalTest(new CookieThemeResolver(), true, AbstractThemeResolver.ORIGINAL_DEFAULT_THEME_NAME);
 	}
 
 	@Test
-	void sessionThemeResolver() {
+	public void sessionThemeResolver() {
 		internalTest(new SessionThemeResolver(), true,AbstractThemeResolver.ORIGINAL_DEFAULT_THEME_NAME);
 	}
 
 	@Test
-	void sessionThemeResolverWithDefault() {
+	public void sessionThemeResolverWithDefault() {
 		SessionThemeResolver tr = new SessionThemeResolver();
 		tr.setDefaultThemeName(DEFAULT_TEST_THEME_NAME);
 		internalTest(tr, true, DEFAULT_TEST_THEME_NAME);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Stephane Nicoll
  */
-class CacheRemoveOperationTests extends AbstractCacheOperationTests<CacheRemoveOperation> {
+public class CacheRemoveOperationTests extends AbstractCacheOperationTests<CacheRemoveOperation> {
 
 	@Override
 	protected CacheRemoveOperation createSimpleOperation() {
@@ -38,11 +38,11 @@ class CacheRemoveOperationTests extends AbstractCacheOperationTests<CacheRemoveO
 	}
 
 	@Test
-	void simpleRemove() {
+	public void simpleRemove() {
 		CacheRemoveOperation operation = createSimpleOperation();
 
 		CacheInvocationParameter[] allParameters = operation.getAllParameters(2L);
-		assertThat(allParameters).hasSize(1);
+		assertThat(allParameters.length).isEqualTo(1);
 		assertCacheInvocationParameter(allParameters[0], Long.class, 2L, 0);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,17 @@
 
 package org.springframework.web.socket.adapter;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.AlternativeJdkIdGenerator;
 import org.springframework.util.Assert;
 import org.springframework.util.IdGenerator;
-import org.springframework.web.socket.BinaryMessage;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.PingMessage;
-import org.springframework.web.socket.PongMessage;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketMessage;
-import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.*;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An abstract base class for implementations of {@link WebSocketSession}.
@@ -57,14 +50,13 @@ public abstract class AbstractWebSocketSession<T> implements NativeWebSocketSess
 
 	/**
 	 * Create a new instance and associate the given attributes with it.
-	 * @param attributes the attributes from the HTTP handshake to associate with the WebSocket
-	 * session; the provided attributes are copied, the original map is not used.
+	 *
+	 * @param attributes attributes from the HTTP handshake to associate with the WebSocket
+	 *                   session; the provided attributes are copied, the original map is not used.
 	 */
 	public AbstractWebSocketSession(@Nullable Map<String, Object> attributes) {
 		if (attributes != null) {
-			attributes.entrySet().stream()
-					.filter(entry -> (entry.getKey() != null && entry.getValue() != null))
-					.forEach(entry -> this.attributes.put(entry.getKey(), entry.getValue()));
+			this.attributes.putAll(attributes);
 		}
 	}
 
@@ -104,17 +96,17 @@ public abstract class AbstractWebSocketSession<T> implements NativeWebSocketSess
 			logger.trace("Sending " + message + ", " + this);
 		}
 
-		if (message instanceof TextMessage textMessage) {
-			sendTextMessage(textMessage);
+		if (message instanceof TextMessage) {
+			sendTextMessage((TextMessage) message);
 		}
-		else if (message instanceof BinaryMessage binaryMessage) {
-			sendBinaryMessage(binaryMessage);
+		else if (message instanceof BinaryMessage) {
+			sendBinaryMessage((BinaryMessage) message);
 		}
-		else if (message instanceof PingMessage pingMessage) {
-			sendPingMessage(pingMessage);
+		else if (message instanceof PingMessage) {
+			sendPingMessage((PingMessage) message);
 		}
-		else if (message instanceof PongMessage pongMessage) {
-			sendPongMessage(pongMessage);
+		else if (message instanceof PongMessage) {
+			sendPongMessage((PongMessage) message);
 		}
 		else {
 			throw new IllegalStateException("Unexpected WebSocketMessage type: " + message);

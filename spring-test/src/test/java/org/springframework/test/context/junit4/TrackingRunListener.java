@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,17 +63,17 @@ public class TrackingRunListener extends RunListener {
 	}
 
 	@Override
-	public void testFailure(Failure failure) {
+	public void testFailure(Failure failure) throws Exception {
 		this.testFailureCount.incrementAndGet();
 	}
 
 	@Override
-	public void testStarted(Description description) {
+	public void testStarted(Description description) throws Exception {
 		this.testStartedCount.incrementAndGet();
 	}
 
 	@Override
-	public void testFinished(Description description) {
+	public void testFinished(Description description) throws Exception {
 		this.testFinishedCount.incrementAndGet();
 	}
 
@@ -83,7 +83,7 @@ public class TrackingRunListener extends RunListener {
 	}
 
 	@Override
-	public void testIgnored(Description description) {
+	public void testIgnored(Description description) throws Exception {
 		this.testIgnoredCount.incrementAndGet();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,15 +41,15 @@ import static org.mockito.Mockito.verify;
  *
  * @author Rossen Stoyanchev
  */
-class DefaultHandshakeHandlerTests extends AbstractHttpRequestTests {
+public class DefaultHandshakeHandlerTests extends AbstractHttpRequestTests {
 
-	private RequestUpgradeStrategy upgradeStrategy = mock();
+	private RequestUpgradeStrategy upgradeStrategy = mock(RequestUpgradeStrategy.class);
 
 	private DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler(this.upgradeStrategy);
 
 
 	@Test
-	void supportedSubProtocols() {
+	public void supportedSubProtocols() {
 		this.handshakeHandler.setSupportedProtocols("stomp", "mqtt");
 		given(this.upgradeStrategy.getSupportedVersions()).willReturn(new String[] {"13"});
 
@@ -65,7 +65,7 @@ class DefaultHandshakeHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void supportedExtensions() {
+	public void supportedExtensions() {
 		WebSocketExtension extension1 = new WebSocketExtension("ext1");
 		WebSocketExtension extension2 = new WebSocketExtension("ext2");
 
@@ -84,7 +84,7 @@ class DefaultHandshakeHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void subProtocolCapableHandler() {
+	public void subProtocolCapableHandler() {
 		given(this.upgradeStrategy.getSupportedVersions()).willReturn(new String[] {"13"});
 
 		this.servletRequest.setMethod("GET");
@@ -99,7 +99,7 @@ class DefaultHandshakeHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void subProtocolCapableHandlerNoMatch() {
+	public void subProtocolCapableHandlerNoMatch() {
 		given(this.upgradeStrategy.getSupportedVersions()).willReturn(new String[] {"13"});
 
 		this.servletRequest.setMethod("GET");

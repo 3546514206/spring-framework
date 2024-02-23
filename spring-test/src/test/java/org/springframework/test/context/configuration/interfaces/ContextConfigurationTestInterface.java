@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package org.springframework.test.context.configuration.interfaces;
 
-import org.springframework.beans.testfixture.beans.Employee;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.configuration.interfaces.ContextConfigurationTestInterface.Config;
+import org.springframework.tests.sample.beans.Employee;
 
 /**
  * @author Sam Brannen
@@ -28,7 +28,7 @@ import org.springframework.test.context.configuration.interfaces.ContextConfigur
 @ContextConfiguration(classes = Config.class)
 interface ContextConfigurationTestInterface {
 
-	class Config {
+	static class Config {
 
 		@Bean
 		Employee employee() {

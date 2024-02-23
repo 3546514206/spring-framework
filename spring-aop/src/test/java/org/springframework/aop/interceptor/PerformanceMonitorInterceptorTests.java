@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ import static org.mockito.Mockito.verify;
  * @author Rick Evans
  * @author Chris Beams
  */
-class PerformanceMonitorInterceptorTests {
+public class PerformanceMonitorInterceptorTests {
 
 	@Test
-	void testSuffixAndPrefixAssignment() {
+	public void testSuffixAndPrefixAssignment() {
 		PerformanceMonitorInterceptor interceptor = new PerformanceMonitorInterceptor();
 
 		assertThat(interceptor.getPrefix()).isNotNull();
@@ -49,11 +49,11 @@ class PerformanceMonitorInterceptorTests {
 	}
 
 	@Test
-	void testSunnyDayPathLogsPerformanceMetricsCorrectly() throws Throwable {
-		MethodInvocation mi = mock();
-		given(mi.getMethod()).willReturn(String.class.getMethod("toString"));
+	public void testSunnyDayPathLogsPerformanceMetricsCorrectly() throws Throwable {
+		MethodInvocation mi = mock(MethodInvocation.class);
+		given(mi.getMethod()).willReturn(String.class.getMethod("toString", new Class[0]));
 
-		Log log = mock();
+		Log log = mock(Log.class);
 
 		PerformanceMonitorInterceptor interceptor = new PerformanceMonitorInterceptor(true);
 		interceptor.invokeUnderTrace(mi, log);
@@ -62,12 +62,12 @@ class PerformanceMonitorInterceptorTests {
 	}
 
 	@Test
-	void testExceptionPathStillLogsPerformanceMetricsCorrectly() throws Throwable {
-		MethodInvocation mi = mock();
+	public void testExceptionPathStillLogsPerformanceMetricsCorrectly() throws Throwable {
+		MethodInvocation mi = mock(MethodInvocation.class);
 
-		given(mi.getMethod()).willReturn(String.class.getMethod("toString"));
+		given(mi.getMethod()).willReturn(String.class.getMethod("toString", new Class[0]));
 		given(mi.proceed()).willThrow(new IllegalArgumentException());
-		Log log = mock();
+		Log log = mock(Log.class);
 
 		PerformanceMonitorInterceptor interceptor = new PerformanceMonitorInterceptor(true);
 		assertThatIllegalArgumentException().isThrownBy(() ->

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.jdbc.support;
 
-import java.sql.SQLDataException;
 import java.sql.SQLException;
 
 import org.junit.jupiter.api.Test;
@@ -28,18 +27,18 @@ import org.springframework.jdbc.BadSqlGrammarException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for custom SQLException translation.
+ * Unit tests for custom SQLException translation.
  *
  * @author Thomas Risberg
  * @author Sam Brannen
  */
-class SQLExceptionCustomTranslatorTests {
+public class SQLExceptionCustomTranslatorTests {
 
 	private static SQLErrorCodes ERROR_CODES = new SQLErrorCodes();
 
 	static {
-		ERROR_CODES.setBadSqlGrammarCodes("1");
-		ERROR_CODES.setDataAccessResourceFailureCodes("2");
+		ERROR_CODES.setBadSqlGrammarCodes(new String[] { "1" });
+		ERROR_CODES.setDataAccessResourceFailureCodes(new String[] { "2" });
 		ERROR_CODES.setCustomSqlExceptionTranslatorClass(CustomSqlExceptionTranslator.class);
 	}
 
@@ -47,16 +46,16 @@ class SQLExceptionCustomTranslatorTests {
 
 
 	@Test
-	void badSqlGrammarException() {
-		SQLException badSqlGrammarExceptionEx = new SQLDataException("", "", 1);
+	public void badSqlGrammarException() {
+		SQLException badSqlGrammarExceptionEx = SQLExceptionSubclassFactory.newSQLDataException("", "", 1);
 		DataAccessException dae = sext.translate("task", "SQL", badSqlGrammarExceptionEx);
 		assertThat(dae.getCause()).isEqualTo(badSqlGrammarExceptionEx);
 		assertThat(dae).isInstanceOf(BadSqlGrammarException.class);
 	}
 
 	@Test
-	void dataAccessResourceException() {
-		SQLException dataAccessResourceEx = new SQLDataException("", "", 2);
+	public void dataAccessResourceException() {
+		SQLException dataAccessResourceEx = SQLExceptionSubclassFactory.newSQLDataException("", "", 2);
 		DataAccessException dae = sext.translate("task", "SQL", dataAccessResourceEx);
 		assertThat(dae.getCause()).isEqualTo(dataAccessResourceEx);
 		assertThat(dae).isInstanceOf(TransientDataAccessResourceException.class);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,17 @@
 
 package org.springframework.transaction.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+
+import java.lang.annotation.*;
 
 /**
  * Enables Spring's annotation-driven transaction management capability, similar to
  * the support found in Spring's {@code <tx:*>} XML namespace. To be used on
  * {@link org.springframework.context.annotation.Configuration @Configuration}
- * classes to configure traditional, imperative transaction management or
- * reactive transaction management.
- *
- * <p>The following example demonstrates imperative transaction management
- * using a {@link org.springframework.transaction.PlatformTransactionManager
- * PlatformTransactionManager}. For reactive transaction management, configure a
- * {@link org.springframework.transaction.ReactiveTransactionManager
- * ReactiveTransactionManager} instead.
+ * classes as follows:
  *
  * <pre class="code">
  * &#064;Configuration
@@ -81,21 +70,21 @@ import org.springframework.core.Ordered;
  *
  * &lt;/beans&gt;
  * </pre>
- *
+ * <p>
  * In both of the scenarios above, {@code @EnableTransactionManagement} and {@code
  * <tx:annotation-driven/>} are responsible for registering the necessary Spring
  * components that power annotation-driven transaction management, such as the
- * TransactionInterceptor and the proxy- or AspectJ-based advice that weaves the
+ * TransactionInterceptor and the proxy- or AspectJ-based advice that weave the
  * interceptor into the call stack when {@code JdbcFooRepository}'s {@code @Transactional}
  * methods are invoked.
  *
  * <p>A minor difference between the two examples lies in the naming of the {@code
- * TransactionManager} bean: In the {@code @Bean} case, the name is
+ * PlatformTransactionManager} bean: In the {@code @Bean} case, the name is
  * <em>"txManager"</em> (per the name of the method); in the XML case, the name is
- * <em>"transactionManager"</em>. {@code <tx:annotation-driven/>} is hard-wired to
+ * <em>"transactionManager"</em>. The {@code <tx:annotation-driven/>} is hard-wired to
  * look for a bean named "transactionManager" by default, however
  * {@code @EnableTransactionManagement} is more flexible; it will fall back to a by-type
- * lookup for any {@code TransactionManager} bean in the container. Thus the name
+ * lookup for any {@code PlatformTransactionManager} bean in the container. Thus the name
  * can be "txManager", "transactionManager", or "tm": it simply does not matter.
  *
  * <p>For those that wish to establish a more direct relationship between
@@ -129,9 +118,9 @@ import org.springframework.core.Ordered;
  *         return txManager();
  *     }
  * }</pre>
- *
- * <p>This approach may be desirable simply because it is more explicit, or it may be
- * necessary in order to distinguish between two {@code TransactionManager} beans
+ * <p>
+ * This approach may be desirable simply because it is more explicit, or it may be
+ * necessary in order to distinguish between two {@code PlatformTransactionManager} beans
  * present in the same container.  As the name suggests, the
  * {@code annotationDrivenTransactionManager()} will be the one used for processing
  * {@code @Transactional} methods. See {@link TransactionManagementConfigurer} Javadoc
@@ -150,11 +139,11 @@ import org.springframework.core.Ordered;
  *
  * @author Chris Beams
  * @author Juergen Hoeller
- * @since 3.1
  * @see TransactionManagementConfigurer
  * @see TransactionManagementConfigurationSelector
  * @see ProxyTransactionManagementConfiguration
  * @see org.springframework.transaction.aspectj.AspectJTransactionManagementConfiguration
+ * @since 3.1
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

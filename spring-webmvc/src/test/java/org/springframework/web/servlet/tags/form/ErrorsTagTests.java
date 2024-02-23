@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package org.springframework.web.servlet.tags.form;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.jsp.JspException;
-import jakarta.servlet.jsp.PageContext;
-import jakarta.servlet.jsp.tagext.BodyTag;
-import jakarta.servlet.jsp.tagext.Tag;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.mock.web.test.MockBodyContent;
+import org.springframework.mock.web.test.MockPageContext;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.web.servlet.support.RequestContext;
 import org.springframework.web.servlet.tags.RequestContextAwareTag;
-import org.springframework.web.testfixture.servlet.MockBodyContent;
-import org.springframework.web.testfixture.servlet.MockPageContext;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.PageContext;
+import javax.servlet.jsp.tagext.BodyTag;
+import javax.servlet.jsp.tagext.Tag;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,6 +53,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 
 
 	@Override
+	@SuppressWarnings("serial")
 	protected void onSetUp() {
 		this.tag = new ErrorsTag() {
 			@Override
@@ -73,7 +73,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 
 
 	@Test
-	void withExplicitNonWhitespaceBodyContent() throws Exception {
+	public void withExplicitNonWhitespaceBodyContent() throws Exception {
 		String mockContent = "This is some explicit body content";
 		this.tag.setBodyContent(new MockBodyContent(mockContent, getWriter()));
 
@@ -94,7 +94,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withExplicitWhitespaceBodyContent() throws Exception {
+	public void withExplicitWhitespaceBodyContent() throws Exception {
 		this.tag.setBodyContent(new MockBodyContent("\t\n   ", getWriter()));
 
 		// construct an errors instance of the tag
@@ -120,7 +120,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withExplicitEmptyWhitespaceBodyContent() throws Exception {
+	public void withExplicitEmptyWhitespaceBodyContent() throws Exception {
 		this.tag.setBodyContent(new MockBodyContent("", getWriter()));
 
 		// construct an errors instance of the tag
@@ -146,7 +146,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withErrors() throws Exception {
+	public void withErrors() throws Exception {
 		// construct an errors instance of the tag
 		TestBean target = new TestBean();
 		target.setName("Rob Harrop");
@@ -173,7 +173,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withErrorsAndDynamicAttributes() throws Exception {
+	public void withErrorsAndDynamicAttributes() throws Exception {
 		String dynamicAttribute1 = "attr1";
 		String dynamicAttribute2 = "attr2";
 
@@ -208,7 +208,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withEscapedErrors() throws Exception {
+	public void withEscapedErrors() throws Exception {
 		// construct an errors instance of the tag
 		TestBean target = new TestBean();
 		target.setName("Rob Harrop");
@@ -235,7 +235,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withNonEscapedErrors() throws Exception {
+	public void withNonEscapedErrors() throws Exception {
 		this.tag.setHtmlEscape(false);
 
 		// construct an errors instance of the tag
@@ -264,7 +264,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withErrorsAndCustomElement() throws Exception {
+	public void withErrorsAndCustomElement() throws Exception {
 		// construct an errors instance of the tag
 		TestBean target = new TestBean();
 		target.setName("Rob Harrop");
@@ -292,7 +292,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withoutErrors() throws Exception {
+	public void withoutErrors() throws Exception {
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
 		exposeBindingResult(errors);
 		int result = this.tag.doStartTag();
@@ -302,11 +302,11 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(result).isEqualTo(Tag.EVAL_PAGE);
 
 		String output = getOutput();
-		assertThat(output).isEmpty();
+		assertThat(output.length()).isEqualTo(0);
 	}
 
 	@Test
-	void withoutErrorsInstance() throws Exception {
+	public void withoutErrorsInstance() throws Exception {
 		int result = this.tag.doStartTag();
 		assertThat(result).isEqualTo(Tag.SKIP_BODY);
 
@@ -314,11 +314,11 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(result).isEqualTo(Tag.EVAL_PAGE);
 
 		String output = getOutput();
-		assertThat(output).isEmpty();
+		assertThat(output.length()).isEqualTo(0);
 	}
 
 	@Test
-	void asBodyTag() throws Exception {
+	public void asBodyTag() throws Exception {
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
 		errors.rejectValue("name", "some.code", "Default Message");
 		errors.rejectValue("name", "too.short", "Too Short");
@@ -335,7 +335,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void asBodyTagWithExistingMessagesAttribute() throws Exception {
+	public void asBodyTagWithExistingMessagesAttribute() throws Exception {
 		String existingAttribute = "something";
 		getPageContext().setAttribute(ErrorsTag.MESSAGES_ATTRIBUTE, existingAttribute);
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
@@ -359,7 +359,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-2788
 	 */
 	@Test
-	void asBodyTagWithErrorsAndExistingMessagesAttributeInNonPageScopeAreNotClobbered() throws Exception {
+	public void asBodyTagWithErrorsAndExistingMessagesAttributeInNonPageScopeAreNotClobbered() throws Exception {
 		String existingAttribute = "something";
 		getPageContext().setAttribute(ErrorsTag.MESSAGES_ATTRIBUTE, existingAttribute, PageContext.APPLICATION_SCOPE);
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
@@ -383,7 +383,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-2788
 	 */
 	@Test
-	void asBodyTagWithNoErrorsAndExistingMessagesAttributeInApplicationScopeAreNotClobbered() throws Exception {
+	public void asBodyTagWithNoErrorsAndExistingMessagesAttributeInApplicationScopeAreNotClobbered() throws Exception {
 		assertWhenNoErrorsExistingMessagesInScopeAreNotClobbered(PageContext.APPLICATION_SCOPE);
 	}
 
@@ -391,7 +391,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-2788
 	 */
 	@Test
-	void asBodyTagWithNoErrorsAndExistingMessagesAttributeInSessionScopeAreNotClobbered() throws Exception {
+	public void asBodyTagWithNoErrorsAndExistingMessagesAttributeInSessionScopeAreNotClobbered() throws Exception {
 		assertWhenNoErrorsExistingMessagesInScopeAreNotClobbered(PageContext.SESSION_SCOPE);
 	}
 
@@ -399,7 +399,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-2788
 	 */
 	@Test
-	void asBodyTagWithNoErrorsAndExistingMessagesAttributeInPageScopeAreNotClobbered() throws Exception {
+	public void asBodyTagWithNoErrorsAndExistingMessagesAttributeInPageScopeAreNotClobbered() throws Exception {
 		assertWhenNoErrorsExistingMessagesInScopeAreNotClobbered(PageContext.PAGE_SCOPE);
 	}
 
@@ -407,7 +407,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-2788
 	 */
 	@Test
-	void asBodyTagWithNoErrorsAndExistingMessagesAttributeInRequestScopeAreNotClobbered() throws Exception {
+	public void asBodyTagWithNoErrorsAndExistingMessagesAttributeInRequestScopeAreNotClobbered() throws Exception {
 		assertWhenNoErrorsExistingMessagesInScopeAreNotClobbered(PageContext.REQUEST_SCOPE);
 	}
 
@@ -415,7 +415,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	 * https://jira.spring.io/browse/SPR-4005
 	 */
 	@Test
-	void omittedPathMatchesObjectErrorsOnly() throws Exception {
+	public void omittedPathMatchesObjectErrorsOnly() throws Exception {
 		this.tag.setPath(null);
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
 		errors.reject("some.code", "object error");
@@ -425,13 +425,13 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(getPageContext().getAttribute(ErrorsTag.MESSAGES_ATTRIBUTE)).isNotNull();
 		this.tag.doEndTag();
 		String output = getOutput();
-		assertThat(output).contains("id=\"testBean.errors\"");
-		assertThat(output).contains("object error");
-		assertThat(output).doesNotContain("field error");
+		assertThat(output.contains("id=\"testBean.errors\"")).isTrue();
+		assertThat(output.contains("object error")).isTrue();
+		assertThat(output.contains("field error")).isFalse();
 	}
 
 	@Test
-	void specificPathMatchesSpecificFieldOnly() throws Exception {
+	public void specificPathMatchesSpecificFieldOnly() throws Exception {
 		this.tag.setPath("name");
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
 		errors.reject("some.code", "object error");
@@ -441,13 +441,13 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(getPageContext().getAttribute(ErrorsTag.MESSAGES_ATTRIBUTE)).isNotNull();
 		this.tag.doEndTag();
 		String output = getOutput();
-		assertThat(output).contains("id=\"name.errors\"");
-		assertThat(output).doesNotContain("object error");
-		assertThat(output).contains("field error");
+		assertThat(output.contains("id=\"name.errors\"")).isTrue();
+		assertThat(output.contains("object error")).isFalse();
+		assertThat(output.contains("field error")).isTrue();
 	}
 
 	@Test
-	void starMatchesAllErrors() throws Exception {
+	public void starMatchesAllErrors() throws Exception {
 		this.tag.setPath("*");
 		Errors errors = new BeanPropertyBindingResult(new TestBean(), "COMMAND_NAME");
 		errors.reject("some.code", "object error");
@@ -457,9 +457,9 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(getPageContext().getAttribute(ErrorsTag.MESSAGES_ATTRIBUTE)).isNotNull();
 		this.tag.doEndTag();
 		String output = getOutput();
-		assertThat(output).contains("id=\"testBean.errors\"");
-		assertThat(output).contains("object error");
-		assertThat(output).contains("field error");
+		assertThat(output.contains("id=\"testBean.errors\"")).isTrue();
+		assertThat(output.contains("object error")).isTrue();
+		assertThat(output.contains("field error")).isTrue();
 	}
 
 	@Override
@@ -475,11 +475,11 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 	}
 
 	private void assertElementTagOpened(String output) {
-		assertThat(output).startsWith("<" + this.tag.getElement() + " ");
+		assertThat(output.startsWith("<" + this.tag.getElement() + " ")).isTrue();
 	}
 
 	private void assertElementTagClosed(String output) {
-		assertThat(output).endsWith("</" + this.tag.getElement() + ">");
+		assertThat(output.endsWith("</" + this.tag.getElement() + ">")).isTrue();
 	}
 
 	private void assertWhenNoErrorsExistingMessagesInScopeAreNotClobbered(int scope) throws JspException {
@@ -495,7 +495,7 @@ public class ErrorsTagTests extends AbstractFormTagTests {
 		assertThat(result).isEqualTo(Tag.EVAL_PAGE);
 
 		String output = getOutput();
-		assertThat(output).isEmpty();
+		assertThat(output.length()).isEqualTo(0);
 
 		assertThat(getPageContext().getAttribute(ErrorsTag.MESSAGES_ATTRIBUTE, scope)).isEqualTo(existingAttribute);
 	}

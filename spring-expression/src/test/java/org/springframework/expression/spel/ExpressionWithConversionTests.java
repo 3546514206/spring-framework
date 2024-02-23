@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Clement
  * @author Dave Syer
  */
-class ExpressionWithConversionTests extends AbstractExpressionTests {
+public class ExpressionWithConversionTests extends AbstractExpressionTests {
 
 	private static List<String> listOfString = new ArrayList<>();
 	private static TypeDescriptor typeDescriptorForListOfString = null;
@@ -59,7 +59,7 @@ class ExpressionWithConversionTests extends AbstractExpressionTests {
 	}
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
 		ExpressionWithConversionTests.typeDescriptorForListOfString = new TypeDescriptor(ExpressionWithConversionTests.class.getDeclaredField("listOfString"));
 		ExpressionWithConversionTests.typeDescriptorForListOfInteger = new TypeDescriptor(ExpressionWithConversionTests.class.getDeclaredField("listOfInteger"));
 	}
@@ -69,7 +69,7 @@ class ExpressionWithConversionTests extends AbstractExpressionTests {
 	 * Test the service can convert what we are about to use in the expression evaluation tests.
 	 */
 	@Test
-	void testConversionsAvailable() {
+	public void testConversionsAvailable() throws Exception {
 		TypeConvertorUsingConversionService tcs = new TypeConvertorUsingConversionService();
 
 		// ArrayList containing List<Integer> to List<String>
@@ -87,21 +87,21 @@ class ExpressionWithConversionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testSetParameterizedList() {
+	public void testSetParameterizedList() throws Exception {
 		StandardEvaluationContext context = TestScenarioCreator.getTestEvaluationContext();
 		Expression e = parser.parseExpression("listOfInteger.size()");
-		assertThat(e.getValue(context, Integer.class)).isZero();
+		assertThat(e.getValue(context, Integer.class).intValue()).isEqualTo(0);
 		context.setTypeConverter(new TypeConvertorUsingConversionService());
 		// Assign a List<String> to the List<Integer> field - the component elements should be converted
 		parser.parseExpression("listOfInteger").setValue(context,listOfString);
 		// size now 3
-		assertThat(e.getValue(context, Integer.class)).isEqualTo(3);
+		assertThat(e.getValue(context, Integer.class).intValue()).isEqualTo(3);
 		Class<?> clazz = parser.parseExpression("listOfInteger[1].getClass()").getValue(context, Class.class); // element type correctly Integer
 		assertThat(clazz).isEqualTo(Integer.class);
 	}
 
 	@Test
-	void testCoercionToCollectionOfPrimitive() throws Exception {
+	public void testCoercionToCollectionOfPrimitive() throws Exception {
 
 		class TestTarget {
 			@SuppressWarnings("unused")
@@ -134,7 +134,7 @@ class ExpressionWithConversionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testConvert() {
+	public void testConvert() {
 		Foo root = new Foo("bar");
 		Collection<String> foos = Collections.singletonList("baz");
 

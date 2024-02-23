@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 
 package org.springframework.test.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Test annotation for use with JUnit 4 to indicate that a test method should be
@@ -28,11 +24,7 @@ import java.lang.annotation.Target;
  *
  * <p>Note that the scope of execution to be repeated includes execution of the
  * test method itself as well as any <em>set up</em> or <em>tear down</em> of
- * the test fixture. When used with the
- * {@link org.springframework.test.context.junit4.rules.SpringMethodRule
- * SpringMethodRule}, the scope additionally includes
- * {@linkplain org.springframework.test.context.TestExecutionListener#prepareTestInstance
- * preparation of the test instance}.
+ * the test fixture.
  *
  * <p>This annotation may be used as a <em>meta-annotation</em> to create custom
  * <em>composed annotations</em>.

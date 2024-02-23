@@ -16,13 +16,13 @@
 
 package org.springframework.context.support;
 
-import java.util.Locale;
-
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.lang.Nullable;
+
+import java.util.Locale;
 
 /**
  * Helper class for easy access to messages from a MessageSource,
@@ -79,7 +79,8 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the default Locale.
-	 * @param code the code of the message
+	 *
+	 * @param code           code of the message
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @return the message
 	 */
@@ -90,7 +91,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the given Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @param locale the Locale in which to do lookup
 	 * @return the message
@@ -102,7 +103,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the default Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @return the message
@@ -114,7 +115,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the given Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @param locale the Locale in which to do lookup
@@ -127,7 +128,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the default Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
 	 */
@@ -137,7 +138,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the given Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param locale the Locale in which to do lookup
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
@@ -148,7 +149,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the default Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
@@ -159,7 +160,7 @@ public class MessageSourceAccessor {
 
 	/**
 	 * Retrieve the message for the given code and the given Locale.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param locale the Locale in which to do lookup
 	 * @return the message

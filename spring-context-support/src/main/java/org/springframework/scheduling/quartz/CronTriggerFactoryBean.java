@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.quartz.impl.triggers.CronTriggerImpl;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.Constants;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -47,7 +48,6 @@ import org.springframework.util.Assert;
  * instead of registering the JobDetail separately.
  *
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.1
  * @see #setName
  * @see #setGroup
@@ -58,16 +58,8 @@ import org.springframework.util.Assert;
  */
 public class CronTriggerFactoryBean implements FactoryBean<CronTrigger>, BeanNameAware, InitializingBean {
 
-	/**
-	 * Map of constant names to constant values for the misfire instruction constants
-	 * defined in {@link org.quartz.Trigger} and {@link org.quartz.CronTrigger}.
-	 */
-	private static final Map<String, Integer> constants = Map.of(
-			"MISFIRE_INSTRUCTION_SMART_POLICY", CronTrigger.MISFIRE_INSTRUCTION_SMART_POLICY,
-			"MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY", CronTrigger.MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY,
-			"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW", CronTrigger.MISFIRE_INSTRUCTION_FIRE_ONCE_NOW,
-			"MISFIRE_INSTRUCTION_DO_NOTHING", CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING
-		);
+	/** Constants for the CronTrigger class. */
+	private static final Constants constants = new Constants(CronTrigger.class);
 
 
 	@Nullable
@@ -97,7 +89,7 @@ public class CronTriggerFactoryBean implements FactoryBean<CronTrigger>, BeanNam
 
 	private int priority;
 
-	private int misfireInstruction = CronTrigger.MISFIRE_INSTRUCTION_SMART_POLICY;
+	private int misfireInstruction;
 
 	@Nullable
 	private String description;
@@ -204,29 +196,22 @@ public class CronTriggerFactoryBean implements FactoryBean<CronTrigger>, BeanNam
 	}
 
 	/**
-	 * Specify the misfire instruction for this trigger.
+	 * Specify a misfire instruction for this trigger.
 	 */
 	public void setMisfireInstruction(int misfireInstruction) {
-		Assert.isTrue(constants.containsValue(misfireInstruction),
-				"Only values of misfire instruction constants allowed");
 		this.misfireInstruction = misfireInstruction;
 	}
 
 	/**
-	 * Set the misfire instruction for this trigger via the name of the corresponding
-	 * constant in the {@link org.quartz.Trigger} and {@link org.quartz.CronTrigger}
-	 * classes.
-	 * <p>Default is {@code MISFIRE_INSTRUCTION_SMART_POLICY}.
-	 * @see org.quartz.Trigger#MISFIRE_INSTRUCTION_SMART_POLICY
-	 * @see org.quartz.Trigger#MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY
+	 * Set the misfire instruction via the name of the corresponding
+	 * constant in the {@link org.quartz.CronTrigger} class.
+	 * Default is {@code MISFIRE_INSTRUCTION_SMART_POLICY}.
 	 * @see org.quartz.CronTrigger#MISFIRE_INSTRUCTION_FIRE_ONCE_NOW
 	 * @see org.quartz.CronTrigger#MISFIRE_INSTRUCTION_DO_NOTHING
+	 * @see org.quartz.Trigger#MISFIRE_INSTRUCTION_SMART_POLICY
 	 */
 	public void setMisfireInstructionName(String constantName) {
-		Assert.hasText(constantName, "'constantName' must not be null or blank");
-		Integer misfireInstruction = constants.get(constantName);
-		Assert.notNull(misfireInstruction, "Only misfire instruction constants allowed");
-		this.misfireInstruction = misfireInstruction;
+		this.misfireInstruction = constants.asNumber(constantName).intValue();
 	}
 
 	/**

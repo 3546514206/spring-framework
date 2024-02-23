@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 package org.springframework.core;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -24,9 +27,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -52,7 +52,7 @@ class MethodParameterTests {
 
 	@BeforeEach
 	void setup() throws NoSuchMethodException {
-		method = getClass().getMethod("method", String.class, long.class);
+		method = getClass().getMethod("method", String.class, Long.TYPE);
 		stringParameter = new MethodParameter(method, 0);
 		longParameter = new MethodParameter(method, 1);
 		intReturnType = new MethodParameter(method, -1);
@@ -65,14 +65,14 @@ class MethodParameterTests {
 		assertThat(longParameter).isEqualTo(longParameter);
 		assertThat(intReturnType).isEqualTo(intReturnType);
 
-		assertThat(stringParameter).isNotEqualTo(longParameter);
-		assertThat(stringParameter).isNotEqualTo(intReturnType);
-		assertThat(longParameter).isNotEqualTo(stringParameter);
-		assertThat(longParameter).isNotEqualTo(intReturnType);
-		assertThat(intReturnType).isNotEqualTo(stringParameter);
-		assertThat(intReturnType).isNotEqualTo(longParameter);
+		assertThat(stringParameter.equals(longParameter)).isFalse();
+		assertThat(stringParameter.equals(intReturnType)).isFalse();
+		assertThat(longParameter.equals(stringParameter)).isFalse();
+		assertThat(longParameter.equals(intReturnType)).isFalse();
+		assertThat(intReturnType.equals(stringParameter)).isFalse();
+		assertThat(intReturnType.equals(longParameter)).isFalse();
 
-		Method method = getClass().getMethod("method", String.class, long.class);
+		Method method = getClass().getMethod("method", String.class, Long.TYPE);
 		MethodParameter methodParameter = new MethodParameter(method, 0);
 		assertThat(methodParameter).isEqualTo(stringParameter);
 		assertThat(stringParameter).isEqualTo(methodParameter);
@@ -86,10 +86,10 @@ class MethodParameterTests {
 		assertThat(longParameter.hashCode()).isEqualTo(longParameter.hashCode());
 		assertThat(intReturnType.hashCode()).isEqualTo(intReturnType.hashCode());
 
-		Method method = getClass().getMethod("method", String.class, long.class);
+		Method method = getClass().getMethod("method", String.class, Long.TYPE);
 		MethodParameter methodParameter = new MethodParameter(method, 0);
 		assertThat(methodParameter.hashCode()).isEqualTo(stringParameter.hashCode());
-		assertThat(methodParameter.hashCode()).isNotEqualTo(longParameter.hashCode());
+		assertThat(methodParameter.hashCode()).isNotEqualTo((long) longParameter.hashCode());
 	}
 
 	@Test

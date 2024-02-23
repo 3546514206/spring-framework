@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 
 package org.springframework.messaging.support;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -31,6 +26,10 @@ import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.MessagingException;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Abstract base class for {@link MessageChannel} implementations.
@@ -87,20 +86,17 @@ public abstract class AbstractMessageChannel implements MessageChannel, Intercep
 
 	@Override
 	public void setInterceptors(List<ChannelInterceptor> interceptors) {
-		Assert.noNullElements(interceptors, "'interceptors' must not contain null elements");
 		this.interceptors.clear();
 		this.interceptors.addAll(interceptors);
 	}
 
 	@Override
 	public void addInterceptor(ChannelInterceptor interceptor) {
-		Assert.notNull(interceptor, "'interceptor' must not be null");
 		this.interceptors.add(interceptor);
 	}
 
 	@Override
 	public void addInterceptor(int index, ChannelInterceptor interceptor) {
-		Assert.notNull(interceptor, "'interceptor' must not be null");
 		this.interceptors.add(index, interceptor);
 	}
 
@@ -143,8 +139,8 @@ public abstract class AbstractMessageChannel implements MessageChannel, Intercep
 		}
 		catch (Exception ex) {
 			chain.triggerAfterSendCompletion(messageToUse, this, sent, ex);
-			if (ex instanceof MessagingException messagingException) {
-				throw messagingException;
+			if (ex instanceof MessagingException) {
+				throw (MessagingException) ex;
 			}
 			throw new MessageDeliveryException(messageToUse,"Failed to send message to " + this, ex);
 		}

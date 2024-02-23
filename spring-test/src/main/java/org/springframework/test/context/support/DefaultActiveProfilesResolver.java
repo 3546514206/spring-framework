@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,16 @@ package org.springframework.test.context.support;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ActiveProfilesResolver;
-import org.springframework.test.context.TestContextAnnotationUtils.AnnotationDescriptor;
+import org.springframework.test.util.MetaAnnotationUtils.AnnotationDescriptor;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
-import static org.springframework.test.context.TestContextAnnotationUtils.findAnnotationDescriptor;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import static org.springframework.test.util.MetaAnnotationUtils.findAnnotationDescriptor;
 
 /**
  * Default implementation of the {@link ActiveProfilesResolver} strategy that
@@ -39,8 +42,6 @@ import static org.springframework.test.context.TestContextAnnotationUtils.findAn
  */
 public class DefaultActiveProfilesResolver implements ActiveProfilesResolver {
 
-	private static final String[] EMPTY_STRING_ARRAY = new String[0];
-
 	private static final Log logger = LogFactory.getLog(DefaultActiveProfilesResolver.class);
 
 
@@ -50,30 +51,41 @@ public class DefaultActiveProfilesResolver implements ActiveProfilesResolver {
 	 * {@link ActiveProfiles#profiles} or {@link ActiveProfiles#value}.
 	 * @param testClass the test class for which the profiles should be resolved;
 	 * never {@code null}
-	 * @return the bean definition profiles to use when loading the
+	 * @return the list of bean definition profiles to use when loading the
 	 * {@code ApplicationContext}; never {@code null}
 	 */
 	@Override
 	public String[] resolve(Class<?> testClass) {
 		Assert.notNull(testClass, "Class must not be null");
-		AnnotationDescriptor<ActiveProfiles> descriptor = findAnnotationDescriptor(testClass, ActiveProfiles.class);
+
+		final Set<String> activeProfiles = new LinkedHashSet<>();
+
+		Class<ActiveProfiles> annotationType = ActiveProfiles.class;
+		AnnotationDescriptor<ActiveProfiles> descriptor = findAnnotationDescriptor(testClass, annotationType);
 
 		if (descriptor == null) {
-			if (logger.isTraceEnabled()) {
-				logger.trace(String.format(
-					"Could not find an 'annotation declaring class' for annotation type [%s] and class [%s]",
-					ActiveProfiles.class.getName(), testClass.getName()));
+			if (logger.isDebugEnabled()) {
+				logger.debug(String.format(
+						"Could not find an 'annotation declaring class' for annotation type [%s] and class [%s]",
+						annotationType.getName(), testClass.getName()));
 			}
-			return EMPTY_STRING_ARRAY;
-		}
-		else {
-			ActiveProfiles annotation = descriptor.getAnnotation();
+		} else {
+			Class<?> declaringClass = descriptor.getDeclaringClass();
+			ActiveProfiles annotation = descriptor.synthesizeAnnotation();
+
 			if (logger.isTraceEnabled()) {
 				logger.trace(String.format("Retrieved @ActiveProfiles [%s] for declaring class [%s].", annotation,
-					descriptor.getDeclaringClass().getName()));
+						declaringClass.getName()));
 			}
-			return annotation.profiles();
+
+			for (String profile : annotation.profiles()) {
+				if (StringUtils.hasText(profile)) {
+					activeProfiles.add(profile.trim());
+				}
+			}
 		}
+
+		return StringUtils.toStringArray(activeProfiles);
 	}
 
 }

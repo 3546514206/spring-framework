@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.rsocket;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.rsocket.metadata.CompositeMetadataFlyweight;
+import io.rsocket.metadata.TaggingMetadataFlyweight;
 import io.rsocket.metadata.WellKnownMimeType;
-import reactor.core.publisher.Mono;
-
-import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Encoder;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -41,6 +32,12 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.MimeType;
 import org.springframework.util.ObjectUtils;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Helps to collect metadata values and mime types, and encode them.
  *
@@ -49,10 +46,10 @@ import org.springframework.util.ObjectUtils;
  */
 final class MetadataEncoder {
 
-	/** For route variable replacement. */
-	private static final Pattern VARS_PATTERN = Pattern.compile("\\{(.+?)}");
-
-	private static final Object NO_VALUE = new Object();
+	/**
+	 * For route variable replacement.
+	 */
+	private static final Pattern VARS_PATTERN = Pattern.compile("\\{([^/]+?)}");
 
 
 	private final MimeType metadataMimeType;
@@ -66,9 +63,7 @@ final class MetadataEncoder {
 	@Nullable
 	private String route;
 
-	private final List<MetadataEntry> metadataEntries = new ArrayList<>(4);
-
-	private boolean hasAsyncValues;
+	private final Map<Object, MimeType> metadata = new LinkedHashMap<>(4);
 
 
 	MetadataEncoder(MimeType metadataMimeType, RSocketStrategies strategies) {
@@ -78,8 +73,8 @@ final class MetadataEncoder {
 		this.strategies = strategies;
 		this.isComposite = this.metadataMimeType.toString().equals(
 				WellKnownMimeType.MESSAGE_RSOCKET_COMPOSITE_METADATA.getString());
-		this.allocator = bufferFactory() instanceof NettyDataBufferFactory nettyDBF ?
-				nettyDBF.getByteBufAllocator() : ByteBufAllocator.DEFAULT;
+		this.allocator = bufferFactory() instanceof NettyDataBufferFactory ?
+				((NettyDataBufferFactory) bufferFactory()).getByteBufAllocator() : ByteBufAllocator.DEFAULT;
 	}
 
 
@@ -102,7 +97,7 @@ final class MetadataEncoder {
 		if (ObjectUtils.isEmpty(routeVars)) {
 			return route;
 		}
-		StringBuilder sb = new StringBuilder();
+		StringBuffer sb = new StringBuffer();
 		int index = 0;
 		Matcher matcher = VARS_PATTERN.matcher(route);
 		while (matcher.find()) {
@@ -112,13 +107,12 @@ final class MetadataEncoder {
 			matcher.appendReplacement(sb, value);
 			index++;
 		}
-		matcher.appendTail(sb);
 		return sb.toString();
 	}
 
 	private void assertMetadataEntryCount() {
 		if (!this.isComposite) {
-			int count = this.route != null ? this.metadataEntries.size() + 1 : this.metadataEntries.size();
+			int count = this.route != null ? this.metadata.size() + 1 : this.metadata.size();
 			Assert.isTrue(count < 2, "Composite metadata required for multiple metadata entries.");
 		}
 	}
@@ -135,18 +129,10 @@ final class MetadataEncoder {
 			mimeType = this.metadataMimeType;
 		}
 		else if (!this.metadataMimeType.equals(mimeType)) {
-			throw new IllegalArgumentException(
-					"Mime type is optional when not using composite metadata, but it was provided " +
-							"and does not match the connection metadata mime type '" + this.metadataMimeType + "'.");
+			throw new IllegalArgumentException("Mime type is optional (may be null) " +
+					"but was provided and does not match the connection metadata mime type.");
 		}
-		ReactiveAdapter adapter = this.strategies.reactiveAdapterRegistry().getAdapter(metadata.getClass());
-		if (adapter != null) {
-			Object originalMetadata = metadata;
-			Assert.isTrue(!adapter.isMultiValue(), () -> "Expected single value: " + originalMetadata);
-			metadata = Mono.from(adapter.toPublisher(metadata)).defaultIfEmpty(NO_VALUE);
-			this.hasAsyncValues = true;
-		}
-		this.metadataEntries.add(new MetadataEntry(metadata, mimeType));
+		this.metadata.put(metadata, mimeType);
 		assertMetadataEntryCount();
 		return this;
 	}
@@ -172,28 +158,22 @@ final class MetadataEncoder {
 
 	/**
 	 * Encode the collected metadata entries to a {@code DataBuffer}.
+	 *
 	 * @see PayloadUtils#createPayload(DataBuffer, DataBuffer)
 	 */
-	public Mono<DataBuffer> encode() {
-		return this.hasAsyncValues ?
-				resolveAsyncMetadata().map(this::encodeEntries) :
-				Mono.fromCallable(() -> encodeEntries(this.metadataEntries));
-	}
-
-	@SuppressWarnings("deprecation")
-	private DataBuffer encodeEntries(List<MetadataEntry> entries) {
+	public DataBuffer encode() {
 		if (this.isComposite) {
 			CompositeByteBuf composite = this.allocator.compositeBuffer();
 			try {
 				if (this.route != null) {
-					io.rsocket.metadata.CompositeMetadataCodec.encodeAndAddMetadata(composite, this.allocator,
+					CompositeMetadataFlyweight.encodeAndAddMetadata(composite, this.allocator,
 							WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, encodeRoute());
 				}
-				entries.forEach(entry -> {
-					Object value = entry.value();
-					io.rsocket.metadata.CompositeMetadataCodec.encodeAndAddMetadata(
-							composite, this.allocator, entry.mimeType().toString(),
-							value instanceof ByteBuf byteBuf ? byteBuf : PayloadUtils.asByteBuf(encodeEntry(entry)));
+				this.metadata.forEach((value, mimeType) -> {
+					ByteBuf metadata = (value instanceof ByteBuf ?
+							(ByteBuf) value : PayloadUtils.asByteBuf(encodeEntry(value, mimeType)));
+					CompositeMetadataFlyweight.encodeAndAddMetadata(
+							composite, this.allocator, mimeType.toString(), metadata);
 				});
 				return asDataBuffer(composite);
 				}
@@ -201,49 +181,43 @@ final class MetadataEncoder {
 				composite.release();
 				throw ex;
 			}
-		}
-		else if (this.route != null) {
-			Assert.isTrue(entries.isEmpty(), "Composite metadata required for route and other entries");
+		} else if (this.route != null) {
+			Assert.isTrue(this.metadata.isEmpty(), "Composite metadata required for route and other entries");
 			String routingMimeType = WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.getString();
 			return this.metadataMimeType.toString().equals(routingMimeType) ?
 					asDataBuffer(encodeRoute()) :
 					encodeEntry(this.route, this.metadataMimeType);
-		}
-		else {
-			Assert.isTrue(entries.size() == 1, "Composite metadata required for multiple entries");
-			MetadataEntry entry = entries.get(0);
-			if (!this.metadataMimeType.equals(entry.mimeType())) {
+		} else {
+			Assert.isTrue(this.metadata.size() == 1, "Composite metadata required for multiple entries");
+			Map.Entry<Object, MimeType> entry = this.metadata.entrySet().iterator().next();
+			if (!this.metadataMimeType.equals(entry.getValue())) {
 				throw new IllegalArgumentException(
 						"Connection configured for metadata mime type " +
-								"'" + this.metadataMimeType + "', but actual is `" + entries + "`");
+								"'" + this.metadataMimeType + "', but actual is `" + this.metadata + "`");
 			}
-			return encodeEntry(entry);
+			return encodeEntry(entry.getKey(), entry.getValue());
 		}
 	}
 
 	private ByteBuf encodeRoute() {
-		return io.rsocket.metadata.TaggingMetadataCodec.createRoutingMetadata(
+		return TaggingMetadataFlyweight.createRoutingMetadata(
 				this.allocator, Collections.singletonList(this.route)).getContent();
 	}
 
-	private <T> DataBuffer encodeEntry(MetadataEntry entry) {
-		return encodeEntry(entry.value(), entry.mimeType());
-	}
-
 	@SuppressWarnings("unchecked")
-	private <T> DataBuffer encodeEntry(Object value, MimeType mimeType) {
-		if (value instanceof ByteBuf byteBuf) {
-			return asDataBuffer(byteBuf);
+	private <T> DataBuffer encodeEntry(Object metadata, MimeType mimeType) {
+		if (metadata instanceof ByteBuf) {
+			return asDataBuffer((ByteBuf) metadata);
 		}
-		ResolvableType type = ResolvableType.forInstance(value);
+		ResolvableType type = ResolvableType.forInstance(metadata);
 		Encoder<T> encoder = this.strategies.encoder(type, mimeType);
-		Assert.notNull(encoder, () -> "No encoder for metadata " + value + ", mimeType '" + mimeType + "'");
-		return encoder.encodeValue((T) value, bufferFactory(), type, mimeType, Collections.emptyMap());
+		Assert.notNull(encoder, () -> "No encoder for metadata " + metadata + ", mimeType '" + mimeType + "'");
+		return encoder.encodeValue((T) metadata, bufferFactory(), type, mimeType, Collections.emptyMap());
 	}
 
 	private DataBuffer asDataBuffer(ByteBuf byteBuf) {
-		if (bufferFactory() instanceof NettyDataBufferFactory nettyDBF) {
-			return nettyDBF.wrap(byteBuf);
+		if (bufferFactory() instanceof NettyDataBufferFactory) {
+			return ((NettyDataBufferFactory) bufferFactory()).wrap(byteBuf);
 		}
 		else {
 			DataBuffer buffer = bufferFactory().wrap(byteBuf.nioBuffer());
@@ -251,48 +225,4 @@ final class MetadataEncoder {
 			return buffer;
 		}
 	}
-
-	private Mono<List<MetadataEntry>> resolveAsyncMetadata() {
-		Assert.state(this.hasAsyncValues, "No asynchronous values to resolve");
-		List<Mono<?>> valueMonos = new ArrayList<>();
-		this.metadataEntries.forEach(entry -> {
-			Object v = entry.value();
-			valueMonos.add(v instanceof Mono<?> mono ? mono : Mono.just(v));
-		});
-		return Mono.zip(valueMonos, values -> {
-			List<MetadataEntry> result = new ArrayList<>(values.length);
-			for (int i = 0; i < values.length; i++) {
-				if (values[i] != NO_VALUE) {
-					result.add(new MetadataEntry(values[i], this.metadataEntries.get(i).mimeType()));
-				}
-			}
-			return result;
-		});
-	}
-
-
-	/**
-	 * Holder for the metadata value and mime type.
-	 * @since 5.2.2
-	 */
-	private static class MetadataEntry {
-
-		private final Object value;
-
-		private final MimeType mimeType;
-
-		MetadataEntry(Object value, MimeType mimeType) {
-			this.value = value;
-			this.mimeType = mimeType;
-		}
-
-		public Object value() {
-			return this.value;
-		}
-
-		public MimeType mimeType() {
-			return this.mimeType;
-		}
-	}
-
 }

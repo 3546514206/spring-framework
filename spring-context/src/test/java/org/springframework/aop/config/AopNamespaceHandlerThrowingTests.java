@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,15 +28,15 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Adrian Colyer
  * @author Chris Beams
  */
-class AopNamespaceHandlerThrowingTests {
+public class AopNamespaceHandlerThrowingTests {
 
 	@Test
-	void testThrowingOnThrowingAdvice() {
+	public void testThrowingOnThrowingAdvice() {
 		new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-ok.xml", getClass());
 	}
 
 	@Test
-	void testParseThrowingOnOtherAdviceType() {
+	public void testParseThrowingOnOtherAdviceType() {
 		assertThatExceptionOfType(BeanDefinitionStoreException.class).isThrownBy(() ->
 				new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-error.xml", getClass()))
 			.matches(ex -> ex.contains(SAXParseException.class));

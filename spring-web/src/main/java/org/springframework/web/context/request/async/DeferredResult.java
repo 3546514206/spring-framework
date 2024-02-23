@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,6 @@ import org.springframework.web.context.request.NativeWebRequest;
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  * @author Rob Winch
- * @author Sam Brannen
  * @since 3.2
  * @param <T> the result type
  */
@@ -64,29 +63,24 @@ public class DeferredResult<T> {
 
 	private final Supplier<?> timeoutResult;
 
-	@Nullable
 	private Runnable timeoutCallback;
 
-	@Nullable
 	private Consumer<Throwable> errorCallback;
 
-	@Nullable
 	private Runnable completionCallback;
 
-	@Nullable
 	private DeferredResultHandler resultHandler;
 
-	@Nullable
 	private volatile Object result = RESULT_NONE;
 
-	private volatile boolean expired;
+	private volatile boolean expired = false;
 
 
 	/**
 	 * Create a DeferredResult.
 	 */
 	public DeferredResult() {
-		this(null);
+		this(null, () -> RESULT_NONE);
 	}
 
 	/**
@@ -107,7 +101,8 @@ public class DeferredResult<T> {
 	 * @param timeoutResult the result to use
 	 */
 	public DeferredResult(@Nullable Long timeoutValue, Object timeoutResult) {
-		this(timeoutValue, () -> timeoutResult);
+		this.timeoutValue = timeoutValue;
+		this.timeoutResult = () -> timeoutResult;
 	}
 
 	/**
@@ -346,7 +341,7 @@ public class DeferredResult<T> {
 	@FunctionalInterface
 	public interface DeferredResultHandler {
 
-		void handleResult(@Nullable Object result);
+		void handleResult(Object result);
 	}
 
 }

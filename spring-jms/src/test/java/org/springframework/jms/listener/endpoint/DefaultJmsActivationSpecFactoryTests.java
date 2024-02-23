@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package org.springframework.jms.listener.endpoint;
 
-import jakarta.jms.Destination;
-import jakarta.jms.Session;
+import javax.jms.Destination;
+import javax.jms.Session;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.jca.StubResourceAdapter;
@@ -32,7 +33,7 @@ import static org.mockito.Mockito.mock;
  * @author Agim Emruli
  * @author Juergen Hoeller
  */
-class DefaultJmsActivationSpecFactoryTests {
+public class DefaultJmsActivationSpecFactoryTests {
 
 	private final JmsActivationSpecConfig activationSpecConfig = new JmsActivationSpecConfig() {{
 		setMaxConcurrency(5);
@@ -46,7 +47,7 @@ class DefaultJmsActivationSpecFactoryTests {
 
 
 	@Test
-	void activeMQResourceAdapterSetup() {
+	public void activeMQResourceAdapterSetup() {
 		activationSpecConfig.setAcknowledgeMode(Session.SESSION_TRANSACTED);
 		JmsActivationSpecFactory activationSpecFactory = new DefaultJmsActivationSpecFactory();
 		StubActiveMQActivationSpec spec = (StubActiveMQActivationSpec) activationSpecFactory.createActivationSpec(
@@ -58,10 +59,10 @@ class DefaultJmsActivationSpecFactoryTests {
 	}
 
 	@Test
-	void webSphereResourceAdapterSetup() throws Exception {
+	public void webSphereResourceAdapterSetup() throws Exception {
 		Destination destination = new StubQueue();
 
-		DestinationResolver destinationResolver = mock();
+		DestinationResolver destinationResolver = mock(DestinationResolver.class);
 		given(destinationResolver.resolveDestinationName(null, "destinationname", false)).willReturn(destination);
 
 		DefaultJmsActivationSpecFactory activationSpecFactory = new DefaultJmsActivationSpecFactory();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,7 @@
 
 package org.springframework.beans.factory.groovy;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
 import groovy.lang.GroovyObjectSupport;
-
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -30,9 +25,11 @@ import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Internal wrapper for a Spring BeanDefinition, allowing for Groovy-style
@@ -53,54 +50,58 @@ class GroovyBeanDefinitionWrapper extends GroovyObjectSupport {
 	private static final String DESTROY_METHOD = "destroyMethod";
 	private static final String SINGLETON = "singleton";
 
-	private static final Set<String> dynamicProperties = Set.of(PARENT, AUTOWIRE, CONSTRUCTOR_ARGS,
-			FACTORY_BEAN, FACTORY_METHOD, INIT_METHOD, DESTROY_METHOD, SINGLETON);
+	private static final List<String> dynamicProperties = new ArrayList<>(8);
+
+	static {
+		dynamicProperties.add(PARENT);
+		dynamicProperties.add(AUTOWIRE);
+		dynamicProperties.add(CONSTRUCTOR_ARGS);
+		dynamicProperties.add(FACTORY_BEAN);
+		dynamicProperties.add(FACTORY_METHOD);
+		dynamicProperties.add(INIT_METHOD);
+		dynamicProperties.add(DESTROY_METHOD);
+		dynamicProperties.add(SINGLETON);
+	}
 
 
-	@Nullable
 	private String beanName;
 
-	@Nullable
-	private final Class<?> clazz;
+	private Class<?> clazz;
 
-	@Nullable
-	private final Collection<?> constructorArgs;
+	private Collection<?> constructorArgs;
 
-	@Nullable
 	private AbstractBeanDefinition definition;
 
-	@Nullable
 	private BeanWrapper definitionWrapper;
 
-	@Nullable
 	private String parentName;
 
 
-	GroovyBeanDefinitionWrapper(String beanName) {
-		this(beanName, null);
+	public GroovyBeanDefinitionWrapper(String beanName) {
+		this.beanName = beanName;
 	}
 
-	GroovyBeanDefinitionWrapper(@Nullable String beanName, @Nullable Class<?> clazz) {
-		this(beanName, clazz, null);
+	public GroovyBeanDefinitionWrapper(String beanName, Class<?> clazz) {
+		this.beanName = beanName;
+		this.clazz = clazz;
 	}
 
-	GroovyBeanDefinitionWrapper(@Nullable String beanName, Class<?> clazz, @Nullable Collection<?> constructorArgs) {
+	public GroovyBeanDefinitionWrapper(String beanName, Class<?> clazz, Collection<?> constructorArgs) {
 		this.beanName = beanName;
 		this.clazz = clazz;
 		this.constructorArgs = constructorArgs;
 	}
 
 
-	@Nullable
 	public String getBeanName() {
 		return this.beanName;
 	}
 
-	void setBeanDefinition(AbstractBeanDefinition definition) {
+	public void setBeanDefinition(AbstractBeanDefinition definition) {
 		this.definition = definition;
 	}
 
-	AbstractBeanDefinition getBeanDefinition() {
+	public AbstractBeanDefinition getBeanDefinition() {
 		if (this.definition == null) {
 			this.definition = createBeanDefinition();
 		}
@@ -124,33 +125,35 @@ class GroovyBeanDefinitionWrapper extends GroovyObjectSupport {
 		return bd;
 	}
 
-	void setBeanDefinitionHolder(BeanDefinitionHolder holder) {
+	public void setBeanDefinitionHolder(BeanDefinitionHolder holder) {
 		this.definition = (AbstractBeanDefinition) holder.getBeanDefinition();
 		this.beanName = holder.getBeanName();
 	}
 
-	BeanDefinitionHolder getBeanDefinitionHolder() {
+	public BeanDefinitionHolder getBeanDefinitionHolder() {
 		return new BeanDefinitionHolder(getBeanDefinition(), getBeanName());
 	}
 
-	void setParent(Object obj) {
-		Assert.notNull(obj, "Parent bean cannot be set to a null runtime bean reference.");
-		if (obj instanceof String name) {
-			this.parentName = name;
+	public void setParent(Object obj) {
+		if (obj == null) {
+			throw new IllegalArgumentException("Parent bean cannot be set to a null runtime bean reference!");
 		}
-		else if (obj instanceof RuntimeBeanReference runtimeBeanReference) {
-			this.parentName = runtimeBeanReference.getBeanName();
+		if (obj instanceof String) {
+			this.parentName = (String) obj;
 		}
-		else if (obj instanceof GroovyBeanDefinitionWrapper wrapper) {
-			this.parentName = wrapper.getBeanName();
+		else if (obj instanceof RuntimeBeanReference) {
+			this.parentName = ((RuntimeBeanReference) obj).getBeanName();
+		}
+		else if (obj instanceof GroovyBeanDefinitionWrapper) {
+			this.parentName = ((GroovyBeanDefinitionWrapper) obj).getBeanName();
 		}
 		getBeanDefinition().setParentName(this.parentName);
 		getBeanDefinition().setAbstract(false);
 	}
 
-	GroovyBeanDefinitionWrapper addProperty(String propertyName, Object propertyValue) {
-		if (propertyValue instanceof GroovyBeanDefinitionWrapper wrapper) {
-			propertyValue = wrapper.getBeanDefinition();
+	public GroovyBeanDefinitionWrapper addProperty(String propertyName, Object propertyValue) {
+		if (propertyValue instanceof GroovyBeanDefinitionWrapper) {
+			propertyValue = ((GroovyBeanDefinitionWrapper) propertyValue).getBeanDefinition();
 		}
 		getBeanDefinition().getPropertyValues().add(propertyName, propertyValue);
 		return this;
@@ -159,7 +162,6 @@ class GroovyBeanDefinitionWrapper extends GroovyObjectSupport {
 
 	@Override
 	public Object getProperty(String property) {
-		Assert.state(this.definitionWrapper != null, "BeanDefinition wrapper not initialized");
 		if (this.definitionWrapper.isReadableProperty(property)) {
 			return this.definitionWrapper.getPropertyValue(property);
 		}
@@ -170,13 +172,13 @@ class GroovyBeanDefinitionWrapper extends GroovyObjectSupport {
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public void setProperty(String property, Object newValue) {
 		if (PARENT.equals(property)) {
 			setParent(newValue);
 		}
 		else {
 			AbstractBeanDefinition bd = getBeanDefinition();
-			Assert.state(this.definitionWrapper != null, "BeanDefinition wrapper not initialized");
 			if (AUTOWIRE.equals(property)) {
 				if ("byName".equals(newValue)) {
 					bd.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
@@ -192,8 +194,9 @@ class GroovyBeanDefinitionWrapper extends GroovyObjectSupport {
 				}
 			}
 			// constructorArgs
-			else if (CONSTRUCTOR_ARGS.equals(property) && newValue instanceof List<?> args) {
+			else if (CONSTRUCTOR_ARGS.equals(property) && newValue instanceof List) {
 				ConstructorArgumentValues cav = new ConstructorArgumentValues();
+				List args = (List) newValue;
 				for (Object arg : args) {
 					cav.addGenericArgumentValue(arg);
 				}

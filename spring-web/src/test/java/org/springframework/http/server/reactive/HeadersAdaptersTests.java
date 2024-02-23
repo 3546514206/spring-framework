@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,30 @@
 
 package org.springframework.http.server.reactive;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.stream.Stream;
-
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.undertow.util.HeaderMap;
 import org.apache.tomcat.util.http.MimeHeaders;
-import org.assertj.core.api.StringAssert;
 import org.eclipse.jetty.http.HttpFields;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import org.springframework.http.support.JettyHeadersAdapter;
-import org.springframework.http.support.Netty4HeadersAdapter;
-import org.springframework.http.support.Netty5HeadersAdapter;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.util.MultiValueMap;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
- * Tests for {@code HeadersAdapters} {@code MultiValueMap} implementations.
+ * Unit tests for {@code HeadersAdapters} {@code MultiValueMap} implementations.
  *
  * @author Brian Clozel
  * @author Sam Brannen
@@ -55,77 +47,50 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 class HeadersAdaptersTests {
 
 	@ParameterizedHeadersTest
-	void getWithUnknownHeaderShouldReturnNull(MultiValueMap<String, String> headers) {
+	void getWithUnknownHeaderShouldReturnNull(String displayName, MultiValueMap<String, String> headers) {
 		assertThat(headers.get("Unknown")).isNull();
 	}
 
 	@ParameterizedHeadersTest
-	void getFirstWithUnknownHeaderShouldReturnNull(MultiValueMap<String, String> headers) {
+	void getFirstWithUnknownHeaderShouldReturnNull(String displayName, MultiValueMap<String, String> headers) {
 		assertThat(headers.getFirst("Unknown")).isNull();
 	}
 
 	@ParameterizedHeadersTest
-	void sizeWithMultipleValuesForHeaderShouldCountHeaders(MultiValueMap<String, String> headers) {
+	void sizeWithMultipleValuesForHeaderShouldCountHeaders(String displayName, MultiValueMap<String, String> headers) {
 		headers.add("TestHeader", "first");
 		headers.add("TestHeader", "second");
-		assertThat(headers).hasSize(1);
+		assertThat(headers.size()).isEqualTo(1);
 	}
 
 	@ParameterizedHeadersTest
-	void keySetShouldNotDuplicateHeaderNames(MultiValueMap<String, String> headers) {
+	void keySetShouldNotDuplicateHeaderNames(String displayName, MultiValueMap<String, String> headers) {
 		headers.add("TestHeader", "first");
 		headers.add("OtherHeader", "test");
 		headers.add("TestHeader", "second");
-		assertThat(headers.keySet()).hasSize(2);
+		assertThat(headers.keySet().size()).isEqualTo(2);
 	}
 
 	@ParameterizedHeadersTest
-	void containsKeyShouldBeCaseInsensitive(MultiValueMap<String, String> headers) {
+	void containsKeyShouldBeCaseInsensitive(String displayName, MultiValueMap<String, String> headers) {
 		headers.add("TestHeader", "first");
 		assertThat(headers.containsKey("testheader")).isTrue();
 	}
 
 	@ParameterizedHeadersTest
-	void addShouldKeepOrdering(MultiValueMap<String, String> headers) {
+	void addShouldKeepOrdering(String displayName, MultiValueMap<String, String> headers) {
 		headers.add("TestHeader", "first");
 		headers.add("TestHeader", "second");
 		assertThat(headers.getFirst("TestHeader")).isEqualTo("first");
-		assertThat(headers.get("TestHeader"), StringAssert.class).element(0).isEqualTo("first");
+		assertThat(headers.get("TestHeader").get(0)).isEqualTo("first");
 	}
 
 	@ParameterizedHeadersTest
-	void putShouldOverrideExisting(MultiValueMap<String, String> headers) {
+	void putShouldOverrideExisting(String displayName, MultiValueMap<String, String> headers) {
 		headers.add("TestHeader", "first");
-		headers.put("TestHeader", List.of("override"));
+		headers.put("TestHeader", Arrays.asList("override"));
 		assertThat(headers.getFirst("TestHeader")).isEqualTo("override");
-		assertThat(headers.get("TestHeader")).hasSize(1);
-	}
-
-	@ParameterizedHeadersTest
-	void nullValuesShouldNotFail(MultiValueMap<String, String> headers) {
-		headers.add("TestHeader", null);
-		assertThat(headers.getFirst("TestHeader")).isNull();
-		headers.set("TestHeader", null);
-		assertThat(headers.getFirst("TestHeader")).isNull();
-	}
-
-	@ParameterizedHeadersTest
-	void shouldReflectChangesOnKeyset(MultiValueMap<String, String> headers) {
-		headers.add("TestHeader", "first");
-		assertThat(headers.keySet()).hasSize(1);
-		headers.keySet().removeIf("TestHeader"::equals);
-		assertThat(headers.keySet()).isEmpty();
-	}
-
-	@ParameterizedHeadersTest
-	void shouldFailIfHeaderRemovedFromKeyset(MultiValueMap<String, String> headers) {
-		headers.add("TestHeader", "first");
-		assertThat(headers.keySet()).hasSize(1);
-		Iterator<String> names = headers.keySet().iterator();
-		assertThat(names.hasNext()).isTrue();
-		assertThat(names.next()).isEqualTo("TestHeader");
-		names.remove();
-		assertThatThrownBy(names::remove).isInstanceOf(IllegalStateException.class);
+		assertThat(headers.get("TestHeader").size()).isEqualTo(1);
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
@@ -137,12 +102,11 @@ class HeadersAdaptersTests {
 
 	static Stream<Arguments> headers() {
 		return Stream.of(
-				arguments(named("Map", CollectionUtils.toMultiValueMap(new LinkedCaseInsensitiveMap<>(8, Locale.ENGLISH)))),
-				arguments(named("Netty", new Netty4HeadersAdapter(new DefaultHttpHeaders()))),
-				arguments(named("Netty", new Netty5HeadersAdapter(io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders()))),
-				arguments(named("Tomcat", new TomcatHeadersAdapter(new MimeHeaders()))),
-				arguments(named("Undertow", new UndertowHeadersAdapter(new HeaderMap()))),
-				arguments(named("Jetty", new JettyHeadersAdapter(HttpFields.build())))
+			arguments("Map", CollectionUtils.toMultiValueMap(new LinkedCaseInsensitiveMap<>(8, Locale.ENGLISH))),
+			arguments("Netty", new NettyHeadersAdapter(new DefaultHttpHeaders())),
+			arguments("Tomcat", new TomcatHeadersAdapter(new MimeHeaders())),
+			arguments("Undertow", new UndertowHeadersAdapter(new HeaderMap())),
+			arguments("Jetty", new JettyHeadersAdapter(new HttpFields()))
 		);
 	}
 

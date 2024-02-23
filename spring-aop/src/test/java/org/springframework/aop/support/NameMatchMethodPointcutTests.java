@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,47 +18,45 @@ package org.springframework.aop.support;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.aop.testfixture.interceptor.SerializableNopInterceptor;
-import org.springframework.beans.testfixture.beans.Person;
-import org.springframework.beans.testfixture.beans.SerializablePerson;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.aop.interceptor.SerializableNopInterceptor;
+import org.springframework.tests.sample.beans.Person;
+import org.springframework.tests.sample.beans.SerializablePerson;
+import org.springframework.util.SerializationTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link NameMatchMethodPointcut}.
- *
  * @author Rod Johnson
  * @author Chris Beams
- * @author Sam Brannen
  */
-class NameMatchMethodPointcutTests {
+public class NameMatchMethodPointcutTests {
 
-	private final NameMatchMethodPointcut pc = new NameMatchMethodPointcut();
+	protected NameMatchMethodPointcut pc;
 
-	private final SerializableNopInterceptor nop = new SerializableNopInterceptor();
+	protected Person proxied;
 
-	private Person personProxy;
+	protected SerializableNopInterceptor nop;
 
 
 	/**
 	 * Create an empty pointcut, populating instance variables.
 	 */
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		ProxyFactory pf = new ProxyFactory(new SerializablePerson());
+		nop = new SerializableNopInterceptor();
+		pc = new NameMatchMethodPointcut();
 		pf.addAdvisor(new DefaultPointcutAdvisor(pc, nop));
-		personProxy = (Person) pf.getProxy();
+		proxied = (Person) pf.getProxy();
 	}
 
 
 	@Test
-	void isMatch() {
-		assertThat(pc.isMatch("echo", "echo")).isTrue();
+	public void testMatchingOnly() {
+		// Can't do exact matching through isMatch
 		assertThat(pc.isMatch("echo", "ech*")).isTrue();
 		assertThat(pc.isMatch("setName", "setN*")).isTrue();
 		assertThat(pc.isMatch("setName", "set*")).isTrue();
@@ -68,87 +66,73 @@ class NameMatchMethodPointcutTests {
 	}
 
 	@Test
-	void noMappedMethodNamePatterns() throws Throwable {
+	public void testEmpty() throws Throwable {
 		assertThat(nop.getCount()).isEqualTo(0);
-		personProxy.getName();
-		personProxy.setName("");
-		personProxy.echo(null);
+		proxied.getName();
+		proxied.setName("");
+		proxied.echo(null);
 		assertThat(nop.getCount()).isEqualTo(0);
 	}
 
+
 	@Test
-	void methodNamePatternsMappedIndividually() throws Throwable {
+	public void testMatchOneMethod() throws Throwable {
 		pc.addMethodName("echo");
 		pc.addMethodName("set*");
-
 		assertThat(nop.getCount()).isEqualTo(0);
-
-		personProxy.getName();
+		proxied.getName();
+		proxied.getName();
 		assertThat(nop.getCount()).isEqualTo(0);
-
-		personProxy.getName();
-		assertThat(nop.getCount()).isEqualTo(0);
-
-		personProxy.echo(null);
+		proxied.echo(null);
 		assertThat(nop.getCount()).isEqualTo(1);
 
-		personProxy.setName("");
+		proxied.setName("");
 		assertThat(nop.getCount()).isEqualTo(2);
-
-		personProxy.setAge(25);
+		proxied.setAge(25);
+		assertThat(proxied.getAge()).isEqualTo(25);
 		assertThat(nop.getCount()).isEqualTo(3);
-		assertThat(personProxy.getAge()).isEqualTo(25);
 	}
 
 	@Test
-	void methodNamePatternsMappedAsVarargs() throws Throwable {
+	public void testSets() throws Throwable {
 		pc.setMappedNames("set*", "echo");
-
 		assertThat(nop.getCount()).isEqualTo(0);
-
-		personProxy.getName();
-		assertThat(nop.getCount()).isEqualTo(0);
-
-		personProxy.setName("");
+		proxied.getName();
+		proxied.setName("");
 		assertThat(nop.getCount()).isEqualTo(1);
-
-		personProxy.echo(null);
+		proxied.echo(null);
 		assertThat(nop.getCount()).isEqualTo(2);
 	}
 
 	@Test
-	void serializable() throws Throwable {
-		methodNamePatternsMappedAsVarargs();
-
-		Person p2 = SerializationTestUtils.serializeAndDeserialize(personProxy);
+	public void testSerializable() throws Throwable {
+		testSets();
+		// Count is now 2
+		Person p2 = (Person) SerializationTestUtils.serializeAndDeserialize(proxied);
 		NopInterceptor nop2 = (NopInterceptor) ((Advised) p2).getAdvisors()[0].getAdvice();
-
-		// nop.getCount() should still be 2.
-		assertThat(nop2.getCount()).isEqualTo(2);
-
 		p2.getName();
 		assertThat(nop2.getCount()).isEqualTo(2);
-
 		p2.echo(null);
 		assertThat(nop2.getCount()).isEqualTo(3);
 	}
 
 	@Test
-	void equalsAndHashCode() {
+	public void testEqualsAndHashCode() {
 		NameMatchMethodPointcut pc1 = new NameMatchMethodPointcut();
 		NameMatchMethodPointcut pc2 = new NameMatchMethodPointcut();
-		String mappedNamePattern = "foo";
+
+		String foo = "foo";
 
 		assertThat(pc2).isEqualTo(pc1);
-		assertThat(pc2).hasSameHashCodeAs(pc1);
+		assertThat(pc2.hashCode()).isEqualTo(pc1.hashCode());
 
-		pc1.setMappedName(mappedNamePattern);
-		assertThat(pc1).isNotEqualTo(pc2);
-		assertThat(pc1).doesNotHaveSameHashCodeAs(pc2);
+		pc1.setMappedName(foo);
+		assertThat(pc1.equals(pc2)).isFalse();
+		assertThat(pc1.hashCode() != pc2.hashCode()).isTrue();
 
-		pc2.setMappedName(mappedNamePattern);
+		pc2.setMappedName(foo);
 		assertThat(pc2).isEqualTo(pc1);
-		assertThat(pc2).hasSameHashCodeAs(pc1);
+		assertThat(pc2.hashCode()).isEqualTo(pc1.hashCode());
 	}
 
 }

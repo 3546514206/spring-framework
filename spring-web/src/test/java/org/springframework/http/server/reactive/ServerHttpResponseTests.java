@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,50 +16,31 @@
 
 package org.springframework.http.server.reactive;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.netty.channel.AbortedException;
-import reactor.test.StepVerifier;
-
-import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.core.testfixture.io.buffer.LeakAwareDataBufferFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
-import org.springframework.http.codec.EncoderHttpMessageWriter;
-import org.springframework.http.codec.HttpMessageWriter;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link AbstractServerHttpRequest}.
- *
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
- * @author Brian Clozel
  */
-class ServerHttpResponseTests {
+public class ServerHttpResponseTests {
 
 	@Test
-	void writeWith() {
+	public void writeWith() throws Exception {
 		TestServerHttpResponse response = new TestServerHttpResponse();
 		response.writeWith(Flux.just(wrap("a"), wrap("b"), wrap("c"))).block();
 
@@ -67,14 +48,14 @@ class ServerHttpResponseTests {
 		assertThat(response.headersWritten).isTrue();
 		assertThat(response.cookiesWritten).isTrue();
 
-		assertThat(response.body).hasSize(3);
-		assertThat(response.body.get(0).toString(StandardCharsets.UTF_8)).isEqualTo("a");
-		assertThat(response.body.get(1).toString(StandardCharsets.UTF_8)).isEqualTo("b");
-		assertThat(response.body.get(2).toString(StandardCharsets.UTF_8)).isEqualTo("c");
+		assertThat(response.body.size()).isEqualTo(3);
+		assertThat(new String(response.body.get(0).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("a");
+		assertThat(new String(response.body.get(1).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("b");
+		assertThat(new String(response.body.get(2).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("c");
 	}
 
 	@Test  // SPR-14952
-	void writeAndFlushWithFluxOfDefaultDataBuffer() {
+	public void writeAndFlushWithFluxOfDefaultDataBuffer() throws Exception {
 		TestServerHttpResponse response = new TestServerHttpResponse();
 		Flux<Flux<DefaultDataBuffer>> flux = Flux.just(Flux.just(wrap("foo")));
 		response.writeAndFlushWith(flux).block();
@@ -83,51 +64,37 @@ class ServerHttpResponseTests {
 		assertThat(response.headersWritten).isTrue();
 		assertThat(response.cookiesWritten).isTrue();
 
-		assertThat(response.body).hasSize(1);
-		assertThat(response.body.get(0).toString(StandardCharsets.UTF_8)).isEqualTo("foo");
+		assertThat(response.body.size()).isEqualTo(1);
+		assertThat(new String(response.body.get(0).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("foo");
 	}
 
 	@Test
-	void writeWithFluxError() {
-		IllegalStateException error = new IllegalStateException("boo");
-		writeWithError(Flux.error(error));
-	}
-
-	@Test
-	void writeWithMonoError() {
-		IllegalStateException error = new IllegalStateException("boo");
-		writeWithError(Mono.error(error));
-	}
-
-	void writeWithError(Publisher<DataBuffer> body) {
+	public void writeWithError() throws Exception {
 		TestServerHttpResponse response = new TestServerHttpResponse();
-		HttpHeaders headers = response.getHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		headers.set(HttpHeaders.CONTENT_ENCODING, "gzip");
-		headers.setContentLength(12);
-		response.writeWith(body).onErrorComplete().block();
+		response.getHeaders().setContentLength(12);
+		IllegalStateException error = new IllegalStateException("boo");
+		response.writeWith(Flux.error(error)).onErrorResume(ex -> Mono.empty()).block();
 
 		assertThat(response.statusCodeWritten).isFalse();
 		assertThat(response.headersWritten).isFalse();
 		assertThat(response.cookiesWritten).isFalse();
-		assertThat(headers).doesNotContainKeys(HttpHeaders.CONTENT_TYPE, HttpHeaders.CONTENT_LENGTH,
-				HttpHeaders.CONTENT_ENCODING);
-		assertThat(response.body).isEmpty();
+		assertThat(response.getHeaders().containsKey(HttpHeaders.CONTENT_LENGTH)).isFalse();
+		assertThat(response.body.isEmpty()).isTrue();
 	}
 
 	@Test
-	void setComplete() {
+	public void setComplete() throws Exception {
 		TestServerHttpResponse response = new TestServerHttpResponse();
 		response.setComplete().block();
 
 		assertThat(response.statusCodeWritten).isTrue();
 		assertThat(response.headersWritten).isTrue();
 		assertThat(response.cookiesWritten).isTrue();
-		assertThat(response.body).isEmpty();
+		assertThat(response.body.isEmpty()).isTrue();
 	}
 
 	@Test
-	void beforeCommitWithComplete() {
+	public void beforeCommitWithComplete() throws Exception {
 		ResponseCookie cookie = ResponseCookie.from("ID", "123").build();
 		TestServerHttpResponse response = new TestServerHttpResponse();
 		response.beforeCommit(() -> Mono.fromRunnable(() -> response.getCookies().add(cookie.getName(), cookie)));
@@ -138,14 +105,14 @@ class ServerHttpResponseTests {
 		assertThat(response.cookiesWritten).isTrue();
 		assertThat(response.getCookies().getFirst("ID")).isSameAs(cookie);
 
-		assertThat(response.body).hasSize(3);
-		assertThat(response.body.get(0).toString(StandardCharsets.UTF_8)).isEqualTo("a");
-		assertThat(response.body.get(1).toString(StandardCharsets.UTF_8)).isEqualTo("b");
-		assertThat(response.body.get(2).toString(StandardCharsets.UTF_8)).isEqualTo("c");
+		assertThat(response.body.size()).isEqualTo(3);
+		assertThat(new String(response.body.get(0).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("a");
+		assertThat(new String(response.body.get(1).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("b");
+		assertThat(new String(response.body.get(2).asByteBuffer().array(), StandardCharsets.UTF_8)).isEqualTo("c");
 	}
 
 	@Test
-	void beforeCommitActionWithSetComplete() {
+	public void beforeCommitActionWithSetComplete() throws Exception {
 		ResponseCookie cookie = ResponseCookie.from("ID", "123").build();
 		TestServerHttpResponse response = new TestServerHttpResponse();
 		response.beforeCommit(() -> {
@@ -157,67 +124,14 @@ class ServerHttpResponseTests {
 		assertThat(response.statusCodeWritten).isTrue();
 		assertThat(response.headersWritten).isTrue();
 		assertThat(response.cookiesWritten).isTrue();
-		assertThat(response.body).isEmpty();
+		assertThat(response.body.isEmpty()).isTrue();
 		assertThat(response.getCookies().getFirst("ID")).isSameAs(cookie);
 	}
 
-	@Test // gh-24186, gh-25753
-	void beforeCommitErrorShouldLeaveResponseNotCommitted() {
-
-		Consumer<Supplier<Mono<Void>>> tester = preCommitAction -> {
-			TestServerHttpResponse response = new TestServerHttpResponse();
-			response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-			response.getHeaders().setContentLength(3);
-			response.beforeCommit(preCommitAction);
-
-			StepVerifier.create(response.writeWith(Flux.just(wrap("body"))))
-					.expectErrorMessage("Max sessions")
-					.verify();
-
-			assertThat(response.statusCodeWritten).isFalse();
-			assertThat(response.headersWritten).isFalse();
-			assertThat(response.cookiesWritten).isFalse();
-			assertThat(response.isCommitted()).isFalse();
-			assertThat(response.getHeaders()).isEmpty();
-
-			// Handle the error
-			response.setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
-			StepVerifier.create(response.setComplete()).verifyComplete();
-
-			assertThat(response.statusCodeWritten).isTrue();
-			assertThat(response.headersWritten).isTrue();
-			assertThat(response.cookiesWritten).isTrue();
-			assertThat(response.isCommitted()).isTrue();
-		};
-
-		tester.accept(() -> Mono.error(new IllegalStateException("Max sessions")));
-		tester.accept(() -> {
-			throw new IllegalStateException("Max sessions");
-		});
-	}
-
-	@Test // gh-26232
-	void monoResponseShouldNotLeakIfCancelled() {
-		LeakAwareDataBufferFactory bufferFactory = new LeakAwareDataBufferFactory();
-		MockServerHttpRequest request = MockServerHttpRequest.get("/").build();
-		MockServerHttpResponse response = new MockServerHttpResponse(bufferFactory);
-		response.setWriteHandler(flux -> {
-			throw AbortedException.beforeSend();
-		});
-
-		HttpMessageWriter<Object> messageWriter = new EncoderHttpMessageWriter<>(new Jackson2JsonEncoder());
-		Mono<Void> result = messageWriter.write(Mono.just(Collections.singletonMap("foo", "bar")),
-				ResolvableType.forClass(Mono.class), ResolvableType.forClass(Map.class), null,
-				request, response, Collections.emptyMap());
-
-		StepVerifier.create(result).expectError(AbortedException.class).verify();
-
-		bufferFactory.checkForLeaks();
-	}
 
 
 	private DefaultDataBuffer wrap(String a) {
-		return DefaultDataBufferFactory.sharedInstance.wrap(ByteBuffer.wrap(a.getBytes(StandardCharsets.UTF_8)));
+		return new DefaultDataBufferFactory().wrap(ByteBuffer.wrap(a.getBytes(StandardCharsets.UTF_8)));
 	}
 
 
@@ -232,7 +146,7 @@ class ServerHttpResponseTests {
 		private final List<DataBuffer> body = new ArrayList<>();
 
 		public TestServerHttpResponse() {
-			super(DefaultDataBufferFactory.sharedInstance);
+			super(new DefaultDataBufferFactory());
 		}
 
 		@Override

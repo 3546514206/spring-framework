@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,15 @@
 
 package org.springframework.test.context.junit4.rules;
 
-import java.lang.reflect.Method;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
-
 import org.springframework.test.context.TestContextManager;
-import org.springframework.test.context.junit4.statements.ProfileValueChecker;
-import org.springframework.test.context.junit4.statements.RunAfterTestMethodCallbacks;
-import org.springframework.test.context.junit4.statements.RunBeforeTestMethodCallbacks;
-import org.springframework.test.context.junit4.statements.RunPrepareTestInstanceCallbacks;
-import org.springframework.test.context.junit4.statements.SpringFailOnTimeout;
-import org.springframework.test.context.junit4.statements.SpringRepeat;
+import org.springframework.test.context.junit4.statements.*;
+
+import java.lang.reflect.Method;
 
 /**
  * {@code SpringMethodRule} is a custom JUnit 4 {@link MethodRule} that
@@ -76,13 +70,9 @@ import org.springframework.test.context.junit4.statements.SpringRepeat;
  * <li>{@link org.springframework.test.annotation.IfProfileValue @IfProfileValue}</li>
  * </ul>
  *
- * <p><strong>NOTE:</strong> This class requires JUnit 4.12 or higher.
+ * <p><strong>NOTE:</strong> As of Spring Framework 4.3, this class requires JUnit 4.12 or higher.
  *
  * <p><strong>WARNING:</strong> Due to the shortcomings of JUnit rules, the
- * {@code SpringMethodRule}
- * {@linkplain org.springframework.test.context.TestExecutionListener#prepareTestInstance
- * prepares the test instance} before {@code @Before} lifecycle methods instead of
- * immediately after instantiation of the test class. In addition, the
  * {@code SpringMethodRule} does <strong>not</strong> support the
  * {@code beforeTestExecution()} and {@code afterTestExecution()} callbacks of the
  * {@link org.springframework.test.context.TestExecutionListener TestExecutionListener}

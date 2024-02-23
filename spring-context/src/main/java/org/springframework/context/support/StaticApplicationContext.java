@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package org.springframework.context.support;
 
-import java.util.Locale;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.lang.Nullable;
+
+import java.util.Locale;
 
 /**
  * {@link org.springframework.context.ApplicationContext} implementation
@@ -116,7 +115,7 @@ public class StaticApplicationContext extends GenericApplicationContext {
 	 */
 	public void registerPrototype(String name, Class<?> clazz) throws BeansException {
 		GenericBeanDefinition bd = new GenericBeanDefinition();
-		bd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
+		bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
 		bd.setBeanClass(clazz);
 		getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
 	}
@@ -128,7 +127,7 @@ public class StaticApplicationContext extends GenericApplicationContext {
 	 */
 	public void registerPrototype(String name, Class<?> clazz, MutablePropertyValues pvs) throws BeansException {
 		GenericBeanDefinition bd = new GenericBeanDefinition();
-		bd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
+		bd.setScope(GenericBeanDefinition.SCOPE_PROTOTYPE);
 		bd.setBeanClass(clazz);
 		bd.setPropertyValues(pvs);
 		getDefaultListableBeanFactory().registerBeanDefinition(name, bd);
@@ -136,8 +135,9 @@ public class StaticApplicationContext extends GenericApplicationContext {
 
 	/**
 	 * Associate the given message with the given code.
-	 * @param code lookup code
-	 * @param locale the locale message should be found within
+	 *
+	 * @param code           lookup code
+	 * @param locale         locale message should be found within
 	 * @param defaultMessage message associated with this lookup code
 	 * @see #getStaticMessageSource
 	 */

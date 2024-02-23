@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,25 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.net.URI;
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
-
 import org.reactivestreams.Publisher;
-
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.reactive.config.BlockingExecutionConfigurer;
 import org.springframework.web.reactive.config.EnableWebFlux;
-import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.server.adapter.ForwardedHeaderTransformer;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+
+import java.net.URI;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,7 +46,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  * @author Stephane Maldini
- * @author Sebastien Deleuze
  * @since 5.0
  */
 class RequestMappingIntegrationTests extends AbstractRequestMappingIntegrationTests {
@@ -68,20 +59,6 @@ class RequestMappingIntegrationTests extends AbstractRequestMappingIntegrationTe
 	}
 
 
-	@ParameterizedHttpServerTest // gh-30293
-	void emptyMapping(HttpServer httpServer) throws Exception {
-		startServer(httpServer);
-
-		String url = "http://localhost:" + this.port;
-		assertThat(getRestTemplate().getForObject(url, String.class)).isEqualTo("root");
-
-		url += "/";
-		assertThat(getRestTemplate().getForObject(url, String.class)).isEqualTo("root");
-
-		assertThat(getApplicationContext().getBean(TestExecutor.class).invocationCount.get()).isEqualTo(2);
-		assertThat(getApplicationContext().getBean(TestPredicate.class).invocationCount.get()).isEqualTo(2);
-	}
-
 	@ParameterizedHttpServerTest
 	void httpHead(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
@@ -90,6 +67,7 @@ class RequestMappingIntegrationTests extends AbstractRequestMappingIntegrationTe
 		HttpHeaders headers = getRestTemplate().headForHeaders(url);
 		String contentType = headers.getFirst("Content-Type");
 		assertThat(contentType).isNotNull();
+		assertThat(contentType.toLowerCase()).isEqualTo("text/html;charset=utf-8");
 		assertThat(headers.getContentLength()).isEqualTo(3);
 	}
 
@@ -112,52 +90,20 @@ class RequestMappingIntegrationTests extends AbstractRequestMappingIntegrationTe
 	void stream(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		int[] expected = {0, 1, 2, 3, 4};
-		assertThat(performGet("/stream", new HttpHeaders(), int[].class).getBody()).isEqualTo(expected);
+		String[] expected = {"0", "1", "2", "3", "4"};
+		assertThat(performGet("/stream", new HttpHeaders(), String[].class).getBody()).isEqualTo(expected);
 	}
 
 
 	@Configuration
 	@EnableWebFlux
-	static class WebConfig implements WebFluxConfigurer {
-
-		@Override
-		public void configureBlockingExecution(BlockingExecutionConfigurer configurer) {
-			configurer.setExecutor(executor());
-			configurer.setControllerMethodPredicate(predicate());
-		}
-
-		@Bean
-		TestExecutor executor() {
-			return new TestExecutor();
-		}
-
-		@Bean
-		TestPredicate predicate() {
-			return new TestPredicate();
-		}
-
-	}
-
-
-	@Configuration
-	static class LocalConfig {
-
-		@Bean
-		public ForwardedHeaderTransformer forwardedHeaderTransformer() {
-			return new ForwardedHeaderTransformer();
-		}
+	static class WebConfig {
 	}
 
 
 	@RestController
 	@SuppressWarnings("unused")
 	private static class TestRestController {
-
-		@GetMapping
-		public String get() {
-			return "root";
-		}
 
 		@GetMapping("/text")
 		public String textGet() {
@@ -182,27 +128,12 @@ class RequestMappingIntegrationTests extends AbstractRequestMappingIntegrationTe
 	}
 
 
-	private static class TestExecutor implements AsyncTaskExecutor {
+	@Configuration
+	static class LocalConfig {
 
-		private final AtomicInteger invocationCount = new AtomicInteger();
-
-		@Override
-		public void execute(Runnable task) {
-			this.invocationCount.incrementAndGet();
-			task.run();
-		}
-	}
-
-
-	private static class TestPredicate implements Predicate<HandlerMethod> {
-
-		private final AtomicInteger invocationCount = new AtomicInteger();
-
-		@Override
-		public boolean test(HandlerMethod handlerMethod) {
-			this.invocationCount.incrementAndGet();
-			Class<?> returnType = handlerMethod.getReturnType().getParameterType();
-			return (ReactiveAdapterRegistry.getSharedInstance().getAdapter(returnType) == null);
+		@Bean
+		public ForwardedHeaderTransformer forwardedHeaderTransformer() {
+			return new ForwardedHeaderTransformer();
 		}
 	}
 

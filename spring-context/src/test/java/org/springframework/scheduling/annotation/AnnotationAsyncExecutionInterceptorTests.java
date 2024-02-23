@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
- * Tests for {@link AnnotationAsyncExecutionInterceptor}.
+ * Unit tests for {@link AnnotationAsyncExecutionInterceptor}.
  *
  * @author Chris Beams
  * @since 3.1.2
  */
-class AnnotationAsyncExecutionInterceptorTests {
+public class AnnotationAsyncExecutionInterceptorTests {
 
 	@Test
 	@SuppressWarnings("unused")
@@ -50,7 +50,7 @@ class AnnotationAsyncExecutionInterceptorTests {
 		}
 		{ // method and class level -> method value, even if empty, overrides
 			@Async("qClass") class C { @Async void m() { } }
-			assertThat(i.getExecutorQualifier(C.class.getDeclaredMethod("m"))).isEmpty();
+			assertThat(i.getExecutorQualifier(C.class.getDeclaredMethod("m"))).isEqualTo("");
 		}
 		{ // meta annotation with qualifier
 			@MyAsync class C { void m() { } }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.aop.aspectj;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.JoinPoint.StaticPart;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -27,18 +23,19 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.aspectj.lang.reflect.SourceLocation;
 import org.aspectj.runtime.reflect.Factory;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.MethodBeforeAdvice;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.interceptor.ExposeInvocationInterceptor;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Rod Johnson
@@ -46,20 +43,20 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Ramnivas Laddad
  * @since 2.0
  */
-class MethodInvocationProceedingJoinPointTests {
+public class MethodInvocationProceedingJoinPointTests {
 
 	@Test
-	void testingBindingWithJoinPoint() {
+	public void testingBindingWithJoinPoint() {
 		assertThatIllegalStateException().isThrownBy(AbstractAspectJAdvice::currentJoinPoint);
 	}
 
 	@Test
-	void testingBindingWithProceedingJoinPoint() {
+	public void testingBindingWithProceedingJoinPoint() {
 		assertThatIllegalStateException().isThrownBy(AbstractAspectJAdvice::currentJoinPoint);
 	}
 
 	@Test
-	void testCanGetMethodSignatureFromJoinPoint() {
+	public void testCanGetMethodSignatureFromJoinPoint() {
 		final Object raw = new TestBean();
 		// Will be set by advice during a method call
 		final int newAge = 23;
@@ -70,7 +67,7 @@ class MethodInvocationProceedingJoinPointTests {
 		AtomicInteger depth = new AtomicInteger();
 		pf.addAdvice((MethodBeforeAdvice) (method, args, target) -> {
 			JoinPoint jp = AbstractAspectJAdvice.currentJoinPoint();
-			assertThat(jp.toString()).as("Method named in toString").contains(method.getName());
+			assertThat(jp.toString().contains(method.getName())).as("Method named in toString").isTrue();
 			// Ensure that these don't cause problems
 			jp.toShortString();
 			jp.toLongString();
@@ -118,7 +115,7 @@ class MethodInvocationProceedingJoinPointTests {
 	}
 
 	@Test
-	void testCanGetSourceLocationFromJoinPoint() {
+	public void testCanGetSourceLocationFromJoinPoint() {
 		final Object raw = new TestBean();
 		ProxyFactory pf = new ProxyFactory(raw);
 		pf.addAdvisor(ExposeInvocationInterceptor.ADVISOR);
@@ -135,7 +132,7 @@ class MethodInvocationProceedingJoinPointTests {
 	}
 
 	@Test
-	void testCanGetStaticPartFromJoinPoint() {
+	public void testCanGetStaticPartFromJoinPoint() {
 		final Object raw = new TestBean();
 		ProxyFactory pf = new ProxyFactory(raw);
 		pf.addAdvisor(ExposeInvocationInterceptor.ADVISOR);
@@ -152,7 +149,7 @@ class MethodInvocationProceedingJoinPointTests {
 	}
 
 	@Test
-	void toShortAndLongStringFormedCorrectly() {
+	public void toShortAndLongStringFormedCorrectly() throws Exception {
 		final Object raw = new TestBean();
 		ProxyFactory pf = new ProxyFactory(raw);
 		pf.addAdvisor(ExposeInvocationInterceptor.ADVISOR);

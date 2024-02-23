@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,11 @@ package org.springframework.transaction.reactive;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.lang.Nullable;
+import org.springframework.transaction.*;
+import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import org.springframework.lang.Nullable;
-import org.springframework.transaction.ReactiveTransaction;
-import org.springframework.transaction.ReactiveTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionException;
-import org.springframework.transaction.TransactionSystemException;
-import org.springframework.util.Assert;
 
 /**
  * Operator class that simplifies programmatic transaction demarcation and
@@ -35,11 +30,11 @@ import org.springframework.util.Assert;
  *
  * @author Mark Paluch
  * @author Juergen Hoeller
- * @author Enric Sala
  * @since 5.2
  * @see #execute
  * @see ReactiveTransactionManager
  */
+@SuppressWarnings("serial")
 final class TransactionalOperatorImpl implements TransactionalOperator {
 
 	private static final Log logger = LogFactory.getLog(TransactionalOperatorImpl.class);
@@ -58,7 +53,7 @@ final class TransactionalOperatorImpl implements TransactionalOperator {
 	 */
 	TransactionalOperatorImpl(ReactiveTransactionManager transactionManager, TransactionDefinition transactionDefinition) {
 		Assert.notNull(transactionManager, "ReactiveTransactionManager must not be null");
-		Assert.notNull(transactionDefinition, "TransactionDefinition must not be null");
+		Assert.notNull(transactionManager, "TransactionDefinition must not be null");
 		this.transactionManager = transactionManager;
 		this.transactionDefinition = transactionDefinition;
 	}
@@ -72,17 +67,41 @@ final class TransactionalOperatorImpl implements TransactionalOperator {
 	}
 
 	@Override
+	public <T> Mono<T> transactional(Mono<T> mono) {
+		return TransactionContextManager.currentContext().flatMap(context -> {
+			Mono<ReactiveTransaction> status = this.transactionManager.getReactiveTransaction(this.transactionDefinition);
+			// This is an around advice: Invoke the next interceptor in the chain.
+			// This will normally result in a target object being invoked.
+			// Need re-wrapping of ReactiveTransaction until we get hold of the exception
+			// through usingWhen.
+			return status.flatMap(it -> Mono.usingWhen(Mono.just(it), ignore -> mono,
+							this.transactionManager::commit, (res, err) -> Mono.empty(), s -> Mono.empty())
+					.onErrorResume(ex -> rollbackOnException(it, ex).then(Mono.error(ex))));
+		})
+		.subscriberContext(TransactionContextManager.getOrCreateContext())
+		.subscriberContext(TransactionContextManager.getOrCreateContextHolder());
+	}
+
+	@Override
 	public <T> Flux<T> execute(TransactionCallback<T> action) throws TransactionException {
-		return TransactionContextManager.currentContext().flatMapMany(context ->
-			Flux.usingWhen(
-				this.transactionManager.getReactiveTransaction(this.transactionDefinition),
-				action::doInTransaction,
-				this.transactionManager::commit,
-				this::rollbackOnException,
-				this.transactionManager::rollback)
-			.onErrorMap(this::unwrapIfResourceCleanupFailure))
-		.contextWrite(TransactionContextManager.getOrCreateContext())
-		.contextWrite(TransactionContextManager.getOrCreateContextHolder());
+		return TransactionContextManager.currentContext().flatMapMany(context -> {
+			Mono<ReactiveTransaction> status = this.transactionManager.getReactiveTransaction(this.transactionDefinition);
+			// This is an around advice: Invoke the next interceptor in the chain.
+			// This will normally result in a target object being invoked.
+			// Need re-wrapping of ReactiveTransaction until we get hold of the exception
+			// through usingWhen.
+			return status.flatMapMany(it -> Flux
+					.usingWhen(
+							Mono.just(it),
+							action::doInTransaction,
+							this.transactionManager::commit,
+							(tx, ex) -> Mono.empty(),
+							this.transactionManager::commit)
+					.onErrorResume(ex ->
+							rollbackOnException(it, ex).then(Mono.error(ex))));
+		})
+		.subscriberContext(TransactionContextManager.getOrCreateContext())
+		.subscriberContext(TransactionContextManager.getOrCreateContextHolder());
 	}
 
 	/**
@@ -95,37 +114,19 @@ final class TransactionalOperatorImpl implements TransactionalOperator {
 		logger.debug("Initiating transaction rollback on application exception", ex);
 		return this.transactionManager.rollback(status).onErrorMap(ex2 -> {
 					logger.error("Application exception overridden by rollback exception", ex);
-					if (ex2 instanceof TransactionSystemException tse) {
-						tse.initApplicationException(ex);
-					}
-					else {
-						ex2.addSuppressed(ex);
+					if (ex2 instanceof TransactionSystemException) {
+						((TransactionSystemException) ex2).initApplicationException(ex);
 					}
 					return ex2;
 				}
 		);
 	}
 
-	/**
-	 * Unwrap the cause of a throwable, if produced by a failure
-	 * during the async resource cleanup in {@link Flux#usingWhen}.
-	 * @param ex the throwable to try to unwrap
-	 */
-	private Throwable unwrapIfResourceCleanupFailure(Throwable ex) {
-		if (ex instanceof RuntimeException && ex.getCause() != null) {
-			String msg = ex.getMessage();
-			if (msg != null && msg.startsWith("Async resource cleanup failed")) {
-				return ex.getCause();
-			}
-		}
-		return ex;
-	}
-
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (super.equals(other) && (!(other instanceof TransactionalOperatorImpl toi) ||
-				getTransactionManager() == toi.getTransactionManager())));
+		return (this == other || (super.equals(other) && (!(other instanceof TransactionalOperatorImpl) ||
+				getTransactionManager() == ((TransactionalOperatorImpl) other).getTransactionManager())));
 	}
 
 	@Override

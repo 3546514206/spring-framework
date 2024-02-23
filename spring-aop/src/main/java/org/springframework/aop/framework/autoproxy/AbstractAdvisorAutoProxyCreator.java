@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.util.List;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetSource;
 import org.springframework.aop.support.AopUtils;
@@ -26,6 +24,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.List;
 
 /**
  * Generic auto proxy creator that builds AOP proxies for specific beans
@@ -36,13 +36,11 @@ import org.springframework.util.Assert;
  * also override the inherited {@link #shouldSkip} method to exclude certain
  * objects from auto-proxying.
  *
- * <p>Advisors or advices requiring ordering should be annotated with
- * {@link org.springframework.core.annotation.Order @Order} or implement the
+ * <p>Advisors or advices requiring ordering should implement the
  * {@link org.springframework.core.Ordered} interface. This class sorts
- * advisors using the {@link AnnotationAwareOrderComparator}. Advisors that are
- * not annotated with {@code @Order} or don't implement the {@code Ordered}
- * interface will be considered as unordered; they will appear at the end of the
- * advisor chain in an undefined order.
+ * Advisors by Ordered order value. Advisors that don't implement the
+ * Ordered interface will be considered as unordered; they will appear
+ * at the end of the advisor chain in undefined order.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
@@ -58,11 +56,11 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		super.setBeanFactory(beanFactory);
-		if (!(beanFactory instanceof ConfigurableListableBeanFactory clbf)) {
+		if (!(beanFactory instanceof ConfigurableListableBeanFactory)) {
 			throw new IllegalArgumentException(
 					"AdvisorAutoProxyCreator requires a ConfigurableListableBeanFactory: " + beanFactory);
 		}
-		initBeanFactory(clbf);
+		initBeanFactory((ConfigurableListableBeanFactory) beanFactory);
 	}
 
 	protected void initBeanFactory(ConfigurableListableBeanFactory beanFactory) {

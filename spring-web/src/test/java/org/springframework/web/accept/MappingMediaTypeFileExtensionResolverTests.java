@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package org.springframework.web.accept;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,40 +31,35 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rossen Stoyanchev
  * @author Melissa Hartsock
  */
-class MappingMediaTypeFileExtensionResolverTests {
+public class MappingMediaTypeFileExtensionResolverTests {
 
-	private static final Map<String, MediaType> DEFAULT_MAPPINGS =
-			Collections.singletonMap("json", MediaType.APPLICATION_JSON);
-
+	private final Map<String, MediaType> mapping = Collections.singletonMap("json", MediaType.APPLICATION_JSON);
+	private final MappingMediaTypeFileExtensionResolver resolver = new MappingMediaTypeFileExtensionResolver(this.mapping);
 
 	@Test
-	void resolveExtensions() {
-		List<String> extensions = new MappingMediaTypeFileExtensionResolver(DEFAULT_MAPPINGS)
-				.resolveFileExtensions(MediaType.APPLICATION_JSON);
+	public void resolveExtensions() {
+		List<String> extensions = this.resolver.resolveFileExtensions(MediaType.APPLICATION_JSON);
 
-		assertThat(extensions).containsExactly("json");
+		assertThat(extensions).size().isEqualTo(1);
+		assertThat(extensions.get(0)).isEqualTo("json");
 	}
 
 	@Test
-	void resolveExtensionsNoMatch() {
-		assertThat(new MappingMediaTypeFileExtensionResolver(DEFAULT_MAPPINGS)
-				.resolveFileExtensions(MediaType.TEXT_HTML)).isEmpty();
+	public void resolveExtensionsNoMatch() {
+		List<String> extensions = this.resolver.resolveFileExtensions(MediaType.TEXT_HTML);
+
+		assertThat(extensions).isEmpty();
 	}
 
-	@Test // SPR-13747
+	/**
+	 * Unit test for SPR-13747 - ensures that reverse lookup of media type from media
+	 * type key is case-insensitive.
+	 */
+	@Test
 	public void lookupMediaTypeCaseInsensitive() {
-		assertThat(new MappingMediaTypeFileExtensionResolver(DEFAULT_MAPPINGS).lookupMediaType("JSON"))
-				.isEqualTo(MediaType.APPLICATION_JSON);
+		MediaType mediaType = this.resolver.lookupMediaType("JSON");
+
+		assertThat(mediaType).isEqualTo(MediaType.APPLICATION_JSON);
 	}
 
-	@Test
-	void allFileExtensions() {
-		Map<String, MediaType> mappings = new HashMap<>();
-		mappings.put("json", MediaType.APPLICATION_JSON);
-		mappings.put("JsOn", MediaType.APPLICATION_JSON);
-		mappings.put("jSoN", MediaType.APPLICATION_JSON);
-
-		MappingMediaTypeFileExtensionResolver resolver = new MappingMediaTypeFileExtensionResolver(mappings);
-		assertThat(resolver.getAllFileExtensions()).containsExactly("json");
-	}
 }

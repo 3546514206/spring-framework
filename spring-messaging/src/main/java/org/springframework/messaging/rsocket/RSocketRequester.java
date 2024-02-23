@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,24 @@
 
 package org.springframework.messaging.rsocket;
 
-import java.net.URI;
-import java.util.List;
-import java.util.function.Consumer;
-
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
-import io.rsocket.core.RSocketClient;
-import io.rsocket.loadbalance.LoadbalanceStrategy;
-import io.rsocket.loadbalance.LoadbalanceTarget;
 import io.rsocket.transport.ClientTransport;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import org.reactivestreams.Publisher;
-import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.codec.Decoder;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.rsocket.annotation.support.RSocketMessageHandler;
 import org.springframework.util.MimeType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
+import java.util.function.Consumer;
 
 /**
  * A thin wrapper around a sending {@link RSocket} with a fluent API accepting
@@ -50,21 +44,11 @@ import org.springframework.util.MimeType;
  * @author Brian Clozel
  * @since 5.2
  */
-public interface RSocketRequester extends Disposable {
+public interface RSocketRequester {
 
 	/**
-	 * Return the underlying {@link RSocketClient} used to make requests with.
-	 * @since 5.3
+	 * Return the underlying sending RSocket.
 	 */
-	RSocketClient rsocketClient();
-
-	/**
-	 * Return the underlying {@link RSocket} if the requester was created with a
-	 * "live" RSocket via {@link #wrap(RSocket, MimeType, MimeType, RSocketStrategies)}
-	 * or via one of the (deprecated) connect methods on the
-	 * {@code RSocketRequester} builder, or otherwise return {@code null}.
-	 */
-	@Nullable
 	RSocket rsocket();
 
 	/**
@@ -84,19 +68,14 @@ public interface RSocketRequester extends Disposable {
 	MimeType metadataMimeType();
 
 	/**
-	 * Return the configured {@link RSocketStrategies}.
-	 */
-	RSocketStrategies strategies();
-
-	/**
 	 * Begin to specify a new request with the given route to a remote handler.
 	 * <p>The route can be a template with placeholders, e.g.
 	 * {@code "flight.{code}"} in which case the supplied route variables are
 	 * formatted via {@code toString()} and expanded into the template.
 	 * If a formatted variable contains a "." it is replaced with the escape
-	 * sequence "%2E" to avoid treating it as separator by the responder.
+	 * sequence "%2E" to avoid treating it as separator by the responder .
 	 * <p>If the connection is set to use composite metadata, the route is
-	 * encoded as {@code "message/x.rsocket.routing.v0"}. Otherwise, the route
+	 * encoded as {@code "message/x.rsocket.routing.v0"}. Otherwise the route
 	 * is encoded according to the mime type for the connection.
 	 * @param route the route expressing a remote handler mapping
 	 * @param routeVars variables to be expanded into the route template
@@ -105,37 +84,16 @@ public interface RSocketRequester extends Disposable {
 	RequestSpec route(String route, Object... routeVars);
 
 	/**
-	 * Begin to specify a new request with the given metadata value, which can
-	 * be a concrete value or any producer of a single value that can be adapted
-	 * to a {@link Publisher} via {@link ReactiveAdapterRegistry}.
+	 * Begin to specify a new request with the given metadata value.
+	 *
 	 * @param metadata the metadata value to encode
 	 * @param mimeType the mime type that describes the metadata;
-	 * This is required for connection using composite metadata. Otherwise, the
-	 * value is encoded according to the mime type for the connection and this
-	 * argument may be left as {@code null}.
+	 *                 This is required for connection using composite metadata. Otherwise the
+	 *                 value is encoded according to the mime type for the connection and this
+	 *                 argument may be left as {@code null}.
 	 */
 	RequestSpec metadata(Object metadata, @Nullable MimeType mimeType);
 
-	/**
-	 * Shortcut method that delegates to the same on the underlying
-	 * {@link #rsocketClient()} in order to close the connection from the
-	 * underlying transport and notify subscribers.
-	 * @since 5.3.7
-	 */
-	@Override
-	default void dispose() {
-		rsocketClient().dispose();
-	}
-
-	/**
-	 * Shortcut method that delegates to the same on the underlying
-	 * {@link #rsocketClient()}.
-	 * @since 5.3.7
-	 */
-	@Override
-	default boolean isDisposed() {
-		return rsocketClient().isDisposed();
-	}
 
 	/**
 	 * Obtain a builder to create a client {@link RSocketRequester} by connecting
@@ -146,15 +104,14 @@ public interface RSocketRequester extends Disposable {
 	}
 
 	/**
-	 * Wrap an existing {@link RSocket}. Typically for internal framework use,
-	 * to wrap the remote {@code RSocket} in a client or server responder, but
-	 * it can also be used to wrap any {@link RSocket}.
+	 * Wrap an existing {@link RSocket}. Typically used in client or server
+	 * responders to wrap the {@code RSocket} for the remote side.
 	 */
 	static RSocketRequester wrap(
 			RSocket rsocket, MimeType dataMimeType, MimeType metadataMimeType,
 			RSocketStrategies strategies) {
 
-		return new DefaultRSocketRequester(null, rsocket, dataMimeType, metadataMimeType, strategies);
+		return new DefaultRSocketRequester(rsocket, dataMimeType, metadataMimeType, strategies);
 	}
 
 
@@ -186,8 +143,6 @@ public interface RSocketRequester extends Disposable {
 		/**
 		 * Set the data for the setup payload. The data will be encoded
 		 * according to the configured {@link #dataMimeType(MimeType)}.
-		 * The data be a concrete value or any producer of a single value that
-		 * can be adapted to a {@link Publisher} via {@link ReactiveAdapterRegistry}.
 		 * <p>By default this is not set.
 		 */
 		RSocketRequester.Builder setupData(Object data);
@@ -203,48 +158,44 @@ public interface RSocketRequester extends Disposable {
 		/**
 		 * Add metadata entry to the setup payload. Composite metadata must be
 		 * in use if this is called more than once or in addition to
-		 * {@link #setupRoute(String, Object...)}. The metadata value be a
-		 * concrete value or any producer of a single value that can be adapted
-		 * to a {@link Publisher} via {@link ReactiveAdapterRegistry}.
+		 * {@link #setupRoute(String, Object...)}.
 		 */
 		RSocketRequester.Builder setupMetadata(Object value, @Nullable MimeType mimeType);
 
 		/**
-		 * Provide the {@link RSocketStrategies} to use.
-		 * <p>This is useful for changing the default settings, yet still allowing
-		 * further customizations via {@link #rsocketStrategies(Consumer)}.
-		 * If not set, defaults are obtained from {@link RSocketStrategies#builder()}.
-		 * @param strategies the strategies to use
+		 * Provide {@link RSocketStrategies} to use.
+		 * <p>By default this is based on default settings of
+		 * {@link RSocketStrategies.Builder} but may be further customized via
+		 * {@link #rsocketStrategies(Consumer)}.
 		 */
 		RSocketRequester.Builder rsocketStrategies(@Nullable RSocketStrategies strategies);
 
 		/**
 		 * Customize the {@link RSocketStrategies}.
-		 * <p>Allows further customization on {@link RSocketStrategies},
-		 * mutating them if they were {@link #rsocketStrategies(RSocketStrategies) set},
-		 * or starting from {@link RSocketStrategies#builder()} defaults}.
+		 * <p>By default this starts out as {@link RSocketStrategies#builder()}.
+		 * However if strategies were {@link #rsocketStrategies(RSocketStrategies) set}
+		 * explicitly, then they are {@link RSocketStrategies#mutate() mutated}.
 		 */
 		RSocketRequester.Builder rsocketStrategies(Consumer<RSocketStrategies.Builder> configurer);
 
 		/**
-		 * Callback to configure the {@code RSocketConnector} directly.
+		 * Callback to configure the {@code ClientRSocketFactory} directly.
 		 * <ul>
 		 * <li>The data and metadata mime types cannot be set directly
-		 * on the {@code RSocketConnector} and will be overridden. Use the
+		 * on the {@code ClientRSocketFactory} and will be overridden. Use the
 		 * shortcuts {@link #dataMimeType(MimeType)} and
 		 * {@link #metadataMimeType(MimeType)} on this builder instead.
 		 * <li>The frame decoder also cannot be set directly and instead is set
 		 * to match the configured {@code DataBufferFactory}.
 		 * <li>For the
-		 * {@link io.rsocket.core.RSocketConnector#setupPayload(Payload)
+		 * {@link io.rsocket.RSocketFactory.ClientRSocketFactory#setupPayload(Payload)
 		 * setupPayload}, consider using methods on this builder to specify the
 		 * route, other metadata, and data as Object values to be encoded.
 		 * <li>To configure client side responding, see
-		 * {@link RSocketMessageHandler#responder(RSocketStrategies, Object...)}.
+		 * {@link RSocketMessageHandler#clientResponder(RSocketStrategies, Object...)}.
 		 * </ul>
-		 * @since 5.2.6
 		 */
-		RSocketRequester.Builder rsocketConnector(RSocketConnectorConfigurer configurer);
+		RSocketRequester.Builder rsocketFactory(ClientRSocketFactoryConfigurer configurer);
 
 		/**
 		 * Configure this builder through a {@code Consumer}. This enables
@@ -255,65 +206,12 @@ public interface RSocketRequester extends Disposable {
 		RSocketRequester.Builder apply(Consumer<RSocketRequester.Builder> configurer);
 
 		/**
-		 * Build an {@link RSocketRequester} with an
-		 * {@link io.rsocket.core.RSocketClient} that connects over TCP to the
-		 * given host and port. The requester can be used to make requests
-		 * concurrently. Requests are made over a shared connection that is also
-		 * re-established as needed when further requests are made.
-		 * @param host the host to connect to
-		 * @param port the port to connect to
-		 * @return the created {@code RSocketRequester}
-		 * @since 5.3
-		 */
-		RSocketRequester tcp(String host, int port);
-
-		/**
-		 * Build an {@link RSocketRequester} with an
-		 * {@link io.rsocket.core.RSocketClient} that connects over WebSocket to
-		 * the given URL. The requester can be used to make requests
-		 * concurrently. Requests are made over a shared connection that is also
-		 * re-established as needed when further requests are made.
-		 * @param uri the URL to connect to
-		 * @return the created {@code RSocketRequester}
-		 * @since 5.3
-		 */
-		RSocketRequester websocket(URI uri);
-
-		/**
-		 * Variant of {@link #tcp(String, int)} and {@link #websocket(URI)}
-		 * with an already initialized {@link ClientTransport}.
-		 * @param transport the transport to connect with
-		 * @return the created {@code RSocketRequester}
-		 * @since 5.3
-		 */
-		RSocketRequester transport(ClientTransport transport);
-
-		/**
-		 * Build an {@link RSocketRequester} with an
-		 * {@link io.rsocket.loadbalance.LoadbalanceRSocketClient} that will
-		 * connect to one of the given targets selected through the given
-		 * {@link io.rsocket.loadbalance.LoadbalanceRSocketClient}.
-		 * @param targetPublisher a {@code Publisher} that supplies a list of
-		 * target transports to loadbalance against; the given list may be
-		 * periodically updated by the {@code Publisher}.
-		 * @param loadbalanceStrategy the strategy to use for selecting from
-		 * the list of loadbalance targets.
-		 * @return the created {@code RSocketRequester}
-		 * @since 5.3
-		 */
-		RSocketRequester transports(
-				Publisher<List<LoadbalanceTarget>> targetPublisher,
-				LoadbalanceStrategy loadbalanceStrategy);
-
-		/**
 		 * Connect to the server over TCP.
 		 * @param host the server host
 		 * @param port the server port
 		 * @return an {@code RSocketRequester} for the connection
 		 * @see TcpClientTransport
-		 * @deprecated as of 5.3 in favor of {@link #tcp(String, int)}
 		 */
-		@Deprecated
 		Mono<RSocketRequester> connectTcp(String host, int port);
 
 		/**
@@ -321,26 +219,22 @@ public interface RSocketRequester extends Disposable {
 		 * @param uri the RSocket server endpoint URI
 		 * @return an {@code RSocketRequester} for the connection
 		 * @see WebsocketClientTransport
-		 * @deprecated as of 5.3 in favor of {@link #websocket(URI)}
 		 */
-		@Deprecated
 		Mono<RSocketRequester> connectWebSocket(URI uri);
 
 		/**
 		 * Connect to the server with the given {@code ClientTransport}.
 		 * @param transport the client transport to use
 		 * @return an {@code RSocketRequester} for the connection
-		 * @deprecated as of 5.3 in favor of {@link #transport(ClientTransport)}
 		 */
-		@Deprecated
 		Mono<RSocketRequester> connect(ClientTransport transport);
 
 	}
 
 	/**
-	 * Spec to declare the input for an RSocket request.
+	 * Spec for providing input data for an RSocket request and triggering the exchange.
 	 */
-	interface RequestSpec extends MetadataSpec<RequestSpec>, RetrieveSpec {
+	interface RequestSpec extends MetadataSpec<RequestSpec> {
 
 		/**
 		 * Append additional metadata entries through a {@code Consumer}.
@@ -352,12 +246,6 @@ public interface RSocketRequester extends Disposable {
 		RequestSpec metadata(Consumer<MetadataSpec<?>> configurer);
 
 		/**
-		 * Perform a {@link RSocket#metadataPush(Payload) metadataPush}.
-		 * @since 5.3
-		 */
-		Mono<Void> sendMetadata();
-
-		/**
 		 * Provide payload data for the request. This can be one of:
 		 * <ul>
 		 * <li>Concrete value
@@ -365,10 +253,11 @@ public interface RSocketRequester extends Disposable {
 		 * <li>Any other producer of value(s) that can be adapted to a
 		 * {@link Publisher} via {@link ReactiveAdapterRegistry}
 		 * </ul>
+		 *
 		 * @param data the Object value for the payload data
 		 * @return spec to declare the expected response
 		 */
-		RetrieveSpec data(Object data);
+		RequestSpec data(Object data);
 
 		/**
 		 * Variant of {@link #data(Object)} that also accepts a hint for the
@@ -380,57 +269,22 @@ public interface RSocketRequester extends Disposable {
 		 * @param elementClass the type of values to be produced
 		 * @return spec to declare the expected response
 		 */
-		RetrieveSpec data(Object producer, Class<?> elementClass);
+		RequestSpec data(Object producer, Class<?> elementClass);
 
 		/**
 		 * Variant of {@link #data(Object, Class)} for when the type hint has
 		 * to have a generic type. See {@link ParameterizedTypeReference}.
-		 * @param producer the source of payload data value(s). This must be a
-		 * {@link Publisher} or another producer adaptable to a
-		 * {@code Publisher} via {@link ReactiveAdapterRegistry}
+		 *
+		 * @param producer       the source of payload data value(s). This must be a
+		 *                       {@link Publisher} or another producer adaptable to a
+		 *                       {@code Publisher} via {@link ReactiveAdapterRegistry}
 		 * @param elementTypeRef the type of values to be produced
 		 * @return spec to declare the expected response
 		 */
-		RetrieveSpec data(Object producer, ParameterizedTypeReference<?> elementTypeRef);
-	}
-
-
-	/**
-	 * Spec for providing additional composite metadata entries.
-	 *
-	 * @param <S> a self reference to the spec type
-	 */
-	interface MetadataSpec<S extends MetadataSpec<S>> {
+		RequestSpec data(Object producer, ParameterizedTypeReference<?> elementTypeRef);
 
 		/**
-		 * Use this to append additional metadata entries when using composite
-		 * metadata. An {@link IllegalArgumentException} is raised if this
-		 * method is used when not using composite metadata.
-		 * The metadata value be a concrete value or any producer of a single
-		 * value that can be adapted to a {@link Publisher} via
-		 * {@link ReactiveAdapterRegistry}.
-		 * @param metadata an Object to be encoded with a suitable
-		 * {@link org.springframework.core.codec.Encoder Encoder}, or a
-		 * {@link org.springframework.core.io.buffer.DataBuffer DataBuffer}
-		 * @param mimeType the mime type that describes the metadata
-		 */
-		S metadata(Object metadata, MimeType mimeType);
-	}
-
-
-	/**
-	 * Spec to declare the expected output for an RSocket request.
-	 * @since 5.2.2
-	 */
-	interface RetrieveSpec {
-
-		/**
-		 * Perform a {@link RSocket#fireAndForget fireAndForget} sending the
-		 * provided data and metadata.
-		 * @return a completion that indicates if the payload was sent
-		 * successfully or not. Note, however that is a one-way send and there
-		 * is no indication of whether or how the even was handled on the
-		 * remote end.
+		 * Perform a {@link RSocket#fireAndForget fireAndForget}.
 		 */
 		Mono<Void> send();
 
@@ -439,7 +293,7 @@ public interface RSocketRequester extends Disposable {
 		 * <p>If the return type is {@code Mono<Void>}, the {@code Mono} will
 		 * complete after all data is consumed.
 		 * <p><strong>Note:</strong> This method will raise an error if
-		 * the request payload is a multivalued {@link Publisher} as there is
+		 * the request payload is a multi-valued {@link Publisher} as there is
 		 * no many-to-one RSocket interaction.
 		 * @param dataType the expected data type for the response
 		 * @param <T> parameter for the expected data type
@@ -470,6 +324,25 @@ public interface RSocketRequester extends Disposable {
 		 * to have a generic type. See {@link ParameterizedTypeReference}.
 		 */
 		<T> Flux<T> retrieveFlux(ParameterizedTypeReference<T> dataTypeRef);
+	}
+
+	/**
+	 * Spec for specifying the metadata.
+	 *
+	 * @param <S> a self reference to the spec type
+	 */
+	interface MetadataSpec<S extends MetadataSpec<S>> {
+
+		/**
+		 * Use this to append additional metadata entries when using composite
+		 * metadata. An {@link IllegalArgumentException} is raised if this
+		 * method is used when not using composite metadata.
+		 * @param metadata an Object to be encoded with a suitable
+		 * {@link org.springframework.core.codec.Encoder Encoder}, or a
+		 * {@link org.springframework.core.io.buffer.DataBuffer DataBuffer}
+		 * @param mimeType the mime type that describes the metadata
+		 */
+		S metadata(Object metadata, MimeType mimeType);
 	}
 
 }

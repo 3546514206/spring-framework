@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 
 package org.springframework.test.context.web;
 
-import org.springframework.lang.Nullable;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.test.context.ContextLoader;
 import org.springframework.test.context.MergedContextConfiguration;
-import org.springframework.test.context.TestContextAnnotationUtils;
 import org.springframework.test.context.TestContextBootstrapper;
 import org.springframework.test.context.support.DefaultTestContextBootstrapper;
 
@@ -46,7 +45,7 @@ public class WebTestContextBootstrapper extends DefaultTestContextBootstrapper {
 	 */
 	@Override
 	protected Class<? extends ContextLoader> getDefaultContextLoaderClass(Class<?> testClass) {
-		if (getWebAppConfiguration(testClass) != null) {
+		if (AnnotatedElementUtils.hasAnnotation(testClass, WebAppConfiguration.class)) {
 			return WebDelegatingSmartContextLoader.class;
 		}
 		else {
@@ -62,18 +61,14 @@ public class WebTestContextBootstrapper extends DefaultTestContextBootstrapper {
 	 */
 	@Override
 	protected MergedContextConfiguration processMergedContextConfiguration(MergedContextConfiguration mergedConfig) {
-		WebAppConfiguration webAppConfiguration = getWebAppConfiguration(mergedConfig.getTestClass());
+		WebAppConfiguration webAppConfiguration =
+				AnnotatedElementUtils.findMergedAnnotation(mergedConfig.getTestClass(), WebAppConfiguration.class);
 		if (webAppConfiguration != null) {
 			return new WebMergedContextConfiguration(mergedConfig, webAppConfiguration.value());
 		}
 		else {
 			return mergedConfig;
 		}
-	}
-
-	@Nullable
-	private static WebAppConfiguration getWebAppConfiguration(Class<?> testClass) {
-		return TestContextAnnotationUtils.findMergedAnnotation(testClass, WebAppConfiguration.class);
 	}
 
 }

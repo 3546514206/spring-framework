@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package org.springframework.web.reactive.result.condition;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.web.reactive.result.condition.ConsumesRequestCondition.ConsumeMediaTypeExpression;
+
 import java.util.Collection;
 import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.web.reactive.result.condition.ConsumesRequestCondition.ConsumeMediaTypeExpression;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -32,10 +31,10 @@ import static org.assertj.core.api.Assertions.fail;
 /**
  * @author Arjen Poutsma
  */
-class ConsumesRequestConditionTests {
+public class ConsumesRequestConditionTests {
 
 	@Test
-	void consumesMatch() {
+	public void consumesMatch() throws Exception {
 		MockServerWebExchange exchange = postExchange("text/plain");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/plain");
 
@@ -43,7 +42,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void negatedConsumesMatch() {
+	public void negatedConsumesMatch() throws Exception {
 		MockServerWebExchange exchange = postExchange("text/plain");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("!text/plain");
 
@@ -51,13 +50,13 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void getConsumableMediaTypesNegatedExpression() {
+	public void getConsumableMediaTypesNegatedExpression() throws Exception {
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("!application/xml");
 		assertThat(condition.getConsumableMediaTypes()).isEqualTo(Collections.emptySet());
 	}
 
 	@Test
-	void consumesWildcardMatch() {
+	public void consumesWildcardMatch() throws Exception {
 		MockServerWebExchange exchange = postExchange("text/plain");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/*");
 
@@ -65,7 +64,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void consumesMultipleMatch() {
+	public void consumesMultipleMatch() throws Exception {
 		MockServerWebExchange exchange = postExchange("text/plain");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/plain", "application/xml");
 
@@ -73,39 +72,15 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void consumesSingleNoMatch() {
+	public void consumesSingleNoMatch() throws Exception {
 		MockServerWebExchange exchange = postExchange("application/xml");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/plain");
 
 		assertThat(condition.getMatchingCondition(exchange)).isNull();
 	}
 
-	@Test // gh-28024
-	public void matchWithParameters() {
-		String base = "application/hal+json";
-		ConsumesRequestCondition condition = new ConsumesRequestCondition(base + ";profile=\"a\"");
-		MockServerWebExchange exchange = postExchange(base + ";profile=\"a\"");
-		assertThat(condition.getMatchingCondition(exchange)).isNotNull();
-
-		condition = new ConsumesRequestCondition(base + ";profile=\"a\"");
-		exchange = postExchange(base + ";profile=\"b\"");
-		assertThat(condition.getMatchingCondition(exchange)).isNull();
-
-		condition = new ConsumesRequestCondition(base + ";profile=\"a\"");
-		exchange = postExchange(base);
-		assertThat(condition.getMatchingCondition(exchange)).isNotNull();
-
-		condition = new ConsumesRequestCondition(base);
-		exchange = postExchange(base + ";profile=\"a\"");
-		assertThat(condition.getMatchingCondition(exchange)).isNotNull();
-
-		condition = new ConsumesRequestCondition(base + ";profile=\"a\"");
-		exchange = postExchange(base + ";profile=\"A\"");
-		assertThat(condition.getMatchingCondition(exchange)).isNotNull();
-	}
-
 	@Test
-	void consumesParseError() {
+	public void consumesParseError() throws Exception {
 		MockServerWebExchange exchange = postExchange("01");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/plain");
 
@@ -113,7 +88,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void consumesParseErrorWithNegation() {
+	public void consumesParseErrorWithNegation() throws Exception {
 		MockServerWebExchange exchange = postExchange("01");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("!text/plain");
 
@@ -139,36 +114,36 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void compareToSingle() {
+	public void compareToSingle() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/"));
 
 		ConsumesRequestCondition condition1 = new ConsumesRequestCondition("text/plain");
 		ConsumesRequestCondition condition2 = new ConsumesRequestCondition("text/*");
 
 		int result = condition1.compareTo(condition2, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isLessThan(0);
+		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
 
 		result = condition2.compareTo(condition1, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isGreaterThan(0);
+		assertThat(result > 0).as("Invalid comparison result: " + result).isTrue();
 	}
 
 	@Test
-	void compareToMultiple() {
+	public void compareToMultiple() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/"));
 
 		ConsumesRequestCondition condition1 = new ConsumesRequestCondition("*/*", "text/plain");
 		ConsumesRequestCondition condition2 = new ConsumesRequestCondition("text/*", "text/plain;q=0.7");
 
 		int result = condition1.compareTo(condition2, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isLessThan(0);
+		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
 
 		result = condition2.compareTo(condition1, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isGreaterThan(0);
+		assertThat(result > 0).as("Invalid comparison result: " + result).isTrue();
 	}
 
 
 	@Test
-	void combine() {
+	public void combine() throws Exception {
 		ConsumesRequestCondition condition1 = new ConsumesRequestCondition("text/plain");
 		ConsumesRequestCondition condition2 = new ConsumesRequestCondition("application/xml");
 
@@ -177,7 +152,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void combineWithDefault() {
+	public void combineWithDefault() throws Exception {
 		ConsumesRequestCondition condition1 = new ConsumesRequestCondition("text/plain");
 		ConsumesRequestCondition condition2 = new ConsumesRequestCondition();
 
@@ -186,7 +161,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void parseConsumesAndHeaders() {
+	public void parseConsumesAndHeaders() throws Exception {
 		String[] consumes = new String[] {"text/plain"};
 		String[] headers = new String[]{"foo=bar", "content-type=application/xml,application/pdf"};
 		ConsumesRequestCondition condition = new ConsumesRequestCondition(consumes, headers);
@@ -195,7 +170,7 @@ class ConsumesRequestConditionTests {
 	}
 
 	@Test
-	void getMatchingCondition() {
+	public void getMatchingCondition() throws Exception {
 		MockServerWebExchange exchange = postExchange("text/plain");
 		ConsumesRequestCondition condition = new ConsumesRequestCondition("text/plain", "application/xml");
 
@@ -209,7 +184,7 @@ class ConsumesRequestConditionTests {
 
 	private void assertConditions(ConsumesRequestCondition condition, String... expected) {
 		Collection<ConsumeMediaTypeExpression> expressions = condition.getContent();
-		assertThat(expected).as("Invalid amount of conditions").hasSameSizeAs(expressions);
+		assertThat(expected.length).as("Invalid amount of conditions").isEqualTo(expressions.size());
 		for (String s : expected) {
 			boolean found = false;
 			for (ConsumeMediaTypeExpression expr : expressions) {

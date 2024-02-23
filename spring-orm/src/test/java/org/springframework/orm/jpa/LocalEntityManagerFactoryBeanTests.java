@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ package org.springframework.orm.jpa;
 import java.util.Map;
 import java.util.Properties;
 
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.spi.PersistenceProvider;
-import jakarta.persistence.spi.PersistenceUnitInfo;
-import jakarta.persistence.spi.ProviderUtil;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.spi.PersistenceProvider;
+import javax.persistence.spi.PersistenceUnitInfo;
+import javax.persistence.spi.ProviderUtil;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +35,7 @@ import static org.mockito.Mockito.verify;
  * @author Phillip Webb
  */
 @SuppressWarnings("rawtypes")
-class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFactoryBeanTests {
+public class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFactoryBeanTests {
 
 	// Static fields set by inner class DummyPersistenceProvider
 
@@ -43,22 +44,21 @@ class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFactoryBea
 	private static Map actualProps;
 
 	@AfterEach
-	void verifyClosed() {
+	public void verifyClosed() throws Exception {
 		verify(mockEmf).close();
 	}
 
 	@Test
-	void testValidUsageWithDefaultProperties() throws Exception {
+	public void testValidUsageWithDefaultProperties() throws Exception {
 		testValidUsage(null);
 	}
 
 	@Test
-	void testValidUsageWithExplicitProperties() throws Exception {
+	public void testValidUsageWithExplicitProperties() throws Exception {
 		testValidUsage(new Properties());
 	}
 
-	@SuppressWarnings("unchecked")
-	protected void testValidUsage(Properties props) {
+	protected void testValidUsage(Properties props) throws Exception {
 		// This will be set by DummyPersistenceProvider
 		actualName = null;
 		actualProps = null;
@@ -75,7 +75,7 @@ class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFactoryBea
 
 		assertThat(actualName).isSameAs(entityManagerName);
 		if (props != null) {
-			assertThat(actualProps).isEqualTo(props);
+			assertThat((Object) actualProps).isEqualTo(props);
 		}
 		checkInvariants(lemfb);
 

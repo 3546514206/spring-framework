@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +41,7 @@ import org.springframework.util.Assert;
  * @see LoadTimeWeavingConfigurer
  * @see ConfigurableApplicationContext#LOAD_TIME_WEAVER_BEAN_NAME
  */
-@Configuration(proxyBeanMethods = false)
-@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+@Configuration
 public class LoadTimeWeavingConfiguration implements ImportAware, BeanClassLoaderAware {
 
 	@Nullable
@@ -94,20 +93,20 @@ public class LoadTimeWeavingConfiguration implements ImportAware, BeanClassLoade
 		if (this.enableLTW != null) {
 			AspectJWeaving aspectJWeaving = this.enableLTW.getEnum("aspectjWeaving");
 			switch (aspectJWeaving) {
-				case DISABLED -> {
+				case DISABLED:
 					// AJ weaving is disabled -> do nothing
-				}
-				case AUTODETECT -> {
+					break;
+				case AUTODETECT:
 					if (this.beanClassLoader.getResource(AspectJWeavingEnabler.ASPECTJ_AOP_XML_RESOURCE) == null) {
 						// No aop.xml present on the classpath -> treat as 'disabled'
 						break;
 					}
 					// aop.xml is present on the classpath -> enable
 					AspectJWeavingEnabler.enableAspectJWeaving(loadTimeWeaver, this.beanClassLoader);
-				}
-				case ENABLED -> {
+					break;
+				case ENABLED:
 					AspectJWeavingEnabler.enableAspectJWeaving(loadTimeWeaver, this.beanClassLoader);
-				}
+					break;
 			}
 		}
 

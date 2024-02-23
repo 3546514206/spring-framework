@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,13 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
-import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessorAdapter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
- * Tests for SPR-8954, in which a custom {@link InstantiationAwareBeanPostProcessor}
+ * Unit tests for SPR-8954, in which a custom {@link InstantiationAwareBeanPostProcessor}
  * forces the predicted type of a FactoryBean, effectively preventing retrieval of the
  * bean from calls to #getBeansOfType(FactoryBean.class). The implementation of
  * {@link AbstractBeanFactory#isFactoryBean(String, RootBeanDefinition)} now ensures that
@@ -40,60 +40,65 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @author Oliver Gierke
  */
-class Spr8954Tests {
+public class Spr8954Tests {
 
 	private DefaultListableBeanFactory bf;
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() {
 		bf = new DefaultListableBeanFactory();
 		bf.registerBeanDefinition("foo", new RootBeanDefinition(FooFactoryBean.class));
 		bf.addBeanPostProcessor(new PredictingBPP());
 	}
 
 	@Test
-	void repro() {
+	public void repro() {
 		assertThat(bf.getBean("foo")).isInstanceOf(Foo.class);
 		assertThat(bf.getBean("&foo")).isInstanceOf(FooFactoryBean.class);
 		assertThat(bf.isTypeMatch("&foo", FactoryBean.class)).isTrue();
 
 		@SuppressWarnings("rawtypes")
 		Map<String, FactoryBean> fbBeans = bf.getBeansOfType(FactoryBean.class);
-		assertThat(fbBeans).containsOnlyKeys("&foo");
+		assertThat(fbBeans).hasSize(1);
+		assertThat(fbBeans.keySet()).contains("&foo");
 
 		Map<String, AnInterface> aiBeans = bf.getBeansOfType(AnInterface.class);
-		assertThat(aiBeans).containsOnlyKeys("&foo");
+		assertThat(aiBeans).hasSize(1);
+		assertThat(aiBeans.keySet()).contains("&foo");
 	}
 
 	@Test
-	void findsBeansByTypeIfNotInstantiated() {
+	public void findsBeansByTypeIfNotInstantiated() {
 		assertThat(bf.isTypeMatch("&foo", FactoryBean.class)).isTrue();
 
 		@SuppressWarnings("rawtypes")
 		Map<String, FactoryBean> fbBeans = bf.getBeansOfType(FactoryBean.class);
-		assertThat(fbBeans).containsOnlyKeys("&foo");
+		assertThat(1).isEqualTo(fbBeans.size());
+		assertThat("&foo").isEqualTo(fbBeans.keySet().iterator().next());
 
 		Map<String, AnInterface> aiBeans = bf.getBeansOfType(AnInterface.class);
-		assertThat(aiBeans).containsOnlyKeys("&foo");
+		assertThat(aiBeans).hasSize(1);
+		assertThat(aiBeans.keySet()).contains("&foo");
 	}
 
 	/**
 	 * SPR-10517
 	 */
 	@Test
-	void findsFactoryBeanNameByTypeWithoutInstantiation() {
+	public void findsFactoryBeanNameByTypeWithoutInstantiation() {
 		String[] names = bf.getBeanNamesForType(AnInterface.class, false, false);
 		assertThat(Arrays.asList(names)).contains("&foo");
 
 		Map<String, AnInterface> beans = bf.getBeansOfType(AnInterface.class, false, false);
-		assertThat(beans).containsOnlyKeys("&foo");
+		assertThat(beans).hasSize(1);
+		assertThat(beans.keySet()).contains("&foo");
 	}
 
 
 	static class FooFactoryBean implements FactoryBean<Foo>, AnInterface {
 
 		@Override
-		public Foo getObject() {
+		public Foo getObject() throws Exception {
 			return new Foo();
 		}
 
@@ -120,11 +125,11 @@ class Spr8954Tests {
 	static class PredictedTypeImpl implements PredictedType {
 	}
 
-	static class PredictingBPP implements SmartInstantiationAwareBeanPostProcessor {
+	static class PredictingBPP extends InstantiationAwareBeanPostProcessorAdapter {
 
 		@Override
 		public Class<?> predictBeanType(Class<?> beanClass, String beanName) {
-			return (FactoryBean.class.isAssignableFrom(beanClass) ? PredictedType.class : null);
+			return FactoryBean.class.isAssignableFrom(beanClass) ? PredictedType.class : null;
 		}
 	}
 

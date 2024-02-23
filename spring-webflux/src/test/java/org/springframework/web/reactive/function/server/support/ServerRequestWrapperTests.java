@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,20 +42,20 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Arjen Poutsma
  */
-class ServerRequestWrapperTests {
+public class ServerRequestWrapperTests {
 
-	private final ServerRequest mockRequest = mock();
+	private final ServerRequest mockRequest = mock(ServerRequest.class);
 
 	private final ServerRequestWrapper wrapper = new ServerRequestWrapper(mockRequest);
 
 
 	@Test
-	void request() {
+	public void request() {
 		assertThat(wrapper.request()).isSameAs(mockRequest);
 	}
 
 	@Test
-	void method() {
+	public void method() {
 		HttpMethod method = HttpMethod.POST;
 		given(mockRequest.method()).willReturn(method);
 
@@ -63,7 +63,7 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void uri() {
+	public void uri() {
 		URI uri = URI.create("https://example.com");
 		given(mockRequest.uri()).willReturn(uri);
 
@@ -71,7 +71,7 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void path() {
+	public void path() {
 		String path = "/foo/bar";
 		given(mockRequest.path()).willReturn(path);
 
@@ -79,33 +79,33 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void headers() {
-		ServerRequest.Headers headers = mock();
+	public void headers() {
+		ServerRequest.Headers headers = mock(ServerRequest.Headers.class);
 		given(mockRequest.headers()).willReturn(headers);
 
 		assertThat(wrapper.headers()).isSameAs(headers);
 	}
 
 	@Test
-	void attribute() {
+	public void attribute() {
 		String name = "foo";
 		String value = "bar";
 		given(mockRequest.attribute(name)).willReturn(Optional.of(value));
 
-		assertThat(wrapper.attribute(name)).contains(value);
+		assertThat(wrapper.attribute(name)).isEqualTo(Optional.of(value));
 	}
 
 	@Test
-	void queryParam() {
+	public void queryParam() {
 		String name = "foo";
 		String value = "bar";
 		given(mockRequest.queryParam(name)).willReturn(Optional.of(value));
 
-		assertThat(wrapper.queryParam(name)).contains(value);
+		assertThat(wrapper.queryParam(name)).isEqualTo(Optional.of(value));
 	}
 
 	@Test
-	void queryParams() {
+	public void queryParams() {
 		MultiValueMap<String, String> value = new LinkedMultiValueMap<>();
 		value.add("foo", "bar");
 		given(mockRequest.queryParams()).willReturn(value);
@@ -114,7 +114,7 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void pathVariable() {
+	public void pathVariable() {
 		String name = "foo";
 		String value = "bar";
 		given(mockRequest.pathVariable(name)).willReturn(value);
@@ -123,7 +123,7 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void pathVariables() {
+	public void pathVariables() {
 		Map<String, String> pathVariables = Collections.singletonMap("foo", "bar");
 		given(mockRequest.pathVariables()).willReturn(pathVariables);
 
@@ -131,15 +131,16 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void cookies() {
-		MultiValueMap<String, HttpCookie> cookies = mock();
+	@SuppressWarnings("unchecked")
+	public void cookies() {
+		MultiValueMap<String, HttpCookie> cookies = mock(MultiValueMap.class);
 		given(mockRequest.cookies()).willReturn(cookies);
 
 		assertThat(wrapper.cookies()).isSameAs(cookies);
 	}
 
 	@Test
-	void bodyExtractor() {
+	public void bodyExtractor() {
 		Mono<String> result = Mono.just("foo");
 		BodyExtractor<Mono<String>, ReactiveHttpInputMessage> extractor = BodyExtractors.toMono(String.class);
 		given(mockRequest.body(extractor)).willReturn(result);
@@ -148,7 +149,7 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void bodyToMonoClass() {
+	public void bodyToMonoClass() {
 		Mono<String> result = Mono.just("foo");
 		given(mockRequest.bodyToMono(String.class)).willReturn(result);
 
@@ -156,16 +157,16 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void bodyToMonoParameterizedTypeReference() {
+	public void bodyToMonoParameterizedTypeReference() {
 		Mono<String> result = Mono.just("foo");
-		ParameterizedTypeReference<String> reference = new ParameterizedTypeReference<>() {};
+		ParameterizedTypeReference<String> reference = new ParameterizedTypeReference<String>() {};
 		given(mockRequest.bodyToMono(reference)).willReturn(result);
 
 		assertThat(wrapper.bodyToMono(reference)).isSameAs(result);
 	}
 
 	@Test
-	void bodyToFluxClass() {
+	public void bodyToFluxClass() {
 		Flux<String> result = Flux.just("foo");
 		given(mockRequest.bodyToFlux(String.class)).willReturn(result);
 
@@ -173,9 +174,9 @@ class ServerRequestWrapperTests {
 	}
 
 	@Test
-	void bodyToFluxParameterizedTypeReference() {
+	public void bodyToFluxParameterizedTypeReference() {
 		Flux<String> result = Flux.just("foo");
-		ParameterizedTypeReference<String> reference = new ParameterizedTypeReference<>() {};
+		ParameterizedTypeReference<String> reference = new ParameterizedTypeReference<String>() {};
 		given(mockRequest.bodyToFlux(reference)).willReturn(result);
 
 		assertThat(wrapper.bodyToFlux(reference)).isSameAs(result);

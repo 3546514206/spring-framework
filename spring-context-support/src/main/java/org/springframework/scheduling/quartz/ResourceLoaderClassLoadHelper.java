@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,9 @@
 
 package org.springframework.scheduling.quartz;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.quartz.spi.ClassLoadHelper;
-
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -31,14 +26,18 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+
 /**
  * Wrapper that adapts from the Quartz {@link ClassLoadHelper} interface
  * onto Spring's {@link ResourceLoader} interface. Used by default when
  * the SchedulerFactoryBean runs in a Spring ApplicationContext.
  *
  * @author Juergen Hoeller
- * @since 2.5.5
  * @see SchedulerFactoryBean#setApplicationContext
+ * @since 2.5.5
  */
 public class ResourceLoaderClassLoadHelper implements ClassLoadHelper {
 
@@ -81,8 +80,8 @@ public class ResourceLoaderClassLoadHelper implements ClassLoadHelper {
 		return ClassUtils.forName(name, this.resourceLoader.getClassLoader());
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
+	@SuppressWarnings("unchecked")
 	public <T> Class<? extends T> loadClass(String name, Class<T> clazz) throws ClassNotFoundException {
 		return (Class<? extends T>) loadClass(name);
 	}

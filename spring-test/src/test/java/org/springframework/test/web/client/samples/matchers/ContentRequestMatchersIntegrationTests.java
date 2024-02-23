@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,21 @@
 package org.springframework.test.web.client.samples.matchers;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.Person;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -37,59 +40,68 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * Examples of defining expectations on request content and content type.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
  * @see JsonPathRequestMatchersIntegrationTests
  * @see XmlContentRequestMatchersIntegrationTests
  * @see XpathRequestMatchersIntegrationTests
  */
-class ContentRequestMatchersIntegrationTests {
+public class ContentRequestMatchersIntegrationTests {
 
-	private final RestTemplate restTemplate = new RestTemplate();
+	private MockRestServiceServer mockServer;
 
-	private final MockRestServiceServer mockServer = MockRestServiceServer.createServer(this.restTemplate);
+	private RestTemplate restTemplate;
 
 
 	@BeforeEach
-	void setup() {
-		this.restTemplate.setMessageConverters(
-				List.of(new StringHttpMessageConverter(), new MappingJackson2HttpMessageConverter()));
+	public void setup() {
+		List<HttpMessageConverter<?>> converters = new ArrayList<>();
+		converters.add(new StringHttpMessageConverter());
+		converters.add(new MappingJackson2HttpMessageConverter());
+
+		this.restTemplate = new RestTemplate();
+		this.restTemplate.setMessageConverters(converters);
+
+		this.mockServer = MockRestServiceServer.createServer(this.restTemplate);
 	}
 
 
 	@Test
-	void contentType() {
+	public void contentType() throws Exception {
 		this.mockServer.expect(content().contentType("application/json")).andRespond(withSuccess());
 		executeAndVerify(new Person());
 	}
 
 	@Test
-	void contentTypeNoMatch() {
+	public void contentTypeNoMatch() throws Exception {
 		this.mockServer.expect(content().contentType("application/json;charset=UTF-8")).andRespond(withSuccess());
-		assertThatExceptionOfType(AssertionError.class)
-				.isThrownBy(() -> executeAndVerify("foo"))
-				.withMessageStartingWith("Content type expected:<application/json;charset=UTF-8>");
+		try {
+			executeAndVerify("foo");
+		}
+		catch (AssertionError error) {
+			String message = error.getMessage();
+			assertThat(message.startsWith("Content type expected:<application/json;charset=UTF-8>")).as(message).isTrue();
+		}
 	}
 
 	@Test
-	void contentAsString() {
+	public void contentAsString() throws Exception {
 		this.mockServer.expect(content().string("foo")).andRespond(withSuccess());
 		executeAndVerify("foo");
 	}
 
 	@Test
-	void contentStringStartsWith() {
+	public void contentStringStartsWith() throws Exception {
 		this.mockServer.expect(content().string(startsWith("foo"))).andRespond(withSuccess());
 		executeAndVerify("foo123");
 	}
 
 	@Test
-	void contentAsBytes() {
+	public void contentAsBytes() throws Exception {
 		this.mockServer.expect(content().bytes("foo".getBytes())).andRespond(withSuccess());
 		executeAndVerify("foo");
 	}
 
-	private void executeAndVerify(Object body) {
-		this.restTemplate.put(URI.create("/foo"), body);
+	private void executeAndVerify(Object body) throws URISyntaxException {
+		this.restTemplate.put(new URI("/foo"), body);
 		this.mockServer.verify();
 	}
 

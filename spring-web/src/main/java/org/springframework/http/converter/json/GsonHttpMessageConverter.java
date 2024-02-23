@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package org.springframework.http.converter.json;
 
+import com.google.gson.Gson;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-
-import com.google.gson.Gson;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * Implementation of {@link org.springframework.http.converter.HttpMessageConverter}
@@ -93,22 +92,17 @@ public class GsonHttpMessageConverter extends AbstractJsonHttpMessageConverter {
 	}
 
 	@Override
-	protected void writeInternal(Object object, @Nullable Type type, Writer writer) throws Exception {
+	protected void writeInternal(Object o, @Nullable Type type, Writer writer) throws Exception {
 		// In Gson, toJson with a type argument will exclusively use that given type,
 		// ignoring the actual type of the object... which might be more specific,
 		// e.g. a subclass of the specified type which includes additional fields.
 		// As a consequence, we're only passing in parameterized type declarations
 		// which might contain extra generics that the object instance doesn't retain.
 		if (type instanceof ParameterizedType) {
-			getGson().toJson(object, type, writer);
-		}
-		else {
-			getGson().toJson(object, writer);
+			getGson().toJson(o, type, writer);
+		} else {
+			getGson().toJson(o, writer);
 		}
 	}
 
-	@Override
-	protected boolean supportsRepeatableWrites(Object o) {
-		return true;
-	}
 }

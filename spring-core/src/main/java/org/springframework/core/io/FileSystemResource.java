@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,18 @@
 
 package org.springframework.core.io;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
+import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
 import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ResourceUtils;
-import org.springframework.util.StringUtils;
+import java.nio.file.*;
 
 /**
  * {@link Resource} implementation for {@code java.io.File} and
@@ -51,9 +41,7 @@ import org.springframework.util.StringUtils;
  * interactions via NIO.2, only resorting to {@link File} on {@link #getFile()}.
  *
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 28.12.2003
- * @see #FileSystemResource(String)
  * @see #FileSystemResource(File)
  * @see #FileSystemResource(Path)
  * @see java.io.File
@@ -74,9 +62,9 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * <p>Note: When building relative resources via {@link #createRelative},
 	 * it makes a difference whether the specified resource base path here
 	 * ends with a slash or not. In the case of "C:/dir1/", relative paths
-	 * will be built underneath that root: e.g. relative path "dir2" &rarr;
+	 * will be built underneath that root: e.g. relative path "dir2" ->
 	 * "C:/dir1/dir2". In the case of "C:/dir1", relative paths will apply
-	 * at the same directory level: relative path "dir2" &rarr; "C:/dir2".
+	 * at the same directory level: relative path "dir2" -> "C:/dir2".
 	 * @param path a file path
 	 * @see #FileSystemResource(Path)
 	 */
@@ -91,7 +79,7 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * Create a new {@code FileSystemResource} from a {@link File} handle.
 	 * <p>Note: When building relative resources via {@link #createRelative},
 	 * the relative path will apply <i>at the same directory level</i>:
-	 * e.g. new File("C:/dir1"), relative path "dir2" &rarr; "C:/dir2"!
+	 * e.g. new File("C:/dir1"), relative path "dir2" -> "C:/dir2"!
 	 * If you prefer to have relative paths built underneath the given root directory,
 	 * use the {@link #FileSystemResource(String) constructor with a file path}
 	 * to append a trailing slash to the root path: "C:/dir1/", which indicates
@@ -113,15 +101,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * <p>In contrast to {@link PathResource}, this variant strictly follows the
 	 * general {@link FileSystemResource} conventions, in particular in terms of
 	 * path cleaning and {@link #createRelative(String)} handling.
-	 * <p>Note: When building relative resources via {@link #createRelative},
-	 * the relative path will apply <i>at the same directory level</i>:
-	 * e.g. Paths.get("C:/dir1"), relative path "dir2" &rarr; "C:/dir2"!
-	 * If you prefer to have relative paths built underneath the given root directory,
-	 * use the {@link #FileSystemResource(String) constructor with a file path}
-	 * to append a trailing slash to the root path: "C:/dir1/", which indicates
-	 * this directory as root for all relative paths. Alternatively, consider
-	 * using {@link PathResource#PathResource(Path)} for {@code java.nio.path.Path}
-	 * resolution in {@code createRelative}, always nesting relative paths.
 	 * @param filePath a Path handle to a file
 	 * @since 5.1
 	 * @see #FileSystemResource(File)
@@ -162,7 +141,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	/**
 	 * This implementation returns whether the underlying file exists.
 	 * @see java.io.File#exists()
-	 * @see java.nio.file.Files#exists(Path, java.nio.file.LinkOption...)
 	 */
 	@Override
 	public boolean exists() {
@@ -174,8 +152,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * (and corresponds to an actual file with content, not to a directory).
 	 * @see java.io.File#canRead()
 	 * @see java.io.File#isDirectory()
-	 * @see java.nio.file.Files#isReadable(Path)
-	 * @see java.nio.file.Files#isDirectory(Path, java.nio.file.LinkOption...)
 	 */
 	@Override
 	public boolean isReadable() {
@@ -184,8 +160,8 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	}
 
 	/**
-	 * This implementation opens an NIO file stream for the underlying file.
-	 * @see java.nio.file.Files#newInputStream(Path, java.nio.file.OpenOption...)
+	 * This implementation opens a NIO file stream for the underlying file.
+	 * @see java.io.FileInputStream
 	 */
 	@Override
 	public InputStream getInputStream() throws IOException {
@@ -197,33 +173,11 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 		}
 	}
 
-	@Override
-	public byte[] getContentAsByteArray() throws IOException {
-		try {
-			return Files.readAllBytes(this.filePath);
-		}
-		catch (NoSuchFileException ex) {
-			throw new FileNotFoundException(ex.getMessage());
-		}
-	}
-
-	@Override
-	public String getContentAsString(Charset charset) throws IOException {
-		try {
-			return Files.readString(this.filePath, charset);
-		}
-		catch (NoSuchFileException ex) {
-			throw new FileNotFoundException(ex.getMessage());
-		}
-	}
-
 	/**
 	 * This implementation checks whether the underlying file is marked as writable
 	 * (and corresponds to an actual file with content, not to a directory).
 	 * @see java.io.File#canWrite()
 	 * @see java.io.File#isDirectory()
-	 * @see java.nio.file.Files#isWritable(Path)
-	 * @see java.nio.file.Files#isDirectory(Path, java.nio.file.LinkOption...)
 	 */
 	@Override
 	public boolean isWritable() {
@@ -233,7 +187,7 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 
 	/**
 	 * This implementation opens a FileOutputStream for the underlying file.
-	 * @see java.nio.file.Files#newOutputStream(Path, java.nio.file.OpenOption...)
+	 * @see java.io.FileOutputStream
 	 */
 	@Override
 	public OutputStream getOutputStream() throws IOException {
@@ -243,7 +197,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	/**
 	 * This implementation returns a URL for the underlying file.
 	 * @see java.io.File#toURI()
-	 * @see java.nio.file.Path#toUri()
 	 */
 	@Override
 	public URL getURL() throws IOException {
@@ -253,27 +206,10 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	/**
 	 * This implementation returns a URI for the underlying file.
 	 * @see java.io.File#toURI()
-	 * @see java.nio.file.Path#toUri()
 	 */
 	@Override
 	public URI getURI() throws IOException {
-		if (this.file != null) {
-			return this.file.toURI();
-		}
-		else {
-			URI uri = this.filePath.toUri();
-			// Normalize URI? See https://github.com/spring-projects/spring-framework/issues/29275
-			String scheme = uri.getScheme();
-			if (ResourceUtils.URL_PROTOCOL_FILE.equals(scheme)) {
-				try {
-					uri = new URI(scheme, uri.getPath(), null);
-				}
-				catch (URISyntaxException ex) {
-					throw new IOException("Failed to normalize URI: " + uri, ex);
-				}
-			}
-			return uri;
-		}
+		return (this.file != null ? this.file.toURI() : this.filePath.toUri());
 	}
 
 	/**
@@ -371,7 +307,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	/**
 	 * This implementation returns the name of the file.
 	 * @see java.io.File#getName()
-	 * @see java.nio.file.Path#getFileName()
 	 */
 	@Override
 	public String getFilename() {
@@ -382,7 +317,6 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * This implementation returns a description that includes the absolute
 	 * path of the file.
 	 * @see java.io.File#getAbsolutePath()
-	 * @see java.nio.file.Path#toAbsolutePath()
 	 */
 	@Override
 	public String getDescription() {
@@ -391,17 +325,16 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 
 
 	/**
-	 * This implementation compares the underlying file paths.
-	 * @see #getPath()
+	 * This implementation compares the underlying File references.
 	 */
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof FileSystemResource that && this.path.equals(that.path)));
+		return (this == other || (other instanceof FileSystemResource &&
+				this.path.equals(((FileSystemResource) other).path)));
 	}
 
 	/**
-	 * This implementation returns the hash code of the underlying file path.
-	 * @see #getPath()
+	 * This implementation returns the hash code of the underlying File reference.
 	 */
 	@Override
 	public int hashCode() {

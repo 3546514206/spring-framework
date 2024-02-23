@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package org.springframework.test.web.client.match;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.MediaType;
@@ -31,13 +31,19 @@ import static org.hamcrest.Matchers.hasXPath;
 
 
 /**
- * Tests for {@link ContentRequestMatchers}.
+ * Unit tests for {@link ContentRequestMatchers}.
  *
  * @author Rossen Stoyanchev
  */
 public class ContentRequestMatchersTests {
 
-	private final MockClientHttpRequest request = new MockClientHttpRequest();
+	private MockClientHttpRequest request;
+
+
+	@BeforeEach
+	public void setUp() {
+		this.request = new MockClientHttpRequest();
+	}
 
 
 	@Test
@@ -49,7 +55,7 @@ public class ContentRequestMatchersTests {
 	}
 
 	@Test
-	public void testContentTypeNoMatch1() {
+	public void testContentTypeNoMatch1() throws Exception {
 		this.request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
 		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
@@ -57,7 +63,7 @@ public class ContentRequestMatchersTests {
 	}
 
 	@Test
-	public void testContentTypeNoMatch2() {
+	public void testContentTypeNoMatch2() throws Exception {
 		this.request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
 		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
@@ -109,19 +115,6 @@ public class ContentRequestMatchersTests {
 		map.add("name 2", "value B");
 		map.add("name 3", null);
 		MockRestRequestMatchers.content().formData(map).match(this.request);
-	}
-
-	@Test
-	public void testFormDataContains() throws Exception {
-		String contentType = "application/x-www-form-urlencoded;charset=UTF-8";
-		String body = "name+1=value+1&name+2=value+A&name+2=value+B&name+3";
-
-		this.request.getHeaders().setContentType(MediaType.parseMediaType(contentType));
-		this.request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
-
-		MockRestRequestMatchers.content()
-				.formDataContains(Collections.singletonMap("name 1", "value 1"))
-				.match(this.request);
 	}
 
 	@Test

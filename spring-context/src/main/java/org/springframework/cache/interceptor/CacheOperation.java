@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package org.springframework.cache.interceptor;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 
 /**
  * Base class for cache operations.
@@ -158,7 +158,7 @@ public abstract class CacheOperation implements BasicOperation {
 		}
 
 		public void setCacheNames(String... cacheNames) {
-			this.cacheNames = CollectionUtils.newLinkedHashSet(cacheNames.length);
+			this.cacheNames = new LinkedHashSet<>(cacheNames.length);
 			for (String cacheName : cacheNames) {
 				Assert.hasText(cacheName, "Cache name must be non-empty if specified");
 				this.cacheNames.add(cacheName);
@@ -216,13 +216,13 @@ public abstract class CacheOperation implements BasicOperation {
 		 */
 		protected StringBuilder getOperationDescription() {
 			StringBuilder result = new StringBuilder(getClass().getSimpleName());
-			result.append('[').append(this.name);
+			result.append("[").append(this.name);
 			result.append("] caches=").append(this.cacheNames);
 			result.append(" | key='").append(this.key);
 			result.append("' | keyGenerator='").append(this.keyGenerator);
 			result.append("' | cacheManager='").append(this.cacheManager);
 			result.append("' | cacheResolver='").append(this.cacheResolver);
-			result.append("' | condition='").append(this.condition).append('\'');
+			result.append("' | condition='").append(this.condition).append("'");
 			return result;
 		}
 

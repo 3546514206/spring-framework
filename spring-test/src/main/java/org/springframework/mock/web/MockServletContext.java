@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,52 +16,30 @@
 
 package org.springframework.mock.web;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.InvalidPathException;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.EventListener;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterRegistration;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRegistration;
-import jakarta.servlet.SessionCookieConfig;
-import jakarta.servlet.SessionTrackingMode;
-import jakarta.servlet.descriptor.JspConfigDescriptor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.MimeType;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
 import org.springframework.web.util.WebUtils;
 
+import javax.servlet.*;
+import javax.servlet.descriptor.JspConfigDescriptor;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
+
 /**
- * Mock implementation of the {@link jakarta.servlet.ServletContext} interface.
+ * Mock implementation of the {@link javax.servlet.ServletContext} interface.
  *
- * <p>As of Spring 6.0, this set of mocks is designed on a Servlet 6.0 baseline.
+ * <p>As of Spring 5.0, this set of mocks is designed on a Servlet 4.0 baseline.
  *
  * <p>Compatible with Servlet 3.1 but can be configured to expose a specific version
  * through {@link #setMajorVersion}/{@link #setMinorVersion}; default is 3.1.
@@ -93,7 +71,7 @@ public class MockServletContext implements ServletContext {
 
 	private static final String TEMP_DIR_SYSTEM_PROPERTY = "java.io.tmpdir";
 
-	private static final Set<SessionTrackingMode> DEFAULT_SESSION_TRACKING_MODES = CollectionUtils.newLinkedHashSet(3);
+	private static final Set<SessionTrackingMode> DEFAULT_SESSION_TRACKING_MODES = new LinkedHashSet<>(4);
 
 	static {
 		DEFAULT_SESSION_TRACKING_MODES.add(SessionTrackingMode.COOKIE);
@@ -112,13 +90,13 @@ public class MockServletContext implements ServletContext {
 
 	private final Map<String, ServletContext> contexts = new HashMap<>();
 
-	private int majorVersion = 6;
+	private int majorVersion = 3;
 
-	private int minorVersion = 0;
+	private int minorVersion = 1;
 
-	private int effectiveMajorVersion = 6;
+	private int effectiveMajorVersion = 3;
 
-	private int effectiveMinorVersion = 0;
+	private int effectiveMinorVersion = 1;
 
 	private final Map<String, RequestDispatcher> namedRequestDispatchers = new HashMap<>();
 
@@ -295,16 +273,14 @@ public class MockServletContext implements ServletContext {
 	@Nullable
 	public Set<String> getResourcePaths(String path) {
 		String actualPath = (path.endsWith("/") ? path : path + "/");
-		String resourceLocation = getResourceLocation(actualPath);
-		Resource resource = null;
+		Resource resource = this.resourceLoader.getResource(getResourceLocation(actualPath));
 		try {
-			resource = this.resourceLoader.getResource(resourceLocation);
 			File file = resource.getFile();
 			String[] fileList = file.list();
 			if (ObjectUtils.isEmpty(fileList)) {
 				return null;
 			}
-			Set<String> resourcePaths = CollectionUtils.newLinkedHashSet(fileList.length);
+			Set<String> resourcePaths = new LinkedHashSet<>(fileList.length);
 			for (String fileEntry : fileList) {
 				String resultPath = actualPath + fileEntry;
 				if (resource.createRelative(fileEntry).getFile().isDirectory()) {
@@ -313,11 +289,9 @@ public class MockServletContext implements ServletContext {
 				resourcePaths.add(resultPath);
 			}
 			return resourcePaths;
-		}
-		catch (InvalidPathException | IOException ex ) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Could not get resource paths for " +
-						(resource != null ? resource : resourceLocation), ex);
+		} catch (IOException ex) {
+			if (logger.isWarnEnabled()) {
+				logger.warn("Could not get resource paths for " + resource, ex);
 			}
 			return null;
 		}
@@ -326,22 +300,17 @@ public class MockServletContext implements ServletContext {
 	@Override
 	@Nullable
 	public URL getResource(String path) throws MalformedURLException {
-		String resourceLocation = getResourceLocation(path);
-		Resource resource = null;
+		Resource resource = this.resourceLoader.getResource(getResourceLocation(path));
+		if (!resource.exists()) {
+			return null;
+		}
 		try {
-			resource = this.resourceLoader.getResource(resourceLocation);
-			if (!resource.exists()) {
-				return null;
-			}
 			return resource.getURL();
-		}
-		catch (MalformedURLException ex) {
+		} catch (MalformedURLException ex) {
 			throw ex;
-		}
-		catch (InvalidPathException | IOException ex) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Could not get URL for resource " +
-						(resource != null ? resource : resourceLocation), ex);
+		} catch (IOException ex) {
+			if (logger.isWarnEnabled()) {
+				logger.warn("Could not get URL for " + resource, ex);
 			}
 			return null;
 		}
@@ -350,19 +319,15 @@ public class MockServletContext implements ServletContext {
 	@Override
 	@Nullable
 	public InputStream getResourceAsStream(String path) {
-		String resourceLocation = getResourceLocation(path);
-		Resource resource = null;
-		try {
-			resource = this.resourceLoader.getResource(resourceLocation);
-			if (!resource.exists()) {
-				return null;
-			}
-			return resource.getInputStream();
+		Resource resource = this.resourceLoader.getResource(getResourceLocation(path));
+		if (!resource.exists()) {
+			return null;
 		}
-		catch (InvalidPathException | IOException ex) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Could not open InputStream for resource " +
-						(resource != null ? resource : resourceLocation), ex);
+		try {
+			return resource.getInputStream();
+		} catch (IOException ex) {
+			if (logger.isWarnEnabled()) {
+				logger.warn("Could not open InputStream for " + resource, ex);
 			}
 			return null;
 		}
@@ -431,9 +396,34 @@ public class MockServletContext implements ServletContext {
 		registerNamedDispatcher(this.defaultServletName, new MockRequestDispatcher(this.defaultServletName));
 	}
 
+	@Deprecated
+	@Override
+	@Nullable
+	public Servlet getServlet(String name) {
+		return null;
+	}
+
+	@Override
+	@Deprecated
+	public Enumeration<Servlet> getServlets() {
+		return Collections.enumeration(Collections.emptySet());
+	}
+
+	@Override
+	@Deprecated
+	public Enumeration<String> getServletNames() {
+		return Collections.enumeration(Collections.emptySet());
+	}
+
 	@Override
 	public void log(String message) {
 		logger.info(message);
+	}
+
+	@Override
+	@Deprecated
+	public void log(Exception ex, String message) {
+		logger.info(message, ex);
 	}
 
 	@Override
@@ -444,16 +434,12 @@ public class MockServletContext implements ServletContext {
 	@Override
 	@Nullable
 	public String getRealPath(String path) {
-		String resourceLocation = getResourceLocation(path);
-		Resource resource = null;
+		Resource resource = this.resourceLoader.getResource(getResourceLocation(path));
 		try {
-			resource = this.resourceLoader.getResource(resourceLocation);
 			return resource.getFile().getAbsolutePath();
-		}
-		catch (InvalidPathException | IOException ex) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Could not determine real path of resource " +
-						(resource != null ? resource : resourceLocation), ex);
+		} catch (IOException ex) {
+			if (logger.isWarnEnabled()) {
+				logger.warn("Could not determine real path of resource " + resource, ex);
 			}
 			return null;
 		}
@@ -638,7 +624,7 @@ public class MockServletContext implements ServletContext {
 
 	/**
 	 * This method always returns {@code null}.
-	 * @see jakarta.servlet.ServletContext#getServletRegistration(java.lang.String)
+	 * @see javax.servlet.ServletContext#getServletRegistration(java.lang.String)
 	 */
 	@Override
 	@Nullable
@@ -648,7 +634,7 @@ public class MockServletContext implements ServletContext {
 
 	/**
 	 * This method always returns an {@linkplain Collections#emptyMap empty map}.
-	 * @see jakarta.servlet.ServletContext#getServletRegistrations()
+	 * @see javax.servlet.ServletContext#getServletRegistrations()
 	 */
 	@Override
 	public Map<String, ? extends ServletRegistration> getServletRegistrations() {
@@ -677,7 +663,7 @@ public class MockServletContext implements ServletContext {
 
 	/**
 	 * This method always returns {@code null}.
-	 * @see jakarta.servlet.ServletContext#getFilterRegistration(java.lang.String)
+	 * @see javax.servlet.ServletContext#getFilterRegistration(java.lang.String)
 	 */
 	@Override
 	@Nullable
@@ -687,7 +673,7 @@ public class MockServletContext implements ServletContext {
 
 	/**
 	 * This method always returns an {@linkplain Collections#emptyMap empty map}.
-	 * @see jakarta.servlet.ServletContext#getFilterRegistrations()
+	 * @see javax.servlet.ServletContext#getFilterRegistrations()
 	 */
 	@Override
 	public Map<String, ? extends FilterRegistration> getFilterRegistrations() {

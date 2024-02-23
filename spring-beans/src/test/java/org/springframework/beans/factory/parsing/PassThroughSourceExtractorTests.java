@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,23 +21,23 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link PassThroughSourceExtractor}.
+ * Unit tests for {@link PassThroughSourceExtractor}.
  *
  * @author Rick Evans
  * @author Chris Beams
  */
-class PassThroughSourceExtractorTests {
+public class PassThroughSourceExtractorTests {
 
 	@Test
-	void testPassThroughContract() {
-		Object source = new Object();
+	public void testPassThroughContract() throws Exception {
+		Object source  = new Object();
 		Object extractedSource = new PassThroughSourceExtractor().extractSource(source, null);
 		assertThat(extractedSource).as("The contract of PassThroughSourceExtractor states that the supplied " +
 				"source object *must* be returned as-is").isSameAs(source);
 	}
 
 	@Test
-	void testPassThroughContractEvenWithNull() {
+	public void testPassThroughContractEvenWithNull() throws Exception {
 		Object extractedSource = new PassThroughSourceExtractor().extractSource(null, null);
 		assertThat(extractedSource).as("The contract of PassThroughSourceExtractor states that the supplied " +
 				"source object *must* be returned as-is (even if null)").isNull();

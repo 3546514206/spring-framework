@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.Assert;
@@ -36,20 +36,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Dave Syer
  */
-class Spr11202Tests {
+public class Spr11202Tests {
 
 	@Test
-	void withImporter() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(Wrapper.class);
+	public void testWithImporter() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(Wrapper.class);
 		assertThat(context.getBean("value")).isEqualTo("foo");
-		context.close();
 	}
 
 	@Test
-	void withoutImporter() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
+	public void testWithoutImporter() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
 		assertThat(context.getBean("value")).isEqualTo("foo");
-		context.close();
 	}
 
 
@@ -77,7 +75,7 @@ class Spr11202Tests {
 		}
 
 		@Bean
-		public String value() {
+		public String value() throws Exception {
 			String name = foo().getObject().getName();
 			Assert.state(name != null, "Name cannot be null");
 			return name;
@@ -85,7 +83,7 @@ class Spr11202Tests {
 
 		@Bean
 		@Conditional(NoBarCondition.class)
-		public String bar() {
+		public String bar() throws Exception {
 			return "bar";
 		}
 	}
@@ -115,7 +113,7 @@ class Spr11202Tests {
 		private Foo foo = new Foo();
 
 		@Override
-		public Foo getObject() {
+		public Foo getObject() throws Exception {
 			return foo;
 		}
 
@@ -130,7 +128,7 @@ class Spr11202Tests {
 		}
 
 		@Override
-		public void afterPropertiesSet() {
+		public void afterPropertiesSet() throws Exception {
 			this.foo.name = "foo";
 		}
 	}

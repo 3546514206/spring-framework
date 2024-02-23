@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,24 +30,24 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Chris Beams
  * @author Phillip Webb
  */
-@Deprecated
 class ComparableComparatorTests {
 
 	@Test
 	void comparableComparator() {
-		@SuppressWarnings("deprecation")
 		Comparator<String> c = new ComparableComparator<>();
-		assertThat(c.compare("abc", "cde")).isLessThan(0);
+		String s1 = "abc";
+		String s2 = "cde";
+		assertThat(c.compare(s1, s2) < 0).isTrue();
 	}
 
-	@Test
 	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Test
 	void shouldNeedComparable() {
-		@SuppressWarnings("deprecation")
 		Comparator c = new ComparableComparator();
 		Object o1 = new Object();
 		Object o2 = new Object();
-		assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> c.compare(o1, o2));
+		assertThatExceptionOfType(ClassCastException.class).isThrownBy(() ->
+				c.compare(o1, o2));
 	}
 
 }

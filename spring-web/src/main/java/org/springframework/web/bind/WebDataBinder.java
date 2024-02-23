@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package org.springframework.web.bind;
 
-import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
-
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
 import org.springframework.core.CollectionFactory;
@@ -29,27 +23,23 @@ import org.springframework.lang.Nullable;
 import org.springframework.validation.DataBinder;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.lang.reflect.Array;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Special {@link DataBinder} for data binding from web request parameters
  * to JavaBean objects. Designed for web environments, but not dependent on
  * the Servlet API; serves as base class for more specific DataBinder variants,
  * such as {@link org.springframework.web.bind.ServletRequestDataBinder}.
  *
- * <p><strong>WARNING</strong>: Data binding can lead to security issues by exposing
- * parts of the object graph that are not meant to be accessed or modified by
- * external clients. Therefore, the design and use of data binding should be considered
- * carefully with regard to security. For more details, please refer to the dedicated
- * sections on data binding for
- * <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-initbinder-model-design">Spring Web MVC</a> and
- * <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html#webflux-ann-initbinder-model-design">Spring WebFlux</a>
- * in the reference manual.
- *
  * <p>Includes support for field markers which address a common problem with
  * HTML checkboxes and select options: detecting that a field was part of
  * the form, but did not generate a request parameter because it was empty.
  * A field marker allows to detect that state and reset the corresponding
  * bean property accordingly. Default values, for parameters that are otherwise
- * not present, can specify a value for the field other than empty.
+ * not present, can specify a value for the field other then empty.
  *
  * @author Juergen Hoeller
  * @author Scott Andrews
@@ -195,33 +185,6 @@ public class WebDataBinder extends DataBinder {
 
 
 	/**
-	 * Check if a value can be resolved if {@link #getFieldDefaultPrefix()}
-	 * or {@link #getFieldMarkerPrefix()} is prepended.
-	 * @param name the name of the value to resolve
-	 * @param type the type of value expected
-	 * @param resolver delegate resolver to use for the checks
-	 * @return the resolved value, or {@code null}
-	 * @since 6.1
-	 */
-	@Nullable
-	protected Object resolvePrefixValue(String name, Class<?> type, BiFunction<String, Class<?>, Object> resolver) {
-		Object value = resolver.apply(name, type);
-		if (value == null) {
-			String prefix = getFieldDefaultPrefix();
-			if (prefix != null) {
-				value = resolver.apply(prefix + name, type);
-			}
-			if (value == null) {
-				prefix = getFieldMarkerPrefix();
-				if (prefix != null && resolver.apply(prefix + name, type) != null) {
-					value = getEmptyValue(type);
-				}
-			}
-		}
-		return value;
-	}
-
-	/**
 	 * This implementation performs a field default and marker check
 	 * before delegating to the superclass binding process.
 	 * @see #checkFieldDefaults
@@ -231,7 +194,6 @@ public class WebDataBinder extends DataBinder {
 	protected void doBind(MutablePropertyValues mpvs) {
 		checkFieldDefaults(mpvs);
 		checkFieldMarkers(mpvs);
-		adaptEmptyArrayIndices(mpvs);
 		super.doBind(mpvs);
 	}
 
@@ -288,27 +250,6 @@ public class WebDataBinder extends DataBinder {
 	}
 
 	/**
-	 * Check for property values with names that end on {@code "[]"}. This is
-	 * used by some clients for array syntax without an explicit index value.
-	 * If such values are found, drop the brackets to adapt to the expected way
-	 * of expressing the same for data binding purposes.
-	 * @param mpvs the property values to be bound (can be modified)
-	 * @since 5.3
-	 */
-	protected void adaptEmptyArrayIndices(MutablePropertyValues mpvs) {
-		for (PropertyValue pv : mpvs.getPropertyValues()) {
-			String name = pv.getName();
-			if (name.endsWith("[]")) {
-				String field = name.substring(0, name.length() - 2);
-				if (getPropertyAccessor().isWritableProperty(field) && !mpvs.contains(field)) {
-					mpvs.add(field, pv.getValue());
-				}
-				mpvs.removePropertyValue(pv);
-			}
-		}
-	}
-
-	/**
 	 * Determine an empty value for the specified field.
 	 * <p>The default implementation delegates to {@link #getEmptyValue(Class)}
 	 * if the field type is known, otherwise falls back to {@code null}.
@@ -344,7 +285,7 @@ public class WebDataBinder extends DataBinder {
 			}
 			else if (fieldType.isArray()) {
 				// Special handling of array property.
-				return Array.newInstance(fieldType.componentType(), 0);
+				return Array.newInstance(fieldType.getComponentType(), 0);
 			}
 			else if (Collection.class.isAssignableFrom(fieldType)) {
 				return CollectionFactory.createCollection(fieldType, 0);

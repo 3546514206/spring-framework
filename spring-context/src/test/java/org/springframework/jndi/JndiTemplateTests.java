@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,13 +33,13 @@ import static org.mockito.Mockito.verify;
  * @author Chris Beams
  * @since 08.07.2003
  */
-class JndiTemplateTests {
+public class JndiTemplateTests {
 
 	@Test
-	void testLookupSucceeds() throws Exception {
+	public void testLookupSucceeds() throws Exception {
 		Object o = new Object();
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 		given(context.lookup(name)).willReturn(o);
 
 		JndiTemplate jt = new JndiTemplate() {
@@ -55,10 +55,10 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testLookupFails() throws Exception {
+	public void testLookupFails() throws Exception {
 		NameNotFoundException ne = new NameNotFoundException();
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 		given(context.lookup(name)).willThrow(ne);
 
 		JndiTemplate jt = new JndiTemplate() {
@@ -74,9 +74,9 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testLookupReturnsNull() throws Exception {
+	public void testLookupReturnsNull() throws Exception {
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 		given(context.lookup(name)).willReturn(null);
 
 		JndiTemplate jt = new JndiTemplate() {
@@ -92,10 +92,10 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testLookupFailsWithTypeMismatch() throws Exception {
+	public void testLookupFailsWithTypeMismatch() throws Exception {
 		Object o = new Object();
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 		given(context.lookup(name)).willReturn(o);
 
 		JndiTemplate jt = new JndiTemplate() {
@@ -111,10 +111,10 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testBind() throws Exception {
+	public void testBind() throws Exception {
 		Object o = new Object();
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 
 		JndiTemplate jt = new JndiTemplate() {
 			@Override
@@ -129,10 +129,10 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testRebind() throws Exception {
+	public void testRebind() throws Exception {
 		Object o = new Object();
 		String name = "foo";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 
 		JndiTemplate jt = new JndiTemplate() {
 			@Override
@@ -147,9 +147,9 @@ class JndiTemplateTests {
 	}
 
 	@Test
-	void testUnbind() throws Exception {
+	public void testUnbind() throws Exception {
 		String name = "something";
-		final Context context = mock();
+		final Context context = mock(Context.class);
 
 		JndiTemplate jt = new JndiTemplate() {
 			@Override

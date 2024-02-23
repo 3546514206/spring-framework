@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean name="sub" class="edu.zjnu.event.parent.Sub">
+		<property name="name" value="我是你的大冤种"/>
+	</bean>
+
+	<bean name="springEventListener" class="edu.zjnu.event.parent.SpringEventListener">
+	</bean>
+
+</beans>

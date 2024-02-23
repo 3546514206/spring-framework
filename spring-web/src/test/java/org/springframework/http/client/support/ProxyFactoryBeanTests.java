@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.http.client.support;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,31 +28,38 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 /**
  * @author Arjen Poutsma
  */
-class ProxyFactoryBeanTests {
+public class ProxyFactoryBeanTests {
 
-	private final ProxyFactoryBean factoryBean = new ProxyFactoryBean();
+	ProxyFactoryBean factoryBean;
 
+	@BeforeEach
+	public void setUp() {
+		factoryBean = new ProxyFactoryBean();
+	}
 
 	@Test
-	void noType() {
+	public void noType() {
 		factoryBean.setType(null);
-		assertThatIllegalArgumentException().isThrownBy(factoryBean::afterPropertiesSet);
+		assertThatIllegalArgumentException().isThrownBy(
+				factoryBean::afterPropertiesSet);
 	}
 
 	@Test
-	void noHostname() {
+	public void noHostname() {
 		factoryBean.setHostname("");
-		assertThatIllegalArgumentException().isThrownBy(factoryBean::afterPropertiesSet);
+		assertThatIllegalArgumentException().isThrownBy(
+				factoryBean::afterPropertiesSet);
 	}
 
 	@Test
-	void noPort() {
+	public void noPort() {
 		factoryBean.setHostname("example.com");
-		assertThatIllegalArgumentException().isThrownBy(factoryBean::afterPropertiesSet);
+		assertThatIllegalArgumentException().isThrownBy(
+				factoryBean::afterPropertiesSet);
 	}
 
 	@Test
-	void normal() {
+	public void normal() {
 		Proxy.Type type = Proxy.Type.HTTP;
 		factoryBean.setType(type);
 		String hostname = "example.com";

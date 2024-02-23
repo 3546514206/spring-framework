@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ package org.springframework.core.env;
  * variable names.
  *
  * @author Chris Beams
- * @author Phillip Webb
  * @since 3.1
  * @see ConfigurableEnvironment
  * @see SystemEnvironmentPropertySource
@@ -54,29 +53,14 @@ package org.springframework.core.env;
  */
 public class StandardEnvironment extends AbstractEnvironment {
 
+
 	/** System environment property source name: {@value}. */
+	// 一个是设置Spring的环境就是我们经常用的spring.profile配置。
 	public static final String SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME = "systemEnvironment";
 
 	/** JVM system properties property source name: {@value}. */
+	// 另外就是系统资源Property
 	public static final String SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME = "systemProperties";
-
-
-	/**
-	 * Create a new {@code StandardEnvironment} instance with a default
-	 * {@link MutablePropertySources} instance.
-	 */
-	public StandardEnvironment() {
-	}
-
-	/**
-	 * Create a new {@code StandardEnvironment} instance with a specific
-	 * {@link MutablePropertySources} instance.
-	 * @param propertySources property sources to use
-	 * @since 5.3.4
-	 */
-	protected StandardEnvironment(MutablePropertySources propertySources) {
-		super(propertySources);
-	}
 
 
 	/**

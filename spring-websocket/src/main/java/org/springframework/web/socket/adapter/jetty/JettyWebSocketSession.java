@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,18 @@
 
 package org.springframework.web.socket.adapter.jetty;
 
+import org.eclipse.jetty.websocket.api.RemoteEndpoint;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.WebSocketException;
+import org.eclipse.jetty.websocket.api.extensions.ExtensionConfig;
+import org.springframework.http.HttpHeaders;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.socket.*;
+import org.springframework.web.socket.adapter.AbstractWebSocketSession;
+
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.Principal;
@@ -25,27 +35,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
-import org.eclipse.jetty.websocket.api.Callback;
-import org.eclipse.jetty.websocket.api.ExtensionConfig;
-import org.eclipse.jetty.websocket.api.Session;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.web.socket.BinaryMessage;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.PingMessage;
-import org.springframework.web.socket.PongMessage;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketExtension;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.adapter.AbstractWebSocketSession;
 
 /**
- * A {@link WebSocketSession} for use with the Jetty WebSocket API.
+ * A {@link WebSocketSession} for use with the Jetty 9.4 WebSocket API.
  *
  * @author Phillip Webb
  * @author Rossen Stoyanchev
@@ -75,7 +67,8 @@ public class JettyWebSocketSession extends AbstractWebSocketSession<Session> {
 
 	/**
 	 * Create a new {@link JettyWebSocketSession} instance.
-	 * @param attributes the attributes from the HTTP handshake to associate with the WebSocket session
+	 *
+	 * @param attributes attributes from the HTTP handshake to associate with the WebSocket session
 	 */
 	public JettyWebSocketSession(Map<String, Object> attributes) {
 		this(attributes, null);
@@ -83,9 +76,9 @@ public class JettyWebSocketSession extends AbstractWebSocketSession<Session> {
 
 	/**
 	 * Create a new {@link JettyWebSocketSession} instance associated with the given user.
-	 * @param attributes the attributes from the HTTP handshake to associate with the WebSocket
+	 * @param attributes attributes from the HTTP handshake to associate with the WebSocket
 	 * session; the provided attributes are copied, the original map is not used.
-	 * @param user the user associated with the session; if {@code null} we'll fall back on the
+	 * @param user the user associated with the session; if {@code null} we'll fallback on the
 	 * user available via {@link org.eclipse.jetty.websocket.api.Session#getUpgradeRequest()}
 	 */
 	public JettyWebSocketSession(Map<String, Object> attributes, @Nullable Principal user) {
@@ -133,37 +126,37 @@ public class JettyWebSocketSession extends AbstractWebSocketSession<Session> {
 	@Override
 	public InetSocketAddress getLocalAddress() {
 		checkNativeSessionInitialized();
-		return (InetSocketAddress) getNativeSession().getLocalSocketAddress();
+		return getNativeSession().getLocalAddress();
 	}
 
 	@Override
 	public InetSocketAddress getRemoteAddress() {
 		checkNativeSessionInitialized();
-		return (InetSocketAddress) getNativeSession().getRemoteSocketAddress();
+		return getNativeSession().getRemoteAddress();
 	}
 
 	@Override
 	public void setTextMessageSizeLimit(int messageSizeLimit) {
 		checkNativeSessionInitialized();
-		getNativeSession().setMaxTextMessageSize(messageSizeLimit);
+		getNativeSession().getPolicy().setMaxTextMessageSize(messageSizeLimit);
 	}
 
 	@Override
 	public int getTextMessageSizeLimit() {
 		checkNativeSessionInitialized();
-		return (int) getNativeSession().getMaxTextMessageSize();
+		return getNativeSession().getPolicy().getMaxTextMessageSize();
 	}
 
 	@Override
 	public void setBinaryMessageSizeLimit(int messageSizeLimit) {
 		checkNativeSessionInitialized();
-		getNativeSession().setMaxBinaryMessageSize(messageSizeLimit);
+		getNativeSession().getPolicy().setMaxBinaryMessageSize(messageSizeLimit);
 	}
 
 	@Override
 	public int getBinaryMessageSizeLimit() {
 		checkNativeSessionInitialized();
-		return (int) getNativeSession().getMaxBinaryMessageSize();
+		return getNativeSession().getPolicy().getMaxBinaryMessageSize();
 	}
 
 	@Override
@@ -179,92 +172,61 @@ public class JettyWebSocketSession extends AbstractWebSocketSession<Session> {
 		this.uri = session.getUpgradeRequest().getRequestURI();
 
 		HttpHeaders headers = new HttpHeaders();
-		Map<String, List<String>> nativeHeaders = session.getUpgradeRequest().getHeaders();
-		if (!CollectionUtils.isEmpty(nativeHeaders)) {
-			headers.putAll(nativeHeaders);
-		}
+		headers.putAll(session.getUpgradeRequest().getHeaders());
 		this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
 
 		this.acceptedProtocol = session.getUpgradeResponse().getAcceptedSubProtocol();
-		this.extensions = getExtensions(session);
+
+		List<ExtensionConfig> jettyExtensions = session.getUpgradeResponse().getExtensions();
+		if (!CollectionUtils.isEmpty(jettyExtensions)) {
+			List<WebSocketExtension> extensions = new ArrayList<>(jettyExtensions.size());
+			for (ExtensionConfig jettyExtension : jettyExtensions) {
+				extensions.add(new WebSocketExtension(jettyExtension.getName(), jettyExtension.getParameters()));
+			}
+			this.extensions = Collections.unmodifiableList(extensions);
+		}
+		else {
+			this.extensions = Collections.emptyList();
+		}
 
 		if (this.user == null) {
-			try {
-				this.user = session.getUpgradeRequest().getUserPrincipal();
-			}
-			catch (NullPointerException ex) {
-				// Necessary until https://github.com/eclipse/jetty.project/issues/10498 is resolved
-				logger.error("Failure from UpgradeRequest while getting Principal", ex);
-			}
+			this.user = session.getUpgradeRequest().getUserPrincipal();
 		}
-	}
-
-	private List<WebSocketExtension> getExtensions(Session session) {
-		List<ExtensionConfig> configs = session.getUpgradeResponse().getExtensions();
-		if (!CollectionUtils.isEmpty(configs)) {
-			List<WebSocketExtension> result = new ArrayList<>(configs.size());
-			for (ExtensionConfig config : configs) {
-				result.add(new WebSocketExtension(config.getName(), config.getParameters()));
-			}
-			return Collections.unmodifiableList(result);
-		}
-		return Collections.emptyList();
 	}
 
 
 	@Override
 	protected void sendTextMessage(TextMessage message) throws IOException {
-		useSession((session, callback) -> session.sendText(message.getPayload(), callback));
+		getRemoteEndpoint().sendString(message.getPayload());
 	}
 
 	@Override
 	protected void sendBinaryMessage(BinaryMessage message) throws IOException {
-		useSession((session, callback) -> session.sendBinary(message.getPayload(), callback));
+		getRemoteEndpoint().sendBytes(message.getPayload());
 	}
 
 	@Override
 	protected void sendPingMessage(PingMessage message) throws IOException {
-		useSession((session, callback) -> session.sendPing(message.getPayload(), callback));
+		getRemoteEndpoint().sendPing(message.getPayload());
 	}
 
 	@Override
 	protected void sendPongMessage(PongMessage message) throws IOException {
-		useSession((session, callback) -> session.sendPong(message.getPayload(), callback));
+		getRemoteEndpoint().sendPong(message.getPayload());
+	}
+
+	private RemoteEndpoint getRemoteEndpoint() throws IOException {
+		try {
+			return getNativeSession().getRemote();
+		}
+		catch (WebSocketException ex) {
+			throw new IOException("Unable to obtain RemoteEndpoint in session " + getId(), ex);
+		}
 	}
 
 	@Override
 	protected void closeInternal(CloseStatus status) throws IOException {
-		useSession((session, callback) -> session.close(status.getCode(), status.getReason(), callback));
-	}
-
-	private void useSession(SessionConsumer sessionConsumer) throws IOException {
-		try {
-			Callback.Completable completable = new Callback.Completable();
-			sessionConsumer.consume(getNativeSession(), completable);
-			completable.get();
-		}
-		catch (ExecutionException ex) {
-			Throwable cause = ex.getCause();
-
-			if (cause instanceof IOException ioEx) {
-				throw ioEx;
-			}
-			else if (cause instanceof UncheckedIOException uioEx) {
-				throw uioEx.getCause();
-			}
-			else {
-				throw new IOException(ex.getMessage(), cause);
-			}
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	@FunctionalInterface
-	private interface SessionConsumer {
-
-		void consume(Session session, Callback callback) throws IOException;
+		getNativeSession().close(status.getCode(), status.getReason());
 	}
 
 }

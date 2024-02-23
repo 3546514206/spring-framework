@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.cache.concurrent;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.cache.AbstractValueAdaptingCacheTests;
+import org.springframework.core.serializer.support.SerializationDelegate;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.context.testfixture.cache.AbstractValueAdaptingCacheTests;
-import org.springframework.core.serializer.support.SerializationDelegate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -36,7 +35,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Juergen Hoeller
  * @author Stephane Nicoll
  */
-class ConcurrentMapCacheTests extends AbstractValueAdaptingCacheTests<ConcurrentMapCache> {
+public class ConcurrentMapCacheTests
+		extends AbstractValueAdaptingCacheTests<ConcurrentMapCache> {
 
 	protected ConcurrentMap<Object, Object> nativeCache;
 
@@ -48,11 +48,12 @@ class ConcurrentMapCacheTests extends AbstractValueAdaptingCacheTests<Concurrent
 
 
 	@BeforeEach
-	void setup() {
+	public void setUp() throws Exception {
 		this.nativeCache = new ConcurrentHashMap<>();
 		this.cache = new ConcurrentMapCache(CACHE_NAME, this.nativeCache, true);
 		this.nativeCacheNoNull = new ConcurrentHashMap<>();
-		this.cacheNoNull = new ConcurrentMapCache(CACHE_NAME_NO_NULL, this.nativeCacheNoNull, false);
+		this.cacheNoNull = new ConcurrentMapCache(CACHE_NAME_NO_NULL,
+				this.nativeCacheNoNull, false);
 		this.cache.clear();
 	}
 
@@ -63,7 +64,7 @@ class ConcurrentMapCacheTests extends AbstractValueAdaptingCacheTests<Concurrent
 
 	@Override
 	protected ConcurrentMapCache getCache(boolean allowNull) {
-		return (allowNull ? this.cache : this.cacheNoNull);
+		return allowNull ? this.cache : this.cacheNoNull;
 	}
 
 	@Override
@@ -71,29 +72,29 @@ class ConcurrentMapCacheTests extends AbstractValueAdaptingCacheTests<Concurrent
 		return this.nativeCache;
 	}
 
-
 	@Test
-	void testIsStoreByReferenceByDefault() {
+	public void testIsStoreByReferenceByDefault() {
 		assertThat(this.cache.isStoreByValue()).isFalse();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
-	void testSerializer() {
+	public void testSerializer() {
 		ConcurrentMapCache serializeCache = createCacheWithStoreByValue();
 		assertThat(serializeCache.isStoreByValue()).isTrue();
 
 		Object key = createRandomKey();
-		List<String> content = new ArrayList<>(Arrays.asList("one", "two", "three"));
+		List<String> content = new ArrayList<>();
+		content.addAll(Arrays.asList("one", "two", "three"));
 		serializeCache.put(key, content);
 		content.remove(0);
 		List<String> entry = (List<String>) serializeCache.get(key).get();
-		assertThat(entry).hasSize(3);
+		assertThat(entry.size()).isEqualTo(3);
 		assertThat(entry.get(0)).isEqualTo("one");
 	}
 
 	@Test
-	void testNonSerializableContent() {
+	public void testNonSerializableContent() {
 		ConcurrentMapCache serializeCache = createCacheWithStoreByValue();
 
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -104,7 +105,7 @@ class ConcurrentMapCacheTests extends AbstractValueAdaptingCacheTests<Concurrent
 	}
 
 	@Test
-	void testInvalidSerializedContent() {
+	public void testInvalidSerializedContent() {
 		ConcurrentMapCache serializeCache = createCacheWithStoreByValue();
 
 		String key = createRandomKey();

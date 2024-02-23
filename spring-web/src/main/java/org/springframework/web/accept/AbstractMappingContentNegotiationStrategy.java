@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,9 +40,9 @@ import org.springframework.web.context.request.NativeWebRequest;
  * through the base class {@link MappingMediaTypeFileExtensionResolver} which
  * stores such mappings.
  *
- * <p>The method {@link #handleNoMatch} allow subclasses to plug in additional
+ * <p>The method {@link #handleNoMatch} allow sub-classes to plug in additional
  * ways of looking up media types (e.g. through the Java Activation framework,
- * or {@link jakarta.servlet.ServletContext#getMimeType}). Media types resolved
+ * or {@link javax.servlet.ServletContext#getMimeType}. Media types resolved
  * via base classes are then added to the base class
  * {@link MappingMediaTypeFileExtensionResolver}, i.e. cached for new lookups.
  *
@@ -69,7 +69,7 @@ public abstract class AbstractMappingContentNegotiationStrategy extends MappingM
 
 	/**
 	 * Whether to only use the registered mappings to look up file extensions,
-	 * or also to use dynamic resolution (e.g. via {@link MediaTypeFactory}).
+	 * or also to use dynamic resolution (e.g. via {@link MediaTypeFactory}.
 	 * <p>By default this is set to {@code false}.
 	 */
 	public void setUseRegisteredExtensionsOnly(boolean useRegisteredExtensionsOnly) {
@@ -142,7 +142,7 @@ public abstract class AbstractMappingContentNegotiationStrategy extends MappingM
 
 	/**
 	 * Override to provide handling when a key is not resolved via.
-	 * {@link #lookupMediaType}. Subclasses can take further steps to
+	 * {@link #lookupMediaType}. Sub-classes can take further steps to
 	 * determine the media type(s). If a MediaType is returned from
 	 * this method it will be added to the cache in the base class.
 	 */

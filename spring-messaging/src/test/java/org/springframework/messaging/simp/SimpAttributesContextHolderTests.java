@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,31 +30,37 @@ import org.springframework.messaging.support.MessageBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+
+
+
+
+
 /**
- * Tests for {@link SimpAttributesContextHolder}.
+ * Unit tests for
+ * {@link org.springframework.messaging.simp.SimpAttributesContextHolder}.
  *
  * @author Rossen Stoyanchev
  * @since 4.1
  */
-class SimpAttributesContextHolderTests {
+public class SimpAttributesContextHolderTests {
 
 	private SimpAttributes simpAttributes;
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() {
 		Map<String, Object> map = new ConcurrentHashMap<>();
 		this.simpAttributes = new SimpAttributes("session1", map);
 	}
 
 	@AfterEach
-	void tearDown() {
+	public void tearDown() {
 		SimpAttributesContextHolder.resetAttributes();
 	}
 
 
 	@Test
-	void resetAttributes() {
+	public void resetAttributes() {
 		SimpAttributesContextHolder.setAttributes(this.simpAttributes);
 		assertThat(SimpAttributesContextHolder.getAttributes()).isSameAs(this.simpAttributes);
 
@@ -63,7 +69,7 @@ class SimpAttributesContextHolderTests {
 	}
 
 	@Test
-	void getAttributes() {
+	public void getAttributes() {
 		assertThat(SimpAttributesContextHolder.getAttributes()).isNull();
 
 		SimpAttributesContextHolder.setAttributes(this.simpAttributes);
@@ -71,7 +77,7 @@ class SimpAttributesContextHolderTests {
 	}
 
 	@Test
-	void setAttributes() {
+	public void setAttributes() {
 		SimpAttributesContextHolder.setAttributes(this.simpAttributes);
 		assertThat(SimpAttributesContextHolder.getAttributes()).isSameAs(this.simpAttributes);
 
@@ -80,7 +86,7 @@ class SimpAttributesContextHolderTests {
 	}
 
 	@Test
-	void setAttributesFromMessage() {
+	public void setAttributesFromMessage() {
 
 		String sessionId = "session1";
 		ConcurrentHashMap<String, Object> map = new ConcurrentHashMap<>();
@@ -101,14 +107,14 @@ class SimpAttributesContextHolderTests {
 	}
 
 	@Test
-	void setAttributesFromMessageWithMissingSessionId() {
+	public void setAttributesFromMessageWithMissingSessionId() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				SimpAttributesContextHolder.setAttributesFromMessage(new GenericMessage<Object>("")))
 			.withMessageStartingWith("No session id in");
 	}
 
 	@Test
-	void setAttributesFromMessageWithMissingSessionAttributes() {
+	public void setAttributesFromMessageWithMissingSessionAttributes() {
 		SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.create();
 		headerAccessor.setSessionId("session1");
 		Message<?> message = MessageBuilder.createMessage("", headerAccessor.getMessageHeaders());
@@ -118,14 +124,15 @@ class SimpAttributesContextHolderTests {
 	}
 
 	@Test
-	void currentAttributes() {
+	public void currentAttributes() {
 		SimpAttributesContextHolder.setAttributes(this.simpAttributes);
 		assertThat(SimpAttributesContextHolder.currentAttributes()).isSameAs(this.simpAttributes);
 	}
 
 	@Test
-	void currentAttributesNone() {
-		assertThatIllegalStateException().isThrownBy(SimpAttributesContextHolder::currentAttributes)
+	public void currentAttributesNone() {
+		assertThatIllegalStateException().isThrownBy(() ->
+				SimpAttributesContextHolder.currentAttributes())
 			.withMessageStartingWith("No thread-bound SimpAttributes found");
 	}
 

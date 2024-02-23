@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,14 @@
 package org.springframework.web.reactive.function.server
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactor.mono
-import kotlinx.coroutines.withContext
 import org.springframework.core.io.Resource
-import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
-import org.springframework.http.HttpStatusCode
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.RouterFunctions.nest
-import org.springframework.web.server.CoWebFilter
-import reactor.core.publisher.Mono
 import java.net.URI
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Allow to create easily a WebFlux.fn [RouterFunction] with a [Coroutines router Kotlin DSL][CoRouterFunctionDsl].
@@ -70,12 +63,10 @@ fun coRouter(routes: (CoRouterFunctionDsl.() -> Unit)) =
  * @author Sebastien Deleuze
  * @since 5.2
  */
-class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunctionDsl.() -> Unit)) {
+class CoRouterFunctionDsl(private val init: (CoRouterFunctionDsl.() -> Unit)) {
 
 	@PublishedApi
 	internal val builder = RouterFunctions.route()
-
-	private var contextProvider: (suspend (ServerRequest) -> CoroutineContext)? = null
 
 	/**
 	 * Return a composed request predicate that tests against both this predicate AND
@@ -145,7 +136,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 * @see RouterFunctions.nest
 	 */
 	fun RequestPredicate.nest(r: (CoRouterFunctionDsl.() -> Unit)) {
-		builder.add(nest(this, CoRouterFunctionDsl(r).also { it.contextProvider = contextProvider }.build()))
+		builder.add(nest(this, CoRouterFunctionDsl(r).build()))
 	}
 
 
@@ -170,17 +161,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `GET` requests
-	 * that match the given predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun GET(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.GET(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `GET` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -207,17 +188,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `HEAD` requests
-	 * that match the given pattern and predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun HEAD(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.HEAD(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `HEAD` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -244,17 +215,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `POST` requests
-	 * that match the given predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun POST(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.POST(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `POST` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -281,17 +242,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `PUT` requests
-	 * that match the given predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun PUT(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.PUT(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `PUT` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -318,17 +269,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `PATCH` requests
-	 * that match the given pattern and predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun PATCH(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.PATCH(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `PATCH` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -357,17 +298,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `DELETE` requests
-	 * that match the given predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun DELETE(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.DELETE(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `DELETE` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -396,17 +327,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 
 	/**
 	 * Adds a route to the given handler function that handles all HTTP `OPTIONS` requests
-	 * that match the given predicate.
-	 * @param predicate predicate to match
-	 * @since 6.1.4
-	 */
-	fun OPTIONS(predicate: RequestPredicate, f: suspend (ServerRequest) -> ServerResponse) {
-		builder.OPTIONS(predicate, asHandlerFunction(f))
-	}
-
-	/**
-	 * Adds a route to the given handler function that handles all HTTP `OPTIONS` requests
-	 * that match the given pattern and predicate.
+	 * that match the given pattern.
 	 * @param pattern the pattern to match to
 	 * @param predicate additional predicate to match
 	 * @since 5.2
@@ -522,7 +443,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 * Route to the given handler function if the given pathExtension predicate applies.
 	 * @see RouterFunctions.route
 	 */
-	fun pathExtension(predicate: (String?) -> Boolean, f: suspend (ServerRequest) -> ServerResponse) {
+	fun pathExtension(predicate: (String) -> Boolean, f: suspend (ServerRequest) -> ServerResponse) {
 		builder.add(RouterFunctions.route(RequestPredicates.pathExtension(predicate), asHandlerFunction(f)))
 	}
 
@@ -531,7 +452,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 * predicate.
 	 * @see RequestPredicates.pathExtension
 	 */
-	fun pathExtension(predicate: (String?) -> Boolean): RequestPredicate =
+	fun pathExtension(predicate: (String) -> Boolean): RequestPredicate =
 			RequestPredicates.pathExtension(predicate)
 
 	/**
@@ -546,7 +467,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 * Return a [RequestPredicate] that tests the request's query parameter of the given name
 	 * against the given predicate.
 	 * @param name the name of the query parameter to test against
-	 * @param predicate the predicate to test against the query parameter value
+	 * @param predicate predicate to test against the query parameter value
 	 * @return a predicate that matches the given predicate against the query parameter of the given name
 	 * @see ServerRequest#queryParam
 	 */
@@ -571,15 +492,6 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	}
 
 	/**
-	 * Route requests that match the given predicate to the given resource.
-	 * @since 6.1.4
-	 * @see RouterFunctions.resource
-	 */
-	fun resource(predicate: RequestPredicate, resource: Resource, headersConsumer: (Resource, HttpHeaders) -> Unit = { _, _ -> }) {
-		builder.resource(predicate, resource, headersConsumer)
-	}
-
-	/**
 	 * Route requests that match the given pattern to resources relative to the given root location.
 	 * @see RouterFunctions.resources
 	 */
@@ -594,7 +506,9 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 */
 	fun resources(lookupFunction: suspend (ServerRequest) -> Resource?) {
 		builder.resources {
-			asMono(it, handler = lookupFunction)
+			mono(Dispatchers.Unconfined) {
+				lookupFunction.invoke(it)
+			}
 		}
 	}
 
@@ -616,14 +530,9 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 */
 	fun filter(filterFunction: suspend (ServerRequest, suspend (ServerRequest) -> ServerResponse) -> ServerResponse) {
 		builder.filter { serverRequest, handlerFunction ->
-			asMono(serverRequest) {
-				filterFunction(serverRequest) { handlerRequest ->
-					if (handlerFunction is CoroutineContextAwareHandlerFunction<*>) {
-						handlerFunction.handle(currentCoroutineContext().minusKey(Job.Key), handlerRequest).awaitSingle()
-					}
-					else {
-						handlerFunction.handle(handlerRequest).awaitSingle()
-					}
+			mono(Dispatchers.Unconfined) {
+				filterFunction(serverRequest) {
+					handlerFunction.handle(serverRequest).awaitFirst()
 				}
 			}
 		}
@@ -660,7 +569,7 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 */
 	fun onError(predicate: (Throwable) -> Boolean, responseProvider: suspend (Throwable, ServerRequest) -> ServerResponse) {
 		builder.onError(predicate) { throwable, request ->
-			asMono(request) { responseProvider.invoke(throwable, request) }
+			mono(Dispatchers.Unconfined) { responseProvider.invoke(throwable, request) }
 		}
 	}
 
@@ -673,42 +582,8 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	 */
 	inline fun <reified E : Throwable> onError(noinline responseProvider: suspend (Throwable, ServerRequest) -> ServerResponse) {
 		builder.onError({it is E}) { throwable, request ->
-			asMono(request) { responseProvider.invoke(throwable, request) }
+			mono(Dispatchers.Unconfined) { responseProvider.invoke(throwable, request) }
 		}
-	}
-
-	/**
-	 * Add an attribute with the given name and value to the last route built with this builder.
-	 * @param name the attribute name
-	 * @param value the attribute value
--	 * @since 6.0
-	 */
-	fun withAttribute(name: String, value: Any) {
-		builder.withAttribute(name, value)
-	}
-
-	/**
-	 * Manipulate the attributes of the last route built with the given consumer.
-	 *
-	 * The map provided to the consumer is "live", so that the consumer can be used
-	 * to [overwrite][MutableMap.put] existing attributes,
-	 * [remove][MutableMap.remove] attributes, or use any of the other
-	 * [MutableMap] methods.
-	 * @param attributesConsumer a function that consumes the attributes map
-	 * @since 6.0
-	 */
-	fun withAttributes(attributesConsumer: (MutableMap<String, Any>) -> Unit) {
-		builder.withAttributes(attributesConsumer)
-	}
-
-	/**
-	 * Allow to provide the default [CoroutineContext], potentially dynamically based on
-	 * the incoming [ServerRequest].
-	 * @param provider the [CoroutineContext] provider
-	 * @since 6.1
-	 */
-	fun context(provider: suspend (ServerRequest) -> CoroutineContext) {
-		this.contextProvider = provider
 	}
 
 	/**
@@ -719,21 +594,10 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 		return builder.build()
 	}
 
-	@PublishedApi
-	internal fun <T> asMono(request: ServerRequest, context: CoroutineContext = Dispatchers.Unconfined, handler: suspend (ServerRequest) -> T): Mono<T> {
-		return mono(context) {
-			contextProvider?.let {
-				withContext(it.invoke(request)) {
-					handler.invoke(request)
-				}
-			} ?: run {
-				handler.invoke(request)
-			}
+	private fun asHandlerFunction(init: suspend (ServerRequest) -> ServerResponse) = HandlerFunction {
+		mono(Dispatchers.Unconfined) {
+			init(it)
 		}
-	}
-
-	private fun asHandlerFunction(handler: suspend (ServerRequest) -> ServerResponse) = CoroutineContextAwareHandlerFunction { request ->
-		handler.invoke(request)
 	}
 
 	/**
@@ -796,28 +660,12 @@ class CoRouterFunctionDsl internal constructor (private val init: (CoRouterFunct
 	/**
 	 * @see ServerResponse.status
 	 */
-	fun status(status: HttpStatusCode) = ServerResponse.status(status)
+	fun status(status: HttpStatus) = ServerResponse.status(status)
 
 	/**
 	 * @see ServerResponse.status
 	 */
 	fun status(status: Int) = ServerResponse.status(status)
-
-
-	private inner class CoroutineContextAwareHandlerFunction<T : ServerResponse>(
-		private val handler: suspend (ServerRequest) -> T
-	) : HandlerFunction<T> {
-
-		override fun handle(request: ServerRequest): Mono<T> {
-			val context = request.attributes()[CoWebFilter.COROUTINE_CONTEXT_ATTRIBUTE] as CoroutineContext?
-			return handle(context ?: Dispatchers.Unconfined, request)
-		}
-
-		fun handle(context: CoroutineContext, request: ServerRequest) = asMono(request, context) {
-			handler(request)
-		}
-
-	}
 
 }
 

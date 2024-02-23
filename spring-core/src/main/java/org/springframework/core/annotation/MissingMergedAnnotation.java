@@ -162,7 +162,7 @@ final class MissingMergedAnnotation<A extends Annotation> extends AbstractMerged
 	}
 
 	@Override
-	protected A createSynthesizedAnnotation() {
+	protected A createSynthesized() {
 		throw new NoSuchElementException("Unable to synthesize missing annotation");
 	}
 

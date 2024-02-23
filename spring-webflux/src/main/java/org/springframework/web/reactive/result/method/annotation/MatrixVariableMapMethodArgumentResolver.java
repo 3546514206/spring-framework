@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -70,17 +71,12 @@ public class MatrixVariableMapMethodArgumentResolver extends HandlerMethodArgume
 
 		Map<String, MultiValueMap<String, String>> matrixVariables =
 				exchange.getAttribute(HandlerMapping.MATRIX_VARIABLES_ATTRIBUTE);
-		MultiValueMap<String, String> map = mapMatrixVariables(parameter, matrixVariables);
-		return (isSingleValueMap(parameter) ? map.toSingleValueMap() : map);
-	}
 
-	private MultiValueMap<String,String> mapMatrixVariables(MethodParameter parameter,
-			@Nullable Map<String, MultiValueMap<String, String>> matrixVariables) {
+		if (CollectionUtils.isEmpty(matrixVariables)) {
+			return Collections.emptyMap();
+		}
 
 		MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-		if (CollectionUtils.isEmpty(matrixVariables)) {
-			return map;
-		}
 		MatrixVariable annotation = parameter.getParameterAnnotation(MatrixVariable.class);
 		Assert.state(annotation != null, "No MatrixVariable annotation");
 		String pathVariable = annotation.pathVar();
@@ -88,7 +84,7 @@ public class MatrixVariableMapMethodArgumentResolver extends HandlerMethodArgume
 		if (!pathVariable.equals(ValueConstants.DEFAULT_NONE)) {
 			MultiValueMap<String, String> mapForPathVariable = matrixVariables.get(pathVariable);
 			if (mapForPathVariable == null) {
-				return map;
+				return Collections.emptyMap();
 			}
 			map.putAll(mapForPathVariable);
 		}
@@ -101,7 +97,8 @@ public class MatrixVariableMapMethodArgumentResolver extends HandlerMethodArgume
 				});
 			}
 		}
-		return map;
+
+		return (isSingleValueMap(parameter) ? map.toSingleValueMap() : map);
 	}
 
 	private boolean isSingleValueMap(MethodParameter parameter) {

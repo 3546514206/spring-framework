@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link GenericXmlWebContextLoader}.
+ * Unit tests for {@link GenericXmlWebContextLoader}.
  *
  * @author Sam Brannen
  * @since 4.0.4
@@ -32,15 +32,14 @@ class GenericXmlWebContextLoaderTests {
 
 
 	@Test
-	void configMustNotContainAnnotatedClasses() {
+	void configMustNotContainAnnotatedClasses() throws Exception {
 		GenericXmlWebContextLoader loader = new GenericXmlWebContextLoader();
-		@SuppressWarnings("deprecation")
 		WebMergedContextConfiguration mergedConfig = new WebMergedContextConfiguration(getClass(), EMPTY_STRING_ARRAY,
 				new Class<?>[] { getClass() }, null, EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY,
 				"resource/path", loader, null, null);
 		assertThatIllegalStateException()
-				.isThrownBy(() -> loader.loadContext(mergedConfig))
-				.withMessageContaining("does not support annotated classes");
+			.isThrownBy(() -> loader.loadContext(mergedConfig))
+			.withMessageContaining("does not support annotated classes");
 	}
 
 }

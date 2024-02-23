@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,50 +40,50 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Phillip Webb
  */
-class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
+public class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
 
 	@Test
-	void preFreezeDirect() {
+	public void preFreezeDirect() {
 		assertPreFreeze(DirectConfiguration.class);
 	}
 
 	@Test
-	void postFreezeDirect() {
+	public void postFreezeDirect() {
 		assertPostFreeze(DirectConfiguration.class);
 	}
 
 	@Test
-	void preFreezeGenericMethod() {
+	public void preFreezeGenericMethod() {
 		assertPreFreeze(GenericMethodConfiguration.class);
 	}
 
 	@Test
-	void postFreezeGenericMethod() {
+	public void postFreezeGenericMethod() {
 		assertPostFreeze(GenericMethodConfiguration.class);
 	}
 
 	@Test
-	void preFreezeGenericClass() {
+	public void preFreezeGenericClass() {
 		assertPreFreeze(GenericClassConfiguration.class);
 	}
 
 	@Test
-	void postFreezeGenericClass() {
+	public void postFreezeGenericClass() {
 		assertPostFreeze(GenericClassConfiguration.class);
 	}
 
 	@Test
-	void preFreezeAttribute() {
+	public void preFreezeAttribute() {
 		assertPreFreeze(AttributeClassConfiguration.class);
 	}
 
 	@Test
-	void postFreezeAttribute() {
+	public void postFreezeAttribute() {
 		assertPostFreeze(AttributeClassConfiguration.class);
 	}
 
 	@Test
-	void preFreezeUnresolvedGenericFactoryBean() {
+	public void preFreezeUnresolvedGenericFactoryBean() {
 		// Covers the case where a @Configuration is picked up via component scanning
 		// and its bean definition only has a String bean class. In such cases
 		// beanDefinition.hasBeanClass() returns false so we need to actually
@@ -95,13 +95,16 @@ class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
 		beanDefinition.setFactoryBeanName("factoryBean");
 		beanDefinition.setFactoryMethodName("myBean");
 		GenericApplicationContext context = new GenericApplicationContext();
-		try (context) {
+		try {
 			context.registerBeanDefinition("factoryBean", factoryBeanDefinition);
 			context.registerBeanDefinition("myBean", beanDefinition);
 			NameCollectingBeanFactoryPostProcessor postProcessor = new NameCollectingBeanFactoryPostProcessor();
 			context.addBeanFactoryPostProcessor(postProcessor);
 			context.refresh();
 			assertContainsMyBeanName(postProcessor.getNames());
+		}
+		finally {
+			context.close();
 		}
 	}
 
@@ -115,12 +118,15 @@ class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
 			BeanFactoryPostProcessor... postProcessors) {
 		NameCollectingBeanFactoryPostProcessor postProcessor = new NameCollectingBeanFactoryPostProcessor();
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		try (context) {
+		try {
 			Arrays.stream(postProcessors).forEach(context::addBeanFactoryPostProcessor);
 			context.addBeanFactoryPostProcessor(postProcessor);
 			context.register(configurationClass);
 			context.refresh();
 			assertContainsMyBeanName(postProcessor.getNames());
+		}
+		finally {
+			context.close();
 		}
 	}
 
@@ -212,7 +218,7 @@ class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
 		}
 
 		@Override
-		public T getObject() {
+		public T getObject() throws Exception {
 			return this.instance;
 		}
 
@@ -236,7 +242,7 @@ class ConfigurationWithFactoryBeanBeanEarlyDeductionTests {
 		private final Object object = new MyBean();
 
 		@Override
-		public Object getObject() {
+		public Object getObject() throws Exception {
 			return object;
 		}
 

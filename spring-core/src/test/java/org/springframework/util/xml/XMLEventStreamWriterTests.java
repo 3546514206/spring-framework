@@ -16,18 +16,16 @@
 
 package org.springframework.util.xml;
 
-import java.io.StringWriter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.tests.XmlContent;
+import org.w3c.dom.Node;
+import org.xmlunit.util.Predicate;
 
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLOutputFactory;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.w3c.dom.Node;
-import org.xmlunit.util.Predicate;
-
-import org.springframework.core.testfixture.xml.XmlContent;
+import java.io.StringWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

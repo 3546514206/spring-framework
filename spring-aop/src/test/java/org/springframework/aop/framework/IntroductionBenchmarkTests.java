@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,21 @@
 package org.springframework.aop.framework;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.support.DelegatingIntroductionInterceptor;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.util.StopWatch;
 
 /**
  * Benchmarks for introductions.
- * <p>
+ *
  * NOTE: No assertions!
  *
  * @author Rod Johnson
  * @author Chris Beams
  * @since 2.0
  */
-class IntroductionBenchmarkTests {
+public class IntroductionBenchmarkTests {
 
 	private static final int EXPECTED_COMPARE = 13;
 
@@ -48,12 +47,12 @@ class IntroductionBenchmarkTests {
 		}
 	}
 
-	public interface Counter {
+	public static interface Counter {
 		int getCount();
 	}
 
 	@Test
-	void timeManyInvocations() {
+	public void timeManyInvocations() {
 		StopWatch sw = new StopWatch();
 
 		TestBean target = new TestBean();
@@ -82,8 +81,6 @@ class IntroductionBenchmarkTests {
 		}
 		sw.stop();
 
-		// TODO Add reasonable assertions.
-		// System.out.println(sw.prettyPrint());
+		System.out.println(sw.prettyPrint());
 	}
-
 }

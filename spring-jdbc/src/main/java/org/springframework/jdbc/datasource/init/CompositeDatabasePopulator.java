@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
-import org.springframework.util.Assert;
 
 /**
  * Composite {@link DatabasePopulator} that delegates to a list of given
@@ -54,7 +52,6 @@ public class CompositeDatabasePopulator implements DatabasePopulator {
 	 * @since 4.3
 	 */
 	public CompositeDatabasePopulator(Collection<DatabasePopulator> populators) {
-		Assert.notNull(populators, "DatabasePopulators must not be null");
 		this.populators.addAll(populators);
 	}
 
@@ -64,7 +61,6 @@ public class CompositeDatabasePopulator implements DatabasePopulator {
 	 * @since 4.3
 	 */
 	public CompositeDatabasePopulator(DatabasePopulator... populators) {
-		Assert.notNull(populators, "DatabasePopulators must not be null");
 		this.populators.addAll(Arrays.asList(populators));
 	}
 
@@ -73,7 +69,6 @@ public class CompositeDatabasePopulator implements DatabasePopulator {
 	 * Specify one or more populators to delegate to.
 	 */
 	public void setPopulators(DatabasePopulator... populators) {
-		Assert.notNull(populators, "DatabasePopulators must not be null");
 		this.populators.clear();
 		this.populators.addAll(Arrays.asList(populators));
 	}
@@ -82,13 +77,12 @@ public class CompositeDatabasePopulator implements DatabasePopulator {
 	 * Add one or more populators to the list of delegates.
 	 */
 	public void addPopulators(DatabasePopulator... populators) {
-		Assert.notNull(populators, "DatabasePopulators must not be null");
 		this.populators.addAll(Arrays.asList(populators));
 	}
 
+
 	@Override
 	public void populate(Connection connection) throws SQLException, ScriptException {
-		Assert.notNull(connection, "Connection must not be null");
 		for (DatabasePopulator populator : this.populators) {
 			populator.populate(connection);
 		}

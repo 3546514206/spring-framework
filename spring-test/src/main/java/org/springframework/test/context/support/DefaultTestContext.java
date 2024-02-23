@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,14 @@ package org.springframework.test.context.support;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.style.DefaultToStringStyler;
-import org.springframework.core.style.SimpleValueStyler;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.lang.Nullable;
 import org.springframework.test.annotation.DirtiesContext.HierarchyMode;
 import org.springframework.test.context.CacheAwareContextLoaderDelegate;
 import org.springframework.test.context.MergedContextConfiguration;
-import org.springframework.test.context.MethodInvoker;
 import org.springframework.test.context.TestContext;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -43,7 +39,6 @@ import org.springframework.util.StringUtils;
  * @author Rob Harrop
  * @since 4.0
  */
-@SuppressWarnings("serial")
 public class DefaultTestContext implements TestContext {
 
 	private static final long serialVersionUID = -5827157174866681233L;
@@ -52,7 +47,7 @@ public class DefaultTestContext implements TestContext {
 
 	private final CacheAwareContextLoaderDelegate cacheAwareContextLoaderDelegate;
 
-	private final MergedContextConfiguration mergedConfig;
+	private final MergedContextConfiguration mergedContextConfiguration;
 
 	private final Class<?> testClass;
 
@@ -65,8 +60,6 @@ public class DefaultTestContext implements TestContext {
 	@Nullable
 	private volatile Throwable testException;
 
-	private volatile MethodInvoker methodInvoker = MethodInvoker.DEFAULT_INVOKER;
-
 
 	/**
 	 * <em>Copy constructor</em> for creating a new {@code DefaultTestContext}
@@ -78,7 +71,7 @@ public class DefaultTestContext implements TestContext {
 	 * is {@code null}
 	 */
 	public DefaultTestContext(DefaultTestContext testContext) {
-		this(testContext.testClass, testContext.mergedConfig,
+		this(testContext.testClass, testContext.mergedContextConfiguration,
 			testContext.cacheAwareContextLoaderDelegate);
 		this.attributes.putAll(testContext.attributes);
 	}
@@ -86,19 +79,19 @@ public class DefaultTestContext implements TestContext {
 	/**
 	 * Construct a new {@code DefaultTestContext} from the supplied arguments.
 	 * @param testClass the test class for this test context
-	 * @param mergedConfig the merged application context
+	 * @param mergedContextConfiguration the merged application context
 	 * configuration for this test context
 	 * @param cacheAwareContextLoaderDelegate the delegate to use for loading
 	 * and closing the application context for this test context
 	 */
-	public DefaultTestContext(Class<?> testClass, MergedContextConfiguration mergedConfig,
+	public DefaultTestContext(Class<?> testClass, MergedContextConfiguration mergedContextConfiguration,
 			CacheAwareContextLoaderDelegate cacheAwareContextLoaderDelegate) {
 
 		Assert.notNull(testClass, "Test Class must not be null");
-		Assert.notNull(mergedConfig, "MergedContextConfiguration must not be null");
+		Assert.notNull(mergedContextConfiguration, "MergedContextConfiguration must not be null");
 		Assert.notNull(cacheAwareContextLoaderDelegate, "CacheAwareContextLoaderDelegate must not be null");
 		this.testClass = testClass;
-		this.mergedConfig = mergedConfig;
+		this.mergedContextConfiguration = mergedContextConfiguration;
 		this.cacheAwareContextLoaderDelegate = cacheAwareContextLoaderDelegate;
 	}
 
@@ -113,7 +106,7 @@ public class DefaultTestContext implements TestContext {
 	 */
 	@Override
 	public boolean hasApplicationContext() {
-		return this.cacheAwareContextLoaderDelegate.isContextLoaded(this.mergedConfig);
+		return this.cacheAwareContextLoaderDelegate.isContextLoaded(this.mergedContextConfiguration);
 	}
 
 	/**
@@ -127,16 +120,17 @@ public class DefaultTestContext implements TestContext {
 	 */
 	@Override
 	public ApplicationContext getApplicationContext() {
-		ApplicationContext context = this.cacheAwareContextLoaderDelegate.loadContext(this.mergedConfig);
-		if (context instanceof ConfigurableApplicationContext cac) {
-			Assert.state(cac.isActive(), () -> """
-					The ApplicationContext loaded for %s is not active. \
-					This may be due to one of the following reasons: \
-					1) the context was closed programmatically by user code; \
-					2) the context was closed during parallel test execution either \
-					according to @DirtiesContext semantics or due to automatic eviction \
-					from the ContextCache due to a maximum cache size policy."""
-						.formatted(this.mergedConfig));
+		ApplicationContext context = this.cacheAwareContextLoaderDelegate.loadContext(this.mergedContextConfiguration);
+		if (context instanceof ConfigurableApplicationContext) {
+			@SuppressWarnings("resource")
+			ConfigurableApplicationContext cac = (ConfigurableApplicationContext) context;
+			Assert.state(cac.isActive(), () ->
+					"The ApplicationContext loaded for [" + this.mergedContextConfiguration +
+					"] is not active. This may be due to one of the following reasons: " +
+					"1) the context was closed programmatically by user code; " +
+					"2) the context was closed during parallel test execution either " +
+					"according to @DirtiesContext semantics or due to automatic eviction " +
+					"from the ContextCache due to a maximum cache size policy.");
 		}
 		return context;
 	}
@@ -151,7 +145,7 @@ public class DefaultTestContext implements TestContext {
 	 */
 	@Override
 	public void markApplicationContextDirty(@Nullable HierarchyMode hierarchyMode) {
-		this.cacheAwareContextLoaderDelegate.closeContext(this.mergedConfig, hierarchyMode);
+		this.cacheAwareContextLoaderDelegate.closeContext(this.mergedContextConfiguration, hierarchyMode);
 	}
 
 	@Override
@@ -187,17 +181,6 @@ public class DefaultTestContext implements TestContext {
 	}
 
 	@Override
-	public final void setMethodInvoker(MethodInvoker methodInvoker) {
-		Assert.notNull(methodInvoker, "MethodInvoker must not be null");
-		this.methodInvoker = methodInvoker;
-	}
-
-	@Override
-	public final MethodInvoker getMethodInvoker() {
-		return this.methodInvoker;
-	}
-
-	@Override
 	public void setAttribute(String name, @Nullable Object value) {
 		Assert.notNull(name, "Name must not be null");
 		synchronized (this.attributes) {
@@ -215,17 +198,6 @@ public class DefaultTestContext implements TestContext {
 	public Object getAttribute(String name) {
 		Assert.notNull(name, "Name must not be null");
 		return this.attributes.get(name);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T computeAttribute(String name, Function<String, T> computeFunction) {
-		Assert.notNull(name, "Name must not be null");
-		Assert.notNull(computeFunction, "Compute function must not be null");
-		Object value = this.attributes.computeIfAbsent(name, computeFunction);
-		Assert.state(value != null,
-				() -> "Compute function must not return null for attribute named '%s'".formatted(name));
-		return (T) value;
 	}
 
 	@Override
@@ -254,12 +226,12 @@ public class DefaultTestContext implements TestContext {
 	 */
 	@Override
 	public String toString() {
-		return new ToStringCreator(this, new DefaultToStringStyler(new SimpleValueStyler()))
+		return new ToStringCreator(this)
 				.append("testClass", this.testClass)
 				.append("testInstance", this.testInstance)
 				.append("testMethod", this.testMethod)
 				.append("testException", this.testException)
-				.append("mergedContextConfiguration", this.mergedConfig)
+				.append("mergedContextConfiguration", this.mergedContextConfiguration)
 				.append("attributes", this.attributes)
 				.toString();
 	}

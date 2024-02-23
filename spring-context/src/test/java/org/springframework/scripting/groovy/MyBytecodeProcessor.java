@@ -26,7 +26,7 @@ import org.codehaus.groovy.control.BytecodeProcessor;
  */
 public class MyBytecodeProcessor implements BytecodeProcessor {
 
-	public final Set<String> processed = new HashSet<>();
+	public final Set<String> processed = new HashSet<String>();
 
 	@Override
 	public byte[] processBytecode(String name, byte[] original) {

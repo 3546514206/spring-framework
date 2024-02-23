@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Dave Syer
  */
-class InitializeDatabaseIntegrationTests {
+public class InitializeDatabaseIntegrationTests {
 
 	private String enabled;
 
@@ -44,12 +44,12 @@ class InitializeDatabaseIntegrationTests {
 
 
 	@BeforeEach
-	void init() {
+	public void init() {
 		enabled = System.setProperty("ENABLED", "true");
 	}
 
 	@AfterEach
-	void after() {
+	public void after() {
 		if (enabled != null) {
 			System.setProperty("ENABLED", enabled);
 		}
@@ -63,13 +63,13 @@ class InitializeDatabaseIntegrationTests {
 
 
 	@Test
-	void testCreateEmbeddedDatabase() {
+	public void testCreateEmbeddedDatabase() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-config.xml");
 		assertCorrectSetup(context.getBean("dataSource", DataSource.class));
 	}
 
 	@Test
-	void testDisableCreateEmbeddedDatabase() {
+	public void testDisableCreateEmbeddedDatabase() throws Exception {
 		System.setProperty("ENABLED", "false");
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-config.xml");
 		assertThatExceptionOfType(BadSqlGrammarException.class).isThrownBy(() ->
@@ -77,13 +77,13 @@ class InitializeDatabaseIntegrationTests {
 	}
 
 	@Test
-	void testIgnoreFailedDrops() {
+	public void testIgnoreFailedDrops() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-fail-config.xml");
 		assertCorrectSetup(context.getBean("dataSource", DataSource.class));
 	}
 
 	@Test
-	void testScriptNameWithPattern() {
+	public void testScriptNameWithPattern() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-pattern-config.xml");
 		DataSource dataSource = context.getBean("dataSource", DataSource.class);
 		assertCorrectSetup(dataSource);
@@ -92,30 +92,30 @@ class InitializeDatabaseIntegrationTests {
 	}
 
 	@Test
-	void testScriptNameWithPlaceholder() {
+	public void testScriptNameWithPlaceholder() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-placeholder-config.xml");
 		DataSource dataSource = context.getBean("dataSource", DataSource.class);
 		assertCorrectSetup(dataSource);
 	}
 
 	@Test
-	void testScriptNameWithExpressions() {
+	public void testScriptNameWithExpressions() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-expression-config.xml");
 		DataSource dataSource = context.getBean("dataSource", DataSource.class);
 		assertCorrectSetup(dataSource);
 	}
 
 	@Test
-	void testCacheInitialization() {
+	public void testCacheInitialization() throws Exception {
 		context = new ClassPathXmlApplicationContext("org/springframework/jdbc/config/jdbc-initialize-cache-config.xml");
 		assertCorrectSetup(context.getBean("dataSource", DataSource.class));
 		CacheData cache = context.getBean(CacheData.class);
-		assertThat(cache.getCachedData()).hasSize(1);
+		assertThat(cache.getCachedData().size()).isEqualTo(1);
 	}
 
 	private void assertCorrectSetup(DataSource dataSource) {
 		JdbcTemplate jt = new JdbcTemplate(dataSource);
-		assertThat(jt.queryForObject("select count(*) from T_TEST", Integer.class)).isEqualTo(1);
+		assertThat(jt.queryForObject("select count(*) from T_TEST", Integer.class).intValue()).isEqualTo(1);
 	}
 
 
@@ -134,7 +134,7 @@ class InitializeDatabaseIntegrationTests {
 		}
 
 		@Override
-		public void afterPropertiesSet() {
+		public void afterPropertiesSet() throws Exception {
 			cache = jdbcTemplate.queryForList("SELECT * FROM T_TEST");
 		}
 	}

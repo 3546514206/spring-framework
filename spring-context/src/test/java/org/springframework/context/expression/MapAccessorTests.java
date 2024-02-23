@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link MapAccessor}.
+ * Unit tests for compilation of {@link MapAccessor}.
  *
  * @author Andy Clement
  */
-class MapAccessorTests {
+public class MapAccessorTests {
 
 	@Test
-	void mapAccessorCompilable() {
+	public void mapAccessorCompilable() {
 		Map<String, Object> testMap = getSimpleTestMap();
 		StandardEvaluationContext sec = new StandardEvaluationContext();
 		sec.addPropertyAccessor(new MapAccessor());
@@ -67,17 +67,6 @@ class MapAccessorTests {
 		assertThat(ex.getValue(sec,mapGetter)).isEqualTo("bar");
 		assertThat(SpelCompiler.compile(ex)).isTrue();
 		assertThat(ex.getValue(sec,mapGetter)).isEqualTo("bar");
-
-		// basic isWritable
-		ex = sep.parseExpression("foo");
-		assertThat(ex.isWritable(sec,testMap)).isTrue();
-
-		// basic write
-		ex = sep.parseExpression("foo2");
-		ex.setValue(sec, testMap, "bar2");
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("bar2");
-		assertThat(SpelCompiler.compile(ex)).isTrue();
-		assertThat(ex.getValue(sec,testMap)).isEqualTo("bar2");
 	}
 
 	public static class MapGetter {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package org.springframework.beans.propertyeditors;
 
-import java.beans.PropertyEditorSupport;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
+
+import java.beans.PropertyEditorSupport;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Editor for {@code java.net.URI}, to directly populate a URI property
@@ -119,7 +119,7 @@ public class URIEditor extends PropertyEditorSupport {
 					setValue(createURI(uri));
 				}
 				catch (URISyntaxException ex) {
-					throw new IllegalArgumentException("Invalid URI syntax: " + ex.getMessage());
+					throw new IllegalArgumentException("Invalid URI syntax: " + ex);
 				}
 			}
 		}
@@ -130,7 +130,7 @@ public class URIEditor extends PropertyEditorSupport {
 
 	/**
 	 * Create a URI instance for the given user-specified String value.
-	 * <p>The default implementation encodes the value into an RFC-2396 compliant URI.
+	 * <p>The default implementation encodes the value into a RFC-2396 compliant URI.
 	 * @param value the value to convert into a URI instance
 	 * @return the URI instance
 	 * @throws java.net.URISyntaxException if URI conversion failed

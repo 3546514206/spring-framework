@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.beans.propertyeditors;
 
-import java.io.IOException;
 import java.io.Reader;
 
 import org.junit.jupiter.api.Test;
@@ -27,21 +26,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link ReaderEditor}.
+ * Unit tests for the {@link ReaderEditor} class.
  *
  * @author Juergen Hoeller
  * @since 4.2
  */
-class ReaderEditorTests {
+public class ReaderEditorTests {
 
 	@Test
-	void testCtorWithNullResourceEditor() {
+	public void testCtorWithNullResourceEditor() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new ReaderEditor(null));
 	}
 
 	@Test
-	void testSunnyDay() throws IOException {
+	public void testSunnyDay() throws Exception {
 		Reader reader = null;
 		try {
 			String resource = "classpath:" + ClassUtils.classPackageAsResourcePath(getClass()) +
@@ -50,7 +49,8 @@ class ReaderEditorTests {
 			editor.setAsText(resource);
 			Object value = editor.getValue();
 			assertThat(value).isNotNull();
-			assertThat(value).isInstanceOf(Reader.class);
+			boolean condition = value instanceof Reader;
+			assertThat(condition).isTrue();
 			reader = (Reader) value;
 			assertThat(reader.ready()).isTrue();
 		}
@@ -62,7 +62,7 @@ class ReaderEditorTests {
 	}
 
 	@Test
-	void testWhenResourceDoesNotExist() {
+	public void testWhenResourceDoesNotExist() throws Exception {
 		String resource = "classpath:bingo!";
 		ReaderEditor editor = new ReaderEditor();
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -70,7 +70,7 @@ class ReaderEditorTests {
 	}
 
 	@Test
-	void testGetAsTextReturnsNullByDefault() {
+	public void testGetAsTextReturnsNullByDefault() throws Exception {
 		assertThat(new ReaderEditor().getAsText()).isNull();
 		String resource = "classpath:" + ClassUtils.classPackageAsResourcePath(getClass()) +
 				"/" + ClassUtils.getShortName(getClass()) + ".class";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,8 +36,7 @@ import org.springframework.web.reactive.result.method.annotation.ArgumentResolve
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DefaultControllerSpec}.
- *
+ * Unit tests for {@link DefaultControllerSpec}.
  * @author Rossen Stoyanchev
  */
 public class DefaultControllerSpecTests {
@@ -46,12 +45,6 @@ public class DefaultControllerSpecTests {
 	public void controller() {
 		new DefaultControllerSpec(new MyController()).build()
 				.get().uri("/")
-				.exchange()
-				.expectStatus().isOk()
-				.expectBody(String.class).isEqualTo("Success");
-
-		new DefaultControllerSpec(new MyController()).build()
-				.get().uri("")
 				.exchange()
 				.expectStatus().isOk()
 				.expectBody(String.class).isEqualTo("Success");
@@ -82,7 +75,7 @@ public class DefaultControllerSpecTests {
 	@Test
 	public void configurerConsumers() {
 		TestConsumer<ArgumentResolverConfigurer> argumentResolverConsumer = new TestConsumer<>();
-		TestConsumer<RequestedContentTypeResolverBuilder> contentTypeResolverConsumer = new TestConsumer<>();
+		TestConsumer<RequestedContentTypeResolverBuilder> contenTypeResolverConsumer = new TestConsumer<>();
 		TestConsumer<CorsRegistry> corsRegistryConsumer = new TestConsumer<>();
 		TestConsumer<FormatterRegistry> formatterConsumer = new TestConsumer<>();
 		TestConsumer<ServerCodecConfigurer> codecsConsumer = new TestConsumer<>();
@@ -91,7 +84,7 @@ public class DefaultControllerSpecTests {
 
 		new DefaultControllerSpec(new MyController())
 				.argumentResolvers(argumentResolverConsumer)
-				.contentTypeResolver(contentTypeResolverConsumer)
+				.contentTypeResolver(contenTypeResolverConsumer)
 				.corsMappings(corsRegistryConsumer)
 				.formatters(formatterConsumer)
 				.httpMessageCodecs(codecsConsumer)
@@ -100,31 +93,21 @@ public class DefaultControllerSpecTests {
 				.build();
 
 		assertThat(argumentResolverConsumer.getValue()).isNotNull();
-		assertThat(contentTypeResolverConsumer.getValue()).isNotNull();
+		assertThat(contenTypeResolverConsumer.getValue()).isNotNull();
 		assertThat(corsRegistryConsumer.getValue()).isNotNull();
 		assertThat(formatterConsumer.getValue()).isNotNull();
 		assertThat(codecsConsumer.getValue()).isNotNull();
 		assertThat(pathMatchingConsumer.getValue()).isNotNull();
 		assertThat(viewResolverConsumer.getValue()).isNotNull();
-	}
 
-	@Test // gh-25854
-	public void uriTemplate() {
-		new DefaultControllerSpec(new MyController()).build()
-				.get().uri("/")
-				.exchange()
-				.expectStatus().isOk()
-				.expectBody(String.class).isEqualTo("Success")
-				.consumeWith(result -> assertThat(result.getUriTemplate()).isEqualTo("/"));
 	}
 
 
-	@SuppressWarnings("unused")
 	@RestController
 	private static class MyController {
 
-		@GetMapping
-		public String handleRootPath() {
+		@GetMapping("/")
+		public String handle() {
 			return "Success";
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Chris Beams
  * @since 10.09.2003
  */
-class SimpleMailMessageTests {
+public class SimpleMailMessageTests {
 
 	@Test
-	void testSimpleMessageCopyCtor() {
+	public void testSimpleMessageCopyCtor() {
 		SimpleMailMessage message = new SimpleMailMessage();
 		message.setFrom("me@mail.org");
 		message.setTo("you@mail.org");
@@ -45,8 +45,8 @@ class SimpleMailMessageTests {
 		assertThat(messageCopy.getTo()[0]).isEqualTo("you@mail.org");
 
 		message.setReplyTo("reply@mail.org");
-		message.setCc("he@mail.org", "she@mail.org");
-		message.setBcc("us@mail.org", "them@mail.org");
+		message.setCc(new String[]{"he@mail.org", "she@mail.org"});
+		message.setBcc(new String[]{"us@mail.org", "them@mail.org"});
 		Date sentDate = new Date();
 		message.setSentDate(sentDate);
 		message.setSubject("my subject");
@@ -56,11 +56,11 @@ class SimpleMailMessageTests {
 		assertThat(message.getReplyTo()).isEqualTo("reply@mail.org");
 		assertThat(message.getTo()[0]).isEqualTo("you@mail.org");
 		List<String> ccs = Arrays.asList(message.getCc());
-		assertThat(ccs).contains("he@mail.org");
-		assertThat(ccs).contains("she@mail.org");
+		assertThat(ccs.contains("he@mail.org")).isTrue();
+		assertThat(ccs.contains("she@mail.org")).isTrue();
 		List<String> bccs = Arrays.asList(message.getBcc());
-		assertThat(bccs).contains("us@mail.org");
-		assertThat(bccs).contains("them@mail.org");
+		assertThat(bccs.contains("us@mail.org")).isTrue();
+		assertThat(bccs.contains("them@mail.org")).isTrue();
 		assertThat(message.getSentDate()).isEqualTo(sentDate);
 		assertThat(message.getSubject()).isEqualTo("my subject");
 		assertThat(message.getText()).isEqualTo("my text");
@@ -70,23 +70,23 @@ class SimpleMailMessageTests {
 		assertThat(messageCopy.getReplyTo()).isEqualTo("reply@mail.org");
 		assertThat(messageCopy.getTo()[0]).isEqualTo("you@mail.org");
 		ccs = Arrays.asList(messageCopy.getCc());
-		assertThat(ccs).contains("he@mail.org");
-		assertThat(ccs).contains("she@mail.org");
+		assertThat(ccs.contains("he@mail.org")).isTrue();
+		assertThat(ccs.contains("she@mail.org")).isTrue();
 		bccs = Arrays.asList(message.getBcc());
-		assertThat(bccs).contains("us@mail.org");
-		assertThat(bccs).contains("them@mail.org");
+		assertThat(bccs.contains("us@mail.org")).isTrue();
+		assertThat(bccs.contains("them@mail.org")).isTrue();
 		assertThat(messageCopy.getSentDate()).isEqualTo(sentDate);
 		assertThat(messageCopy.getSubject()).isEqualTo("my subject");
 		assertThat(messageCopy.getText()).isEqualTo("my text");
 	}
 
 	@Test
-	void testDeepCopyOfStringArrayTypedFieldsOnCopyCtor() {
+	public void testDeepCopyOfStringArrayTypedFieldsOnCopyCtor() throws Exception {
 
 		SimpleMailMessage original = new SimpleMailMessage();
-		original.setTo("fiona@mail.org", "apple@mail.org");
-		original.setCc("he@mail.org", "she@mail.org");
-		original.setBcc("us@mail.org", "them@mail.org");
+		original.setTo(new String[]{"fiona@mail.org", "apple@mail.org"});
+		original.setCc(new String[]{"he@mail.org", "she@mail.org"});
+		original.setBcc(new String[]{"us@mail.org", "them@mail.org"});
 
 		SimpleMailMessage copy = new SimpleMailMessage(original);
 
@@ -121,7 +121,6 @@ class SimpleMailMessageTests {
 		assertThat(message2.hashCode()).isEqualTo(message1.hashCode());
 	}
 
-	@Test
 	public final void testEqualsObject() {
 		SimpleMailMessage message1;
 		SimpleMailMessage message2;
@@ -129,7 +128,7 @@ class SimpleMailMessageTests {
 		// Same object is equal
 		message1 = new SimpleMailMessage();
 		message2 = message1;
-		assertThat(message1).isEqualTo(message2);
+		assertThat(message1.equals(message2)).isTrue();
 
 		// Null object is not equal
 		message1 = new SimpleMailMessage();
@@ -144,7 +143,7 @@ class SimpleMailMessageTests {
 		// Equal values are equal
 		message1 = new SimpleMailMessage();
 		message2 = new SimpleMailMessage();
-		assertThat(message1).isEqualTo(message2);
+		assertThat(message1.equals(message2)).isTrue();
 
 		message1 = new SimpleMailMessage();
 		message1.setFrom("from@somewhere");
@@ -156,17 +155,17 @@ class SimpleMailMessageTests {
 		message1.setSubject("subject");
 		message1.setText("text");
 		message2 = new SimpleMailMessage(message1);
-		assertThat(message1).isEqualTo(message2);
+		assertThat(message1.equals(message2)).isTrue();
 	}
 
 	@Test
-	void testCopyCtorChokesOnNullOriginalMessage() {
+	public void testCopyCtorChokesOnNullOriginalMessage() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new SimpleMailMessage(null));
 	}
 
 	@Test
-	void testCopyToChokesOnNullTargetMessage() {
+	public void testCopyToChokesOnNullTargetMessage() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new SimpleMailMessage().copyTo(null));
 	}

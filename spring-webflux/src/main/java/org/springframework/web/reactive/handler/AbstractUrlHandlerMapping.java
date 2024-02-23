@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,20 @@
 
 package org.springframework.web.reactive.handler;
 
-import java.util.ArrayList;
+import org.springframework.beans.BeansException;
+import org.springframework.http.server.PathContainer;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.pattern.PathPattern;
+import reactor.core.publisher.Mono;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
-
-import reactor.core.publisher.Mono;
-
-import org.springframework.beans.BeansException;
-import org.springframework.http.server.PathContainer;
-import org.springframework.http.server.reactive.observation.ServerRequestObservationContext;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.pattern.PathPattern;
-import org.springframework.web.util.pattern.PathPatternParser;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for URL-mapped
@@ -59,9 +56,6 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 	private final Map<PathPattern, Object> handlerMap = new LinkedHashMap<>();
 
-	@Nullable
-	private BiPredicate<Object, ServerWebExchange> handlerPredicate;
-
 
 	/**
 	 * Set whether to lazily initialize handlers. Only applicable to
@@ -79,28 +73,11 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 	/**
 	 * Return a read-only view of registered path patterns and handlers which may
-	 * be an actual handler instance or the bean name of lazily initialized
+	 * may be an actual handler instance or the bean name of lazily initialized
 	 * handler.
 	 */
 	public final Map<PathPattern, Object> getHandlerMap() {
 		return Collections.unmodifiableMap(this.handlerMap);
-	}
-
-	/**
-	 * Configure a predicate for extended matching of the handler that was
-	 * matched by URL path. This allows for further narrowing of the mapping by
-	 * checking additional properties of the request. If the predicate returns
-	 * "false", it result in a no-match, which allows another
-	 * {@link org.springframework.web.reactive.HandlerMapping} to match or
-	 * result in a 404 (NOT_FOUND) response.
-	 * @param handlerPredicate a bi-predicate to match the candidate handler
-	 * against the current exchange.
-	 * @since 5.3.5
-	 * @see org.springframework.web.reactive.socket.server.support.WebSocketUpgradeHandlerPredicate
-	 */
-	public void setHandlerPredicate(BiPredicate<Object, ServerWebExchange> handlerPredicate) {
-		this.handlerPredicate = (this.handlerPredicate != null ?
-				this.handlerPredicate.and(handlerPredicate) : handlerPredicate);
 	}
 
 
@@ -128,18 +105,16 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 	 * @see org.springframework.web.util.pattern.PathPattern
 	 */
 	@Nullable
-	@SuppressWarnings("removal")
 	protected Object lookupHandler(PathContainer lookupPath, ServerWebExchange exchange) throws Exception {
-		List<PathPattern> matches = null;
-		for (PathPattern pattern : this.handlerMap.keySet()) {
-			if (pattern.matches(lookupPath)) {
-				matches = (matches != null ? matches : new ArrayList<>());
-				matches.add(pattern);
-			}
-		}
-		if (matches == null) {
+
+		List<PathPattern> matches = this.handlerMap.keySet().stream()
+				.filter(key -> key.matches(lookupPath))
+				.collect(Collectors.toList());
+
+		if (matches.isEmpty()) {
 			return null;
 		}
+
 		if (matches.size() > 1) {
 			matches.sort(PathPattern.SPECIFICITY_COMPARATOR);
 			if (logger.isTraceEnabled()) {
@@ -149,31 +124,23 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 		PathPattern pattern = matches.get(0);
 		PathContainer pathWithinMapping = pattern.extractPathWithinPattern(lookupPath);
-		PathPattern.PathMatchInfo matchInfo = pattern.matchAndExtract(lookupPath);
-		Assert.notNull(matchInfo, "Expected a match");
+		return handleMatch(this.handlerMap.get(pattern), pattern, pathWithinMapping, exchange);
+	}
 
-		Object handler = this.handlerMap.get(pattern);
+	private Object handleMatch(Object handler, PathPattern bestMatch, PathContainer pathWithinMapping,
+			ServerWebExchange exchange) {
 
 		// Bean name or resolved handler?
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
+			String handlerName = (String) handler;
 			handler = obtainApplicationContext().getBean(handlerName);
-		}
-
-		if (this.handlerPredicate != null && !this.handlerPredicate.test(handler, exchange)) {
-			return null;
 		}
 
 		validateHandler(handler, exchange);
 
 		exchange.getAttributes().put(BEST_MATCHING_HANDLER_ATTRIBUTE, handler);
-		exchange.getAttributes().put(BEST_MATCHING_PATTERN_ATTRIBUTE, pattern);
-		org.springframework.web.filter.reactive.ServerHttpObservationFilter
-				.findObservationContext(exchange)
-				.ifPresent(context -> context.setPathPattern(pattern.toString()));
-		ServerRequestObservationContext.findCurrent(exchange.getAttributes())
-				.ifPresent(context -> context.setPathPattern(pattern.toString()));
+		exchange.getAttributes().put(BEST_MATCHING_PATTERN_ATTRIBUTE, bestMatch);
 		exchange.getAttributes().put(PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, pathWithinMapping);
-		exchange.getAttributes().put(URI_TEMPLATE_VARIABLES_ATTRIBUTE, matchInfo.getUriVariables());
 
 		return handler;
 	}
@@ -203,12 +170,25 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		}
 	}
 
+	private static String prependLeadingSlash(String pattern) {
+		if (StringUtils.hasLength(pattern) && !pattern.startsWith("/")) {
+			return "/" + pattern;
+		} else {
+			return pattern;
+		}
+	}
+
+	private String getHandlerDescription(Object handler) {
+		return (handler instanceof String ? "'" + handler + "'" : handler.toString());
+	}
+
 	/**
 	 * Register the specified handler for the given URL path.
+	 *
 	 * @param urlPath the URL the bean should be mapped to
 	 * @param handler the handler instance or handler bean name String
-	 * (a bean name will automatically be resolved into the corresponding handler bean)
-	 * @throws BeansException if the handler couldn't be registered
+	 *                (a bean name will automatically be resolved into the corresponding handler bean)
+	 * @throws BeansException        if the handler couldn't be registered
 	 * @throws IllegalStateException if there is a conflicting handler registered
 	 */
 	protected void registerHandler(String urlPath, Object handler) throws BeansException, IllegalStateException {
@@ -217,20 +197,20 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		Object resolvedHandler = handler;
 
 		// Parse path pattern
-		PathPatternParser parser = getPathPatternParser();
-		urlPath = parser.initFullPathPattern(urlPath);
-		PathPattern pattern = parser.parse(urlPath);
+		urlPath = prependLeadingSlash(urlPath);
+		PathPattern pattern = getPathPatternParser().parse(urlPath);
 		if (this.handlerMap.containsKey(pattern)) {
 			Object existingHandler = this.handlerMap.get(pattern);
 			if (existingHandler != null && existingHandler != resolvedHandler) {
 				throw new IllegalStateException(
 						"Cannot map " + getHandlerDescription(handler) + " to [" + urlPath + "]: " +
-						"there is already " + getHandlerDescription(existingHandler) + " mapped.");
+								"there is already " + getHandlerDescription(existingHandler) + " mapped.");
 			}
 		}
 
 		// Eagerly resolve handler if referencing singleton via name.
-		if (!this.lazyInitHandlers && handler instanceof String handlerName) {
+		if (!this.lazyInitHandlers && handler instanceof String) {
+			String handlerName = (String) handler;
 			if (obtainApplicationContext().isSingleton(handlerName)) {
 				resolvedHandler = obtainApplicationContext().getBean(handlerName);
 			}
@@ -241,10 +221,6 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		if (logger.isTraceEnabled()) {
 			logger.trace("Mapped [" + urlPath + "] onto " + getHandlerDescription(handler));
 		}
-	}
-
-	private String getHandlerDescription(Object handler) {
-		return (handler instanceof String ? "'" + handler + "'" : handler.toString());
 	}
 
 }

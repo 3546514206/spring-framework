@@ -16,14 +16,13 @@
 
 package org.springframework.web.reactive.result.view;
 
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriTemplate;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Dummy request context used for FreeMarker macro tests.
@@ -108,8 +107,8 @@ public class DummyMacroRequestContext {
 	 * @see org.springframework.web.reactive.result.view.RequestContext#getContextUrl(String, Map)
 	 */
 	public String getContextUrl(String relativeUrl, Map<String,String> params) {
-		UriComponents uric = UriComponentsBuilder.fromUriString(relativeUrl).buildAndExpand(params);
-		return getContextPath() + uric.toUri().toASCIIString();
+		UriTemplate template = new UriTemplate(relativeUrl);
+		return getContextPath() + template.expand(params).toASCIIString();
 	}
 
 	/**

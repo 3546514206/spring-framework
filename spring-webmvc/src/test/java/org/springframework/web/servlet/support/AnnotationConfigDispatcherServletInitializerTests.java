@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,21 @@
 
 package org.springframework.web.servlet.support;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.EventListener;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterRegistration.Dynamic;
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletContextEvent;
-import jakarta.servlet.ServletContextListener;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRegistration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mock.web.test.MockServletConfig;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.filter.DelegatingFilterProxy;
 import org.springframework.web.filter.HiddenHttpMethodFilter;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.testfixture.servlet.MockServletConfig;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import javax.servlet.*;
+import javax.servlet.FilterRegistration.Dynamic;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Arjen Poutsma
  */
-class AnnotationConfigDispatcherServletInitializerTests {
+public class AnnotationConfigDispatcherServletInitializerTests {
 
 	private static final String SERVLET_NAME = "myservlet";
 
@@ -72,7 +61,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		servletContext = new MyMockServletContext();
 		initializer = new MyAnnotationConfigDispatcherServletInitializer();
 		servlets = new LinkedHashMap<>(1);
@@ -82,10 +71,10 @@ class AnnotationConfigDispatcherServletInitializerTests {
 	}
 
 	@Test
-	void register() throws ServletException {
+	public void register() throws ServletException {
 		initializer.onStartup(servletContext);
 
-		assertThat(servlets).hasSize(1);
+		assertThat(servlets.size()).isEqualTo(1);
 		assertThat(servlets.get(SERVLET_NAME)).isNotNull();
 
 		DispatcherServlet servlet = (DispatcherServlet) servlets.get(SERVLET_NAME);
@@ -96,7 +85,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 		boolean condition = wac.getBean("bean") instanceof MyBean;
 		assertThat(condition).isTrue();
 
-		assertThat(servletRegistrations).hasSize(1);
+		assertThat(servletRegistrations.size()).isEqualTo(1);
 		assertThat(servletRegistrations.get(SERVLET_NAME)).isNotNull();
 
 		MockServletRegistration servletRegistration = servletRegistrations.get(SERVLET_NAME);
@@ -106,7 +95,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 		assertThat(servletRegistration.getRunAsRole()).isEqualTo(ROLE_NAME);
 		assertThat(servletRegistration.isAsyncSupported()).isTrue();
 
-		assertThat(filterRegistrations).hasSize(4);
+		assertThat(filterRegistrations.size()).isEqualTo(4);
 		assertThat(filterRegistrations.get("hiddenHttpMethodFilter")).isNotNull();
 		assertThat(filterRegistrations.get("delegatingFilterProxy")).isNotNull();
 		assertThat(filterRegistrations.get("delegatingFilterProxy#0")).isNotNull();
@@ -122,7 +111,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 	}
 
 	@Test
-	void asyncSupportedFalse() throws ServletException {
+	public void asyncSupportedFalse() throws ServletException {
 		initializer = new MyAnnotationConfigDispatcherServletInitializer() {
 			@Override
 			protected boolean isAsyncSupported() {
@@ -143,7 +132,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 
 	// SPR-11357
 	@Test
-	void rootContextOnly() throws ServletException {
+	public void rootContextOnly() throws ServletException {
 		initializer = new MyAnnotationConfigDispatcherServletInitializer() {
 			@Override
 			protected Class<?>[] getRootConfigClasses() {
@@ -169,7 +158,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 	}
 
 	@Test
-	void noFilters() throws ServletException {
+	public void noFilters() throws ServletException {
 		initializer = new MyAnnotationConfigDispatcherServletInitializer() {
 			@Override
 			protected Filter[] getServletFilters() {
@@ -179,7 +168,7 @@ class AnnotationConfigDispatcherServletInitializerTests {
 
 		initializer.onStartup(servletContext);
 
-		assertThat(filterRegistrations).isEmpty();
+		assertThat(filterRegistrations.size()).isEqualTo(0);
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,10 @@
 
 package org.springframework.web.servlet.view.json;
 
-import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.cfg.SerializerFactoryConfig;
 import com.fasterxml.jackson.databind.ser.BeanSerializerFactory;
@@ -38,18 +27,21 @@ import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.SerializerFactory;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
-
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.View;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import java.io.IOException;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -59,28 +51,39 @@ import static org.mockito.Mockito.mock;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
- * @author Sam Brannen
  */
-class MappingJackson2JsonViewTests {
+public class MappingJackson2JsonViewTests {
 
-	private MappingJackson2JsonView view = new MappingJackson2JsonView();
+	private MappingJackson2JsonView view;
 
-	private MockHttpServletRequest request = new MockHttpServletRequest();
+	private MockHttpServletRequest request;
 
-	private MockHttpServletResponse response = new MockHttpServletResponse();
+	private MockHttpServletResponse response;
 
-	private Context jsContext = ContextFactory.getGlobal().enterContext();
+	private Context jsContext;
 
-	private ScriptableObject jsScope = jsContext.initStandardObjects();
+	private ScriptableObject jsScope;
+
+
+	@BeforeEach
+	public void setUp() {
+		request = new MockHttpServletRequest();
+		response = new MockHttpServletResponse();
+
+		jsContext = ContextFactory.getGlobal().enterContext();
+		jsScope = jsContext.initStandardObjects();
+
+		view = new MappingJackson2JsonView();
+	}
 
 
 	@Test
-	void isExposePathVars() {
-		assertThat(view.isExposePathVariables()).as("Must not expose path variables").isFalse();
+	public void isExposePathVars() {
+		assertThat(view.isExposePathVariables()).as("Must not expose path variables").isEqualTo(false);
 	}
 
 	@Test
-	void renderSimpleMap() throws Exception {
+	public void renderSimpleMap() throws Exception {
 		Map<String, Object> model = new HashMap<>();
 		model.put("bindingResult", mock(BindingResult.class, "binding_result"));
 		model.put("foo", "bar");
@@ -90,34 +93,31 @@ class MappingJackson2JsonViewTests {
 
 		assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
 
-		MediaType mediaType = MediaType.parseMediaType(response.getContentType());
-		assertThat(mediaType.isCompatibleWith(MediaType.parseMediaType(MappingJackson2JsonView.DEFAULT_CONTENT_TYPE))).isTrue();
+		assertThat(response.getContentType()).isEqualTo(MappingJackson2JsonView.DEFAULT_CONTENT_TYPE);
 
 		String jsonResult = response.getContentAsString();
-		assertThat(jsonResult).isNotEmpty();
+		assertThat(jsonResult.length() > 0).isTrue();
 		assertThat(response.getContentLength()).isEqualTo(jsonResult.length());
 
 		validateResult();
 	}
 
 	@Test
-	void renderWithSelectedContentType() throws Exception {
+	public void renderWithSelectedContentType() throws Exception {
 		Map<String, Object> model = new HashMap<>();
 		model.put("foo", "bar");
 
 		view.render(model, request, response);
-		MediaType mediaType = MediaType.parseMediaType(response.getContentType());
-		assertThat(mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)).isTrue();
+		assertThat(response.getContentType()).isEqualTo("application/json");
 
 		request.setAttribute(View.SELECTED_CONTENT_TYPE, new MediaType("application", "vnd.example-v2+xml"));
 		view.render(model, request, response);
 
-		mediaType = MediaType.parseMediaType(response.getContentType());
-		assertThat(mediaType.isCompatibleWith(MediaType.parseMediaType("application/vnd.example-v2+xml"))).isTrue();
+		assertThat(response.getContentType()).isEqualTo("application/vnd.example-v2+xml");
 	}
 
 	@Test
-	void renderCaching() throws Exception {
+	public void renderCaching() throws Exception {
 		view.setDisableCaching(false);
 
 		Map<String, Object> model = new HashMap<>();
@@ -126,17 +126,17 @@ class MappingJackson2JsonViewTests {
 
 		view.render(model, request, response);
 
-		assertThat(response.getHeader("Cache-Control")).isNull();
+		assertThat((Object) response.getHeader("Cache-Control")).isNull();
 	}
 
 	@Test
-	void renderSimpleMapPrefixed() throws Exception {
+	public void renderSimpleMapPrefixed() throws Exception {
 		view.setPrefixJson(true);
 		renderSimpleMap();
 	}
 
 	@Test
-	void renderSimpleBean() throws Exception {
+	public void renderSimpleBean() throws Exception {
 		Object bean = new TestBeanSimple();
 		Map<String, Object> model = new HashMap<>();
 		model.put("bindingResult", mock(BindingResult.class, "binding_result"));
@@ -145,55 +145,55 @@ class MappingJackson2JsonViewTests {
 		view.setUpdateContentLength(true);
 		view.render(model, request, response);
 
-		assertThat(response.getContentAsString()).isNotEmpty();
+		assertThat(response.getContentAsString().length() > 0).isTrue();
 		assertThat(response.getContentLength()).isEqualTo(response.getContentAsString().length());
 
 		validateResult();
 	}
 
 	@Test
-	void renderWithPrettyPrint() throws Exception {
+	public void renderWithPrettyPrint() throws Exception {
 		ModelMap model = new ModelMap("foo", new TestBeanSimple());
 
 		view.setPrettyPrint(true);
 		view.render(model, request, response);
 
 		String result = response.getContentAsString().replace("\r\n", "\n");
-		assertThat(result).as("Pretty printing not applied:\n" + result).startsWith("{\n  \"foo\" : {\n    ");
+		assertThat(result.startsWith("{\n  \"foo\" : {\n    ")).as("Pretty printing not applied:\n" + result).isTrue();
 
 		validateResult();
 	}
 
 	@Test
-	void renderSimpleBeanPrefixed() throws Exception {
+	public void renderSimpleBeanPrefixed() throws Exception {
 		view.setPrefixJson(true);
 		renderSimpleBean();
-		assertThat(response.getContentAsString()).startsWith(")]}', ");
+		assertThat(response.getContentAsString().startsWith(")]}', ")).isTrue();
 	}
 
 	@Test
-	void renderSimpleBeanNotPrefixed() throws Exception {
+	public void renderSimpleBeanNotPrefixed() throws Exception {
 		view.setPrefixJson(false);
 		renderSimpleBean();
-		assertThat(response.getContentAsString()).doesNotStartWith(")]}', ");
+		assertThat(response.getContentAsString().startsWith(")]}', ")).isFalse();
 	}
 
 	@Test
-	void renderWithCustomSerializerLocatedByAnnotation() throws Exception {
+	public void renderWithCustomSerializerLocatedByAnnotation() throws Exception {
 		Object bean = new TestBeanSimpleAnnotated();
 		Map<String, Object> model = new HashMap<>();
 		model.put("foo", bean);
 
 		view.render(model, request, response);
 
-		assertThat(response.getContentAsString()).isNotEmpty();
+		assertThat(response.getContentAsString().length() > 0).isTrue();
 		assertThat(response.getContentAsString()).isEqualTo("{\"foo\":{\"testBeanSimple\":\"custom\"}}");
 
 		validateResult();
 	}
 
 	@Test
-	void renderWithCustomSerializerLocatedByFactory() throws Exception {
+	public void renderWithCustomSerializerLocatedByFactory() throws Exception {
 		SerializerFactory factory = new DelegatingSerializerFactory(null);
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.setSerializerFactory(factory);
@@ -207,14 +207,14 @@ class MappingJackson2JsonViewTests {
 		view.render(model, request, response);
 
 		String result = response.getContentAsString();
-		assertThat(result).isNotEmpty();
-		assertThat(result).contains("\"foo\":{\"testBeanSimple\":\"custom\"}");
+		assertThat(result.length() > 0).isTrue();
+		assertThat(result.contains("\"foo\":{\"testBeanSimple\":\"custom\"}")).isTrue();
 
 		validateResult();
 	}
 
 	@Test
-	void renderOnlyIncludedAttributes() throws Exception {
+	public void renderOnlyIncludedAttributes() throws Exception {
 
 		Set<String> attrs = new HashSet<>();
 		attrs.add("foo");
@@ -230,15 +230,15 @@ class MappingJackson2JsonViewTests {
 		view.render(model, request, response);
 
 		String result = response.getContentAsString();
-		assertThat(result).isNotEmpty();
-		assertThat(result).contains("\"foo\":\"foo\"");
-		assertThat(result).contains("\"baz\":\"baz\"");
+		assertThat(result.length() > 0).isTrue();
+		assertThat(result.contains("\"foo\":\"foo\"")).isTrue();
+		assertThat(result.contains("\"baz\":\"baz\"")).isTrue();
 
 		validateResult();
 	}
 
 	@Test
-	void filterSingleKeyModel() {
+	public void filterSingleKeyModel() throws Exception {
 		view.setExtractValueFromSingleKeyModel(true);
 
 		Map<String, Object> model = new HashMap<>();
@@ -252,7 +252,7 @@ class MappingJackson2JsonViewTests {
 
 	@SuppressWarnings("rawtypes")
 	@Test
-	void filterTwoKeyModel() {
+	public void filterTwoKeyModel() throws Exception {
 		view.setExtractValueFromSingleKeyModel(true);
 
 		Map<String, Object> model = new HashMap<>();
@@ -263,13 +263,13 @@ class MappingJackson2JsonViewTests {
 
 		Object actual = view.filterModel(model);
 
-		assertThat(actual).isInstanceOf(Map.class);
+		assertThat(actual instanceof Map).isTrue();
 		assertThat(((Map) actual).get("foo1")).isSameAs(bean1);
 		assertThat(((Map) actual).get("foo2")).isSameAs(bean2);
 	}
 
 	@Test
-	void renderSimpleBeanWithJsonView() throws Exception {
+	public void renderSimpleBeanWithJsonView() throws Exception {
 		Object bean = new TestBeanSimple();
 		Map<String, Object> model = new HashMap<>();
 		model.put("bindingResult", mock(BindingResult.class, "binding_result"));
@@ -280,15 +280,15 @@ class MappingJackson2JsonViewTests {
 		view.render(model, request, response);
 
 		String content = response.getContentAsString();
-		assertThat(content).isNotEmpty();
+		assertThat(content.length() > 0).isTrue();
 		assertThat(response.getContentLength()).isEqualTo(content.length());
-		assertThat(content).contains("foo");
-		assertThat(content).doesNotContain("boo");
-		assertThat(content).doesNotContain(JsonView.class.getName());
+		assertThat(content.contains("foo")).isTrue();
+		assertThat(content.contains("boo")).isFalse();
+		assertThat(content.contains(JsonView.class.getName())).isFalse();
 	}
 
 	@Test
-	void renderSimpleBeanWithFilters() throws Exception {
+	public void renderSimpleBeanWithFilters() throws Exception {
 		TestSimpleBeanFiltered bean = new TestSimpleBeanFiltered();
 		bean.setProperty1("value");
 		bean.setProperty2("value");
@@ -303,11 +303,11 @@ class MappingJackson2JsonViewTests {
 		view.render(model, request, response);
 
 		String content = response.getContentAsString();
-		assertThat(content).isNotEmpty();
+		assertThat(content.length() > 0).isTrue();
 		assertThat(response.getContentLength()).isEqualTo(content.length());
 		assertThat(content).contains("\"property1\":\"value\"");
 		assertThat(content).doesNotContain("\"property2\":\"value\"");
-		assertThat(content).doesNotContain(FilterProvider.class.getName());
+		assertThat(content.contains(FilterProvider.class.getName())).isFalse();
 	}
 
 	private void validateResult() throws Exception {
@@ -317,10 +317,10 @@ class MappingJackson2JsonViewTests {
 		if (jsonPrefix != null) {
 			json = json.substring(5);
 		}
-		Object jsResult = jsContext.evaluateString(jsScope, "(" + json + ")", "JSON Stream", 1, null);
+		Object jsResult =
+				jsContext.evaluateString(jsScope, "(" + json + ")", "JSON Stream", 1, null);
 		assertThat(jsResult).as("Json Result did not eval as valid JavaScript").isNotNull();
-		MediaType mediaType = MediaType.parseMediaType(response.getContentType());
-		assertThat(mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)).isTrue();
+		assertThat(response.getContentType()).isEqualTo("application/json");
 	}
 
 

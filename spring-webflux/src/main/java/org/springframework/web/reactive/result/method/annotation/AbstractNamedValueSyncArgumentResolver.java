@@ -28,7 +28,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 /**
  * An extension of {@link AbstractNamedValueArgumentResolver} for named value
- * resolvers that are synchronous and yet non-blocking. Subclasses implement
+ * resolvers that are synchronous and yet non-blocking. Sub-classes implement
  * the synchronous {@link #resolveNamedValue} to which the asynchronous
  * {@link #resolveName} delegates to by default.
  *

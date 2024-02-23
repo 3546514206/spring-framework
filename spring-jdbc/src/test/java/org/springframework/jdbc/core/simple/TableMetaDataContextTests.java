@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,36 +44,39 @@ import static org.mockito.Mockito.verify;
  *
  * @author Thomas Risberg
  */
-class TableMetaDataContextTests {
+public class TableMetaDataContextTests  {
 
-	private DataSource dataSource = mock();
+	private Connection connection;
 
-	private Connection connection = mock();
+	private DataSource dataSource;
 
-	private DatabaseMetaData databaseMetaData = mock();
+	private DatabaseMetaData databaseMetaData;
 
 	private TableMetaDataContext context = new TableMetaDataContext();
 
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
+		connection = mock(Connection.class);
+		dataSource = mock(DataSource.class);
+		databaseMetaData = mock(DatabaseMetaData.class);
 		given(connection.getMetaData()).willReturn(databaseMetaData);
 		given(dataSource.getConnection()).willReturn(connection);
 	}
 
 
 	@Test
-	void testMatchInParametersAndSqlTypeInfoWrapping() throws Exception {
+	public void testMatchInParametersAndSqlTypeInfoWrapping() throws Exception {
 		final String TABLE = "customers";
 		final String USER = "me";
 
-		ResultSet metaDataResultSet = mock();
+		ResultSet metaDataResultSet = mock(ResultSet.class);
 		given(metaDataResultSet.next()).willReturn(true, false);
 		given(metaDataResultSet.getString("TABLE_SCHEM")).willReturn(USER);
 		given(metaDataResultSet.getString("TABLE_NAME")).willReturn(TABLE);
 		given(metaDataResultSet.getString("TABLE_TYPE")).willReturn("TABLE");
 
-		ResultSet columnsResultSet = mock();
+		ResultSet columnsResultSet = mock(ResultSet.class);
 		given(columnsResultSet.next()).willReturn(
 				true, true, true, true, false);
 		given(columnsResultSet.getString("COLUMN_NAME")).willReturn(
@@ -119,17 +122,17 @@ class TableMetaDataContextTests {
 	}
 
 	@Test
-	void testTableWithSingleColumnGeneratedKey() throws Exception {
+	public void testTableWithSingleColumnGeneratedKey() throws Exception {
 		final String TABLE = "customers";
 		final String USER = "me";
 
-		ResultSet metaDataResultSet = mock();
+		ResultSet metaDataResultSet = mock(ResultSet.class);
 		given(metaDataResultSet.next()).willReturn(true, false);
 		given(metaDataResultSet.getString("TABLE_SCHEM")).willReturn(USER);
 		given(metaDataResultSet.getString("TABLE_NAME")).willReturn(TABLE);
 		given(metaDataResultSet.getString("TABLE_TYPE")).willReturn("TABLE");
 
-		ResultSet columnsResultSet = mock();
+		ResultSet columnsResultSet = mock(ResultSet.class);
 		given(columnsResultSet.next()).willReturn(true, false);
 		given(columnsResultSet.getString("COLUMN_NAME")).willReturn("id");
 		given(columnsResultSet.getInt("DATA_TYPE")).willReturn(Types.INTEGER);

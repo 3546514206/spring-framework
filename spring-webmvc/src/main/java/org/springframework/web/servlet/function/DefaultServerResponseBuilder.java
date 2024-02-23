@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,29 @@
 
 package org.springframework.web.servlet.function;
 
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.util.Assert;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.servlet.ModelAndView;
+import java.util.function.Predicate;
 
 /**
  * Default {@link ServerResponse.BodyBuilder} implementation.
@@ -48,7 +48,7 @@ import org.springframework.web.servlet.ModelAndView;
  */
 class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 
-	private final HttpStatusCode statusCode;
+	private final int statusCode;
 
 	private final HttpHeaders headers = new HttpHeaders();
 
@@ -57,19 +57,23 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 
 	public DefaultServerResponseBuilder(ServerResponse other) {
 		Assert.notNull(other, "ServerResponse must not be null");
-		this.statusCode = other.statusCode();
+		this.statusCode = (other instanceof AbstractServerResponse ?
+				((AbstractServerResponse) other).statusCode : other.statusCode().value());
 		this.headers.addAll(other.headers());
 		this.cookies.addAll(other.cookies());
 	}
 
-	public DefaultServerResponseBuilder(HttpStatusCode status) {
-		Assert.notNull(status, "HttpStatusCode must not be null");
-		this.statusCode = status;
+	public DefaultServerResponseBuilder(HttpStatus status) {
+		Assert.notNull(status, "HttpStatus must not be null");
+		this.statusCode = status.value();
+	}
+
+	public DefaultServerResponseBuilder(int statusCode) {
+		this.statusCode = statusCode;
 	}
 
 	@Override
 	public ServerResponse.BodyBuilder header(String headerName, String... headerValues) {
-		Assert.notNull(headerName, "HeaderName must not be null");
 		for (String headerValue : headerValues) {
 			this.headers.add(headerName, headerValue);
 		}
@@ -78,7 +82,6 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 
 	@Override
 	public ServerResponse.BodyBuilder headers(Consumer<HttpHeaders> headersConsumer) {
-		Assert.notNull(headersConsumer, "HeaderConsumer must not be null");
 		headersConsumer.accept(this.headers);
 		return this;
 	}
@@ -92,21 +95,18 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 
 	@Override
 	public ServerResponse.BodyBuilder cookies(Consumer<MultiValueMap<String, Cookie>> cookiesConsumer) {
-		Assert.notNull(cookiesConsumer, "CookiesConsumer must not be null");
 		cookiesConsumer.accept(this.cookies);
 		return this;
 	}
 
 	@Override
 	public ServerResponse.BodyBuilder allow(HttpMethod... allowedMethods) {
-		Assert.notNull(allowedMethods, "Http AllowedMethods must not be null");
 		this.headers.setAllow(new LinkedHashSet<>(Arrays.asList(allowedMethods)));
 		return this;
 	}
 
 	@Override
 	public ServerResponse.BodyBuilder allow(Set<HttpMethod> allowedMethods) {
-		Assert.notNull(allowedMethods, "Http AllowedMethods must not be null");
 		this.headers.setAllow(allowedMethods);
 		return this;
 	}
@@ -119,14 +119,12 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 
 	@Override
 	public ServerResponse.BodyBuilder contentType(MediaType contentType) {
-		Assert.notNull(contentType, "ContentType must not be null");
 		this.headers.setContentType(contentType);
 		return this;
 	}
 
 	@Override
 	public ServerResponse.BodyBuilder eTag(String etag) {
-		Assert.notNull(etag, "etag must not be null");
 		if (!etag.startsWith("\"") && !etag.startsWith("W/\"")) {
 			etag = "\"" + etag;
 		}
@@ -173,8 +171,9 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 	}
 
 	@Override
-	public ServerResponse build(WriteFunction writeFunction) {
-		return new WriteFunctionResponse(this.statusCode, this.headers, this.cookies, writeFunction);
+	public ServerResponse build(
+			BiFunction<HttpServletRequest, HttpServletResponse, ModelAndView> writeFunction) {
+		return new WriterFunctionResponse(this.statusCode, this.headers, this.cookies, writeFunction);
 	}
 
 	@Override
@@ -216,24 +215,189 @@ class DefaultServerResponseBuilder implements ServerResponse.BodyBuilder {
 	}
 
 
-	private static class WriteFunctionResponse extends AbstractServerResponse {
+	/**
+	 * Abstract base class for {@link ServerResponse} implementations.
+	 */
+	abstract static class AbstractServerResponse implements ServerResponse {
 
-		private final WriteFunction writeFunction;
+		private static final Set<HttpMethod> SAFE_METHODS =	EnumSet.of(HttpMethod.GET, HttpMethod.HEAD);
 
-		public WriteFunctionResponse(HttpStatusCode statusCode, HttpHeaders headers, MultiValueMap<String, Cookie> cookies,
-				WriteFunction writeFunction) {
+		final int statusCode;
 
+		private final HttpHeaders headers;
+
+		private final MultiValueMap<String, Cookie> cookies;
+
+		private final List<ErrorHandler<?>> errorHandlers = new ArrayList<>();
+
+
+		protected AbstractServerResponse(
+				int statusCode, HttpHeaders headers, MultiValueMap<String, Cookie> cookies) {
+
+			this.statusCode = statusCode;
+			this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
+			this.cookies =
+					CollectionUtils.unmodifiableMultiValueMap(new LinkedMultiValueMap<>(cookies));
+		}
+
+		protected <T extends ServerResponse> void addErrorHandler(Predicate<Throwable> predicate,
+				BiFunction<Throwable, ServerRequest, T> errorHandler) {
+
+			Assert.notNull(predicate, "Predicate must not be null");
+			Assert.notNull(errorHandler, "ErrorHandler must not be null");
+			this.errorHandlers.add(new ErrorHandler<>(predicate, errorHandler));
+		}
+
+
+		@Override
+		public final HttpStatus statusCode() {
+			return HttpStatus.valueOf(this.statusCode);
+		}
+
+		@Override
+		public int rawStatusCode() {
+			return this.statusCode;
+		}
+
+		@Override
+		public final HttpHeaders headers() {
+			return this.headers;
+		}
+
+		@Override
+		public MultiValueMap<String, Cookie> cookies() {
+			return this.cookies;
+		}
+
+		@Override
+		public ModelAndView writeTo(HttpServletRequest request, HttpServletResponse response,
+				Context context) throws ServletException, IOException {
+
+			try {
+				writeStatusAndHeaders(response);
+
+				long lastModified = headers().getLastModified();
+				ServletWebRequest servletWebRequest = new ServletWebRequest(request, response);
+				HttpMethod httpMethod = HttpMethod.resolve(request.getMethod());
+				if (SAFE_METHODS.contains(httpMethod) &&
+						servletWebRequest.checkNotModified(headers().getETag(), lastModified)) {
+					return null;
+				}
+				else {
+					return writeToInternal(request, response, context);
+				}
+			}
+			catch (Throwable throwable) {
+				return handleError(throwable, request, response, context);
+			}
+		}
+
+		private void writeStatusAndHeaders(HttpServletResponse response) {
+			response.setStatus(this.statusCode);
+			writeHeaders(response);
+			writeCookies(response);
+		}
+
+		private void writeHeaders(HttpServletResponse servletResponse) {
+			this.headers.forEach((headerName, headerValues) -> {
+				for (String headerValue : headerValues) {
+					servletResponse.addHeader(headerName, headerValue);
+				}
+			});
+			// HttpServletResponse exposes some headers as properties: we should include those if not already present
+			if (servletResponse.getContentType() == null && this.headers.getContentType() != null) {
+				servletResponse.setContentType(this.headers.getContentType().toString());
+			}
+			if (servletResponse.getCharacterEncoding() == null &&
+					this.headers.getContentType() != null &&
+					this.headers.getContentType().getCharset() != null) {
+				servletResponse
+						.setCharacterEncoding(this.headers.getContentType().getCharset().name());
+			}
+		}
+
+		private void writeCookies(HttpServletResponse servletResponse) {
+			this.cookies.values().stream()
+					.flatMap(Collection::stream)
+					.forEach(servletResponse::addCookie);
+		}
+
+		@Nullable
+		protected abstract ModelAndView writeToInternal(HttpServletRequest request,
+														HttpServletResponse response, Context context)
+				throws ServletException, IOException;
+
+		@Nullable
+		protected ModelAndView handleError(Throwable t, HttpServletRequest servletRequest,
+				HttpServletResponse servletResponse, Context context) {
+
+			return this.errorHandlers.stream()
+					.filter(errorHandler -> errorHandler.test(t))
+					.findFirst()
+					.map(errorHandler -> {
+						ServerRequest serverRequest =
+								(ServerRequest) servletRequest
+										.getAttribute(RouterFunctions.REQUEST_ATTRIBUTE);
+						ServerResponse serverResponse = errorHandler.handle(t, serverRequest);
+						try {
+							return serverResponse.writeTo(servletRequest, servletResponse, context);
+						} catch (ServletException ex) {
+							throw new RuntimeException(ex);
+						} catch (IOException ex) {
+							throw new UncheckedIOException(ex);
+						}
+					})
+					.orElseThrow(() -> new RuntimeException(t));
+		}
+
+
+		private static class ErrorHandler<T extends ServerResponse> {
+
+			private final Predicate<Throwable> predicate;
+
+			private final BiFunction<Throwable, ServerRequest, T>
+					responseProvider;
+
+			public ErrorHandler(Predicate<Throwable> predicate,
+					BiFunction<Throwable, ServerRequest, T> responseProvider) {
+				Assert.notNull(predicate, "Predicate must not be null");
+				Assert.notNull(responseProvider, "ResponseProvider must not be null");
+				this.predicate = predicate;
+				this.responseProvider = responseProvider;
+			}
+
+			public boolean test(Throwable t) {
+				return this.predicate.test(t);
+			}
+
+			public T handle(Throwable t, ServerRequest serverRequest) {
+				return this.responseProvider.apply(t, serverRequest);
+			}
+		}
+
+
+	}
+
+
+	private static class WriterFunctionResponse extends AbstractServerResponse {
+
+		private final BiFunction<HttpServletRequest, HttpServletResponse, ModelAndView> writeFunction;
+
+
+		public WriterFunctionResponse(int statusCode, HttpHeaders headers,
+									  MultiValueMap<String, Cookie> cookies,
+									  BiFunction<HttpServletRequest, HttpServletResponse, ModelAndView> writeFunction) {
 			super(statusCode, headers, cookies);
 			Assert.notNull(writeFunction, "WriteFunction must not be null");
 			this.writeFunction = writeFunction;
 		}
 
 		@Override
-		protected ModelAndView writeToInternal(HttpServletRequest request, HttpServletResponse response,
-				Context context) throws Exception {
-
-			return this.writeFunction.write(request, response);
+		protected ModelAndView writeToInternal(HttpServletRequest request,
+											   HttpServletResponse response, Context context) {
+			return this.writeFunction.apply(request, response);
 		}
 	}
+
 
 }

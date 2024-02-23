@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,7 @@
 
 package org.springframework.mock.http.server.reactive;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -36,6 +26,15 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.AbstractServerHttpResponse;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Mock extension of {@link AbstractServerHttpResponse} for use in tests without
@@ -57,17 +56,17 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 
 
 	public MockServerHttpResponse() {
-		this(DefaultDataBufferFactory.sharedInstance);
+		this(new DefaultDataBufferFactory());
 	}
 
 	public MockServerHttpResponse(DataBufferFactory dataBufferFactory) {
 		super(dataBufferFactory);
 		this.writeHandler = body -> {
-			// Avoid .then() that causes data buffers to be discarded and released
-			Sinks.Empty<Void> completion = Sinks.unsafe().empty();
-			this.body = body.cache();
-			this.body.subscribe(aVoid -> {}, completion::tryEmitError, completion::tryEmitEmpty); // Signals are serialized
-			return completion.asMono();
+			// Avoid .then() which causes data buffers to be released
+			MonoProcessor<Void> completion = MonoProcessor.create();
+			this.body = body.doOnComplete(completion::onComplete).doOnError(completion::onError).cache();
+			this.body.subscribe();
+			return completion;
 		};
 	}
 
@@ -133,6 +132,14 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 		return this.body;
 	}
 
+	private static String bufferToString(DataBuffer buffer, Charset charset) {
+		Assert.notNull(charset, "'charset' must not be null");
+		byte[] bytes = new byte[buffer.readableByteCount()];
+		buffer.read(bytes);
+		DataBufferUtils.release(buffer);
+		return new String(bytes, charset);
+	}
+
 	/**
 	 * Aggregate response data and convert to a String using the "Content-Type"
 	 * charset or "UTF-8" by default.
@@ -142,13 +149,13 @@ public class MockServerHttpResponse extends AbstractServerHttpResponse {
 		Charset charset = Optional.ofNullable(getHeaders().getContentType()).map(MimeType::getCharset)
 				.orElse(StandardCharsets.UTF_8);
 
-		return DataBufferUtils.join(getBody())
-				.map(buffer -> {
-					String s = buffer.toString(charset);
-					DataBufferUtils.release(buffer);
-					return s;
+		return getBody()
+				.reduce(bufferFactory().allocateBuffer(), (previous, current) -> {
+					previous.write(current);
+					DataBufferUtils.release(current);
+					return previous;
 				})
-				.defaultIfEmpty("");
+				.map(buffer -> bufferToString(buffer, charset));
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,21 @@ package org.springframework.test.web.servlet.htmlunit;
 import java.io.IOException;
 import java.net.URL;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebConnection;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.WebResponse;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,11 +53,13 @@ import static org.mockito.Mockito.mock;
  * @author Rossen Stoyanchev
  * @since 4.2
  */
-@SpringJUnitWebConfig
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration
+@WebAppConfiguration
 @SuppressWarnings("rawtypes")
 public class MockMvcConnectionBuilderSupportTests {
 
-	private final WebClient client = mock();
+	private final WebClient client = mock(WebClient.class);
 
 	private MockMvcWebConnectionBuilderSupport builder;
 
@@ -63,7 +69,7 @@ public class MockMvcConnectionBuilderSupportTests {
 
 	@BeforeEach
 	public void setup() {
-		given(this.client.getWebConnection()).willReturn(mock());
+		given(this.client.getWebConnection()).willReturn(mock(WebConnection.class));
 		this.builder = new MockMvcWebConnectionBuilderSupport(this.wac) {};
 	}
 
@@ -115,7 +121,7 @@ public class MockMvcConnectionBuilderSupportTests {
 	@Test
 	public void defaultContextPathEmpty() throws Exception {
 		WebConnection conn = this.builder.createConnection(this.client);
-		assertThat(getResponse(conn, "http://localhost/abc").getContentAsString()).isEmpty();
+		assertThat(getResponse(conn, "http://localhost/abc").getContentAsString()).isEqualTo("");
 	}
 
 	@Test

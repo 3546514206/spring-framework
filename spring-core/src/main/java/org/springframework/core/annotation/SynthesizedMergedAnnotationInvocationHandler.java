@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,20 @@
 
 package org.springframework.core.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 
 /**
  * {@link InvocationHandler} for an {@link Annotation} that Spring has
@@ -52,13 +51,8 @@ final class SynthesizedMergedAnnotationInvocationHandler<A extends Annotation> i
 
 	private final AttributeMethods attributes;
 
-	private final Map<String, Object> valueCache = new ConcurrentHashMap<>(8);
-
 	@Nullable
 	private volatile Integer hashCode;
-
-	@Nullable
-	private volatile String string;
 
 
 	private SynthesizedMergedAnnotationInvocationHandler(MergedAnnotation<A> annotation, Class<A> type) {
@@ -68,26 +62,35 @@ final class SynthesizedMergedAnnotationInvocationHandler<A extends Annotation> i
 		this.annotation = annotation;
 		this.type = type;
 		this.attributes = AttributeMethods.forAnnotationType(type);
+		for (int i = 0; i < this.attributes.size(); i++) {
+			getAttributeValue(this.attributes.get(i));
+		}
 	}
 
 
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) {
-		if (this.attributes.indexOf(method.getName()) != -1) {
-			return getAttributeValue(method);
-		}
-		if (method.getParameterCount() == 0) {
-			switch (method.getName()) {
-				case "annotationType": return this.type;
-				case "hashCode": return annotationHashCode();
-				case "toString": return annotationToString();
-			}
-		}
 		if (ReflectionUtils.isEqualsMethod(method)) {
 			return annotationEquals(args[0]);
 		}
+		if (ReflectionUtils.isHashCodeMethod(method)) {
+			return annotationHashCode();
+		}
+		if (ReflectionUtils.isToStringMethod(method)) {
+			return this.annotation.toString();
+		}
+		if (isAnnotationTypeMethod(method)) {
+			return this.type;
+		}
+		if (this.attributes.indexOf(method.getName()) != -1) {
+			return getAttributeValue(method);
+		}
 		throw new AnnotationConfigurationException(String.format(
 				"Method [%s] is unsupported for synthesized annotation type [%s]", method, this.type));
+	}
+
+	private boolean isAnnotationTypeMethod(Method method) {
+		return (Objects.equals(method.getName(), "annotationType") && method.getParameterCount() == 0);
 	}
 
 	/**
@@ -104,7 +107,7 @@ final class SynthesizedMergedAnnotationInvocationHandler<A extends Annotation> i
 		for (int i = 0; i < this.attributes.size(); i++) {
 			Method attribute = this.attributes.get(i);
 			Object thisValue = getAttributeValue(attribute);
-			Object otherValue = AnnotationUtils.invokeAnnotationMethod(attribute, other);
+			Object otherValue = ReflectionUtils.invokeMethod(attribute, other);
 			if (!ObjectUtils.nullSafeEquals(thisValue, otherValue)) {
 				return false;
 			}
@@ -129,144 +132,68 @@ final class SynthesizedMergedAnnotationInvocationHandler<A extends Annotation> i
 		for (int i = 0; i < this.attributes.size(); i++) {
 			Method attribute = this.attributes.get(i);
 			Object value = getAttributeValue(attribute);
-			hashCode += (127 * attribute.getName().hashCode()) ^ ObjectUtils.nullSafeHashCode(value);
+			hashCode += (127 * attribute.getName().hashCode()) ^ getValueHashCode(value);
 		}
 		return hashCode;
 	}
 
-	private String annotationToString() {
-		String string = this.string;
-		if (string == null) {
-			StringBuilder builder = new StringBuilder("@").append(getName(this.type)).append('(');
-			for (int i = 0; i < this.attributes.size(); i++) {
-				Method attribute = this.attributes.get(i);
-				if (i > 0) {
-					builder.append(", ");
-				}
-				builder.append(attribute.getName());
-				builder.append('=');
-				builder.append(toString(getAttributeValue(attribute)));
-			}
-			builder.append(')');
-			string = builder.toString();
-			this.string = string;
+	private int getValueHashCode(Object value) {
+		// Use Arrays.hashCode since ObjectUtils doesn't comply to to
+		// Annotation#hashCode()
+		if (value instanceof boolean[]) {
+			return Arrays.hashCode((boolean[]) value);
 		}
-		return string;
-	}
-
-	/**
-	 * This method currently does not address the following issues which we may
-	 * choose to address at a later point in time.
-	 *
-	 * <ul>
-	 * <li>non-ASCII, non-visible, and non-printable characters within a character
-	 * or String literal are not escaped.</li>
-	 * <li>formatting for float and double values does not take into account whether
-	 * a value is not a number (NaN) or infinite.</li>
-	 * </ul>
-	 * @param value the attribute value to format
-	 * @return the formatted string representation
-	 */
-	private String toString(Object value) {
-		if (value instanceof String str) {
-			return '"' + str + '"';
+		if (value instanceof byte[]) {
+			return Arrays.hashCode((byte[]) value);
 		}
-		if (value instanceof Character) {
-			return '\'' + value.toString() + '\'';
+		if (value instanceof char[]) {
+			return Arrays.hashCode((char[]) value);
 		}
-		if (value instanceof Byte) {
-			return String.format("(byte) 0x%02X", value);
+		if (value instanceof double[]) {
+			return Arrays.hashCode((double[]) value);
 		}
-		if (value instanceof Long longValue) {
-			return Long.toString(longValue) + 'L';
+		if (value instanceof float[]) {
+			return Arrays.hashCode((float[]) value);
 		}
-		if (value instanceof Float floatValue) {
-			return Float.toString(floatValue) + 'f';
+		if (value instanceof int[]) {
+			return Arrays.hashCode((int[]) value);
 		}
-		if (value instanceof Double doubleValue) {
-			return Double.toString(doubleValue) + 'd';
+		if (value instanceof long[]) {
+			return Arrays.hashCode((long[]) value);
 		}
-		if (value instanceof Enum<?> e) {
-			return e.name();
+		if (value instanceof short[]) {
+			return Arrays.hashCode((short[]) value);
 		}
-		if (value instanceof Class<?> clazz) {
-			return getName(clazz) + ".class";
+		if (value instanceof Object[]) {
+			return Arrays.hashCode((Object[]) value);
 		}
-		if (value.getClass().isArray()) {
-			StringBuilder builder = new StringBuilder("{");
-			for (int i = 0; i < Array.getLength(value); i++) {
-				if (i > 0) {
-					builder.append(", ");
-				}
-				builder.append(toString(Array.get(value, i)));
-			}
-			builder.append('}');
-			return builder.toString();
-		}
-		return String.valueOf(value);
+		return value.hashCode();
 	}
 
 	private Object getAttributeValue(Method method) {
-		Object value = this.valueCache.computeIfAbsent(method.getName(), attributeName -> {
-			Class<?> type = ClassUtils.resolvePrimitiveIfNecessary(method.getReturnType());
-			return this.annotation.getValue(attributeName, type).orElseThrow(
-					() -> new NoSuchElementException("No value found for attribute named '" + attributeName +
-							"' in merged annotation " + this.annotation.getType().getName()));
-		});
-
-		// Clone non-empty arrays so that users cannot alter the contents of values in our cache.
-		if (value.getClass().isArray() && Array.getLength(value) > 0) {
-			value = cloneArray(value);
-		}
-
-		return value;
-	}
-
-	/**
-	 * Clone the provided array, ensuring that the original component type is retained.
-	 * @param array the array to clone
-	 */
-	private Object cloneArray(Object array) {
-		if (array instanceof boolean[] booleans) {
-			return booleans.clone();
-		}
-		if (array instanceof byte[] bytes) {
-			return bytes.clone();
-		}
-		if (array instanceof char[] chars) {
-			return chars.clone();
-		}
-		if (array instanceof double[] doubles) {
-			return doubles.clone();
-		}
-		if (array instanceof float[] floats) {
-			return floats.clone();
-		}
-		if (array instanceof int[] ints) {
-			return ints.clone();
-		}
-		if (array instanceof long[] longs) {
-			return longs.clone();
-		}
-		if (array instanceof short[] shorts) {
-			return shorts.clone();
-		}
-
-		// else
-		return ((Object[]) array).clone();
+		String name = method.getName();
+		Class<?> type = ClassUtils.resolvePrimitiveIfNecessary(method.getReturnType());
+		return this.annotation.getValue(name, type).orElseThrow(
+				() -> new NoSuchElementException("No value found for attribute named '" + name +
+						"' in merged annotation " + this.annotation.getType().getName()));
 	}
 
 	@SuppressWarnings("unchecked")
 	static <A extends Annotation> A createProxy(MergedAnnotation<A> annotation, Class<A> type) {
 		ClassLoader classLoader = type.getClassLoader();
-		Class<?>[] interfaces = new Class<?>[] {type};
 		InvocationHandler handler = new SynthesizedMergedAnnotationInvocationHandler<>(annotation, type);
+		Class<?>[] interfaces = isVisible(classLoader, SynthesizedAnnotation.class) ?
+				new Class<?>[] {type, SynthesizedAnnotation.class} : new Class<?>[] {type};
 		return (A) Proxy.newProxyInstance(classLoader, interfaces, handler);
 	}
 
-	private static String getName(Class<?> clazz) {
-		String canonicalName = clazz.getCanonicalName();
-		return (canonicalName != null ? canonicalName : clazz.getName());
+	private static boolean isVisible(ClassLoader classLoader, Class<?> interfaceClass) {
+		try {
+			return Class.forName(interfaceClass.getName(), false, classLoader) == interfaceClass;
+		}
+		catch (ClassNotFoundException ex) {
+			return false;
+		}
 	}
 
 }

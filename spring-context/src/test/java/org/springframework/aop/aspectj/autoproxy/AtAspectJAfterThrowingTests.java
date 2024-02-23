@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package org.springframework.aop.aspectj.autoproxy;
 
-import java.io.IOException;
-
 import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.testfixture.beans.ITestBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.tests.sample.beans.ITestBean;
+
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,10 +32,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @since 2.0
  */
-class AtAspectJAfterThrowingTests {
+public class AtAspectJAfterThrowingTests {
 
 	@Test
-	void accessThrowable() {
+	public void testAccessThrowable() throws Exception {
 		ClassPathXmlApplicationContext ctx =
 				new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
 
@@ -44,20 +43,15 @@ class AtAspectJAfterThrowingTests {
 		ExceptionHandlingAspect aspect = (ExceptionHandlingAspect) ctx.getBean("aspect");
 
 		assertThat(AopUtils.isAopProxy(bean)).isTrue();
-		IOException exceptionThrown = null;
 		try {
 			bean.unreliableFileOperation();
-		}
-		catch (IOException ex) {
-			exceptionThrown = ex;
+		} catch (IOException e) {
+			//
 		}
 
 		assertThat(aspect.handled).isEqualTo(1);
-		assertThat(aspect.lastException).isSameAs(exceptionThrown);
-
-		ctx.close();
+		assertThat(aspect.lastException).isNotNull();
 	}
-
 }
 
 
@@ -68,7 +62,7 @@ class ExceptionHandlingAspect {
 
 	public IOException lastException;
 
-	@AfterThrowing(pointcut = "within(org.springframework.beans.testfixture.beans.ITestBean+)", throwing = "ex")
+	@AfterThrowing(pointcut = "within(org.springframework.tests.sample.beans.ITestBean+)", throwing = "ex")
 	public void handleIOException(IOException ex) {
 		handled++;
 		lastException = ex;

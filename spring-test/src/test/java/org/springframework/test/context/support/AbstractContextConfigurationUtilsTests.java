@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,26 +23,22 @@ import java.lang.annotation.Target;
 import java.util.Collections;
 import java.util.Set;
 
+import org.mockito.Mockito;
+
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.AliasFor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.BootstrapContext;
 import org.springframework.test.context.BootstrapTestUtils;
 import org.springframework.test.context.CacheAwareContextLoaderDelegate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.ContextConfigurationAttributes;
-import org.springframework.test.context.ContextHierarchy;
 import org.springframework.test.context.ContextLoader;
 import org.springframework.test.context.MergedContextConfiguration;
-import org.springframework.test.context.NestedTestConfiguration;
 import org.springframework.test.context.TestContextBootstrapper;
 import org.springframework.test.context.web.WebAppConfiguration;
 
-import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.Mockito.mock;
-import static org.springframework.test.context.NestedTestConfiguration.EnclosingConfiguration.INHERIT;
-import static org.springframework.test.context.NestedTestConfiguration.EnclosingConfiguration.OVERRIDE;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Abstract base class for tests involving {@link ContextLoaderUtils},
@@ -58,11 +54,11 @@ abstract class AbstractContextConfigurationUtilsTests {
 	static final String[] EMPTY_STRING_ARRAY = new String[0];
 
 	static final Set<Class<? extends ApplicationContextInitializer<?>>>
-			EMPTY_INITIALIZER_CLASSES = Collections.emptySet();
+			EMPTY_INITIALIZER_CLASSES = Collections.<Class<? extends ApplicationContextInitializer<?>>> emptySet();
 
 
 	MergedContextConfiguration buildMergedContextConfiguration(Class<?> testClass) {
-		CacheAwareContextLoaderDelegate cacheAwareContextLoaderDelegate = mock();
+		CacheAwareContextLoaderDelegate cacheAwareContextLoaderDelegate = Mockito.mock(CacheAwareContextLoaderDelegate.class);
 		BootstrapContext bootstrapContext = BootstrapTestUtils.buildBootstrapContext(testClass, cacheAwareContextLoaderDelegate);
 		TestContextBootstrapper bootstrapper = BootstrapTestUtils.resolveTestContextBootstrapper(bootstrapContext);
 		return bootstrapper.buildMergedContextConfiguration();
@@ -72,13 +68,11 @@ abstract class AbstractContextConfigurationUtilsTests {
 			String[] expectedLocations, Class<?>[] expectedClasses,
 			Class<? extends ContextLoader> expectedContextLoaderClass, boolean expectedInheritLocations) {
 
-		assertSoftly(softly -> {
-			softly.assertThat(attributes.getDeclaringClass()).as("declaring class").isEqualTo(expectedDeclaringClass);
-			softly.assertThat(attributes.getLocations()).as("locations").isEqualTo(expectedLocations);
-			softly.assertThat(attributes.getClasses()).as("classes").isEqualTo(expectedClasses);
-			softly.assertThat(attributes.isInheritLocations()).as("inherit locations").isEqualTo(expectedInheritLocations);
-			softly.assertThat(attributes.getContextLoaderClass()).as("context loader").isEqualTo(expectedContextLoaderClass);
-		});
+		assertThat(attributes.getDeclaringClass()).as("declaring class").isEqualTo(expectedDeclaringClass);
+		assertThat(attributes.getLocations()).as("locations").isEqualTo(expectedLocations);
+		assertThat(attributes.getClasses()).as("classes").isEqualTo(expectedClasses);
+		assertThat(attributes.isInheritLocations()).as("inherit locations").isEqualTo(expectedInheritLocations);
+		assertThat(attributes.getContextLoaderClass()).as("context loader").isEqualTo(expectedContextLoaderClass);
 	}
 
 	void assertMergedConfig(MergedContextConfiguration mergedConfig, Class<?> expectedTestClass,
@@ -97,22 +91,21 @@ abstract class AbstractContextConfigurationUtilsTests {
 			Set<Class<? extends ApplicationContextInitializer<?>>> expectedInitializerClasses,
 			Class<? extends ContextLoader> expectedContextLoaderClass) {
 
-		assertSoftly(softly -> {
-			softly.assertThat(mergedConfig).as("merged config").isNotNull();
-			softly.assertThat(mergedConfig.getTestClass()).as("test class").isEqualTo(expectedTestClass);
-			softly.assertThat(mergedConfig.getLocations()).as("locations").containsExactly(expectedLocations);
-			softly.assertThat(mergedConfig.getClasses()).as("classes").containsExactly(expectedClasses);
-			softly.assertThat(mergedConfig.getActiveProfiles()).as("active profiles").isNotNull();
-
-			if (expectedContextLoaderClass == null) {
-				softly.assertThat(mergedConfig.getContextLoader()).as("context loader").isNull();
-			}
-			else {
-				softly.assertThat(mergedConfig.getContextLoader().getClass()).as("context loader").isEqualTo(expectedContextLoaderClass);
-			}
-			softly.assertThat(mergedConfig.getContextInitializerClasses()).as("context initializers").isNotNull();
-			softly.assertThat(mergedConfig.getContextInitializerClasses()).as("context initializers").isEqualTo(expectedInitializerClasses);
-		});
+		assertThat(mergedConfig).isNotNull();
+		assertThat(mergedConfig.getTestClass()).isEqualTo(expectedTestClass);
+		assertThat(mergedConfig.getLocations()).isNotNull();
+		assertThat(mergedConfig.getLocations()).isEqualTo(expectedLocations);
+		assertThat(mergedConfig.getClasses()).isNotNull();
+		assertThat(mergedConfig.getClasses()).isEqualTo(expectedClasses);
+		assertThat(mergedConfig.getActiveProfiles()).isNotNull();
+		if (expectedContextLoaderClass == null) {
+			assertThat(mergedConfig.getContextLoader()).isNull();
+		}
+		else {
+			assertThat(mergedConfig.getContextLoader().getClass()).isEqualTo(expectedContextLoaderClass);
+		}
+		assertThat(mergedConfig.getContextInitializerClasses()).isNotNull();
+		assertThat(mergedConfig.getContextInitializerClasses()).isEqualTo(expectedInitializerClasses);
 	}
 
 	@SafeVarargs
@@ -137,31 +130,21 @@ abstract class AbstractContextConfigurationUtilsTests {
 	static class BarConfig {
 	}
 
-	@Configuration
-	static class BazConfig {
-	}
-
-	@Configuration
-	static class QuuxConfig {
-	}
-
 	@ContextConfiguration("/foo.xml")
 	@ActiveProfiles(profiles = "foo")
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.TYPE)
-	public @interface MetaLocationsFooConfig {
+	public static @interface MetaLocationsFooConfig {
 	}
 
 	@ContextConfiguration
 	@ActiveProfiles
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.TYPE)
-	public @interface MetaLocationsFooConfigWithOverrides {
+	public static @interface MetaLocationsFooConfigWithOverrides {
 
-		@AliasFor(annotation = ContextConfiguration.class)
 		String[] locations() default "/foo.xml";
 
-		@AliasFor(annotation = ActiveProfiles.class)
 		String[] profiles() default "foo";
 	}
 
@@ -169,7 +152,7 @@ abstract class AbstractContextConfigurationUtilsTests {
 	@ActiveProfiles(profiles = "bar")
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.TYPE)
-	public @interface MetaLocationsBarConfig {
+	public static @interface MetaLocationsBarConfig {
 	}
 
 	@MetaLocationsFooConfig
@@ -222,46 +205,16 @@ abstract class AbstractContextConfigurationUtilsTests {
 	static class OverriddenClassesBar extends ClassesFoo {
 	}
 
-	@ContextConfiguration(classes = FooConfig.class, loader = AnnotationConfigContextLoader.class)
-	@NestedTestConfiguration(INHERIT)
-	static class OuterTestCase {
-
-		class NestedTestCaseWithInheritedConfig {
-		}
-
-		@ContextConfiguration(classes = BarConfig.class)
-		class NestedTestCaseWithMergedInheritedConfig {
-		}
-
-		@NestedTestConfiguration(OVERRIDE)
-		@ContextConfiguration(classes = BarConfig.class)
-		class NestedTestCaseWithOverriddenConfig {
-
-			@NestedTestConfiguration(INHERIT)
-			class DoubleNestedTestCaseWithInheritedOverriddenConfig {
-			}
-		}
-
+	@ContextConfiguration(locations = "/foo.properties", loader = GenericPropertiesContextLoader.class)
+	@ActiveProfiles("foo")
+	static class PropertiesLocationsFoo {
 	}
 
-	@ContextHierarchy({ //
-		@ContextConfiguration(classes = FooConfig.class, loader = AnnotationConfigContextLoader.class, name = "foo"), //
-		@ContextConfiguration(classes = BarConfig.class, loader = AnnotationConfigContextLoader.class, name = "bar")//
-	})
-	@NestedTestConfiguration(INHERIT)
-	static class ContextHierarchyOuterTestCase {
-
-		class NestedTestCaseWithInheritedConfig {
-		}
-
-		@ContextConfiguration(classes = BazConfig.class, loader = AnnotationConfigContextLoader.class, name = "bar")
-		class NestedTestCaseWithMergedInheritedConfig {
-		}
-
-		@ContextConfiguration(classes = QuuxConfig.class, loader = AnnotationConfigContextLoader.class, name = "foo", inheritLocations = false)
-		class NestedTestCaseWithOverriddenConfig {
-		}
-
+	// Combining @Configuration classes with a Properties based loader doesn't really make
+	// sense, but that's OK for unit testing purposes.
+	@ContextConfiguration(classes = FooConfig.class, loader = GenericPropertiesContextLoader.class)
+	@ActiveProfiles("foo")
+	static class PropertiesClassesFoo {
 	}
 
 }

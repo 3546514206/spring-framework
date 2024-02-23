@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,14 @@
 
 package org.springframework.beans.factory.annotation;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyValues;
+import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ReflectionUtils;
+
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -23,22 +31,15 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
-
-import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.PropertyValues;
-import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * Internal class for managing injection metadata.
- *
- * <p>Not intended for direct use in applications.
+ * Not intended for direct use in applications.
  *
  * <p>Used by {@link AutowiredAnnotationBeanPostProcessor},
- * {@link org.springframework.context.annotation.CommonAnnotationBeanPostProcessor}, and
+ * {@link org.springframework.context.annotation.CommonAnnotationBeanPostProcessor} and
  * {@link org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor}.
  *
  * @author Juergen Hoeller
@@ -52,20 +53,20 @@ public class InjectionMetadata {
 	 */
 	public static final InjectionMetadata EMPTY = new InjectionMetadata(Object.class, Collections.emptyList()) {
 		@Override
-		protected boolean needsRefresh(Class<?> clazz) {
-			return false;
-		}
-		@Override
 		public void checkConfigMembers(RootBeanDefinition beanDefinition) {
 		}
+
 		@Override
 		public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) {
 		}
+
 		@Override
 		public void clear(@Nullable PropertyValues pvs) {
 		}
 	};
 
+
+	private static final Log logger = LogFactory.getLog(InjectionMetadata.class);
 
 	private final Class<?> targetClass;
 
@@ -88,67 +89,33 @@ public class InjectionMetadata {
 		this.injectedElements = elements;
 	}
 
-
 	/**
-	 * Return the {@link InjectedElement elements} to inject.
-	 * @return the elements to inject
+	 * Return an {@code InjectionMetadata} instance, possibly for empty elements.
+	 *
+	 * @param elements the elements to inject (possibly empty)
+	 * @param clazz    the target class
+	 * @return a new {@code InjectionMetadata} instance,
+	 * or {@link #EMPTY} in case of no elements
+	 * @since 5.2
 	 */
-	public Collection<InjectedElement> getInjectedElements() {
-		return Collections.unmodifiableCollection(this.injectedElements);
+	public static InjectionMetadata forElements(Collection<InjectedElement> elements, Class<?> clazz) {
+		return (elements.isEmpty() ? InjectionMetadata.EMPTY : new InjectionMetadata(clazz, elements));
 	}
 
 	/**
-	 * Return the {@link InjectedElement elements} to inject based on the
-	 * specified {@link PropertyValues}. If a property is already defined
-	 * for an {@link InjectedElement}, it is excluded.
-	 * @param pvs the property values to consider
-	 * @return the elements to inject
-	 * @since 6.0.10
-	 */
-	public Collection<InjectedElement> getInjectedElements(@Nullable PropertyValues pvs) {
-		return this.injectedElements.stream().filter(candidate -> candidate.shouldInject(pvs)).toList();
-	}
-
-	/**
-	 * Determine whether this metadata instance needs to be refreshed.
-	 * @param clazz the current target class
+	 * Check whether the given injection metadata needs to be refreshed.
+	 *
+	 * @param metadata the existing metadata instance
+	 * @param clazz    the current target class
 	 * @return {@code true} indicating a refresh, {@code false} otherwise
-	 * @since 5.2.4
 	 */
-	protected boolean needsRefresh(Class<?> clazz) {
-		return (this.targetClass != clazz);
-	}
-
-	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
-		if (this.injectedElements.isEmpty()) {
-			this.checkedElements = Collections.emptySet();
-		}
-		else {
-			Set<InjectedElement> checkedElements = CollectionUtils.newLinkedHashSet(this.injectedElements.size());
-			for (InjectedElement element : this.injectedElements) {
-				Member member = element.getMember();
-				if (!beanDefinition.isExternallyManagedConfigMember(member)) {
-					beanDefinition.registerExternallyManagedConfigMember(member);
-					checkedElements.add(element);
-				}
-			}
-			this.checkedElements = checkedElements;
-		}
-	}
-
-	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
-		Collection<InjectedElement> checkedElements = this.checkedElements;
-		Collection<InjectedElement> elementsToIterate =
-				(checkedElements != null ? checkedElements : this.injectedElements);
-		if (!elementsToIterate.isEmpty()) {
-			for (InjectedElement element : elementsToIterate) {
-				element.inject(target, beanName, pvs);
-			}
-		}
+	public static boolean needsRefresh(@Nullable InjectionMetadata metadata, Class<?> clazz) {
+		return (metadata == null || metadata.targetClass != clazz);
 	}
 
 	/**
 	 * Clear property skipping for the contained elements.
+	 *
 	 * @since 3.2.13
 	 */
 	public void clear(@Nullable PropertyValues pvs) {
@@ -162,28 +129,33 @@ public class InjectionMetadata {
 		}
 	}
 
-
-	/**
-	 * Return an {@code InjectionMetadata} instance, possibly for empty elements.
-	 * @param elements the elements to inject (possibly empty)
-	 * @param clazz the target class
-	 * @return a new {@link #InjectionMetadata(Class, Collection)} instance
-	 * @since 5.2
-	 */
-	public static InjectionMetadata forElements(Collection<InjectedElement> elements, Class<?> clazz) {
-		return (elements.isEmpty() ? new InjectionMetadata(clazz, Collections.emptyList()) :
-				new InjectionMetadata(clazz, elements));
+	public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+		Set<InjectedElement> checkedElements = new LinkedHashSet<>(this.injectedElements.size());
+		for (InjectedElement element : this.injectedElements) {
+			Member member = element.getMember();
+			if (!beanDefinition.isExternallyManagedConfigMember(member)) {
+				beanDefinition.registerExternallyManagedConfigMember(member);
+				checkedElements.add(element);
+				if (logger.isTraceEnabled()) {
+					logger.trace("Registered injected element on class [" + this.targetClass.getName() + "]: " + element);
+				}
+			}
+		}
+		this.checkedElements = checkedElements;
 	}
 
-	/**
-	 * Check whether the given injection metadata needs to be refreshed.
-	 * @param metadata the existing metadata instance
-	 * @param clazz the current target class
-	 * @return {@code true} indicating a refresh, {@code false} otherwise
-	 * @see #needsRefresh(Class)
-	 */
-	public static boolean needsRefresh(@Nullable InjectionMetadata metadata, Class<?> clazz) {
-		return (metadata == null || metadata.needsRefresh(clazz));
+	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+		Collection<InjectedElement> checkedElements = this.checkedElements;
+		Collection<InjectedElement> elementsToIterate =
+				(checkedElements != null ? checkedElements : this.injectedElements);
+		if (!elementsToIterate.isEmpty()) {
+			for (InjectedElement element : elementsToIterate) {
+				if (logger.isTraceEnabled()) {
+					logger.trace("Processing injected element of bean '" + beanName + "': " + element);
+				}
+				element.inject(target, beanName, pvs);
+			}
+		}
 	}
 
 
@@ -243,33 +215,20 @@ public class InjectionMetadata {
 		}
 
 		/**
-		 * Whether the property values should be injected.
-		 * @param pvs property values to check
-		 * @return whether the property values should be injected
-		 * @since 6.0.10
-		 */
-		protected boolean shouldInject(@Nullable PropertyValues pvs) {
-			if (this.isField) {
-				return true;
-			}
-			return !checkPropertySkipping(pvs);
-		}
-
-		/**
 		 * Either this or {@link #getResourceToInject} needs to be overridden.
 		 */
 		protected void inject(Object target, @Nullable String requestingBeanName, @Nullable PropertyValues pvs)
 				throws Throwable {
 
-			if (!shouldInject(pvs)) {
-				return;
-			}
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
 			else {
+				if (checkPropertySkipping(pvs)) {
+					return;
+				}
 				try {
 					Method method = (Method) this.member;
 					ReflectionUtils.makeAccessible(method);
@@ -306,8 +265,8 @@ public class InjectionMetadata {
 						this.skip = true;
 						return true;
 					}
-					else if (pvs instanceof MutablePropertyValues mpvs) {
-						mpvs.registerProcessedProperty(this.pd.getName());
+					else if (pvs instanceof MutablePropertyValues) {
+						((MutablePropertyValues) pvs).registerProcessedProperty(this.pd.getName());
 					}
 				}
 				this.skip = false;
@@ -324,8 +283,8 @@ public class InjectionMetadata {
 				return;
 			}
 			synchronized (pvs) {
-				if (Boolean.FALSE.equals(this.skip) && this.pd != null && pvs instanceof MutablePropertyValues mpvs) {
-					mpvs.clearProcessedProperty(this.pd.getName());
+				if (Boolean.FALSE.equals(this.skip) && this.pd != null && pvs instanceof MutablePropertyValues) {
+					((MutablePropertyValues) pvs).clearProcessedProperty(this.pd.getName());
 				}
 			}
 		}
@@ -340,8 +299,14 @@ public class InjectionMetadata {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof InjectedElement that &&
-					this.member.equals(that.member)));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof InjectedElement)) {
+				return false;
+			}
+			InjectedElement otherElement = (InjectedElement) other;
+			return this.member.equals(otherElement.member);
 		}
 
 		@Override

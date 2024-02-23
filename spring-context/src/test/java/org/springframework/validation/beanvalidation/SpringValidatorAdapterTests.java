@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,44 +16,23 @@
 
 package org.springframework.validation.beanvalidation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
-import jakarta.validation.Constraint;
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Payload;
-import jakarta.validation.Valid;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.SerializationTestUtils;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+
+import javax.validation.*;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
+import java.lang.annotation.*;
+import java.lang.reflect.Field;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Kazuki Shimizu
  * @author Juergen Hoeller
  */
-class SpringValidatorAdapterTests {
+public class SpringValidatorAdapterTests {
 
 	private final Validator nativeValidator = Validation.buildDefaultValidatorFactory().getValidator();
 
@@ -71,7 +50,7 @@ class SpringValidatorAdapterTests {
 
 
 	@BeforeEach
-	void setupSpringValidatorAdapter() {
+	public void setupSpringValidatorAdapter() {
 		messageSource.addMessage("Size", Locale.ENGLISH, "Size of {0} must be between {2} and {1}");
 		messageSource.addMessage("Same", Locale.ENGLISH, "{2} must be same value as {1}");
 		messageSource.addMessage("password", Locale.ENGLISH, "Password");
@@ -80,7 +59,7 @@ class SpringValidatorAdapterTests {
 
 
 	@Test
-	void testUnwrap() {
+	public void testUnwrap() {
 		Validator nativeValidator = validatorAdapter.unwrap(Validator.class);
 		assertThat(nativeValidator).isSameAs(this.nativeValidator);
 	}
@@ -174,7 +153,7 @@ class SpringValidatorAdapterTests {
 	}
 
 	@Test
-	void testPatternMessage() {
+	public void testPatternMessage() {
 		TestBean testBean = new TestBean();
 		testBean.setEmail("X");
 		testBean.setConfirmEmail("X");
@@ -200,7 +179,7 @@ class SpringValidatorAdapterTests {
 		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(parent, "parent");
 		validatorAdapter.validate(parent, errors);
 
-		assertThat(errors.getErrorCount()).isGreaterThan(0);
+		assertThat(errors.getErrorCount() > 0).isTrue();
 	}
 
 	@Test  // SPR-16177
@@ -212,7 +191,7 @@ class SpringValidatorAdapterTests {
 		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(parent, "parent");
 		validatorAdapter.validate(parent, errors);
 
-		assertThat(errors.getErrorCount()).isGreaterThan(0);
+		assertThat(errors.getErrorCount() > 0).isTrue();
 	}
 
 	private List<Child> createChildren(Parent parent) {
@@ -227,48 +206,6 @@ class SpringValidatorAdapterTests {
 		child2.setParent(parent);
 
 		return Arrays.asList(child1, child2);
-	}
-
-	@Test  // SPR-15839
-	public void testListElementConstraint() {
-		BeanWithListElementConstraint bean = new BeanWithListElementConstraint();
-		bean.setProperty(Arrays.asList("no", "element", "can", "be", null));
-
-		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(bean, "bean");
-		validatorAdapter.validate(bean, errors);
-
-		assertThat(errors.getFieldErrorCount("property[4]")).isEqualTo(1);
-		assertThat(errors.getFieldValue("property[4]")).isNull();
-	}
-
-	@Test  // SPR-15839
-	public void testMapValueConstraint() {
-		Map<String, String> property = new HashMap<>();
-		property.put("no value can be", null);
-
-		BeanWithMapEntryConstraint bean = new BeanWithMapEntryConstraint();
-		bean.setProperty(property);
-
-		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(bean, "bean");
-		validatorAdapter.validate(bean, errors);
-
-		assertThat(errors.getFieldErrorCount("property[no value can be]")).isEqualTo(1);
-		assertThat(errors.getFieldValue("property[no value can be]")).isNull();
-	}
-
-	@Test  // SPR-15839
-	public void testMapEntryConstraint() {
-		Map<String, String> property = new HashMap<>();
-		property.put(null, null);
-
-		BeanWithMapEntryConstraint bean = new BeanWithMapEntryConstraint();
-		bean.setProperty(property);
-
-		BeanPropertyBindingResult errors = new BeanPropertyBindingResult(bean, "bean");
-		validatorAdapter.validate(bean, errors);
-
-		assertThat(errors.hasFieldErrors("property[]")).isTrue();
-		assertThat(errors.getFieldValue("property[]")).isNull();
 	}
 
 
@@ -403,7 +340,7 @@ class SpringValidatorAdapterTests {
 		private Set<Child> childSet = new LinkedHashSet<>();
 
 		@Valid
-		private List<Child> childList = new ArrayList<>();
+		private List<Child> childList = new LinkedList<>();
 
 		public Integer getId() {
 			return id;
@@ -525,36 +462,6 @@ class SpringValidatorAdapterTests {
 				}
 			});
 			return fieldsErrors.isEmpty();
-		}
-	}
-
-
-	public class BeanWithListElementConstraint {
-
-		@Valid
-		private List<@NotNull String> property;
-
-		public List<String> getProperty() {
-			return property;
-		}
-
-		public void setProperty(List<String> property) {
-			this.property = property;
-		}
-	}
-
-
-	public class BeanWithMapEntryConstraint {
-
-		@Valid
-		private Map<@NotNull String, @NotNull String> property;
-
-		public Map<String, String> getProperty() {
-			return property;
-		}
-
-		public void setProperty(Map<String, String> property) {
-			this.property = property;
 		}
 	}
 

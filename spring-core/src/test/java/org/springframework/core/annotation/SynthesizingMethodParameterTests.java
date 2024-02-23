@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,11 @@
 
 package org.springframework.core.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -43,7 +42,7 @@ class SynthesizingMethodParameterTests {
 
 	@BeforeEach
 	void setUp() throws NoSuchMethodException {
-		method = getClass().getMethod("method", String.class, long.class);
+		method = getClass().getMethod("method", String.class, Long.TYPE);
 		stringParameter = new SynthesizingMethodParameter(method, 0);
 		longParameter = new SynthesizingMethodParameter(method, 1);
 		intReturnType = new SynthesizingMethodParameter(method, -1);
@@ -56,14 +55,14 @@ class SynthesizingMethodParameterTests {
 		assertThat(longParameter).isEqualTo(longParameter);
 		assertThat(intReturnType).isEqualTo(intReturnType);
 
-		assertThat(stringParameter).isNotEqualTo(longParameter);
-		assertThat(stringParameter).isNotEqualTo(intReturnType);
-		assertThat(longParameter).isNotEqualTo(stringParameter);
-		assertThat(longParameter).isNotEqualTo(intReturnType);
-		assertThat(intReturnType).isNotEqualTo(stringParameter);
-		assertThat(intReturnType).isNotEqualTo(longParameter);
+		assertThat(stringParameter.equals(longParameter)).isFalse();
+		assertThat(stringParameter.equals(intReturnType)).isFalse();
+		assertThat(longParameter.equals(stringParameter)).isFalse();
+		assertThat(longParameter.equals(intReturnType)).isFalse();
+		assertThat(intReturnType.equals(stringParameter)).isFalse();
+		assertThat(intReturnType.equals(longParameter)).isFalse();
 
-		Method method = getClass().getMethod("method", String.class, long.class);
+		Method method = getClass().getMethod("method", String.class, Long.TYPE);
 		MethodParameter methodParameter = new SynthesizingMethodParameter(method, 0);
 		assertThat(methodParameter).isEqualTo(stringParameter);
 		assertThat(stringParameter).isEqualTo(methodParameter);
@@ -83,10 +82,10 @@ class SynthesizingMethodParameterTests {
 		assertThat(longParameter.hashCode()).isEqualTo(longParameter.hashCode());
 		assertThat(intReturnType.hashCode()).isEqualTo(intReturnType.hashCode());
 
-		Method method = getClass().getMethod("method", String.class, long.class);
+		Method method = getClass().getMethod("method", String.class, Long.TYPE);
 		SynthesizingMethodParameter methodParameter = new SynthesizingMethodParameter(method, 0);
 		assertThat(methodParameter.hashCode()).isEqualTo(stringParameter.hashCode());
-		assertThat(methodParameter.hashCode()).isNotEqualTo(longParameter.hashCode());
+		assertThat(methodParameter.hashCode()).isNotEqualTo((long) longParameter.hashCode());
 	}
 
 	@Test

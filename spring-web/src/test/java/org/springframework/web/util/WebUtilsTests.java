@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,18 @@
 
 package org.springframework.web.util;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.mock.web.test.MockFilterChain;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.filter.ForwardedHeaderFilter;
-import org.springframework.web.testfixture.servlet.MockFilterChain;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,10 +37,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
  */
-class WebUtilsTests {
+public class WebUtilsTests {
 
 	@Test
-	void findParameterValue() {
+	public void findParameterValue() {
 		Map<String, Object> params = new HashMap<>();
 		params.put("myKey1", "myValue1");
 		params.put("myKey2_myValue2", "xxx");
@@ -59,50 +55,37 @@ class WebUtilsTests {
 	}
 
 	@Test
-	void parseMatrixVariablesString() {
+	public void parseMatrixVariablesString() {
 		MultiValueMap<String, String> variables;
 
 		variables = WebUtils.parseMatrixVariables(null);
-		assertThat(variables).isEmpty();
+		assertThat(variables.size()).isEqualTo(0);
 
 		variables = WebUtils.parseMatrixVariables("year");
-		assertThat(variables).hasSize(1);
-		assertThat(variables.getFirst("year")).isEmpty();
+		assertThat(variables.size()).isEqualTo(1);
+		assertThat(variables.getFirst("year")).isEqualTo("");
 
 		variables = WebUtils.parseMatrixVariables("year=2012");
-		assertThat(variables).hasSize(1);
+		assertThat(variables.size()).isEqualTo(1);
 		assertThat(variables.getFirst("year")).isEqualTo("2012");
 
 		variables = WebUtils.parseMatrixVariables("year=2012;colors=red,blue,green");
-		assertThat(variables).hasSize(2);
-		assertThat(variables.get("colors")).containsExactly("red", "blue", "green");
+		assertThat(variables.size()).isEqualTo(2);
+		assertThat(variables.get("colors")).isEqualTo(Arrays.asList("red", "blue", "green"));
 		assertThat(variables.getFirst("year")).isEqualTo("2012");
 
 		variables = WebUtils.parseMatrixVariables(";year=2012;colors=red,blue,green;");
-		assertThat(variables).hasSize(2);
-		assertThat(variables.get("colors")).containsExactly("red", "blue", "green");
+		assertThat(variables.size()).isEqualTo(2);
+		assertThat(variables.get("colors")).isEqualTo(Arrays.asList("red", "blue", "green"));
 		assertThat(variables.getFirst("year")).isEqualTo("2012");
 
 		variables = WebUtils.parseMatrixVariables("colors=red;colors=blue;colors=green");
-		assertThat(variables).hasSize(1);
-		assertThat(variables.get("colors")).containsExactly("red", "blue", "green");
-
-		variables = WebUtils.parseMatrixVariables("jsessionid=c0o7fszeb1");
-		assertThat(variables).isEmpty();
-
-		variables = WebUtils.parseMatrixVariables("a=b;jsessionid=c0o7fszeb1;c=d");
-		assertThat(variables).hasSize(2);
-		assertThat(variables.get("a")).containsExactly("b");
-		assertThat(variables.get("c")).containsExactly("d");
-
-		variables = WebUtils.parseMatrixVariables("a=b;jsessionid=c0o7fszeb1;c=d");
-		assertThat(variables).hasSize(2);
-		assertThat(variables.get("a")).containsExactly("b");
-		assertThat(variables.get("c")).containsExactly("d");
+		assertThat(variables.size()).isEqualTo(1);
+		assertThat(variables.get("colors")).isEqualTo(Arrays.asList("red", "blue", "green"));
 	}
 
 	@Test
-	void isValidOrigin() {
+	public void isValidOrigin() {
 		List<String> allowed = Collections.emptyList();
 		assertThat(checkValidOrigin("mydomain1.example", -1, "http://mydomain1.example", allowed)).isTrue();
 		assertThat(checkValidOrigin("mydomain1.example", -1, "http://mydomain2.example", allowed)).isFalse();
@@ -116,7 +99,7 @@ class WebUtilsTests {
 	}
 
 	@Test
-	void isSameOrigin() {
+	public void isSameOrigin() {
 		assertThat(checkSameOrigin("http", "mydomain1.example", -1, "http://mydomain1.example")).isTrue();
 		assertThat(checkSameOrigin("http", "mydomain1.example", -1, "http://mydomain1.example:80")).isTrue();
 		assertThat(checkSameOrigin("https", "mydomain1.example", 443, "https://mydomain1.example")).isTrue();
@@ -155,7 +138,7 @@ class WebUtilsTests {
 	}
 
 	@Test  // SPR-16262
-	void isSameOriginWithXForwardedHeaders() throws Exception {
+	public void isSameOriginWithXForwardedHeaders() throws Exception {
 		String server = "mydomain1.example";
 		testWithXForwardedHeaders(server, -1, "https", null, -1, "https://mydomain1.example");
 		testWithXForwardedHeaders(server, 123, "https", null, -1, "https://mydomain1.example");
@@ -166,7 +149,7 @@ class WebUtilsTests {
 	}
 
 	@Test  // SPR-16262
-	void isSameOriginWithForwardedHeader() throws Exception {
+	public void isSameOriginWithForwardedHeader() throws Exception {
 		String server = "mydomain1.example";
 		testWithForwardedHeader(server, -1, "proto=https", "https://mydomain1.example");
 		testWithForwardedHeader(server, 123, "proto=https", "https://mydomain1.example");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 
 package org.springframework.web.client;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
@@ -31,7 +26,10 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.FileCopyUtils;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  * Response extractor that uses the given {@linkplain HttpMessageConverter entity converters}
@@ -71,22 +69,22 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 		this(responseType, messageConverters, LogFactory.getLog(HttpMessageConverterExtractor.class));
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("unchecked")
 	HttpMessageConverterExtractor(Type responseType, List<HttpMessageConverter<?>> messageConverters, Log logger) {
 		Assert.notNull(responseType, "'responseType' must not be null");
 		Assert.notEmpty(messageConverters, "'messageConverters' must not be empty");
 		Assert.noNullElements(messageConverters, "'messageConverters' must not contain null elements");
 		this.responseType = responseType;
-		this.responseClass = (responseType instanceof Class clazz ? clazz : null);
+		this.responseClass = (responseType instanceof Class ? (Class<T>) responseType : null);
 		this.messageConverters = messageConverters;
 		this.logger = logger;
 	}
 
 
 	@Override
-	@SuppressWarnings({"rawtypes", "unchecked", "resource"})
+	@SuppressWarnings({"unchecked", "rawtypes", "resource"})
 	public T extractData(ClientHttpResponse response) throws IOException {
-		IntrospectingClientHttpResponse responseWrapper = new IntrospectingClientHttpResponse(response);
+		MessageBodyClientHttpResponseWrapper responseWrapper = new MessageBodyClientHttpResponseWrapper(response);
 		if (!responseWrapper.hasMessageBody() || responseWrapper.hasEmptyMessageBody()) {
 			return null;
 		}
@@ -94,7 +92,9 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 
 		try {
 			for (HttpMessageConverter<?> messageConverter : this.messageConverters) {
-				if (messageConverter instanceof GenericHttpMessageConverter genericMessageConverter) {
+				if (messageConverter instanceof GenericHttpMessageConverter) {
+					GenericHttpMessageConverter<?> genericMessageConverter =
+							(GenericHttpMessageConverter<?>) messageConverter;
 					if (genericMessageConverter.canRead(this.responseType, null, contentType)) {
 						if (logger.isDebugEnabled()) {
 							ResolvableType resolvableType = ResolvableType.forType(this.responseType);
@@ -113,23 +113,23 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 					}
 				}
 			}
-		}
-		catch (IOException | HttpMessageNotReadableException ex) {
+		} catch (IOException | HttpMessageNotReadableException ex) {
 			throw new RestClientException("Error while extracting response for type [" +
 					this.responseType + "] and content type [" + contentType + "]", ex);
 		}
 
-		throw new UnknownContentTypeException(this.responseType, contentType,
-				responseWrapper.getStatusCode(), responseWrapper.getStatusText(),
-				responseWrapper.getHeaders(), getResponseBody(responseWrapper));
+		throw new RestClientException("Could not extract response: no suitable HttpMessageConverter found " +
+				"for response type [" + this.responseType + "] and content type [" + contentType + "]");
 	}
 
 	/**
 	 * Determine the Content-Type of the response based on the "Content-Type"
 	 * header or otherwise default to {@link MediaType#APPLICATION_OCTET_STREAM}.
+	 *
 	 * @param response the response
-	 * @return the MediaType, or "application/octet-stream"
+	 * @return the MediaType, possibly {@code null}.
 	 */
+	@Nullable
 	protected MediaType getContentType(ClientHttpResponse response) {
 		MediaType contentType = response.getHeaders().getContentType();
 		if (contentType == null) {
@@ -141,13 +141,4 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 		return contentType;
 	}
 
-	private static byte[] getResponseBody(ClientHttpResponse response) {
-		try {
-			return FileCopyUtils.copyToByteArray(response.getBody());
-		}
-		catch (IOException ex) {
-			// ignore
-		}
-		return new byte[0];
-	}
 }

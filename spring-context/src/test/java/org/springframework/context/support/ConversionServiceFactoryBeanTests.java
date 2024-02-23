@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.Converter;
@@ -41,10 +41,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Keith Donald
  * @author Juergen Hoeller
  */
-class ConversionServiceFactoryBeanTests {
+public class ConversionServiceFactoryBeanTests {
 
 	@Test
-	void createDefaultConversionService() {
+	public void createDefaultConversionService() {
 		ConversionServiceFactoryBean factory = new ConversionServiceFactoryBean();
 		factory.afterPropertiesSet();
 		ConversionService service = factory.getObject();
@@ -52,12 +52,9 @@ class ConversionServiceFactoryBeanTests {
 	}
 
 	@Test
-	@SuppressWarnings("Convert2Lambda")
-	void createDefaultConversionServiceWithSupplements() {
+	public void createDefaultConversionServiceWithSupplements() {
 		ConversionServiceFactoryBean factory = new ConversionServiceFactoryBean();
 		Set<Object> converters = new HashSet<>();
-		// The following String -> Foo Converter cannot be implemented as a lambda
-		// due to type erasure of the source and target types.
 		converters.add(new Converter<String, Foo>() {
 			@Override
 			public Foo convert(String source) {
@@ -67,7 +64,7 @@ class ConversionServiceFactoryBeanTests {
 		converters.add(new ConverterFactory<String, Bar>() {
 			@Override
 			public <T extends Bar> Converter<String, T> getConverter(Class<T> targetType) {
-				return new Converter<> () {
+				return new Converter<String, T> () {
 					@SuppressWarnings("unchecked")
 					@Override
 					public T convert(String source) {
@@ -97,52 +94,52 @@ class ConversionServiceFactoryBeanTests {
 	}
 
 	@Test
-	void createDefaultConversionServiceWithInvalidSupplements() {
+	public void createDefaultConversionServiceWithInvalidSupplements() {
 		ConversionServiceFactoryBean factory = new ConversionServiceFactoryBean();
 		Set<Object> converters = new HashSet<>();
 		converters.add("bogus");
 		factory.setConverters(converters);
-		assertThatIllegalArgumentException().isThrownBy(factory::afterPropertiesSet);
+		assertThatIllegalArgumentException().isThrownBy(
+				factory::afterPropertiesSet);
 	}
 
 	@Test
-	void conversionServiceInApplicationContext() {
+	public void conversionServiceInApplicationContext() {
 		doTestConversionServiceInApplicationContext("conversionService.xml", ClassPathResource.class);
 	}
 
 	@Test
-	void conversionServiceInApplicationContextWithResourceOverriding() {
+	public void conversionServiceInApplicationContextWithResourceOverriding() {
 		doTestConversionServiceInApplicationContext("conversionServiceWithResourceOverriding.xml", FileSystemResource.class);
 	}
 
 	private void doTestConversionServiceInApplicationContext(String fileName, Class<?> resourceClass) {
-		ConfigurableApplicationContext ctx = new ClassPathXmlApplicationContext(fileName, getClass());
+		ApplicationContext ctx = new ClassPathXmlApplicationContext(fileName, getClass());
 		ResourceTestBean tb = ctx.getBean("resourceTestBean", ResourceTestBean.class);
-		assertThat(tb.getResource()).isInstanceOf(resourceClass);
-		assertThat(tb.getResourceArray()).hasSize(1);
-		assertThat(tb.getResourceArray()[0]).isInstanceOf(resourceClass);
-		assertThat(tb.getResourceMap()).hasSize(1);
-		assertThat(tb.getResourceMap().get("key1")).isInstanceOf(resourceClass);
-		assertThat(tb.getResourceArrayMap()).hasSize(1);
-		assertThat(tb.getResourceArrayMap().get("key1")).isNotEmpty();
-		assertThat(tb.getResourceArrayMap().get("key1")[0]).isInstanceOf(resourceClass);
-		ctx.close();
+		assertThat(resourceClass.isInstance(tb.getResource())).isTrue();
+		assertThat(tb.getResourceArray().length > 0).isTrue();
+		assertThat(resourceClass.isInstance(tb.getResourceArray()[0])).isTrue();
+		assertThat(tb.getResourceMap().size() == 1).isTrue();
+		assertThat(resourceClass.isInstance(tb.getResourceMap().get("key1"))).isTrue();
+		assertThat(tb.getResourceArrayMap().size() == 1).isTrue();
+		assertThat(tb.getResourceArrayMap().get("key1").length > 0).isTrue();
+		assertThat(resourceClass.isInstance(tb.getResourceArrayMap().get("key1")[0])).isTrue();
 	}
 
 
-	static class Foo {
+	public static class Foo {
 	}
 
-	static class Bar {
+	public static class Bar {
 	}
 
-	static class Baz {
+	public static class Baz {
 	}
 
-	static class ComplexConstructorArgument {
+	public static class ComplexConstructorArgument {
 
-		ComplexConstructorArgument(Map<String, Class<?>> map) {
-			assertThat(map).isNotEmpty();
+		public ComplexConstructorArgument(Map<String, Class<?>> map) {
+			assertThat(!map.isEmpty()).isTrue();
 			assertThat(map.keySet().iterator().next()).isInstanceOf(String.class);
 			assertThat(map.values().iterator().next()).isInstanceOf(Class.class);
 		}

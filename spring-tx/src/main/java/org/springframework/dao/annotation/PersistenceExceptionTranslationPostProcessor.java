@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.dao.annotation;
 
-import java.lang.annotation.Annotation;
-
 import org.springframework.aop.framework.autoproxy.AbstractBeanFactoryAwareAdvisingPostProcessor;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.Assert;
+
+import java.lang.annotation.Annotation;
 
 /**
  * Bean post-processor that automatically applies persistence exception translation to any
@@ -45,11 +45,6 @@ import org.springframework.util.Assert;
  * translation is marking all affected beans (such as Repositories or DAOs)
  * with the {@code @Repository} annotation, along with defining this post-processor
  * as a bean in the application context.
- *
- * <p>As of 5.3, {@code PersistenceExceptionTranslator} beans will be sorted according
- * to Spring's dependency ordering rules: see {@link org.springframework.core.Ordered}
- * and {@link org.springframework.core.annotation.Order}. Note that such beans will
- * get retrieved from any scope, not just singleton scope, as of this 5.3 revision.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
@@ -82,11 +77,12 @@ public class PersistenceExceptionTranslationPostProcessor extends AbstractBeanFa
 	public void setBeanFactory(BeanFactory beanFactory) {
 		super.setBeanFactory(beanFactory);
 
-		if (!(beanFactory instanceof ListableBeanFactory lbf)) {
+		if (!(beanFactory instanceof ListableBeanFactory)) {
 			throw new IllegalArgumentException(
 					"Cannot use PersistenceExceptionTranslator autodetection without ListableBeanFactory");
 		}
-		this.advisor = new PersistenceExceptionTranslationAdvisor(lbf, this.repositoryAnnotationType);
+		this.advisor = new PersistenceExceptionTranslationAdvisor(
+				(ListableBeanFactory) beanFactory, this.repositoryAnnotationType);
 	}
 
 }

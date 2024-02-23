@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,10 @@
 
 package org.springframework.web.bind.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.List;
-
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.web.cors.CorsConfiguration;
+
+import java.lang.annotation.*;
 
 /**
  * Annotation for permitting cross-origin requests on specific handler classes
@@ -46,13 +41,29 @@ import org.springframework.web.cors.CorsConfiguration;
  * @author Russell Allen
  * @author Sebastien Deleuze
  * @author Sam Brannen
- * @author Ruslan Akhundov
  * @since 4.2
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface CrossOrigin {
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	String[] DEFAULT_ORIGINS = {"*"};
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	String[] DEFAULT_ALLOWED_HEADERS = {"*"};
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	boolean DEFAULT_ALLOW_CREDENTIALS = false;
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	long DEFAULT_MAX_AGE = 1800;
+
 
 	/**
 	 * Alias for {@link #origins}.
@@ -61,42 +72,48 @@ public @interface CrossOrigin {
 	String[] value() default {};
 
 	/**
-	 * A list of origins for which cross-origin requests are allowed. Please,
-	 * see {@link CorsConfiguration#setAllowedOrigins(List)} for details.
-	 * <p>By default all origins are allowed unless {@link #originPatterns} is
-	 * also set in which case {@code originPatterns} is used instead.
+	 * The list of allowed origins that be specific origins, e.g.
+	 * {@code "https://domain1.com"}, or {@code "*"} for all origins.
+	 * <p>A matched origin is listed in the {@code Access-Control-Allow-Origin}
+	 * response header of preflight actual CORS requests.
+	 * <p>By default all origins are allowed.
+	 * <p><strong>Note:</strong> CORS checks use values from "Forwarded"
+	 * (<a href="https://tools.ietf.org/html/rfc7239">RFC 7239</a>),
+	 * "X-Forwarded-Host", "X-Forwarded-Port", and "X-Forwarded-Proto" headers,
+	 * if present, in order to reflect the client-originated address.
+	 * Consider using the {@code ForwardedHeaderFilter} in order to choose from a
+	 * central place whether to extract and use, or to discard such headers.
+	 * See the Spring Framework reference for more on this filter.
+	 * @see #value
 	 */
 	@AliasFor("value")
 	String[] origins() default {};
 
 	/**
-	 * Alternative to {@link #origins} that supports more flexible origin
-	 * patterns. Please, see {@link CorsConfiguration#setAllowedOriginPatterns(List)}
-	 * for details.
-	 * <p>By default this is not set.
-	 * @since 5.3
-	 */
-	String[] originPatterns() default {};
-
-	/**
 	 * The list of request headers that are permitted in actual requests,
-	 * possibly {@code "*"} to allow all headers. Please, see
-	 * {@link CorsConfiguration#setAllowedHeaders(List)} for details.
+	 * possibly {@code "*"}  to allow all headers.
+	 * <p>Allowed headers are listed in the {@code Access-Control-Allow-Headers}
+	 * response header of preflight requests.
+	 * <p>A header name is not required to be listed if it is one of:
+	 * {@code Cache-Control}, {@code Content-Language}, {@code Expires},
+	 * {@code Last-Modified}, or {@code Pragma} as per the CORS spec.
 	 * <p>By default all requested headers are allowed.
 	 */
 	String[] allowedHeaders() default {};
 
 	/**
 	 * The List of response headers that the user-agent will allow the client
-	 * to access on an actual response, possibly {@code "*"} to expose all headers.
-	 * Please, see {@link CorsConfiguration#setExposedHeaders(List)} for details.
+	 * to access on an actual response, other than "simple" headers, i.e.
+	 * {@code Cache-Control}, {@code Content-Language}, {@code Content-Type},
+	 * {@code Expires}, {@code Last-Modified}, or {@code Pragma},
+	 * <p>Exposed headers are listed in the {@code Access-Control-Expose-Headers}
+	 * response header of actual CORS requests.
 	 * <p>By default no headers are listed as exposed.
 	 */
 	String[] exposedHeaders() default {};
 
 	/**
-	 * The list of supported HTTP request methods. Please, see
-	 * {@link CorsConfiguration#setAllowedMethods(List)} for details.
+	 * The list of supported HTTP request methods.
 	 * <p>By default the supported methods are the same as the ones to which a
 	 * controller method is mapped.
 	 */
@@ -104,8 +121,9 @@ public @interface CrossOrigin {
 
 	/**
 	 * Whether the browser should send credentials, such as cookies along with
-	 * cross domain requests, to the annotated endpoint. Please, see
-	 * {@link CorsConfiguration#setAllowCredentials(Boolean)} for details.
+	 * cross domain requests, to the annotated endpoint. The configured value is
+	 * set on the {@code Access-Control-Allow-Credentials} response header of
+	 * preflight requests.
 	 * <p><strong>NOTE:</strong> Be aware that this option establishes a high
 	 * level of trust with the configured domains and also increases the surface
 	 * attack of the web application by exposing sensitive user-specific
@@ -115,14 +133,6 @@ public @interface CrossOrigin {
 	 * credentials are therefore not allowed.
 	 */
 	String allowCredentials() default "";
-
-	/**
-	 * Whether private network access is supported. Please, see
-	 * {@link CorsConfiguration#setAllowPrivateNetwork(Boolean)} for details.
-	 * <p>By default this is not set (i.e. private network access is not supported).
-	 * @since 5.3.32
-	 */
-	String allowPrivateNetwork() default "";
 
 	/**
 	 * The maximum age (in seconds) of the cache duration for preflight responses.

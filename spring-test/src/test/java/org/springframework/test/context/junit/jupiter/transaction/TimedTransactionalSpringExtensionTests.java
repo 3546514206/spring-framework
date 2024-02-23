@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,10 @@
 
 package org.springframework.test.context.junit.jupiter.transaction;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.Events;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -36,10 +30,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
-import static org.junit.platform.testkit.engine.EventConditions.event;
-import static org.junit.platform.testkit.engine.EventConditions.finishedWithFailure;
-import static org.junit.platform.testkit.engine.EventConditions.test;
+import static org.junit.platform.testkit.engine.EventConditions.*;
 import static org.junit.platform.testkit.engine.TestExecutionResultConditions.instanceOf;
 import static org.junit.platform.testkit.engine.TestExecutionResultConditions.message;
 import static org.springframework.test.transaction.TransactionAssert.assertThatTransaction;
@@ -60,14 +56,14 @@ class TimedTransactionalSpringExtensionTests {
 		Events events = EngineTestKit.engine("junit-jupiter")
 				.selectors(selectClass(TestCase.class))
 				.execute()
-				.testEvents()
+				.tests()
 				.assertStatistics(stats -> stats.started(4).succeeded(2).failed(2));
 
 		events.failed().assertThatEvents().haveExactly(2,
-			event(test("WithExceededJUnitJupiterTimeout"),
-				finishedWithFailure(
-					instanceOf(TimeoutException.class),
-					message(msg -> msg.endsWith("timed out after 10 milliseconds")))));
+				event(test("WithExceededJUnitJupiterTimeout"),
+						finishedWithFailure(
+								instanceOf(TimeoutException.class),
+								message(msg -> msg.endsWith("timed out after 50 milliseconds")))));
 	}
 
 
@@ -83,10 +79,10 @@ class TimedTransactionalSpringExtensionTests {
 		}
 
 		@Test
-		@Timeout(value = 10, unit = TimeUnit.MILLISECONDS)
+		@Timeout(value = 50, unit = TimeUnit.MILLISECONDS)
 		void transactionalWithExceededJUnitJupiterTimeout() throws Exception {
 			assertThatTransaction().isActive();
-			Thread.sleep(200);
+			Thread.sleep(100);
 		}
 
 		@Test
@@ -97,11 +93,11 @@ class TimedTransactionalSpringExtensionTests {
 		}
 
 		@Test
-		@Timeout(value = 10, unit = TimeUnit.MILLISECONDS)
+		@Timeout(value = 50, unit = TimeUnit.MILLISECONDS)
 		@Transactional(propagation = Propagation.NOT_SUPPORTED)
 		void notTransactionalWithExceededJUnitJupiterTimeout() throws Exception {
 			assertThatTransaction().isNotActive();
-			Thread.sleep(200);
+			Thread.sleep(100);
 		}
 
 

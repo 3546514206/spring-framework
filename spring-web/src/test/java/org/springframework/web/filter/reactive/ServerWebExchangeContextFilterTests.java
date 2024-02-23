@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,39 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.filter.reactive;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.http.server.reactive.HttpHandler;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ServerWebExchangeContextFilter}.
- *
+ * Unit tests for {@link ServerWebExchangeContextFilter}.
  * @author Rossen Stoyanchev
  */
-class ServerWebExchangeContextFilterTests {
-
+public class ServerWebExchangeContextFilterTests {
 
 	@Test
-	void extractServerWebExchangeFromContext() {
+	public void extractServerWebExchangeFromContext() {
 		MyService service = new MyService();
 
-		WebHttpHandlerBuilder
+		HttpHandler httpHandler = WebHttpHandlerBuilder
 				.webHandler(exchange -> service.service().then())
 				.filter(new ServerWebExchangeContextFilter())
-				.build()
-				.handle(MockServerHttpRequest.get("/path").build(), new MockServerHttpResponse())
+				.build();
+
+		httpHandler.handle(MockServerHttpRequest.get("/path").build(), new MockServerHttpResponse())
 				.block(Duration.ofSeconds(5));
 
 		assertThat(service.getExchange()).isNotNull();
@@ -56,16 +54,16 @@ class ServerWebExchangeContextFilterTests {
 
 		private final AtomicReference<ServerWebExchange> exchangeRef = new AtomicReference<>();
 
+
 		public ServerWebExchange getExchange() {
 			return this.exchangeRef.get();
 		}
 
 		public Mono<String> service() {
-			return Mono.just("result")
-					.transformDeferredContextual((mono, contextView) -> {
-						ServerWebExchangeContextFilter.getExchange(contextView).ifPresent(exchangeRef::set);
-						return mono;
-					});
+			return Mono.just("result").subscriberContext(context -> {
+				ServerWebExchangeContextFilter.get(context).ifPresent(exchangeRef::set);
+				return context;
+			});
 		}
 	}
 

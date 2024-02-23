@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package org.springframework.cache.support;
 
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.lang.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
-import org.springframework.lang.Nullable;
 
 /**
  * A basic, no operation {@link CacheManager} implementation suitable
@@ -36,8 +36,8 @@ import org.springframework.lang.Nullable;
  *
  * @author Costin Leau
  * @author Stephane Nicoll
+ * @see CompositeCacheManager
  * @since 3.1
- * @see NoOpCache
  */
 public class NoOpCacheManager implements CacheManager {
 
@@ -55,11 +55,12 @@ public class NoOpCacheManager implements CacheManager {
 	public Cache getCache(String name) {
 		Cache cache = this.caches.get(name);
 		if (cache == null) {
-			this.caches.computeIfAbsent(name, NoOpCache::new);
+			this.caches.computeIfAbsent(name, key -> new NoOpCache(name));
 			synchronized (this.cacheNames) {
 				this.cacheNames.add(name);
 			}
 		}
+
 		return this.caches.get(name);
 	}
 

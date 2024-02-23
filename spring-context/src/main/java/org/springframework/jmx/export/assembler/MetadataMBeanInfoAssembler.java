@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,8 +118,8 @@ public class MetadataMBeanInfoAssembler extends AbstractReflectiveMBeanInfoAssem
 	}
 
 	/**
-	 * Used for auto-detection of beans. Checks to see if the bean's class has a
-	 * {@code ManagedResource} attribute. If so, it will add it to the list of included beans.
+	 * Used for autodetection of beans. Checks to see if the bean's class has a
+	 * {@code ManagedResource} attribute. If so it will add it list of included beans.
 	 * @param beanClass the class of the bean
 	 * @param beanName the name of the bean in the bean factory
 	 */
@@ -410,14 +410,14 @@ public class MetadataMBeanInfoAssembler extends AbstractReflectiveMBeanInfoAssem
 	/**
 	 * Determines which of two {@code int} values should be used as the value
 	 * for an attribute descriptor. In general, only the getter or the setter will
-	 * have a non-negative value, so we use that value. In the event that both values
+	 * be have a non-negative value so we use that value. In the event that both values
 	 * are non-negative, we use the greater of the two. This method can be used to
 	 * resolve any {@code int} valued descriptor where there are two possible values.
 	 * @param getter the int value associated with the getter for this attribute
 	 * @param setter the int associated with the setter for this attribute
 	 */
 	private int resolveIntDescriptor(int getter, int setter) {
-		return Math.max(getter, setter);
+		return (getter >= setter ? getter : setter);
 	}
 
 	/**

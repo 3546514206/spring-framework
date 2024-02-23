@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,28 @@
 
 package org.springframework.web.reactive.function.server;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.i18n.LocaleContext;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.codec.Hints;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.*;
+import org.springframework.http.codec.HttpMessageReader;
+import org.springframework.http.codec.multipart.Part;
+import org.springframework.http.server.RequestPath;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.lang.Nullable;
+import org.springframework.util.*;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebSession;
+import org.springframework.web.util.UriUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
@@ -28,55 +50,21 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.i18n.LocaleContext;
-import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.Hints;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.InvalidMediaTypeException;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.HttpMessageReader;
-import org.springframework.http.codec.multipart.Part;
-import org.springframework.http.server.RequestPath;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebSession;
-import org.springframework.web.util.UriUtils;
-
 /**
  * Default {@link ServerRequest.Builder} implementation.
  *
  * @author Arjen Poutsma
- * @author Sam Brannen
  * @since 5.1
  */
 class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 	private final List<HttpMessageReader<?>> messageReaders;
 
-	private final ServerWebExchange exchange;
+	private ServerWebExchange exchange;
 
-	private HttpMethod method;
+	private String methodName;
 
 	private URI uri;
-
-	@Nullable
-	private String contextPath;
 
 	private final HttpHeaders headers = new HttpHeaders();
 
@@ -87,23 +75,22 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	private Flux<DataBuffer> body = Flux.empty();
 
 
-	DefaultServerRequestBuilder(ServerRequest other) {
+	public DefaultServerRequestBuilder(ServerRequest other) {
 		Assert.notNull(other, "ServerRequest must not be null");
 		this.messageReaders = other.messageReaders();
 		this.exchange = other.exchange();
-		this.method = other.method();
+		this.methodName = other.methodName();
 		this.uri = other.uri();
-		this.contextPath = other.requestPath().contextPath().value();
-		this.headers.addAll(other.headers().asHttpHeaders());
-		this.cookies.addAll(other.cookies());
-		this.attributes.putAll(other.attributes());
+		headers(headers -> headers.addAll(other.headers().asHttpHeaders()));
+		cookies(cookies -> cookies.addAll(other.cookies()));
+		attributes(attributes -> attributes.putAll(other.attributes()));
 	}
 
 
 	@Override
 	public ServerRequest.Builder method(HttpMethod method) {
 		Assert.notNull(method, "HttpMethod must not be null");
-		this.method = method;
+		this.methodName = method.name();
 		return this;
 	}
 
@@ -115,14 +102,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	}
 
 	@Override
-	public ServerRequest.Builder contextPath(@Nullable String contextPath) {
-		this.contextPath = contextPath;
-		return this;
-	}
-
-	@Override
 	public ServerRequest.Builder header(String headerName, String... headerValues) {
-		Assert.notNull(headerName, "Header name must not be null");
 		for (String headerValue : headerValues) {
 			this.headers.add(headerName, headerValue);
 		}
@@ -131,14 +111,12 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 	@Override
 	public ServerRequest.Builder headers(Consumer<HttpHeaders> headersConsumer) {
-		Assert.notNull(headersConsumer, "Headers consumer must not be null");
 		headersConsumer.accept(this.headers);
 		return this;
 	}
 
 	@Override
 	public ServerRequest.Builder cookie(String name, String... values) {
-		Assert.notNull(name, "Cookie name must not be null");
 		for (String value : values) {
 			this.cookies.add(name, new HttpCookie(name, value));
 		}
@@ -147,7 +125,6 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 	@Override
 	public ServerRequest.Builder cookies(Consumer<MultiValueMap<String, HttpCookie>> cookiesConsumer) {
-		Assert.notNull(cookiesConsumer, "Cookies consumer must not be null");
 		cookiesConsumer.accept(this.cookies);
 		return this;
 	}
@@ -164,10 +141,11 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	public ServerRequest.Builder body(String body) {
 		Assert.notNull(body, "Body must not be null");
 		releaseBody();
+		DataBufferFactory dataBufferFactory = new DefaultDataBufferFactory();
 		this.body = Flux.just(body).
 				map(s -> {
 					byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-					return DefaultDataBufferFactory.sharedInstance.wrap(bytes);
+					return dataBufferFactory.wrap(bytes);
 				});
 		return this;
 	}
@@ -178,14 +156,12 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 	@Override
 	public ServerRequest.Builder attribute(String name, Object value) {
-		Assert.notNull(name, "Name must not be null");
 		this.attributes.put(name, value);
 		return this;
 	}
 
 	@Override
 	public ServerRequest.Builder attributes(Consumer<Map<String, Object>> attributesConsumer) {
-		Assert.notNull(attributesConsumer, "Attributes consumer must not be null");
 		attributesConsumer.accept(this.attributes);
 		return this;
 	}
@@ -193,9 +169,9 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 	@Override
 	public ServerRequest build() {
 		ServerHttpRequest serverHttpRequest = new BuiltServerHttpRequest(this.exchange.getRequest().getId(),
-				this.method, this.uri, this.contextPath, this.headers, this.cookies, this.body);
+				this.methodName, this.uri, this.headers, this.cookies, this.body);
 		ServerWebExchange exchange = new DelegatingServerWebExchange(
-				serverHttpRequest, this.attributes, this.exchange, this.messageReaders);
+				serverHttpRequest, this.exchange, this.messageReaders);
 		return new DefaultServerRequest(exchange, this.messageReaders);
 	}
 
@@ -206,7 +182,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 		private final String id;
 
-		private final HttpMethod method;
+		private final String method;
 
 		private final URI uri;
 
@@ -220,13 +196,13 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 		private final Flux<DataBuffer> body;
 
-		public BuiltServerHttpRequest(String id, HttpMethod method, URI uri, @Nullable String contextPath,
-				HttpHeaders headers, MultiValueMap<String, HttpCookie> cookies, Flux<DataBuffer> body) {
+		public BuiltServerHttpRequest(String id, String method, URI uri, HttpHeaders headers,
+				MultiValueMap<String, HttpCookie> cookies, Flux<DataBuffer> body) {
 
 			this.id = id;
 			this.method = method;
 			this.uri = uri;
-			this.path = RequestPath.parse(uri, contextPath);
+			this.path = RequestPath.parse(uri, null);
 			this.headers = HttpHeaders.readOnlyHttpHeaders(headers);
 			this.cookies = unmodifiableCopy(cookies);
 			this.queryParams = parseQueryParams(uri);
@@ -264,7 +240,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 		}
 
 		@Override
-		public HttpMethod getMethod() {
+		public String getMethodValue() {
 			return this.method;
 		}
 
@@ -316,19 +292,16 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 		private final ServerHttpRequest request;
 
-		private final Map<String, Object> attributes;
-
 		private final ServerWebExchange delegate;
 
 		private final Mono<MultiValueMap<String, String>> formDataMono;
 
 		private final Mono<MultiValueMap<String, Part>> multipartDataMono;
 
-		DelegatingServerWebExchange(ServerHttpRequest request, Map<String, Object> attributes,
-				ServerWebExchange delegate, List<HttpMessageReader<?>> messageReaders) {
+		public DelegatingServerWebExchange(
+				ServerHttpRequest request, ServerWebExchange delegate, List<HttpMessageReader<?>> messageReaders) {
 
 			this.request = request;
-			this.attributes = attributes;
 			this.delegate = delegate;
 			this.formDataMono = initFormData(request, messageReaders);
 			this.multipartDataMono = initMultipartData(request, messageReaders);
@@ -336,7 +309,7 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 
 		@SuppressWarnings("unchecked")
 		private static Mono<MultiValueMap<String, String>> initFormData(ServerHttpRequest request,
-				List<HttpMessageReader<?>> readers) {
+																		List<HttpMessageReader<?>> readers) {
 
 			try {
 				MediaType contentType = request.getHeaders().getContentType();
@@ -377,15 +350,9 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 			}
 			return EMPTY_MULTIPART_DATA;
 		}
-
 		@Override
 		public ServerHttpRequest getRequest() {
 			return this.request;
-		}
-
-		@Override
-		public Map<String, Object> getAttributes() {
-			return this.attributes;
 		}
 
 		@Override
@@ -403,6 +370,11 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 		@Override
 		public ServerHttpResponse getResponse() {
 			return this.delegate.getResponse();
+		}
+
+		@Override
+		public Map<String, Object> getAttributes() {
+			return this.delegate.getAttributes();
 		}
 
 		@Override
@@ -461,5 +433,4 @@ class DefaultServerRequestBuilder implements ServerRequest.Builder {
 			return this.delegate.getLogPrefix();
 		}
 	}
-
 }

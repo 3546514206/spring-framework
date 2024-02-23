@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.util.Optional;
 
 import reactor.core.publisher.Mono;
 import reactor.util.context.Context;
-import reactor.util.context.ContextView;
 
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -33,7 +32,7 @@ import org.springframework.web.server.WebFilterChain;
  * exchange without explicitly passing it to components that participate in
  * request processing.
  *
- * <p>The convenience method {@link #getExchange(ContextView)} looks up the exchange.
+ * <p>The convenience method {@link #get(Context)} looks up the exchange.
  *
  * @author Rossen Stoyanchev
  * @since 5.2
@@ -48,20 +47,19 @@ public class ServerWebExchangeContextFilter implements WebFilter {
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
 		return chain.filter(exchange)
-				.contextWrite(context -> context.put(EXCHANGE_CONTEXT_ATTRIBUTE, exchange));
+				.subscriberContext(cxt -> cxt.put(EXCHANGE_CONTEXT_ATTRIBUTE, exchange));
 	}
 
 
 	/**
-	 * Access the {@link ServerWebExchange} from a Reactor {@link ContextView},
-	 * if available, which is generally the case when
-	 * {@link ServerWebExchangeContextFilter} is present in the filter chain.
-	 * @param contextView the contextView to get the exchange from
-	 * @return an {@link Optional} with the exchange if found
-	 * @since 6.0.6
+	 * Access the {@link ServerWebExchange} from the Reactor Context, if available,
+	 * which is if {@link ServerWebExchangeContextFilter} is configured for use
+	 * and the give context was obtained from a request processing chain.
+	 * @param context the context in which to access the exchange
+	 * @return the exchange
 	 */
-	public static Optional<ServerWebExchange> getExchange(ContextView contextView) {
-		return contextView.getOrEmpty(EXCHANGE_CONTEXT_ATTRIBUTE);
+	public static Optional<ServerWebExchange> get(Context context) {
+		return context.getOrEmpty(EXCHANGE_CONTEXT_ATTRIBUTE);
 	}
 
 }

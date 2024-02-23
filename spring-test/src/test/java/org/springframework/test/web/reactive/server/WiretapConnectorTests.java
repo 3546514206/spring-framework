@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import static java.time.Duration.ofMillis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link WiretapConnector}.
+ * Unit tests for {@link WiretapConnector}.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -57,7 +57,8 @@ public class WiretapConnectorTests {
 		ExchangeFunction function = ExchangeFunctions.create(wiretapConnector);
 		function.exchange(clientRequest).block(ofMillis(0));
 
-		ExchangeResult result = wiretapConnector.getExchangeResult("1", null, Duration.ZERO);
+		WiretapConnector.Info actual = wiretapConnector.claimRequest("1");
+		ExchangeResult result = actual.createExchangeResult(Duration.ZERO, null);
 		assertThat(result.getMethod()).isEqualTo(HttpMethod.GET);
 		assertThat(result.getUrl().toString()).isEqualTo("/test");
 	}

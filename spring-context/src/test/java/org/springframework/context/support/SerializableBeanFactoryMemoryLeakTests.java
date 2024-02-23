@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  *
  * @author Chris Beams
  */
-class SerializableBeanFactoryMemoryLeakTests {
+public class SerializableBeanFactoryMemoryLeakTests {
 
 	/**
 	 * Defensively zero-out static factory count - other tests
@@ -44,29 +44,29 @@ class SerializableBeanFactoryMemoryLeakTests {
 	 */
 	@BeforeAll
 	@AfterAll
-	static void zeroOutFactoryCount() throws Exception {
+	public static void zeroOutFactoryCount() throws Exception {
 		getSerializableFactoryMap().clear();
 	}
 
 	@Test
-	void genericContext() throws Exception {
+	public void genericContext() throws Exception {
 		assertFactoryCountThroughoutLifecycle(new GenericApplicationContext());
 	}
 
 	@Test
-	void abstractRefreshableContext() throws Exception {
+	public void abstractRefreshableContext() throws Exception {
 		assertFactoryCountThroughoutLifecycle(new ClassPathXmlApplicationContext());
 	}
 
 	@Test
-	void genericContextWithMisconfiguredBean() throws Exception {
+	public void genericContextWithMisconfiguredBean() throws Exception {
 		GenericApplicationContext ctx = new GenericApplicationContext();
 		registerMisconfiguredBeanDefinition(ctx);
 		assertFactoryCountThroughoutLifecycle(ctx);
 	}
 
 	@Test
-	void abstractRefreshableContextWithMisconfiguredBean() throws Exception {
+	public void abstractRefreshableContextWithMisconfiguredBean() throws Exception {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext() {
 			@Override
 			protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  *
  * @author Rossen Stoyanchev
  */
-class BeanCreatingHandlerProviderTests {
+public class BeanCreatingHandlerProviderTests {
 
 
 	@Test
-	void getHandlerSimpleInstantiation() {
+	public void getHandlerSimpleInstantiation() {
 
 		BeanCreatingHandlerProvider<SimpleEchoHandler> provider =
 				new BeanCreatingHandlerProvider<>(SimpleEchoHandler.class);
@@ -46,8 +46,9 @@ class BeanCreatingHandlerProviderTests {
 	}
 
 	@Test
-	void getHandlerWithBeanFactory() {
+	public void getHandlerWithBeanFactory() {
 
+		@SuppressWarnings("resource")
 		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
 
 		BeanCreatingHandlerProvider<EchoHandler> provider =
@@ -58,7 +59,7 @@ class BeanCreatingHandlerProviderTests {
 	}
 
 	@Test
-	void getHandlerNoBeanFactory() {
+	public void getHandlerNoBeanFactory() {
 
 		BeanCreatingHandlerProvider<EchoHandler> provider =
 				new BeanCreatingHandlerProvider<>(EchoHandler.class);
@@ -72,7 +73,7 @@ class BeanCreatingHandlerProviderTests {
 	static class Config {
 
 		@Bean
-		EchoService echoService() {
+		public EchoService echoService() {
 			return new EchoService();
 		}
 	}
@@ -91,6 +92,6 @@ class BeanCreatingHandlerProviderTests {
 		}
 	}
 
-	private static class EchoService { }
+	private static class EchoService {	}
 
 }

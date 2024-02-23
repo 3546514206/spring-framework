@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,41 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.reactive.socket;
+
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.Netty5DataBufferFactory;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.ObjectUtils;
-
 /**
  * Representation of a WebSocket message.
- *
- * <p>See static factory methods in {@link WebSocketSession} for creating messages with
- * the {@link org.springframework.core.io.buffer.DataBufferFactory} for the session.
+ * <p>See static factory methods in {@link WebSocketSession} for creating messages
+ * with the {@link org.springframework.core.io.buffer.DataBufferFactory
+ * DataBufferFactory} for the session.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
  */
 public class WebSocketMessage {
 
-	private static final boolean reactorNetty2Present = ClassUtils.isPresent(
-			"io.netty5.handler.codec.http.websocketx.WebSocketFrame", WebSocketMessage.class.getClassLoader());
-
-
 	private final Type type;
 
 	private final DataBuffer payload;
-
-	@Nullable
-	private final Object nativeMessage;
 
 
 	/**
@@ -57,24 +47,12 @@ public class WebSocketMessage {
 	 * then invoke this constructor.
 	 */
 	public WebSocketMessage(Type type, DataBuffer payload) {
-		this(type, payload, null);
-	}
-
-	/**
-	 * Constructor for an inbound message with access to the underlying message.
-	 * @param type the type of WebSocket message
-	 * @param payload the message content
-	 * @param nativeMessage the message from the API of the underlying WebSocket
-	 * library, if applicable.
-	 * @since 5.3
-	 */
-	public WebSocketMessage(Type type, DataBuffer payload, @Nullable Object nativeMessage) {
 		Assert.notNull(type, "'type' must not be null");
 		Assert.notNull(payload, "'payload' must not be null");
 		this.type = type;
 		this.payload = payload;
-		this.nativeMessage = nativeMessage;
 	}
+
 
 	/**
 	 * Return the message type (text, binary, etc).
@@ -88,21 +66,6 @@ public class WebSocketMessage {
 	 */
 	public DataBuffer getPayload() {
 		return this.payload;
-	}
-
-	/**
-	 * Return the message from the API of the underlying WebSocket library. This
-	 * is applicable for inbound messages only and when the underlying message
-	 * has additional fields other than the content. Currently this is the case
-	 * for Reactor Netty only.
-	 * @param <T> the type to cast the underlying message to
-	 * @return the underlying message, or {@code null}
-	 * @since 5.3
-	 */
-	@Nullable
-	@SuppressWarnings("unchecked")
-	public <T> T getNativeMessage() {
-		return (T) this.nativeMessage;
 	}
 
 	/**
@@ -121,7 +84,9 @@ public class WebSocketMessage {
 	 * @since 5.0.5
 	 */
 	public String getPayloadAsText(Charset charset) {
-		return this.payload.toString(charset);
+		byte[] bytes = new byte[this.payload.readableByteCount()];
+		this.payload.read(bytes);
+		return new String(bytes, charset);
 	}
 
 	/**
@@ -134,9 +99,6 @@ public class WebSocketMessage {
 	 * @see DataBufferUtils#retain(DataBuffer)
 	 */
 	public WebSocketMessage retain() {
-		if (reactorNetty2Present) {
-			return ReactorNetty2Helper.retain(this);
-		}
 		DataBufferUtils.retain(this.payload);
 		return this;
 	}
@@ -157,9 +119,15 @@ public class WebSocketMessage {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof WebSocketMessage that &&
-				this.type.equals(that.type) &&
-				ObjectUtils.nullSafeEquals(this.payload, that.payload)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof WebSocketMessage)) {
+			return false;
+		}
+		WebSocketMessage otherMessage = (WebSocketMessage) other;
+		return (this.type.equals(otherMessage.type) &&
+				ObjectUtils.nullSafeEquals(this.payload, otherMessage.payload));
 	}
 
 	@Override
@@ -171,7 +139,6 @@ public class WebSocketMessage {
 	public String toString() {
 		return "WebSocket " + this.type.name() + " message (" + this.payload.readableByteCount() + " bytes)";
 	}
-
 
 	/**
 	 * WebSocket message types.
@@ -192,23 +159,7 @@ public class WebSocketMessage {
 		/**
 		 * WebSocket pong.
 		 */
-		PONG
-	}
-
-
-	private static class ReactorNetty2Helper {
-
-		static WebSocketMessage retain(WebSocketMessage message) {
-			if (message.nativeMessage instanceof io.netty5.handler.codec.http.websocketx.WebSocketFrame netty5Frame) {
-				io.netty5.handler.codec.http.websocketx.WebSocketFrame frame = netty5Frame.send().receive();
-				DataBuffer payload = ((Netty5DataBufferFactory) message.payload.factory()).wrap(frame.binaryData());
-				return new WebSocketMessage(message.type, payload, frame);
-			}
-			else {
-				DataBufferUtils.retain(message.payload);
-				return message;
-			}
-		}
+		PONG;
 	}
 
 }

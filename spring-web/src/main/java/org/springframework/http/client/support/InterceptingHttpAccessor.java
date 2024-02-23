@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.http.client.support;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.InterceptingClientHttpRequestFactory;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base class for {@link org.springframework.web.client.RestTemplate}
@@ -54,15 +53,10 @@ public abstract class InterceptingHttpAccessor extends HttpAccessor {
 	 * Set the request interceptors that this accessor should use.
 	 * <p>The interceptors will get immediately sorted according to their
 	 * {@linkplain AnnotationAwareOrderComparator#sort(List) order}.
-	 * <p><strong>Note:</strong> This method does not support concurrent changes,
-	 * and in most cases should not be called after initialization on startup.
-	 * See also related note on {@link org.springframework.web.client.RestTemplate}
-	 * regarding concurrent configuration changes.
 	 * @see #getRequestFactory()
 	 * @see AnnotationAwareOrderComparator
 	 */
 	public void setInterceptors(List<ClientHttpRequestInterceptor> interceptors) {
-		Assert.noNullElements(interceptors, "'interceptors' must not contain null elements");
 		// Take getInterceptors() List as-is when passed in here
 		if (this.interceptors != interceptors) {
 			this.interceptors.clear();
@@ -82,6 +76,9 @@ public abstract class InterceptingHttpAccessor extends HttpAccessor {
 		return this.interceptors;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void setRequestFactory(ClientHttpRequestFactory requestFactory) {
 		super.setRequestFactory(requestFactory);

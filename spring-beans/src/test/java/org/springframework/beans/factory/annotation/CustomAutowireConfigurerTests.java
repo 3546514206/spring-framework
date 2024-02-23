@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.beans.factory.annotation;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.beans.factory.support.AutowireCandidateResolver;
@@ -25,19 +24,19 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
- * Tests for {@link CustomAutowireConfigurer}.
+ * Unit tests for {@link CustomAutowireConfigurer}.
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class CustomAutowireConfigurerTests {
+public class CustomAutowireConfigurerTests {
 
 	@Test
-	void testCustomResolver() {
+	public void testCustomResolver() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				qualifiedResource(CustomAutowireConfigurerTests.class, "context.xml"));

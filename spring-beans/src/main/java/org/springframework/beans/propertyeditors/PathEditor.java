@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,11 @@
 
 package org.springframework.beans.propertyeditors;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceEditor;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.util.Assert;
+
 import java.beans.PropertyEditorSupport;
 import java.io.IOException;
 import java.net.URI;
@@ -23,11 +28,6 @@ import java.net.URISyntaxException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceEditor;
-import org.springframework.util.Assert;
-import org.springframework.util.ResourceUtils;
 
 /**
  * Editor for {@code java.nio.file.Path}, to directly populate a Path
@@ -74,26 +74,19 @@ public class PathEditor extends PropertyEditorSupport {
 
 	@Override
 	public void setAsText(String text) throws IllegalArgumentException {
-		boolean nioPathCandidate = !text.startsWith(ResourceUtils.CLASSPATH_URL_PREFIX);
+		boolean nioPathCandidate = !text.startsWith(ResourceLoader.CLASSPATH_URL_PREFIX);
 		if (nioPathCandidate && !text.startsWith("/")) {
 			try {
-				URI uri = ResourceUtils.toURI(text);
-				String scheme = uri.getScheme();
-				if (scheme != null) {
-					// No NIO candidate except for "C:" style drive letters
-					nioPathCandidate = (scheme.length() == 1);
+				URI uri = new URI(text);
+				if (uri.getScheme() != null) {
+					nioPathCandidate = false;
 					// Let's try NIO file system providers via Paths.get(URI)
 					setValue(Paths.get(uri).normalize());
 					return;
 				}
-			}
-			catch (URISyntaxException ex) {
-				// Not a valid URI; potentially a Windows-style path after
-				// a file prefix (let's try as Spring resource location)
-				nioPathCandidate = !text.startsWith(ResourceUtils.FILE_URL_PREFIX);
-			}
-			catch (FileSystemNotFoundException ex) {
-				// URI scheme not registered for NIO (let's try URL
+			} catch (URISyntaxException | FileSystemNotFoundException ex) {
+				// Not a valid URI (let's try as Spring resource location),
+				// or a URI scheme not registered for NIO (let's try URL
 				// protocol handlers via Spring's resource mechanism).
 			}
 		}
@@ -102,17 +95,13 @@ public class PathEditor extends PropertyEditorSupport {
 		Resource resource = (Resource) this.resourceEditor.getValue();
 		if (resource == null) {
 			setValue(null);
-		}
-		else if (nioPathCandidate && !resource.exists()) {
+		} else if (!resource.exists() && nioPathCandidate) {
 			setValue(Paths.get(text).normalize());
-		}
-		else {
+		} else {
 			try {
 				setValue(resource.getFile().toPath());
-			}
-			catch (IOException ex) {
-				throw new IllegalArgumentException(
-						"Could not retrieve file for " + resource + ": " + ex.getMessage());
+			} catch (IOException ex) {
+				throw new IllegalArgumentException("Failed to retrieve file for " + resource, ex);
 			}
 		}
 	}

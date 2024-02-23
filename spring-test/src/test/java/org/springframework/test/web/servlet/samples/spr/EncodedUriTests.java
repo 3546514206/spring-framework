@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,24 @@
 
 package org.springframework.test.web.servlet.samples.spr;
 
+
 import java.net.URI;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
-import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.ui.Model;
@@ -40,7 +46,6 @@ import org.springframework.web.servlet.config.annotation.ViewResolverRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UrlPathHelper;
 
 import static org.hamcrest.core.Is.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -53,18 +58,23 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
  *
  * @author Sebastien Deleuze
  */
-@SpringJUnitWebConfig
+@ExtendWith(SpringExtension.class)
+@WebAppConfiguration
+@ContextConfiguration
 public class EncodedUriTests {
 
-	private final MockMvc mockMvc;
+	@Autowired
+	private WebApplicationContext wac;
 
-	EncodedUriTests(WebApplicationContext wac) {
-		this.mockMvc = webAppContextSetup(wac).build();
+	private MockMvc mockMvc;
+
+	@BeforeEach
+	public void setup() {
+		this.mockMvc = webAppContextSetup(this.wac).build();
 	}
 
-
 	@Test
-	void test() throws Exception {
+	public void test() throws Exception {
 		String id = "a/b";
 		URI url = UriComponentsBuilder.fromUriString("/circuit").pathSegment(id).build().encode().toUri();
 		ResultActions result = mockMvc.perform(get(url));
@@ -72,17 +82,17 @@ public class EncodedUriTests {
 	}
 
 
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	@EnableWebMvc
 	static class WebConfig implements WebMvcConfigurer {
 
 		@Bean
-		MyController myController() {
+		public MyController myController() {
 			return new MyController();
 		}
 
 		@Bean
-		HandlerMappingConfigurer myHandlerMappingConfigurer() {
+		public HandlerMappingConfigurer myHandlerMappingConfigurer() {
 			return new HandlerMappingConfigurer();
 		}
 
@@ -93,25 +103,25 @@ public class EncodedUriTests {
 	}
 
 	@Controller
-	static class MyController {
+	private static class MyController {
 
 		@RequestMapping(value = "/circuit/{id}", method = RequestMethod.GET)
-		String getCircuit(@PathVariable String id, Model model) {
+		public String getCircuit(@PathVariable String id, Model model) {
 			model.addAttribute("receivedId", id);
 			return "result";
 		}
 	}
 
 	@Component
-	static class HandlerMappingConfigurer implements BeanPostProcessor, PriorityOrdered {
+	private static class HandlerMappingConfigurer implements BeanPostProcessor, PriorityOrdered {
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-			if (bean instanceof RequestMappingHandlerMapping requestMappingHandlerMapping) {
+			if (bean instanceof RequestMappingHandlerMapping) {
+				RequestMappingHandlerMapping requestMappingHandlerMapping = (RequestMappingHandlerMapping) bean;
+
 				// URL decode after request mapping, not before.
-				UrlPathHelper pathHelper = new UrlPathHelper();
-				pathHelper.setUrlDecode(false);
-				requestMappingHandlerMapping.setUrlPathHelper(pathHelper);
+				requestMappingHandlerMapping.setUrlDecode(false);
 			}
 			return bean;
 		}

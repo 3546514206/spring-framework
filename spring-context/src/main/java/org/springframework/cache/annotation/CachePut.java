@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,9 @@
 
 package org.springframework.cache.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.springframework.aot.hint.annotation.Reflective;
 import org.springframework.core.annotation.AliasFor;
+
+import java.lang.annotation.*;
 
 /**
  * Annotation indicating that a method (or all methods on a class) triggers a
@@ -32,8 +26,7 @@ import org.springframework.core.annotation.AliasFor;
  *
  * <p>In contrast to the {@link Cacheable @Cacheable} annotation, this annotation
  * does not cause the advised method to be skipped. Rather, it always causes the
- * method to be invoked and its result to be stored in the associated cache if the
- * {@link #condition()} and {@link #unless()} expressions match accordingly. Note
+ * method to be invoked and its result to be stored in the associated cache. Note
  * that Java8's {@code Optional} return types are automatically handled and its
  * content is stored in the cache if present.
  *
@@ -51,7 +44,6 @@ import org.springframework.core.annotation.AliasFor;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Reflective
 public @interface CachePut {
 
 	/**
@@ -120,17 +112,11 @@ public @interface CachePut {
 
 	/**
 	 * Spring Expression Language (SpEL) expression used for making the cache
-	 * put operation conditional. Update the cache if the condition evaluates to
-	 * {@code true}.
-	 * <p>This expression is evaluated after the method has been called due to the
-	 * nature of the put operation and can therefore refer to the {@code result}.
+	 * put operation conditional.
 	 * <p>Default is {@code ""}, meaning the method result is always cached.
 	 * <p>The SpEL expression evaluates against a dedicated context that provides the
 	 * following meta-data:
 	 * <ul>
-	 * <li>{@code #result} for a reference to the result of the method invocation. For
-	 * supported wrappers such as {@code Optional}, {@code #result} refers to the actual
-	 * object, not the wrapper</li>
 	 * <li>{@code #root.method}, {@code #root.target}, and {@code #root.caches} for
 	 * references to the {@link java.lang.reflect.Method method}, target object, and
 	 * affected cache(s) respectively.</li>
@@ -145,7 +131,8 @@ public @interface CachePut {
 
 	/**
 	 * Spring Expression Language (SpEL) expression used to veto the cache put operation.
-	 * Veto updating the cache if the condition evaluates to {@code true}.
+	 * <p>Unlike {@link #condition}, this expression is evaluated after the method
+	 * has been called and can therefore refer to the {@code result}.
 	 * <p>Default is {@code ""}, meaning that caching is never vetoed.
 	 * <p>The SpEL expression evaluates against a dedicated context that provides the
 	 * following meta-data:

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,6 @@ abstract class DatabasePopulatorConfigUtils {
 		}
 	}
 
-	@Nullable
 	private static BeanDefinition createDatabasePopulator(Element element, List<Element> scripts, String execution) {
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(CompositeDatabasePopulator.class);
 
@@ -81,12 +80,8 @@ abstract class DatabasePopulatorConfigUtils {
 			}
 			delegates.add(delegate.getBeanDefinition());
 		}
-
-		if (delegates.isEmpty()) {
-			return null;
-		}
-
 		builder.addPropertyValue("populators", delegates);
+
 		return builder.getBeanDefinition();
 	}
 

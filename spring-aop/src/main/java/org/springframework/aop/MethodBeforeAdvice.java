@@ -16,9 +16,9 @@
 
 package org.springframework.aop;
 
-import java.lang.reflect.Method;
-
 import org.springframework.lang.Nullable;
+
+import java.lang.reflect.Method;
 
 /**
  * Advice invoked before a method is invoked. Such advices cannot
@@ -28,17 +28,23 @@ import org.springframework.lang.Nullable;
  * @see AfterReturningAdvice
  * @see ThrowsAdvice
  */
+
+/**
+ * 在 BeforeAdvice 接口的继承体系中，定义了为了增强目标方法设置的前置增强接口
+ * MethodBeforeAdvice ，使用这个增强接口需要实现一个回调函数 before
+ */
 public interface MethodBeforeAdvice extends BeforeAdvice {
 
 	/**
 	 * Callback before a given method is invoked.
-	 * @param method the method being invoked
-	 * @param args the arguments to the method
-	 * @param target the target of the method invocation. May be {@code null}.
+	 *
+	 * @param method method being invoked
+	 * @param args   arguments to the method
+	 * @param target target of the method invocation. May be {@code null}.
 	 * @throws Throwable if this object wishes to abort the call.
-	 * Any exception thrown will be returned to the caller if it's
-	 * allowed by the method signature. Otherwise the exception
-	 * will be wrapped as a runtime exception.
+	 *                   Any exception thrown will be returned to the caller if it's
+	 *                   allowed by the method signature. Otherwise the exception
+	 *                   will be wrapped as a runtime exception.
 	 */
 	void before(Method method, Object[] args, @Nullable Object target) throws Throwable;
 

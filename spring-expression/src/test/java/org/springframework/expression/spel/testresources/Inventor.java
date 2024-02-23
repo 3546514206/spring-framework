@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,13 @@
 
 package org.springframework.expression.spel.testresources;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import org.springframework.util.ObjectUtils;
+
+import java.util.*;
 
 ///CLOVER:OFF
 @SuppressWarnings("unused")
 public class Inventor {
-
 	private String name;
 	public String _name;
 	public String _name_;
@@ -109,7 +101,7 @@ public class Inventor {
 		return inventions;
 	}
 
-	public void setInventions(String... inventions) {
+	public void setInventions(String[] inventions) {
 		this.inventions = inventions;
 	}
 
@@ -136,10 +128,6 @@ public class Inventor {
 
 	public String throwException(PlaceOfBirth pob) {
 		return pob.getCity();
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public String getName() {
@@ -197,30 +185,20 @@ public class Inventor {
 		return a + b + c;
 	}
 
-	public String aVarargsMethod(String... strings) {
-		return Arrays.toString(strings);
+	public int aVarargsMethod(String... strings) {
+		if (strings == null)
+			return 0;
+		return strings.length;
 	}
 
-	public String aVarargsMethod2(int i, String... strings) {
-		return i + "-" + Arrays.toString(strings);
-	}
-
-	@SuppressWarnings("unchecked")
-	public String optionalVarargsMethod(Optional<String>... values) {
-		return Arrays.toString(values);
-	}
-
-	public String aVarargsMethod3(String str1, String... strings) {
-		if (ObjectUtils.isEmpty(strings)) {
-			return str1;
-		}
-		return str1 + "-" + String.join("-", strings);
+	public int aVarargsMethod2(int i, String... strings) {
+		if (strings == null)
+			return i;
+		return strings.length + i;
 	}
 
 	public Inventor(String... strings) {
-		if (strings.length > 0) {
-			this.name = strings[0];
-		}
+
 	}
 
 	public boolean getSomeProperty() {

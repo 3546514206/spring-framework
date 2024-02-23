@@ -16,12 +16,11 @@
 
 package org.springframework.aop.support;
 
-import java.io.Serializable;
-
 import org.aopalliance.aop.Advice;
-
 import org.springframework.aop.Pointcut;
 import org.springframework.lang.Nullable;
+
+import java.io.Serializable;
 
 /**
  * Convenient Pointcut-driven Advisor implementation.
@@ -36,14 +35,24 @@ import org.springframework.lang.Nullable;
  * @see #setAdvice
  */
 @SuppressWarnings("serial")
+/**
+ *
+ * DefaultPointcutAdvisor 有两个属性，pointcut 和  advice
+ * @see org.springframework.aop.support.AbstractGenericPointcutAdvisor
+ *
+ *
+ * @see org.springframework.aop.Advisor
+ *
+ */
 public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor implements Serializable {
 
+	// pointcut 被定义为Pointcut.TRUE   ，继续跟踪可以发现 是 TruePointcut 的一个实例
 	private Pointcut pointcut = Pointcut.TRUE;
 
 
 	/**
 	 * Create an empty DefaultPointcutAdvisor.
-	 * <p>Advice must be set before using setter methods.
+	 * <p>Advice must be set before use using setter methods.
 	 * Pointcut will normally be set also, but defaults to {@code Pointcut.TRUE}.
 	 */
 	public DefaultPointcutAdvisor() {
@@ -52,6 +61,7 @@ public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor imple
 	/**
 	 * Create a DefaultPointcutAdvisor that matches all methods.
 	 * <p>{@code Pointcut.TRUE} will be used as Pointcut.
+	 *
 	 * @param advice the Advice to use
 	 */
 	public DefaultPointcutAdvisor(Advice advice) {
@@ -60,22 +70,13 @@ public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor imple
 
 	/**
 	 * Create a DefaultPointcutAdvisor, specifying Pointcut and Advice.
+	 *
 	 * @param pointcut the Pointcut targeting the Advice
-	 * @param advice the Advice to run when Pointcut matches
+	 * @param advice   the Advice to run when Pointcut matches
 	 */
 	public DefaultPointcutAdvisor(Pointcut pointcut, Advice advice) {
 		this.pointcut = pointcut;
 		setAdvice(advice);
-	}
-
-
-	/**
-	 * Specify the pointcut targeting the advice.
-	 * <p>Default is {@code Pointcut.TRUE}.
-	 * @see #setAdvice
-	 */
-	public void setPointcut(@Nullable Pointcut pointcut) {
-		this.pointcut = (pointcut != null ? pointcut : Pointcut.TRUE);
 	}
 
 	@Override
@@ -83,6 +84,15 @@ public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor imple
 		return this.pointcut;
 	}
 
+	/**
+	 * Specify the pointcut targeting the advice.
+	 * <p>Default is {@code Pointcut.TRUE}.
+	 *
+	 * @see #setAdvice
+	 */
+	public void setPointcut(@Nullable Pointcut pointcut) {
+		this.pointcut = (pointcut != null ? pointcut : Pointcut.TRUE);
+	}
 
 	@Override
 	public String toString() {

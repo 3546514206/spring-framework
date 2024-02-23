@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
+import reactor.core.publisher.MonoProcessor;
 import reactor.util.concurrent.Queues;
 
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -35,18 +35,17 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.reactive.socket.CloseStatus;
 import org.springframework.web.reactive.socket.HandshakeInfo;
-import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketMessage;
 import org.springframework.web.reactive.socket.WebSocketMessage.Type;
 import org.springframework.web.reactive.socket.WebSocketSession;
 
 /**
  * Base class for {@link WebSocketSession} implementations that bridge between
- * event-listener WebSocket APIs (e.g. Jakarta WebSocket API (JSR-356), Jetty,
+ * event-listener WebSocket APIs (e.g. Java WebSocket API JSR-356, Jetty,
  * Undertow) and Reactive Streams.
  *
- * <p>Also implements {@code Subscriber<Void>} so it can be used to subscribe to
- * the completion of {@link WebSocketHandler#handle(WebSocketSession)}.
+ * <p>Also an implementation of {@code Subscriber&lt;Void&gt;} so it can be used as
+ * the completion subscriber for session handling
  *
  * @author Violeta Georgieva
  * @author Rossen Stoyanchev
@@ -64,7 +63,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 
 	@Nullable
-	private final Sinks.Empty<Void> handlerCompletionSink;
+	private final MonoProcessor<Void> completionMono;
 
 	private final WebSocketReceivePublisher receivePublisher;
 
@@ -73,34 +72,30 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 	private final AtomicBoolean sendCalled = new AtomicBoolean();
 
-	private final Sinks.One<CloseStatus> closeStatusSink = Sinks.one();
-
 
 	/**
 	 * Base constructor.
  	 * @param delegate the native WebSocket session, channel, or connection
 	 * @param id the session id
-	 * @param info the handshake info
+	 * @param handshakeInfo the handshake info
 	 * @param bufferFactory the DataBuffer factor for the current connection
 	 */
 	public AbstractListenerWebSocketSession(
-			T delegate, String id, HandshakeInfo info, DataBufferFactory bufferFactory) {
+			T delegate, String id, HandshakeInfo handshakeInfo, DataBufferFactory bufferFactory) {
 
-		this(delegate, id, info, bufferFactory, null);
+		this(delegate, id, handshakeInfo, bufferFactory, null);
 	}
 
 	/**
-	 * Alternative constructor with completion sink to use to signal when the
-	 * handling of the session is complete, with success or error.
-	 * <p>Primarily for use with {@code WebSocketClient} to be able to
-	 * communicate the end of handling.
+	 * Alternative constructor with completion {@code Mono&lt;Void&gt;} to propagate
+	 * the session completion (success or error) (for client-side use).
 	 */
 	public AbstractListenerWebSocketSession(T delegate, String id, HandshakeInfo info,
-			DataBufferFactory bufferFactory, @Nullable Sinks.Empty<Void> handlerCompletionSink) {
+			DataBufferFactory bufferFactory, @Nullable MonoProcessor<Void> completionMono) {
 
 		super(delegate, id, info, bufferFactory);
 		this.receivePublisher = new WebSocketReceivePublisher();
-		this.handlerCompletionSink = handlerCompletionSink;
+		this.completionMono = completionMono;
 	}
 
 
@@ -112,8 +107,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 	@Override
 	public Flux<WebSocketMessage> receive() {
-		return (canSuspendReceiving() ?
-				Flux.from(this.receivePublisher) :
+		return (canSuspendReceiving() ? Flux.from(this.receivePublisher) :
 				Flux.from(this.receivePublisher).onBackpressureBuffer(RECEIVE_BUFFER_SIZE));
 	}
 
@@ -130,11 +124,6 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 		else {
 			return Mono.error(new IllegalStateException("send() has already been called"));
 		}
-	}
-
-	@Override
-	public Mono<CloseStatus> closeStatus() {
-		return this.closeStatusSink.asMono();
 	}
 
 	/**
@@ -179,10 +168,8 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 		this.receivePublisher.handleMessage(message);
 	}
 
-	/** Handle an error callback from the WebSocket engine. */
+	/** Handle an error callback from the WebSocketHandler adapter. */
 	void handleError(Throwable ex) {
-		// Ignore result: can't overflow, ok if not first or no one listens
-		this.closeStatusSink.tryEmitEmpty();
 		this.receivePublisher.onError(ex);
 		WebSocketSendProcessor sendProcessor = this.sendProcessor;
 		if (sendProcessor != null) {
@@ -191,10 +178,8 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 		}
 	}
 
-	/** Handle a close callback from the WebSocket engine. */
-	void handleClose(CloseStatus closeStatus) {
-		// Ignore result: can't overflow, ok if not first or no one listens
-		this.closeStatusSink.tryEmitValue(closeStatus);
+	/** Handle a close callback from the WebSocketHandler adapter. */
+	void handleClose(CloseStatus reason) {
 		this.receivePublisher.onAllDataRead();
 		WebSocketSendProcessor sendProcessor = this.sendProcessor;
 		if (sendProcessor != null) {
@@ -204,7 +189,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 	}
 
 
-	// Subscriber<Void> implementation tracking WebSocketHandler#handle completion
+	// Subscriber<Void> implementation
 
 	@Override
 	public void onSubscribe(Subscription subscription) {
@@ -218,32 +203,22 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 	@Override
 	public void onError(Throwable ex) {
-		if (this.handlerCompletionSink != null) {
-			// Ignore result: can't overflow, ok if not first or no one listens
-			this.handlerCompletionSink.tryEmitError(ex);
+		if (this.completionMono != null) {
+			this.completionMono.onError(ex);
 		}
-		if (logger.isDebugEnabled()) {
-			logger.debug("WebSocket session completed with error", ex);
-		}
-		else if (logger.isInfoEnabled()) {
-			logger.info("WebSocket session completed with error: " + ex.getMessage());
-		}
-		close(CloseStatus.SERVER_ERROR);
+		int code = CloseStatus.SERVER_ERROR.getCode();
+		close(new CloseStatus(code, ex.getMessage()));
 	}
 
 	@Override
 	public void onComplete() {
-		if (this.handlerCompletionSink != null) {
-			// Ignore result: can't overflow, ok if not first or no one listens
-			this.handlerCompletionSink.tryEmitEmpty();
+		if (this.completionMono != null) {
+			this.completionMono.onComplete();
 		}
 		close();
 	}
 
 
-	/**
-	 * Read publisher for inbound WebSocket messages.
-	 */
 	private final class WebSocketReceivePublisher extends AbstractListenerReadPublisher<WebSocketMessage> {
 
 		private volatile Queue<Object> pendingMessages = Queues.unbounded(Queues.SMALL_BUFFER_SIZE).get();
@@ -273,7 +248,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 		@Override
 		@Nullable
-		protected WebSocketMessage read() {
+		protected WebSocketMessage read() throws IOException {
 			return (WebSocketMessage) this.pendingMessages.poll();
 		}
 
@@ -294,10 +269,8 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 		@Override
 		protected void discardData() {
-			Queue<Object> queue = this.pendingMessages;
-			this.pendingMessages = Queues.empty().get(); // prevent further reading
 			while (true) {
-				WebSocketMessage message = (WebSocketMessage) queue.poll();
+				WebSocketMessage message = (WebSocketMessage) this.pendingMessages.poll();
 				if (message == null) {
 					return;
 				}
@@ -308,7 +281,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 
 
 	/**
-	 * Write processor for outbound WebSocket messages.
+	 * Processor to send web socket messages.
 	 */
 	protected final class WebSocketSendProcessor extends AbstractListenerWriteProcessor<WebSocketMessage> {
 
@@ -343,7 +316,7 @@ public abstract class AbstractListenerWebSocketSession<T> extends AbstractWebSoc
 		}
 
 		/**
-		 * Subclasses can invoke this before sending a message (false) and
+		 * Sub-classes can invoke this before sending a message (false) and
 		 * after receiving the async send callback (true) effective translating
 		 * async completion callback into simple flow control.
 		 */

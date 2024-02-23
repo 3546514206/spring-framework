@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,18 +39,17 @@ import org.springframework.util.Assert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests that an ImportAware @Configuration class gets injected with the
+ * Tests that an ImportAware @Configuration classes gets injected with the
  * annotation metadata of the @Configuration class that imported it.
  *
  * @author Chris Beams
  * @author Juergen Hoeller
  * @since 3.1
  */
-class ImportAwareTests {
+public class ImportAwareTests {
 
 	@Test
-	@SuppressWarnings("resource")
-	void directlyAnnotatedWithImport() {
+	public void directlyAnnotatedWithImport() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ImportingConfig.class);
 		ctx.refresh();
@@ -66,8 +65,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void indirectlyAnnotatedWithImport() {
+	public void indirectlyAnnotatedWithImport() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(IndirectlyImportingConfig.class);
 		ctx.refresh();
@@ -83,8 +81,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void directlyAnnotatedWithImportLite() {
+	public void directlyAnnotatedWithImportLite() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ImportingConfigLite.class);
 		ctx.refresh();
@@ -100,8 +97,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void importRegistrar() {
+	public void importRegistrar() {
 		ImportedRegistrar.called = false;
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ImportingRegistrarConfig.class);
@@ -111,8 +107,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void importRegistrarWithImport() {
+	public void importRegistrarWithImport() {
 		ImportedRegistrar.called = false;
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ImportingRegistrarConfigWithImport.class);
@@ -124,8 +119,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void metadataFromImportsOneThenTwo() {
+	public void metadataFromImportsOneThenTwo() {
 		AnnotationMetadata importMetadata = new AnnotationConfigApplicationContext(
 				ConfigurationOne.class, ConfigurationTwo.class)
 				.getBean(MetadataHolder.class).importMetadata;
@@ -133,8 +127,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void metadataFromImportsTwoThenOne() {
+	public void metadataFromImportsTwoThenOne() {
 		AnnotationMetadata importMetadata = new AnnotationConfigApplicationContext(
 				ConfigurationTwo.class, ConfigurationOne.class)
 				.getBean(MetadataHolder.class).importMetadata;
@@ -142,8 +135,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void metadataFromImportsOneThenThree() {
+	public void metadataFromImportsOneThenThree() {
 		AnnotationMetadata importMetadata = new AnnotationConfigApplicationContext(
 				ConfigurationOne.class, ConfigurationThree.class)
 				.getBean(MetadataHolder.class).importMetadata;
@@ -151,8 +143,7 @@ class ImportAwareTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void importAwareWithAnnotationAttributes() {
+	public void importAwareWithAnnotationAttributes() {
 		new AnnotationConfigApplicationContext(ApplicationConfiguration.class);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.function.Consumer;
+import java.util.Collections;
+import java.util.Iterator;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,241 +41,244 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Stephane Nicoll
  * @author Sam Brannen
  */
-class AnnotationCacheOperationSourceTests {
+public class AnnotationCacheOperationSourceTests {
 
 	private final AnnotationCacheOperationSource source = new AnnotationCacheOperationSource();
 
 
 	@Test
-	void singularAnnotation() {
+	public void singularAnnotation() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "singular", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation(CacheableOperation.class, "test"));
+		assertThat(ops.iterator().next() instanceof CacheableOperation).isTrue();
 	}
 
 	@Test
-	void multipleAnnotation() {
+	public void multipleAnnotation() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "multiple", 2);
-		assertThat(ops).satisfiesExactly(cacheOperation(CacheableOperation.class),
-				cacheOperation(CacheEvictOperation.class));
+		Iterator<CacheOperation> it = ops.iterator();
+		assertThat(it.next() instanceof CacheableOperation).isTrue();
+		assertThat(it.next() instanceof CacheEvictOperation).isTrue();
 	}
 
 	@Test
-	void caching() {
+	public void caching() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "caching", 2);
-		assertThat(ops).satisfiesExactly(cacheOperation(CacheableOperation.class),
-				cacheOperation(CacheEvictOperation.class));
+		Iterator<CacheOperation> it = ops.iterator();
+		assertThat(it.next() instanceof CacheableOperation).isTrue();
+		assertThat(it.next() instanceof CacheEvictOperation).isTrue();
 	}
 
 	@Test
-	void emptyCaching() {
+	public void emptyCaching() {
 		getOps(AnnotatedClass.class, "emptyCaching", 0);
 	}
 
 	@Test
-	void singularStereotype() {
+	public void singularStereotype() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "singleStereotype", 1);
-		assertThat(ops).satisfiesExactly(cacheOperation(CacheEvictOperation.class));
+		assertThat(ops.iterator().next() instanceof CacheEvictOperation).isTrue();
 	}
 
 	@Test
-	void multipleStereotypes() {
+	public void multipleStereotypes() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "multipleStereotype", 3);
-		assertThat(ops).satisfiesExactly(cacheOperation(CacheableOperation.class),
-				cacheOperation(CacheEvictOperation.class, "foo"),
-				cacheOperation(CacheEvictOperation.class, "bar")
-		);
+		Iterator<CacheOperation> it = ops.iterator();
+		assertThat(it.next() instanceof CacheableOperation).isTrue();
+		CacheOperation next = it.next();
+		assertThat(next instanceof CacheEvictOperation).isTrue();
+		assertThat(next.getCacheNames().contains("foo")).isTrue();
+		next = it.next();
+		assertThat(next instanceof CacheEvictOperation).isTrue();
+		assertThat(next.getCacheNames().contains("bar")).isTrue();
 	}
 
 	@Test
-	void singleComposedAnnotation() {
+	public void singleComposedAnnotation() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "singleComposed", 2);
-		assertThat(ops).satisfiesExactly(
-				zero -> {
-					assertThat(zero).satisfies(cacheOperation(CacheOperation.class, "directly declared"));
-					assertThat(zero.getKey()).isEmpty();
-				},
-				first -> {
-					assertThat(first).satisfies(cacheOperation(CacheOperation.class, "composedCache"));
-					assertThat(first.getKey()).isEqualTo("composedKey");
-				}
-		);
+		Iterator<CacheOperation> it = ops.iterator();
+
+		CacheOperation cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheableOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("directly declared"));
+		assertThat(cacheOperation.getKey()).isEqualTo("");
+
+		cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheableOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("composedCache"));
+		assertThat(cacheOperation.getKey()).isEqualTo("composedKey");
 	}
 
 	@Test
-	void multipleComposedAnnotations() {
+	public void multipleComposedAnnotations() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "multipleComposed", 4);
-		assertThat(ops).satisfiesExactly(
-				zero -> {
-					assertThat(zero).satisfies(cacheOperation(CacheOperation.class, "directly declared"));
-					assertThat(zero.getKey()).isEmpty();
-				},
-				first -> {
-					assertThat(first).satisfies(cacheOperation(CacheOperation.class, "composedCache"));
-					assertThat(first.getKey()).isEqualTo("composedKey");
-				},
-				two -> {
-					assertThat(two).satisfies(cacheOperation(CacheOperation.class, "foo"));
-					assertThat(two.getKey()).isEmpty();
-				},
-				three -> {
-					assertThat(three).satisfies(cacheOperation(CacheEvictOperation.class, "composedCacheEvict"));
-					assertThat(three.getKey()).isEqualTo("composedEvictionKey");
-				}
-		);
+		Iterator<CacheOperation> it = ops.iterator();
+
+		CacheOperation cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheableOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("directly declared"));
+		assertThat(cacheOperation.getKey()).isEqualTo("");
+
+		cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheableOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("composedCache"));
+		assertThat(cacheOperation.getKey()).isEqualTo("composedKey");
+
+		cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheableOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("foo"));
+		assertThat(cacheOperation.getKey()).isEqualTo("");
+
+		cacheOperation = it.next();
+		assertThat(cacheOperation).isInstanceOf(CacheEvictOperation.class);
+		assertThat(cacheOperation.getCacheNames()).isEqualTo(Collections.singleton("composedCacheEvict"));
+		assertThat(cacheOperation.getKey()).isEqualTo("composedEvictionKey");
 	}
 
 	@Test
-	void customKeyGenerator() {
+	public void customKeyGenerator() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customKeyGenerator", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getKeyGenerator()).isEqualTo("custom"));
-
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getKeyGenerator()).as("Custom key generator not set").isEqualTo("custom");
 	}
 
 	@Test
-	void customKeyGeneratorInherited() {
+	public void customKeyGeneratorInherited() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customKeyGeneratorInherited", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getKeyGenerator()).isEqualTo("custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getKeyGenerator()).as("Custom key generator not set").isEqualTo("custom");
 	}
 
 	@Test
-	void keyAndKeyGeneratorCannotBeSetTogether() {
+	public void keyAndKeyGeneratorCannotBeSetTogether() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				getOps(AnnotatedClass.class, "invalidKeyAndKeyGeneratorSet"));
 	}
 
 	@Test
-	void customCacheManager() {
+	public void customCacheManager() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customCacheManager", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getCacheManager()).isEqualTo("custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getCacheManager()).as("Custom cache manager not set").isEqualTo("custom");
 	}
 
 	@Test
-	void customCacheManagerInherited() {
+	public void customCacheManagerInherited() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customCacheManagerInherited", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getCacheManager()).isEqualTo("custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getCacheManager()).as("Custom cache manager not set").isEqualTo("custom");
 	}
 
 	@Test
-	void customCacheResolver() {
+	public void customCacheResolver() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customCacheResolver", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getCacheResolver()).isEqualTo("custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getCacheResolver()).as("Custom cache resolver not set").isEqualTo("custom");
 	}
 
 	@Test
-	void customCacheResolverInherited() {
+	public void customCacheResolverInherited() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "customCacheResolverInherited", 1);
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getCacheResolver()).isEqualTo("custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getCacheResolver()).as("Custom cache resolver not set").isEqualTo("custom");
 	}
 
 	@Test
-	void cacheResolverAndCacheManagerCannotBeSetTogether() {
+	public void cacheResolverAndCacheManagerCannotBeSetTogether() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				getOps(AnnotatedClass.class, "invalidCacheResolverAndCacheManagerSet"));
 	}
 
 	@Test
-	void fullClassLevelWithCustomCacheName() {
+	public void fullClassLevelWithCustomCacheName() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithFullDefault.class, "methodLevelCacheName", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "", "classCacheResolver", "custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "", "classCacheResolver", "custom");
 	}
 
 	@Test
-	void fullClassLevelWithCustomKeyManager() {
+	public void fullClassLevelWithCustomKeyManager() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithFullDefault.class, "methodLevelKeyGenerator", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"custom", "", "classCacheResolver" , "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "custom", "", "classCacheResolver" , "classCacheName");
 	}
 
 	@Test
-	void fullClassLevelWithCustomCacheManager() {
+	public void fullClassLevelWithCustomCacheManager() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithFullDefault.class, "methodLevelCacheManager", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "custom", "", "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "custom", "", "classCacheName");
 	}
 
 	@Test
-	void fullClassLevelWithCustomCacheResolver() {
+	public void fullClassLevelWithCustomCacheResolver() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithFullDefault.class, "methodLevelCacheResolver", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "", "custom" , "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "", "custom" , "classCacheName");
 	}
 
 	@Test
-	void validateNoCacheIsValid() {
+	public void validateNoCacheIsValid() {
 		// Valid as a CacheResolver might return the cache names to use with other info
 		Collection<CacheOperation> ops = getOps(AnnotatedClass.class, "noCacheNameSpecified");
-		assertThat(ops).singleElement().satisfies(cacheOperation ->
-				assertThat(cacheOperation.getCacheNames()).isEmpty());
-
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation.getCacheNames()).as("cache names set must not be null").isNotNull();
+		assertThat(cacheOperation.getCacheNames().size()).as("no cache names specified").isEqualTo(0);
 	}
 
 	@Test
-	void customClassLevelWithCustomCacheName() {
+	public void customClassLevelWithCustomCacheName() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithCustomDefault.class, "methodLevelCacheName", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "", "classCacheResolver", "custom"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "", "classCacheResolver", "custom");
 	}
 
 	@Test
-	void severalCacheConfigUseClosest() {
+	public void severalCacheConfigUseClosest() {
 		Collection<CacheOperation> ops = getOps(MultipleCacheConfig.class, "multipleCacheConfig");
-		assertThat(ops).singleElement().satisfies(hasSharedConfig("", "", "", "myCache"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "", "", "", "myCache");
 	}
 
 	@Test
-	void cacheConfigFromInterface() {
+	public void cacheConfigFromInterface() {
 		Collection<CacheOperation> ops = getOps(InterfaceCacheConfig.class, "interfaceCacheConfig");
-		assertThat(ops).singleElement().satisfies(hasSharedConfig("", "", "", "myCache"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "", "", "", "myCache");
 	}
 
 	@Test
-	void cacheAnnotationOverride() {
+	public void cacheAnnotationOverride() {
 		Collection<CacheOperation> ops = getOps(InterfaceCacheConfig.class, "interfaceCacheableOverride");
-		assertThat(ops).singleElement().satisfies(cacheOperation(CacheableOperation.class));
+		assertThat(ops.size()).isSameAs(1);
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertThat(cacheOperation instanceof CacheableOperation).isTrue();
 	}
 
 	@Test
-	void partialClassLevelWithCustomCacheManager() {
+	public void partialClassLevelWithCustomCacheManager() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithSomeDefault.class, "methodLevelCacheManager", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "custom", "", "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "custom", "", "classCacheName");
 	}
 
 	@Test
-	void partialClassLevelWithCustomCacheResolver() {
+	public void partialClassLevelWithCustomCacheResolver() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithSomeDefault.class, "methodLevelCacheResolver", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "", "custom", "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "", "custom", "classCacheName");
 	}
 
 	@Test
-	void partialClassLevelWithNoCustomization() {
+	public void partialClassLevelWithNoCustomization() {
 		Collection<CacheOperation> ops = getOps(AnnotatedClassWithSomeDefault.class, "noCustomization", 1);
-		assertThat(ops).singleElement().satisfies(hasSharedConfig(
-				"classKeyGenerator", "classCacheManager", "", "classCacheName"));
+		CacheOperation cacheOperation = ops.iterator().next();
+		assertSharedConfig(cacheOperation, "classKeyGenerator", "classCacheManager", "", "classCacheName");
 	}
 
-	private Consumer<CacheOperation> cacheOperation(Class<? extends CacheOperation> type, String... cacheNames) {
-		return candidate -> {
-			assertThat(candidate).isInstanceOf(type);
-			assertThat(candidate.getCacheNames()).containsExactly(cacheNames);
-		};
-	}
-
-	private Consumer<CacheOperation> cacheOperation(Class<? extends CacheOperation> type) {
-		return candidate -> assertThat(candidate).isInstanceOf(type);
-	}
 
 	private Collection<CacheOperation> getOps(Class<?> target, String name, int expectedNumberOfOperations) {
 		Collection<CacheOperation> result = getOps(target, name);
-		assertThat(result).as("Wrong number of operation(s) for '" + name + "'").hasSize(expectedNumberOfOperations);
+		assertThat(result.size()).as("Wrong number of operation(s) for '" + name + "'").isEqualTo(expectedNumberOfOperations);
 		return result;
 	}
 
@@ -287,15 +292,14 @@ class AnnotationCacheOperationSourceTests {
 		}
 	}
 
-	private Consumer<CacheOperation> hasSharedConfig(String keyGenerator, String cacheManager,
+	private void assertSharedConfig(CacheOperation actual, String keyGenerator, String cacheManager,
 			String cacheResolver, String... cacheNames) {
-		return actual -> {
-			assertThat(actual.getKeyGenerator()).isEqualTo(keyGenerator);
-			assertThat(actual.getCacheManager()).isEqualTo(cacheManager);
-			assertThat(actual.getCacheResolver()).isEqualTo(cacheResolver);
-			assertThat(actual.getCacheNames()).hasSameSizeAs(cacheNames);
-			assertThat(actual.getCacheNames()).containsExactly(cacheNames);
-		};
+
+		assertThat(actual.getKeyGenerator()).as("Wrong key manager").isEqualTo(keyGenerator);
+		assertThat(actual.getCacheManager()).as("Wrong cache manager").isEqualTo(cacheManager);
+		assertThat(actual.getCacheResolver()).as("Wrong cache resolver").isEqualTo(cacheResolver);
+		assertThat(actual.getCacheNames().size()).as("Wrong number of cache names").isEqualTo(cacheNames.length);
+		Arrays.stream(cacheNames).forEach(cacheName -> assertThat(actual.getCacheNames().contains(cacheName)).as("Cache '" + cacheName + "' not found in " + actual.getCacheNames()).isTrue());
 	}
 
 

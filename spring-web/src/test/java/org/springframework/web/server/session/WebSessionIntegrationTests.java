@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,26 @@
 
 package org.springframework.web.server.session;
 
-import java.net.URI;
-import java.time.Clock;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import reactor.core.publisher.Mono;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.AbstractHttpHandlerIntegrationTests;
 import org.springframework.http.server.reactive.HttpHandler;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebHandler;
 import org.springframework.web.server.WebSession;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rossen Stoyanchev
  * @author Sam Brannen
  */
-class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
+public class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 
 	private final RestTemplate restTemplate = new RestTemplate();
 
@@ -84,6 +84,7 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 	public void expiredSessionIsRecreated(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
+
 		// First request: no session yet, new session created
 		RequestEntity<Void> request = RequestEntity.get(createUri()).build();
 		ResponseEntity<Void> response = this.restTemplate.exchange(request, Void.class);
@@ -121,6 +122,7 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 	public void expiredSessionEnds(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
+
 		// First request: no session yet, new session created
 		RequestEntity<Void> request = RequestEntity.get(createUri()).build();
 		ResponseEntity<Void> response = this.restTemplate.exchange(request, Void.class);
@@ -134,19 +136,20 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 		store.setClock(Clock.offset(store.getClock(), Duration.ofMinutes(31)));
 
 		// Second request: session expires
-		URI uri = URI.create("http://localhost:" + this.port + "/?expire");
+		URI uri = new URI("http://localhost:" + this.port + "/?expire");
 		request = RequestEntity.get(uri).header("Cookie", "SESSION=" + id).build();
 		response = this.restTemplate.exchange(request, Void.class);
 
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		String value = response.getHeaders().getFirst("Set-Cookie");
 		assertThat(value).isNotNull();
-		assertThat(value).as("Actual value: " + value).contains("Max-Age=0");
+		assertThat(value.contains("Max-Age=0")).as("Actual value: " + value).isTrue();
 	}
 
 	@ParameterizedHttpServerTest
 	public void changeSessionId(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
+
 
 		// First request: no session yet, new session created
 		RequestEntity<Void> request = RequestEntity.get(createUri()).build();
@@ -158,7 +161,7 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 		assertThat(this.handler.getSessionRequestCount()).isEqualTo(1);
 
 		// Second request: session id changes
-		URI uri = URI.create("http://localhost:" + this.port + "/?changeId");
+		URI uri = new URI("http://localhost:" + this.port + "/?changeId");
 		request = RequestEntity.get(uri).header("Cookie", "SESSION=" + oldId).build();
 		response = this.restTemplate.exchange(request, Void.class);
 
@@ -182,20 +185,20 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 		assertThat(id).isNotNull();
 
 		// Second request: invalidates session
-		URI uri = URI.create("http://localhost:" + this.port + "/?invalidate");
+		URI uri = new URI("http://localhost:" + this.port + "/?invalidate");
 		request = RequestEntity.get(uri).header("Cookie", "SESSION=" + id).build();
 		response = this.restTemplate.exchange(request, Void.class);
 
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		String value = response.getHeaders().getFirst("Set-Cookie");
 		assertThat(value).isNotNull();
-		assertThat(value).as("Actual value: " + value).contains("Max-Age=0");
+		assertThat(value.contains("Max-Age=0")).as("Actual value: " + value).isTrue();
 	}
 
 	private String extractSessionId(HttpHeaders headers) {
 		List<String> headerValues = headers.get("Set-Cookie");
 		assertThat(headerValues).isNotNull();
-		assertThat(headerValues).hasSize(1);
+		assertThat(headerValues.size()).isEqualTo(1);
 
 		for (String s : headerValues.get(0).split(";")){
 			if (s.startsWith("SESSION=")) {
@@ -205,8 +208,8 @@ class WebSessionIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 		return null;
 	}
 
-	private URI createUri() {
-		return URI.create("http://localhost:" + this.port + "/");
+	private URI createUri() throws URISyntaxException {
+		return new URI("http://localhost:" + this.port + "/");
 	}
 
 

@@ -65,12 +65,6 @@ public class ClassWriter extends ClassVisitor {
    */
   public static final int COMPUTE_FRAMES = 2;
 
-  /**
-   * The flags passed to the constructor. Must be zero or more of {@link #COMPUTE_MAXS} and {@link
-   * #COMPUTE_FRAMES}.
-   */
-  private final int flags;
-
   // Note: fields are ordered as in the ClassFile structure, and those related to attributes are
   // ordered as in Section 4.7 of the JVMS.
 
@@ -85,8 +79,8 @@ public class ClassWriter extends ClassVisitor {
 
   /**
    * The access_flags field of the JVMS ClassFile structure. This field can contain ASM specific
-   * access flags, such as {@link Opcodes#ACC_DEPRECATED} or {@link Opcodes#ACC_RECORD}, which are
-   * removed when generating the ClassFile structure.
+   * access flags, such as {@link Opcodes#ACC_DEPRECATED}, which are removed when generating the
+   * ClassFile structure.
    */
   private int accessFlags;
 
@@ -183,26 +177,6 @@ public class ClassWriter extends ClassVisitor {
   /** The 'classes' array of the NestMembers attribute, or {@literal null}. */
   private ByteVector nestMemberClasses;
 
-  /** The number_of_classes field of the PermittedSubclasses attribute, or 0. */
-  private int numberOfPermittedSubclasses;
-
-  /** The 'classes' array of the PermittedSubclasses attribute, or {@literal null}. */
-  private ByteVector permittedSubclasses;
-
-  /**
-   * The record components of this class, stored in a linked list of {@link RecordComponentWriter}
-   * linked via their {@link RecordComponentWriter#delegate} field. This field stores the first
-   * element of this list.
-   */
-  private RecordComponentWriter firstRecordComponent;
-
-  /**
-   * The record components of this class, stored in a linked list of {@link RecordComponentWriter}
-   * linked via their {@link RecordComponentWriter#delegate} field. This field stores the last
-   * element of this list.
-   */
-  private RecordComponentWriter lastRecordComponent;
-
   /**
    * The first non standard attribute of this class. The next ones can be accessed with the {@link
    * Attribute#nextAttribute} field. May be {@literal null}.
@@ -217,7 +191,6 @@ public class ClassWriter extends ClassVisitor {
   /**
    * Indicates what must be automatically computed in {@link MethodWriter}. Must be one of {@link
    * MethodWriter#COMPUTE_NOTHING}, {@link MethodWriter#COMPUTE_MAX_STACK_AND_LOCAL}, {@link
-   * MethodWriter#COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES}, {@link
    * MethodWriter#COMPUTE_INSERTED_FRAMES}, or {@link MethodWriter#COMPUTE_ALL_FRAMES}.
    */
   private int compute;
@@ -255,37 +228,21 @@ public class ClassWriter extends ClassVisitor {
    * @param classReader the {@link ClassReader} used to read the original class. It will be used to
    *     copy the entire constant pool and bootstrap methods from the original class and also to
    *     copy other fragments of original bytecode where applicable.
-   * @param flags option flags that can be used to modify the default behavior of this class. Must
-   *     be zero or more of {@link #COMPUTE_MAXS} and {@link #COMPUTE_FRAMES}. <i>These option flags
-   *     do not affect methods that are copied as is in the new class. This means that neither the
+   * @param flags option flags that can be used to modify the default behavior of this class.Must be
+   *     zero or more of {@link #COMPUTE_MAXS} and {@link #COMPUTE_FRAMES}. <i>These option flags do
+   *     not affect methods that are copied as is in the new class. This means that neither the
    *     maximum stack size nor the stack frames will be computed for these methods</i>.
    */
   public ClassWriter(final ClassReader classReader, final int flags) {
-    super(/* latest api = */ Opcodes.ASM9);
-    this.flags = flags;
+    super(Opcodes.ASM7);
     symbolTable = classReader == null ? new SymbolTable(this) : new SymbolTable(this, classReader);
     if ((flags & COMPUTE_FRAMES) != 0) {
-      compute = MethodWriter.COMPUTE_ALL_FRAMES;
+      this.compute = MethodWriter.COMPUTE_ALL_FRAMES;
     } else if ((flags & COMPUTE_MAXS) != 0) {
-      compute = MethodWriter.COMPUTE_MAX_STACK_AND_LOCAL;
+      this.compute = MethodWriter.COMPUTE_MAX_STACK_AND_LOCAL;
     } else {
-      compute = MethodWriter.COMPUTE_NOTHING;
+      this.compute = MethodWriter.COMPUTE_NOTHING;
     }
-  }
-
-  // -----------------------------------------------------------------------------------------------
-  // Accessors
-  // -----------------------------------------------------------------------------------------------
-
-  /**
-   * Returns true if all the given flags were passed to the constructor.
-   *
-   * @param flags some option flags. Must be zero or more of {@link #COMPUTE_MAXS} and {@link
-   *     #COMPUTE_FRAMES}.
-   * @return true if all the given flags, or more, were passed to the constructor.
-   */
-  public boolean hasFlags(final int flags) {
-    return (this.flags & flags) == flags;
   }
 
   // -----------------------------------------------------------------------------------------------
@@ -396,15 +353,6 @@ public class ClassWriter extends ClassVisitor {
   }
 
   @Override
-  public final void visitPermittedSubclass(final String permittedSubclass) {
-    if (permittedSubclasses == null) {
-      permittedSubclasses = new ByteVector();
-    }
-    ++numberOfPermittedSubclasses;
-    permittedSubclasses.putShort(symbolTable.addConstantClass(permittedSubclass).index);
-  }
-
-  @Override
   public final void visitInnerClass(
       final String name, final String outerName, final String innerName, final int access) {
     if (innerClasses == null) {
@@ -427,19 +375,6 @@ public class ClassWriter extends ClassVisitor {
     }
     // Else, compare the inner classes entry nameSymbol.info - 1 with the arguments of this method
     // and throw an exception if there is a difference?
-  }
-
-  @Override
-  public final RecordComponentVisitor visitRecordComponent(
-      final String name, final String descriptor, final String signature) {
-    RecordComponentWriter recordComponentWriter =
-        new RecordComponentWriter(symbolTable, name, descriptor, signature);
-    if (firstRecordComponent == null) {
-      firstRecordComponent = recordComponentWriter;
-    } else {
-      lastRecordComponent.delegate = recordComponentWriter;
-    }
-    return lastRecordComponent = recordComponentWriter;
   }
 
   @Override
@@ -512,7 +447,6 @@ public class ClassWriter extends ClassVisitor {
       size += methodWriter.computeMethodInfoSize();
       methodWriter = (MethodWriter) methodWriter.mv;
     }
-
     // For ease of reference, we use here the same attribute order as in Section 4.7 of the JVMS.
     int attributesCount = 0;
     if (innerClasses != null) {
@@ -591,24 +525,6 @@ public class ClassWriter extends ClassVisitor {
       ++attributesCount;
       size += 8 + nestMemberClasses.length;
       symbolTable.addConstantUtf8(Constants.NEST_MEMBERS);
-    }
-    if (permittedSubclasses != null) {
-      ++attributesCount;
-      size += 8 + permittedSubclasses.length;
-      symbolTable.addConstantUtf8(Constants.PERMITTED_SUBCLASSES);
-    }
-    int recordComponentCount = 0;
-    int recordSize = 0;
-    if ((accessFlags & Opcodes.ACC_RECORD) != 0 || firstRecordComponent != null) {
-      RecordComponentWriter recordComponentWriter = firstRecordComponent;
-      while (recordComponentWriter != null) {
-        ++recordComponentCount;
-        recordSize += recordComponentWriter.computeRecordComponentInfoSize();
-        recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;
-      }
-      ++attributesCount;
-      size += 8 + recordSize;
-      symbolTable.addConstantUtf8(Constants.RECORD);
     }
     if (firstAttribute != null) {
       attributesCount += firstAttribute.getAttributeCount();
@@ -714,24 +630,6 @@ public class ClassWriter extends ClassVisitor {
           .putShort(numberOfNestMemberClasses)
           .putByteArray(nestMemberClasses.data, 0, nestMemberClasses.length);
     }
-    if (permittedSubclasses != null) {
-      result
-          .putShort(symbolTable.addConstantUtf8(Constants.PERMITTED_SUBCLASSES))
-          .putInt(permittedSubclasses.length + 2)
-          .putShort(numberOfPermittedSubclasses)
-          .putByteArray(permittedSubclasses.data, 0, permittedSubclasses.length);
-    }
-    if ((accessFlags & Opcodes.ACC_RECORD) != 0 || firstRecordComponent != null) {
-      result
-          .putShort(symbolTable.addConstantUtf8(Constants.RECORD))
-          .putInt(recordSize + 2)
-          .putShort(recordComponentCount);
-      RecordComponentWriter recordComponentWriter = firstRecordComponent;
-      while (recordComponentWriter != null) {
-        recordComponentWriter.putRecordComponentInfo(result);
-        recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;
-      }
-    }
     if (firstAttribute != null) {
       firstAttribute.putAttributes(symbolTable, result);
     }
@@ -768,13 +666,9 @@ public class ClassWriter extends ClassVisitor {
     nestHostClassIndex = 0;
     numberOfNestMemberClasses = 0;
     nestMemberClasses = null;
-    numberOfPermittedSubclasses = 0;
-    permittedSubclasses = null;
-    firstRecordComponent = null;
-    lastRecordComponent = null;
     firstAttribute = null;
     compute = hasFrames ? MethodWriter.COMPUTE_INSERTED_FRAMES : MethodWriter.COMPUTE_NOTHING;
-    new ClassReader(classFile, 0, /* checkClassVersion= */ false)
+    new ClassReader(classFile, 0, /* checkClassVersion = */ false)
         .accept(
             this,
             attributes,
@@ -799,11 +693,6 @@ public class ClassWriter extends ClassVisitor {
     while (methodWriter != null) {
       methodWriter.collectAttributePrototypes(attributePrototypes);
       methodWriter = (MethodWriter) methodWriter.mv;
-    }
-    RecordComponentWriter recordComponentWriter = firstRecordComponent;
-    while (recordComponentWriter != null) {
-      recordComponentWriter.collectAttributePrototypes(attributePrototypes);
-      recordComponentWriter = (RecordComponentWriter) recordComponentWriter.delegate;
     }
     return attributePrototypes.toArray();
   }
@@ -843,7 +732,7 @@ public class ClassWriter extends ClassVisitor {
    * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}
    * sub classes, and is normally not needed by class generators or adapters.</i>
    *
-   * @param value the internal name of the class (see {@link Type#getInternalName()}).
+   * @param value the internal name of the class.
    * @return the index of a new or already existing class reference item.
    */
   public int newClass(final String value) {
@@ -895,8 +784,7 @@ public class ClassWriter extends ClassVisitor {
    *     Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD}, {@link Opcodes#H_PUTSTATIC}, {@link
    *     Opcodes#H_INVOKEVIRTUAL}, {@link Opcodes#H_INVOKESTATIC}, {@link Opcodes#H_INVOKESPECIAL},
    *     {@link Opcodes#H_NEWINVOKESPECIAL} or {@link Opcodes#H_INVOKEINTERFACE}.
-   * @param owner the internal name of the field or method owner class (see {@link
-   *     Type#getInternalName()}).
+   * @param owner the internal name of the field or method owner class.
    * @param name the name of the field or method.
    * @param descriptor the descriptor of the field or method.
    * @return the index of a new or already existing method type reference item.
@@ -918,19 +806,18 @@ public class ClassWriter extends ClassVisitor {
    *     Opcodes#H_GETSTATIC}, {@link Opcodes#H_PUTFIELD}, {@link Opcodes#H_PUTSTATIC}, {@link
    *     Opcodes#H_INVOKEVIRTUAL}, {@link Opcodes#H_INVOKESTATIC}, {@link Opcodes#H_INVOKESPECIAL},
    *     {@link Opcodes#H_NEWINVOKESPECIAL} or {@link Opcodes#H_INVOKEINTERFACE}.
-   * @param owner the internal name of the field or method owner class (see {@link
-   *     Type#getInternalName()}).
+   * @param owner the internal name of the field or method owner class.
    * @param name the name of the field or method.
    * @param descriptor the descriptor of the field or method.
    * @param isInterface true if the owner is an interface.
    * @return the index of a new or already existing method type reference item.
    */
   public int newHandle(
-      final int tag,
-      final String owner,
-      final String name,
-      final String descriptor,
-      final boolean isInterface) {
+          final int tag,
+          final String owner,
+          final String name,
+          final String descriptor,
+          final boolean isInterface) {
     return symbolTable.addConstantMethodHandle(tag, owner, name, descriptor, isInterface).index;
   }
 
@@ -939,20 +826,20 @@ public class ClassWriter extends ClassVisitor {
    * if the constant pool already contains a similar item. <i>This method is intended for {@link
    * Attribute} sub classes, and is normally not needed by class generators or adapters.</i>
    *
-   * @param name name of the invoked method.
-   * @param descriptor field descriptor of the constant type.
-   * @param bootstrapMethodHandle the bootstrap method.
+   * @param name                     name of the invoked method.
+   * @param descriptor               field descriptor of the constant type.
+   * @param bootstrapMethodHandle    the bootstrap method.
    * @param bootstrapMethodArguments the bootstrap method constant arguments.
    * @return the index of a new or already existing dynamic constant reference item.
    */
   public int newConstantDynamic(
-      final String name,
-      final String descriptor,
-      final Handle bootstrapMethodHandle,
-      final Object... bootstrapMethodArguments) {
+          final String name,
+          final String descriptor,
+          final Handle bootstrapMethodHandle,
+          final Object... bootstrapMethodArguments) {
     return symbolTable.addConstantDynamic(
             name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
-        .index;
+            .index;
   }
 
   /**
@@ -960,20 +847,20 @@ public class ClassWriter extends ClassVisitor {
    * the constant pool already contains a similar item. <i>This method is intended for {@link
    * Attribute} sub classes, and is normally not needed by class generators or adapters.</i>
    *
-   * @param name name of the invoked method.
-   * @param descriptor descriptor of the invoke method.
-   * @param bootstrapMethodHandle the bootstrap method.
+   * @param name                     name of the invoked method.
+   * @param descriptor               descriptor of the invoke method.
+   * @param bootstrapMethodHandle    the bootstrap method.
    * @param bootstrapMethodArguments the bootstrap method constant arguments.
    * @return the index of a new or already existing invokedynamic reference item.
    */
   public int newInvokeDynamic(
-      final String name,
-      final String descriptor,
-      final Handle bootstrapMethodHandle,
-      final Object... bootstrapMethodArguments) {
+          final String name,
+          final String descriptor,
+          final Handle bootstrapMethodHandle,
+          final Object... bootstrapMethodArguments) {
     return symbolTable.addConstantInvokeDynamic(
             name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
-        .index;
+            .index;
   }
 
   /**
@@ -981,7 +868,7 @@ public class ClassWriter extends ClassVisitor {
    * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}
    * sub classes, and is normally not needed by class generators or adapters.</i>
    *
-   * @param owner the internal name of the field's owner class (see {@link Type#getInternalName()}).
+   * @param owner the internal name of the field's owner class.
    * @param name the field's name.
    * @param descriptor the field's descriptor.
    * @return the index of a new or already existing field reference item.
@@ -995,8 +882,7 @@ public class ClassWriter extends ClassVisitor {
    * constant pool already contains a similar item. <i>This method is intended for {@link Attribute}
    * sub classes, and is normally not needed by class generators or adapters.</i>
    *
-   * @param owner the internal name of the method's owner class (see {@link
-   *     Type#getInternalName()}).
+   * @param owner the internal name of the method's owner class.
    * @param name the method's name.
    * @param descriptor the method's descriptor.
    * @param isInterface {@literal true} if {@code owner} is an interface.
@@ -1032,10 +918,9 @@ public class ClassWriter extends ClassVisitor {
    * currently being generated by this ClassWriter, which can of course not be loaded since it is
    * under construction.
    *
-   * @param type1 the internal name of a class (see {@link Type#getInternalName()}).
-   * @param type2 the internal name of another class (see {@link Type#getInternalName()}).
-   * @return the internal name of the common super class of the two given classes (see {@link
-   *     Type#getInternalName()}).
+   * @param type1 the internal name of a class.
+   * @param type2 the internal name of another class.
+   * @return the internal name of the common super class of the two given classes.
    */
   protected String getCommonSuperClass(final String type1, final String type2) {
     ClassLoader classLoader = getClassLoader();

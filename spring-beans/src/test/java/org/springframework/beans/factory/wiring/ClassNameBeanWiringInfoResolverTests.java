@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,22 +22,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link ClassNameBeanWiringInfoResolver}.
+ * Unit tests for the ClassNameBeanWiringInfoResolver class.
  *
  * @author Rick Evans
  */
-class ClassNameBeanWiringInfoResolverTests {
+public class ClassNameBeanWiringInfoResolverTests {
 
 	@Test
-	void resolveWiringInfoWithNullBeanInstance() {
+	public void resolveWiringInfoWithNullBeanInstance() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new ClassNameBeanWiringInfoResolver().resolveWiringInfo(null));
 	}
 
 	@Test
-	void resolveWiringInfo() {
+	public void resolveWiringInfo() {
 		ClassNameBeanWiringInfoResolver resolver = new ClassNameBeanWiringInfoResolver();
-		Long beanInstance = 1L;
+		Long beanInstance = new Long(1);
 		BeanWiringInfo info = resolver.resolveWiringInfo(beanInstance);
 		assertThat(info).isNotNull();
 		assertThat(info.getBeanName()).as("Not resolving bean name to the class name of the supplied bean instance as per class contract.").isEqualTo(beanInstance.getClass().getName());

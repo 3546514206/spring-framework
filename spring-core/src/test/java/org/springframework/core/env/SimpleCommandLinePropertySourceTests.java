@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.core.env;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link SimpleCommandLinePropertySource}.
+ * Unit tests for {@link SimpleCommandLinePropertySource}.
  *
  * @author Chris Beams
- * @author Sam Brannen
  * @since 3.1
  */
 class SimpleCommandLinePropertySourceTests {
@@ -34,7 +33,8 @@ class SimpleCommandLinePropertySourceTests {
 	@Test
 	void withDefaultName() {
 		PropertySource<?> ps = new SimpleCommandLinePropertySource();
-		assertThat(ps.getName()).isEqualTo(CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME);
+		assertThat(ps.getName())
+				.isEqualTo(CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME);
 	}
 
 	@Test
@@ -52,21 +52,14 @@ class SimpleCommandLinePropertySourceTests {
 
 	@Test
 	void withOptionArgsOnly() {
-		CommandLinePropertySource<?> ps = new SimpleCommandLinePropertySource("--o1=v1", "--o2");
+		CommandLinePropertySource<?> ps =
+				new SimpleCommandLinePropertySource("--o1=v1", "--o2");
 		assertThat(ps.containsProperty("o1")).isTrue();
 		assertThat(ps.containsProperty("o2")).isTrue();
 		assertThat(ps.containsProperty("o3")).isFalse();
 		assertThat(ps.getProperty("o1")).isEqualTo("v1");
-		assertThat(ps.getProperty("o2")).isEmpty();
+		assertThat(ps.getProperty("o2")).isEqualTo("");
 		assertThat(ps.getProperty("o3")).isNull();
-	}
-
-	@Test // gh-24464
-	void withOptionalArg_andArgIsEmpty() {
-		EnumerablePropertySource<?> ps = new SimpleCommandLinePropertySource("--foo=");
-
-		assertThat(ps.containsProperty("foo")).isTrue();
-		assertThat(ps.getProperty("foo")).isEqualTo("");
 	}
 
 	@Test
@@ -79,12 +72,13 @@ class SimpleCommandLinePropertySourceTests {
 
 		assertThat(ps.containsProperty("nonOptionArgs")).isFalse();
 		assertThat(ps.getProperty("nonOptionArgs")).isNull();
-		assertThat(ps.getPropertyNames()).hasSize(2);
+		assertThat(ps.getPropertyNames().length).isEqualTo(2);
 	}
 
 	@Test
 	void withDefaultNonOptionArgsNameAndNonOptionArgsPresent() {
-		CommandLinePropertySource<?> ps = new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
+		CommandLinePropertySource<?> ps =
+				new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
 
 		assertThat(ps.containsProperty("nonOptionArgs")).isTrue();
 		assertThat(ps.containsProperty("o1")).isTrue();
@@ -96,7 +90,8 @@ class SimpleCommandLinePropertySourceTests {
 
 	@Test
 	void withCustomNonOptionArgsNameAndNoNonOptionArgsPresent() {
-		CommandLinePropertySource<?> ps = new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
+		CommandLinePropertySource<?> ps =
+				new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
 		ps.setNonOptionArgsPropertyName("NOA");
 
 		assertThat(ps.containsProperty("nonOptionArgs")).isFalse();
@@ -109,7 +104,8 @@ class SimpleCommandLinePropertySourceTests {
 
 	@Test
 	void covertNonOptionArgsToStringArrayAndList() {
-		CommandLinePropertySource<?> ps = new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
+		CommandLinePropertySource<?> ps =
+				new SimpleCommandLinePropertySource("--o1=v1", "noa1", "--o2", "noa2");
 		StandardEnvironment env = new StandardEnvironment();
 		env.getPropertySources().addFirst(ps);
 
@@ -122,7 +118,8 @@ class SimpleCommandLinePropertySourceTests {
 
 		@SuppressWarnings("unchecked")
 		List<String> nonOptionArgsList = env.getProperty("nonOptionArgs", List.class);
-		assertThat(nonOptionArgsList).containsExactly("noa1", "noa2");
+		assertThat(nonOptionArgsList.get(0)).isEqualTo("noa1");
+		assertThat(nonOptionArgsList.get(1)).isEqualTo("noa2");
 	}
 
 }

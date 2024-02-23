@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,11 @@
 
 package org.springframework.web.socket.sockjs.transport;
 
-import java.io.IOException;
-import java.security.Principal;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
-
 import org.springframework.context.Lifecycle;
-import org.springframework.core.log.LogFormatUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.util.Assert;
@@ -52,6 +35,12 @@ import org.springframework.web.socket.sockjs.SockJsException;
 import org.springframework.web.socket.sockjs.frame.Jackson2SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.frame.SockJsMessageCodec;
 import org.springframework.web.socket.sockjs.support.AbstractSockJsService;
+
+import java.io.IOException;
+import java.security.Principal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * A basic implementation of {@link org.springframework.web.socket.sockjs.SockJsService}
@@ -169,8 +158,8 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 		if (!isRunning()) {
 			this.running = true;
 			for (TransportHandler handler : this.handlers.values()) {
-				if (handler instanceof Lifecycle lifecycle) {
-					lifecycle.start();
+				if (handler instanceof Lifecycle) {
+					((Lifecycle) handler).start();
 				}
 			}
 		}
@@ -181,8 +170,8 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 		if (isRunning()) {
 			this.running = false;
 			for (TransportHandler handler : this.handlers.values()) {
-				if (handler instanceof Lifecycle lifecycle) {
-					lifecycle.stop();
+				if (handler instanceof Lifecycle) {
+					((Lifecycle) handler).stop();
 				}
 			}
 		}
@@ -199,7 +188,7 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			WebSocketHandler handler) throws IOException {
 
 		TransportHandler transportHandler = this.handlers.get(TransportType.WEBSOCKET);
-		if (!(transportHandler instanceof HandshakeHandler handshakeHandler)) {
+		if (!(transportHandler instanceof HandshakeHandler)) {
 			logger.error("No handler configured for raw WebSocket messages");
 			response.setStatusCode(HttpStatus.NOT_FOUND);
 			return;
@@ -213,16 +202,13 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			if (!chain.applyBeforeHandshake(request, response, attributes)) {
 				return;
 			}
-			handshakeHandler.doHandshake(request, response, handler, attributes);
+			((HandshakeHandler) transportHandler).doHandshake(request, response, handler, attributes);
 			chain.applyAfterHandshake(request, response, null);
-		}
-		catch (HandshakeFailureException ex) {
+		} catch (HandshakeFailureException ex) {
 			failure = ex;
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			failure = new HandshakeFailureException("Uncaught failure for request " + request.getURI(), ex);
-		}
-		finally {
+		} finally {
 			if (failure != null) {
 				chain.applyAfterHandshake(request, response, failure);
 				throw failure;
@@ -237,7 +223,7 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 		TransportType transportType = TransportType.fromValue(transport);
 		if (transportType == null) {
 			if (logger.isWarnEnabled()) {
-				logger.warn(LogFormatUtils.formatValue("Unknown transport type for " + request.getURI(), -1, true));
+				logger.warn("Unknown transport type for " + request.getURI());
 			}
 			response.setStatusCode(HttpStatus.NOT_FOUND);
 			return;
@@ -246,7 +232,7 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 		TransportHandler transportHandler = this.handlers.get(transportType);
 		if (transportHandler == null) {
 			if (logger.isWarnEnabled()) {
-				logger.warn(LogFormatUtils.formatValue("No TransportHandler for " + request.getURI(), -1, true));
+				logger.warn("No TransportHandler for " + request.getURI());
 			}
 			response.setStatusCode(HttpStatus.NOT_FOUND);
 			return;
@@ -274,15 +260,14 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			}
 
 			SockJsSession session = this.sessions.get(sessionId);
-			boolean isNewSession = false;
 			if (session == null) {
-				if (transportHandler instanceof SockJsSessionFactory sessionFactory) {
+				if (transportHandler instanceof SockJsSessionFactory) {
 					Map<String, Object> attributes = new HashMap<>();
 					if (!chain.applyBeforeHandshake(request, response, attributes)) {
 						return;
 					}
+					SockJsSessionFactory sessionFactory = (SockJsSessionFactory) transportHandler;
 					session = createSockJsSession(sessionId, sessionFactory, handler, attributes);
-					isNewSession = true;
 				}
 				else {
 					response.setStatusCode(HttpStatus.NOT_FOUND);
@@ -316,23 +301,12 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			}
 
 			transportHandler.handleRequest(request, response, handler, session);
-
-			if (isNewSession && response instanceof ServletServerHttpResponse servletResponse) {
-				int status = servletResponse.getServletResponse().getStatus();
-				if (HttpStatusCode.valueOf(status).is4xxClientError()) {
-					this.sessions.remove(sessionId);
-				}
-			}
-
 			chain.applyAfterHandshake(request, response, null);
-		}
-		catch (SockJsException ex) {
+		} catch (SockJsException ex) {
 			failure = ex;
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			failure = new SockJsException("Uncaught failure for request " + request.getURI(), sessionId, ex);
-		}
-		finally {
+		} finally {
 			if (failure != null) {
 				chain.applyAfterHandshake(request, response, failure);
 				throw failure;
@@ -346,8 +320,7 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			return false;
 		}
 
-		if (!getAllowedOrigins().isEmpty() && !getAllowedOrigins().contains("*") ||
-				!getAllowedOriginPatterns().isEmpty()) {
+		if (!this.allowedOrigins.contains("*")) {
 			TransportType transportType = TransportType.fromValue(transport);
 			if (transportType == null || !transportType.supportsOrigin()) {
 				if (logger.isWarnEnabled()) {
@@ -380,7 +353,6 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 			if (this.sessionCleanupTask != null) {
 				return;
 			}
-			Duration disconnectDelay = Duration.ofMillis(getDisconnectDelay());
 			this.sessionCleanupTask = getTaskScheduler().scheduleAtFixedRate(() -> {
 				List<String> removedIds = new ArrayList<>();
 				for (SockJsSession session : this.sessions.values()) {
@@ -399,7 +371,7 @@ public class TransportHandlingSockJsService extends AbstractSockJsService implem
 				if (logger.isDebugEnabled() && !removedIds.isEmpty()) {
 					logger.debug("Closed " + removedIds.size() + " sessions: " + removedIds);
 				}
-			}, disconnectDelay);
+			}, getDisconnectDelay());
 		}
 	}
 

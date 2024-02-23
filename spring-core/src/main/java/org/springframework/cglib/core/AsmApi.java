@@ -21,10 +21,10 @@ import org.springframework.asm.Opcodes;
 final class AsmApi {
 
     /**
-     * SPRING PATCH: always returns ASM9.
+     * SPRING PATCH: always returns ASM7.
      */
     static int value() {
-        return Opcodes.ASM9;
+        return Opcodes.ASM7;
     }
 
     private AsmApi() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.scheduling.config;
 
-import java.util.concurrent.RejectedExecutionHandler;
-
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
@@ -26,6 +24,8 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.StringUtils;
+
+import java.util.concurrent.RejectedExecutionHandler;
 
 /**
  * {@link FactoryBean} for creating {@link ThreadPoolTaskExecutor} instances,
@@ -106,8 +106,8 @@ public class TaskExecutorFactoryBean implements
 				int maxPoolSize;
 				int separatorIndex = this.poolSize.indexOf('-');
 				if (separatorIndex != -1) {
-					corePoolSize = Integer.parseInt(this.poolSize, 0, separatorIndex, 10);
-					maxPoolSize = Integer.parseInt(this.poolSize, separatorIndex + 1, this.poolSize.length(), 10);
+					corePoolSize = Integer.parseInt(this.poolSize.substring(0, separatorIndex));
+					maxPoolSize = Integer.parseInt(this.poolSize.substring(separatorIndex + 1, this.poolSize.length()));
 					if (corePoolSize > maxPoolSize) {
 						throw new IllegalArgumentException(
 								"Lower bound of pool-size range must not exceed the upper bound");
@@ -128,7 +128,7 @@ public class TaskExecutorFactoryBean implements
 					}
 				}
 				else {
-					int value = Integer.parseInt(this.poolSize);
+					Integer value = Integer.valueOf(this.poolSize);
 					corePoolSize = value;
 					maxPoolSize = value;
 				}

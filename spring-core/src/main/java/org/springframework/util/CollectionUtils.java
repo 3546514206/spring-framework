@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,10 @@
 
 package org.springframework.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-
 import org.springframework.lang.Nullable;
+
+import java.io.Serializable;
+import java.util.*;
 
 /**
  * Miscellaneous collection utility methods.
@@ -46,14 +31,6 @@ import org.springframework.lang.Nullable;
  * @since 1.1.3
  */
 public abstract class CollectionUtils {
-
-	/**
-	 * Default load factor for {@link HashMap}/{@link LinkedHashMap} variants.
-	 * @see #newHashMap(int)
-	 * @see #newLinkedHashMap(int)
-	 */
-	static final float DEFAULT_LOAD_FACTOR = 0.75f;
-
 
 	/**
 	 * Return {@code true} if the supplied Collection is {@code null} or empty.
@@ -76,70 +53,6 @@ public abstract class CollectionUtils {
 	}
 
 	/**
-	 * Instantiate a new {@link HashMap} with an initial capacity
-	 * that can accommodate the specified number of elements without
-	 * any immediate resize/rehash operations to be expected.
-	 * <p>This differs from the regular {@link HashMap} constructor
-	 * which takes an initial capacity relative to a load factor
-	 * but is effectively aligned with the JDK's
-	 * {@link java.util.concurrent.ConcurrentHashMap#ConcurrentHashMap(int)}.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 5.3
-	 * @see #newLinkedHashMap(int)
-	 */
-	public static <K, V> HashMap<K, V> newHashMap(int expectedSize) {
-		return new HashMap<>(computeInitialCapacity(expectedSize), DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
-	 * Instantiate a new {@link LinkedHashMap} with an initial capacity
-	 * that can accommodate the specified number of elements without
-	 * any immediate resize/rehash operations to be expected.
-	 * <p>This differs from the regular {@link LinkedHashMap} constructor
-	 * which takes an initial capacity relative to a load factor but is
-	 * aligned with Spring's own {@link LinkedCaseInsensitiveMap} and
-	 * {@link LinkedMultiValueMap} constructor semantics as of 5.3.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 5.3
-	 * @see #newHashMap(int)
-	 */
-	public static <K, V> LinkedHashMap<K, V> newLinkedHashMap(int expectedSize) {
-		return new LinkedHashMap<>(computeInitialCapacity(expectedSize), DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
-	 * Instantiate a new {@link HashSet} with an initial capacity that can
-	 * accommodate the specified number of elements without any immediate
-	 * resize/rehash operations to be expected.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 6.2
-	 * @see #newLinkedHashSet(int)
-	 */
-	public static <E> HashSet<E> newHashSet(int expectedSize) {
-		return new HashSet<>(computeInitialCapacity(expectedSize), DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
-	 * Instantiate a new {@link LinkedHashSet} with an initial capacity that can
-	 * accommodate the specified number of elements without any immediate
-	 * resize/rehash operations to be expected.
-	 * @param expectedSize the expected number of elements (with a corresponding
-	 * capacity to be derived so that no resize/rehash operations are needed)
-	 * @since 6.2
-	 * @see #newHashSet(int)
-	 */
-	public static <E> LinkedHashSet<E> newLinkedHashSet(int expectedSize) {
-		return new LinkedHashSet<>(computeInitialCapacity(expectedSize), DEFAULT_LOAD_FACTOR);
-	}
-
-	private static int computeInitialCapacity(int expectedSize) {
-		return (int) Math.ceil(expectedSize / (double) DEFAULT_LOAD_FACTOR);
-	}
-
-	/**
 	 * Convert the supplied array into a List. A primitive array gets converted
 	 * into a List of the appropriate wrapper type.
 	 * <p><b>NOTE:</b> Generally prefer the standard {@link Arrays#asList} method.
@@ -151,7 +64,8 @@ public abstract class CollectionUtils {
 	 * @see ObjectUtils#toObjectArray(Object)
 	 * @see Arrays#asList(Object[])
 	 */
-	public static List<?> arrayToList(@Nullable Object source) {
+	@SuppressWarnings("rawtypes")
+	public static List arrayToList(@Nullable Object source) {
 		return Arrays.asList(ObjectUtils.toObjectArray(source));
 	}
 
@@ -163,7 +77,9 @@ public abstract class CollectionUtils {
 	@SuppressWarnings("unchecked")
 	public static <E> void mergeArrayIntoCollection(@Nullable Object array, Collection<E> collection) {
 		Object[] arr = ObjectUtils.toObjectArray(array);
-		Collections.addAll(collection, (E[])arr);
+		for (Object elem : arr) {
+			collection.add((E) elem);
+		}
 	}
 
 	/**
@@ -253,7 +169,15 @@ public abstract class CollectionUtils {
 	 * @return whether any of the candidates has been found
 	 */
 	public static boolean containsAny(Collection<?> source, Collection<?> candidates) {
-		return findFirstMatch(source, candidates) != null;
+		if (isEmpty(source) || isEmpty(candidates)) {
+			return false;
+		}
+		for (Object candidate : candidates) {
+			if (source.contains(candidate)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -265,14 +189,15 @@ public abstract class CollectionUtils {
 	 * @param candidates the candidates to search for
 	 * @return the first present object, or {@code null} if not found
 	 */
+	@SuppressWarnings("unchecked")
 	@Nullable
 	public static <E> E findFirstMatch(Collection<?> source, Collection<E> candidates) {
 		if (isEmpty(source) || isEmpty(candidates)) {
 			return null;
 		}
-		for (E candidate : candidates) {
+		for (Object candidate : candidates) {
 			if (source.contains(candidate)) {
-				return candidate;
+				return (E) candidate;
 			}
 		}
 		return null;
@@ -377,47 +302,6 @@ public abstract class CollectionUtils {
 	}
 
 	/**
-	 * Retrieve the first element of the given Set, using {@link SortedSet#first()}
-	 * or otherwise using the iterator.
-	 * @param set the Set to check (may be {@code null} or empty)
-	 * @return the first element, or {@code null} if none
-	 * @since 5.2.3
-	 * @see SortedSet
-	 * @see LinkedHashMap#keySet()
-	 * @see java.util.LinkedHashSet
-	 */
-	@Nullable
-	public static <T> T firstElement(@Nullable Set<T> set) {
-		if (isEmpty(set)) {
-			return null;
-		}
-		if (set instanceof SortedSet<T> sortedSet) {
-			return sortedSet.first();
-		}
-
-		Iterator<T> it = set.iterator();
-		T first = null;
-		if (it.hasNext()) {
-			first = it.next();
-		}
-		return first;
-	}
-
-	/**
-	 * Retrieve the first element of the given List, accessing the zero index.
-	 * @param list the List to check (may be {@code null} or empty)
-	 * @return the first element, or {@code null} if none
-	 * @since 5.2.3
-	 */
-	@Nullable
-	public static <T> T firstElement(@Nullable List<T> list) {
-		if (isEmpty(list)) {
-			return null;
-		}
-		return list.get(0);
-	}
-
-	/**
 	 * Retrieve the last element of the given Set, using {@link SortedSet#last()}
 	 * or otherwise iterating over all elements (assuming a linked set).
 	 * @param set the Set to check (may be {@code null} or empty)
@@ -432,8 +316,8 @@ public abstract class CollectionUtils {
 		if (isEmpty(set)) {
 			return null;
 		}
-		if (set instanceof SortedSet<T> sortedSet) {
-			return sortedSet.last();
+		if (set instanceof SortedSet) {
+			return ((SortedSet<T>) set).last();
 		}
 
 		// Full iteration necessary...
@@ -478,72 +362,203 @@ public abstract class CollectionUtils {
 	 * @return the adapted {@code Iterator}
 	 */
 	public static <E> Iterator<E> toIterator(@Nullable Enumeration<E> enumeration) {
-		return (enumeration != null ? enumeration.asIterator() : Collections.emptyIterator());
+		return (enumeration != null ? new EnumerationIterator<>(enumeration) : Collections.emptyIterator());
 	}
 
 	/**
 	 * Adapt a {@code Map<K, List<V>>} to an {@code MultiValueMap<K, V>}.
-	 * @param targetMap the original map
-	 * @return the adapted multi-value map (wrapping the original map)
+	 *
+	 * @param map the original map
+	 * @return the multi-value map
 	 * @since 3.1
 	 */
-	public static <K, V> MultiValueMap<K, V> toMultiValueMap(Map<K, List<V>> targetMap) {
-		return new MultiValueMapAdapter<>(targetMap);
+	public static <K, V> MultiValueMap<K, V> toMultiValueMap(Map<K, List<V>> map) {
+		return new MultiValueMapAdapter<>(map);
 	}
 
 	/**
 	 * Return an unmodifiable view of the specified multi-value map.
-	 * @param targetMap the map for which an unmodifiable view is to be returned.
-	 * @return an unmodifiable view of the specified multi-value map
+	 *
+	 * @param map the map for which an unmodifiable view is to be returned.
+	 * @return an unmodifiable view of the specified multi-value map.
 	 * @since 3.1
 	 */
 	@SuppressWarnings("unchecked")
-	public static <K, V> MultiValueMap<K, V> unmodifiableMultiValueMap(
-			MultiValueMap<? extends K, ? extends V> targetMap) {
+	public static <K, V> MultiValueMap<K, V> unmodifiableMultiValueMap(MultiValueMap<? extends K, ? extends V> map) {
+		Assert.notNull(map, "'map' must not be null");
+		Map<K, List<V>> result = new LinkedHashMap<>(map.size());
+		map.forEach((key, value) -> {
+			List<? extends V> values = Collections.unmodifiableList(value);
+			result.put(key, (List<V>) values);
+		});
+		Map<K, List<V>> unmodifiableMap = Collections.unmodifiableMap(result);
+		return toMultiValueMap(unmodifiableMap);
+	}
 
-		Assert.notNull(targetMap, "'targetMap' must not be null");
-		if (targetMap instanceof UnmodifiableMultiValueMap) {
-			return (MultiValueMap<K, V>) targetMap;
+
+	/**
+	 * Iterator wrapping an Enumeration.
+	 */
+	private static class EnumerationIterator<E> implements Iterator<E> {
+
+		private final Enumeration<E> enumeration;
+
+		public EnumerationIterator(Enumeration<E> enumeration) {
+			this.enumeration = enumeration;
 		}
-		return new UnmodifiableMultiValueMap<>(targetMap);
+
+		@Override
+		public boolean hasNext() {
+			return this.enumeration.hasMoreElements();
+		}
+
+		@Override
+		public E next() {
+			return this.enumeration.nextElement();
+		}
+
+		@Override
+		public void remove() throws UnsupportedOperationException {
+			throw new UnsupportedOperationException("Not supported");
+		}
 	}
 
-	/**
-	 * Return a (partially unmodifiable) map that combines the provided two
-	 * maps. Invoking {@link Map#put(Object, Object)} or {@link Map#putAll(Map)}
-	 * on the returned map results in an {@link UnsupportedOperationException}.
-	 * @param first the first map to compose
-	 * @param second the second map to compose
-	 * @return a new map that composes the given two maps
-	 * @since 6.2
-	 */
-	public static <K, V> Map<K, V> compositeMap(Map<K,V> first, Map<K,V> second) {
-		return new CompositeMap<>(first, second);
-	}
 
 	/**
-	 * Return a map that combines the provided maps. Invoking
-	 * {@link Map#put(Object, Object)} on the returned map will apply
-	 * {@code putFunction}, or will throw an
-	 * {@link UnsupportedOperationException} {@code putFunction} is
-	 * {@code null}. The same applies to {@link Map#putAll(Map)} and
-	 * {@code putAllFunction}.
-	 * @param first the first map to compose
-	 * @param second the second map to compose
-	 * @param putFunction applied when {@code Map::put} is invoked. If
-	 * {@code null}, {@code Map::put} throws an
-	 * {@code UnsupportedOperationException}.
-	 * @param putAllFunction applied when {@code Map::putAll} is invoked. If
-	 * {@code null}, {@code Map::putAll} throws an
-	 * {@code UnsupportedOperationException}.
-	 * @return a new map that composes the give maps
-	 * @since 6.2
+	 * Adapts a Map to the MultiValueMap contract.
 	 */
-	public static <K, V> Map<K, V> compositeMap(Map<K,V> first, Map<K,V> second,
-			@Nullable BiFunction<K, V, V> putFunction,
-			@Nullable Consumer<Map<K, V>> putAllFunction) {
+	@SuppressWarnings("serial")
+	private static class MultiValueMapAdapter<K, V> implements MultiValueMap<K, V>, Serializable {
 
-		return new CompositeMap<>(first, second, putFunction, putAllFunction);
+		private final Map<K, List<V>> map;
+
+		public MultiValueMapAdapter(Map<K, List<V>> map) {
+			Assert.notNull(map, "'map' must not be null");
+			this.map = map;
+		}
+
+		@Override
+		@Nullable
+		public V getFirst(K key) {
+			List<V> values = this.map.get(key);
+			return (values != null ? values.get(0) : null);
+		}
+
+		@Override
+		public void add(K key, @Nullable V value) {
+			List<V> values = this.map.computeIfAbsent(key, k -> new LinkedList<>());
+			values.add(value);
+		}
+
+		@Override
+		public void addAll(K key, List<? extends V> values) {
+			List<V> currentValues = this.map.computeIfAbsent(key, k -> new LinkedList<>());
+			currentValues.addAll(values);
+		}
+
+		@Override
+		public void addAll(MultiValueMap<K, V> values) {
+			for (Entry<K, List<V>> entry : values.entrySet()) {
+				addAll(entry.getKey(), entry.getValue());
+			}
+		}
+
+		@Override
+		public void set(K key, @Nullable V value) {
+			List<V> values = new LinkedList<>();
+			values.add(value);
+			this.map.put(key, values);
+		}
+
+		@Override
+		public void setAll(Map<K, V> values) {
+			values.forEach(this::set);
+		}
+
+		@Override
+		public Map<K, V> toSingleValueMap() {
+			LinkedHashMap<K, V> singleValueMap = new LinkedHashMap<>(this.map.size());
+			this.map.forEach((key, value) -> singleValueMap.put(key, value.get(0)));
+			return singleValueMap;
+		}
+
+		@Override
+		public int size() {
+			return this.map.size();
+		}
+
+		@Override
+		public boolean isEmpty() {
+			return this.map.isEmpty();
+		}
+
+		@Override
+		public boolean containsKey(Object key) {
+			return this.map.containsKey(key);
+		}
+
+		@Override
+		public boolean containsValue(Object value) {
+			return this.map.containsValue(value);
+		}
+
+		@Override
+		public List<V> get(Object key) {
+			return this.map.get(key);
+		}
+
+		@Override
+		public List<V> put(K key, List<V> value) {
+			return this.map.put(key, value);
+		}
+
+		@Override
+		public List<V> remove(Object key) {
+			return this.map.remove(key);
+		}
+
+		@Override
+		public void putAll(Map<? extends K, ? extends List<V>> map) {
+			this.map.putAll(map);
+		}
+
+		@Override
+		public void clear() {
+			this.map.clear();
+		}
+
+		@Override
+		public Set<K> keySet() {
+			return this.map.keySet();
+		}
+
+		@Override
+		public Collection<List<V>> values() {
+			return this.map.values();
+		}
+
+		@Override
+		public Set<Entry<K, List<V>>> entrySet() {
+			return this.map.entrySet();
+		}
+
+		@Override
+		public boolean equals(@Nullable Object other) {
+			if (this == other) {
+				return true;
+			}
+			return this.map.equals(other);
+		}
+
+		@Override
+		public int hashCode() {
+			return this.map.hashCode();
+		}
+
+		@Override
+		public String toString() {
+			return this.map.toString();
+		}
 	}
 
 }

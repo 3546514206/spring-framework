@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,20 @@
 
 package org.springframework.web.reactive.function.server;
 
+import org.reactivestreams.Publisher;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.http.*;
+import org.springframework.http.codec.HttpMessageWriter;
+import org.springframework.http.codec.json.Jackson2CodecSupport;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserter;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.result.view.ViewResolver;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -25,28 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.codec.HttpMessageWriter;
-import org.springframework.http.codec.json.Jackson2CodecSupport;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.ErrorResponse;
-import org.springframework.web.reactive.function.BodyInserter;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.result.view.ViewResolver;
-import org.springframework.web.server.ServerWebExchange;
 
 /**
  * Represents a typed server-side HTTP response, as returned
@@ -62,17 +54,19 @@ public interface ServerResponse {
 
 	/**
 	 * Return the status code of this response.
-	 * @return the status as an HttpStatusCode value
+	 * @return the status as an HttpStatus enum value
+	 * @throws IllegalArgumentException in case of an unknown HTTP status code
+	 * @see HttpStatus#valueOf(int)
 	 */
-	HttpStatusCode statusCode();
+	HttpStatus statusCode();
 
 	/**
-	 * Return the status code of this response as integer.
+	 * Return the (potentially non-standard) status code of this response.
 	 * @return the status as an integer
 	 * @since 5.2
-	 * @deprecated as of 6.0, in favor of {@link #statusCode()}
+	 * @see #statusCode()
+	 * @see HttpStatus#resolve(int)
 	 */
-	@Deprecated(since = "6.0")
 	int rawStatusCode();
 
 	/**
@@ -106,23 +100,11 @@ public interface ServerResponse {
 	}
 
 	/**
-	 * Create a {@code ServerResponse} from the given {@link ErrorResponse}.
-	 * @param response the {@link ErrorResponse} to initialize from
-	 * @return {@code Mono} with the built response
-	 * @since 6.0
-	 */
-	static Mono<ServerResponse> from(ErrorResponse response) {
-		return status(response.getStatusCode())
-				.headers(headers -> headers.putAll(response.getHeaders()))
-				.bodyValue(response.getBody());
-	}
-
-	/**
 	 * Create a builder with the given HTTP status.
 	 * @param status the response status
 	 * @return the created builder
 	 */
-	static BodyBuilder status(HttpStatusCode status) {
+	static BodyBuilder status(HttpStatus status) {
 		return new DefaultServerResponseBuilder(status);
 	}
 
@@ -133,7 +115,7 @@ public interface ServerResponse {
 	 * @since 5.0.3
 	 */
 	static BodyBuilder status(int status) {
-		return new DefaultServerResponseBuilder(HttpStatusCode.valueOf(status));
+		return new DefaultServerResponseBuilder(status);
 	}
 
 	/**
@@ -277,6 +259,7 @@ public interface ServerResponse {
 		/**
 		 * Set the set of allowed {@link HttpMethod HTTP methods}, as specified
 		 * by the {@code Allow} header.
+		 *
 		 * @param allowedMethods the allowed methods
 		 * @return this builder
 		 * @see HttpHeaders#setAllow(Set)
@@ -356,8 +339,9 @@ public interface ServerResponse {
 
 		/**
 		 * Build the response entity with no body.
-		 * <p>The response will be committed when the given {@code voidPublisher} completes.
-		 * @param voidPublisher the publisher to indicate when the response should be committed
+		 * The response will be committed when the given {@code voidPublisher} completes.
+		 *
+		 * @param voidPublisher publisher publisher to indicate when the response should be committed
 		 */
 		Mono<ServerResponse> build(Publisher<Void> voidPublisher);
 

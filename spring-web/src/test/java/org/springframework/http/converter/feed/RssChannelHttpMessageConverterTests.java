@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,16 @@
 
 package org.springframework.http.converter.feed;
 
+import com.rometools.rome.feed.rss.Channel;
+import com.rometools.rome.feed.rss.Item;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.http.MockHttpInputMessage;
+import org.springframework.http.MockHttpOutputMessage;
+import org.springframework.tests.XmlContent;
+import org.xml.sax.SAXException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -23,49 +33,46 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.rometools.rome.feed.rss.Channel;
-import com.rometools.rome.feed.rss.Item;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.testfixture.xml.XmlContent;
-import org.springframework.http.MediaType;
-import org.springframework.web.testfixture.http.MockHttpInputMessage;
-import org.springframework.web.testfixture.http.MockHttpOutputMessage;
-
-import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Arjen Poutsma
  */
-class RssChannelHttpMessageConverterTests {
+public class RssChannelHttpMessageConverterTests {
 
-	private static final MediaType RSS_XML_UTF8 = new MediaType(MediaType.APPLICATION_RSS_XML, StandardCharsets.UTF_8);
+	private RssChannelHttpMessageConverter converter;
 
-	private final RssChannelHttpMessageConverter converter = new RssChannelHttpMessageConverter();
+
+	@BeforeEach
+	public void setUp() {
+		converter = new RssChannelHttpMessageConverter();
+	}
 
 
 	@Test
-	void canReadAndWrite() {
-		assertThat(converter.canRead(Channel.class, MediaType.APPLICATION_RSS_XML)).isTrue();
-		assertThat(converter.canRead(Channel.class, RSS_XML_UTF8)).isTrue();
-
-		assertThat(converter.canWrite(Channel.class, MediaType.APPLICATION_RSS_XML)).isTrue();
-		assertThat(converter.canWrite(Channel.class, RSS_XML_UTF8)).isTrue();
+	public void canRead() {
+		assertThat(converter.canRead(Channel.class, new MediaType("application", "rss+xml"))).isTrue();
+		assertThat(converter.canRead(Channel.class, new MediaType("application", "rss+xml", StandardCharsets.UTF_8))).isTrue();
 	}
 
 	@Test
-	void read() throws IOException {
-		InputStream inputStream = getClass().getResourceAsStream("rss.xml");
-		MockHttpInputMessage inputMessage = new MockHttpInputMessage(inputStream);
-		inputMessage.getHeaders().setContentType(RSS_XML_UTF8);
+	public void canWrite() {
+		assertThat(converter.canWrite(Channel.class, new MediaType("application", "rss+xml"))).isTrue();
+		assertThat(converter.canWrite(Channel.class, new MediaType("application", "rss+xml", StandardCharsets.UTF_8))).isTrue();
+	}
+
+	@Test
+	public void read() throws IOException {
+		InputStream is = getClass().getResourceAsStream("rss.xml");
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(is);
+		inputMessage.getHeaders().setContentType(new MediaType("application", "rss+xml", StandardCharsets.UTF_8));
 		Channel result = converter.read(Channel.class, inputMessage);
 		assertThat(result.getTitle()).isEqualTo("title");
 		assertThat(result.getLink()).isEqualTo("https://example.com");
 		assertThat(result.getDescription()).isEqualTo("description");
 
 		List<?> items = result.getItems();
-		assertThat(items).hasSize(2);
+		assertThat(items.size()).isEqualTo(2);
 
 		Item item1 = (Item) items.get(0);
 		assertThat(item1.getTitle()).isEqualTo("title1");
@@ -75,7 +82,7 @@ class RssChannelHttpMessageConverterTests {
 	}
 
 	@Test
-	void write() throws IOException {
+	public void write() throws IOException, SAXException {
 		Channel channel = new Channel("rss_2.0");
 		channel.setTitle("title");
 		channel.setLink("https://example.com");
@@ -95,9 +102,7 @@ class RssChannelHttpMessageConverterTests {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(channel, null, outputMessage);
 
-		assertThat(outputMessage.getHeaders().getContentType())
-				.as("Invalid content-type")
-				.isEqualTo(RSS_XML_UTF8);
+		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content-type").isEqualTo(new MediaType("application", "rss+xml", StandardCharsets.UTF_8));
 		String expected = "<rss version=\"2.0\">" +
 				"<channel><title>title</title><link>https://example.com</link><description>description</description>" +
 				"<item><title>title1</title></item>" +
@@ -108,7 +113,7 @@ class RssChannelHttpMessageConverterTests {
 	}
 
 	@Test
-	void writeOtherCharset() throws IOException {
+	public void writeOtherCharset() throws IOException, SAXException {
 		Channel channel = new Channel("rss_2.0");
 		channel.setTitle("title");
 		channel.setLink("https://example.com");
@@ -123,26 +128,7 @@ class RssChannelHttpMessageConverterTests {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(channel, null, outputMessage);
 
-		assertThat(outputMessage.getHeaders().getContentType())
-				.as("Invalid content-type")
-				.isEqualTo(new MediaType("application", "rss+xml", Charset.forName(encoding)));
-	}
-
-	@Test
-	void writeOtherContentTypeParameters() throws IOException {
-		Channel channel = new Channel("rss_2.0");
-		channel.setTitle("title");
-		channel.setLink("https://example.com");
-		channel.setDescription("description");
-
-		MockHttpOutputMessage message = new MockHttpOutputMessage();
-		converter.write(channel, new MediaType("application", "rss+xml", singletonMap("x", "y")), message);
-
-		assertThat(message.getHeaders().getContentType().getParameters())
-				.as("Invalid content-type")
-				.hasSize(2)
-				.containsEntry("x", "y")
-				.containsEntry("charset", "UTF-8");
+		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content-type").isEqualTo(new MediaType("application", "rss+xml", Charset.forName(encoding)));
 	}
 
 }

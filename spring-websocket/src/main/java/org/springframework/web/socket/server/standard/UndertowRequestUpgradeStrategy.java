@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,80 @@
 
 package org.springframework.web.socket.server.standard;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.websocket.Endpoint;
+import javax.websocket.Extension;
+
+import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.websocket.server.ServerEndpointConfig;
+
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.lang.Nullable;
+import org.springframework.web.socket.server.HandshakeFailureException;
 
 /**
  * A WebSocket {@code RequestUpgradeStrategy} for WildFly and its underlying
  * Undertow web server. Also compatible with embedded Undertow usage.
  *
- * <p>Designed for Undertow 2.2, also compatible with Undertow 2.3
- * (which implements Jakarta WebSocket 2.1 as well).
+ * <p>Requires Undertow 1.3.5+ as of Spring Framework 5.0.
  *
  * @author Rossen Stoyanchev
- * @author Juergen Hoeller
  * @since 4.0.1
- * @see io.undertow.websockets.jsr.ServerWebSocketContainer#doUpgrade
  */
-public class UndertowRequestUpgradeStrategy extends StandardWebSocketUpgradeStrategy {
+public class UndertowRequestUpgradeStrategy extends AbstractStandardUpgradeStrategy {
 
-	private static final String[] SUPPORTED_VERSIONS = new String[] {"13", "8", "7"};
+	private static final String[] VERSIONS = new String[] {
+			WebSocketVersion.V13.toHttpHeaderValue(),
+			WebSocketVersion.V08.toHttpHeaderValue(),
+			WebSocketVersion.V07.toHttpHeaderValue()
+	};
 
 
 	@Override
 	public String[] getSupportedVersions() {
-		return SUPPORTED_VERSIONS;
+		return VERSIONS;
 	}
 
 	@Override
-	protected void upgradeHttpToWebSocket(HttpServletRequest request, HttpServletResponse response,
-			ServerEndpointConfig endpointConfig, Map<String, String> pathParams) throws Exception {
+	protected void upgradeInternal(ServerHttpRequest request, ServerHttpResponse response,
+			@Nullable String selectedProtocol, List<Extension> selectedExtensions, Endpoint endpoint)
+			throws HandshakeFailureException {
 
-		((ServerWebSocketContainer) getContainer(request)).doUpgrade(
-				request, response, endpointConfig, pathParams);
+		HttpServletRequest servletRequest = getHttpServletRequest(request);
+		HttpServletResponse servletResponse = getHttpServletResponse(response);
+
+		StringBuffer requestUrl = servletRequest.getRequestURL();
+		String path = servletRequest.getRequestURI();  // shouldn't matter
+		Map<String, String> pathParams = Collections.emptyMap();
+
+		ServerEndpointRegistration endpointConfig = new ServerEndpointRegistration(path, endpoint);
+		endpointConfig.setSubprotocols(Collections.singletonList(selectedProtocol));
+		endpointConfig.setExtensions(selectedExtensions);
+
+		try {
+			getContainer(servletRequest).doUpgrade(servletRequest, servletResponse, endpointConfig, pathParams);
+		}
+		catch (ServletException ex) {
+			throw new HandshakeFailureException(
+					"Servlet request failed to upgrade to WebSocket: " + requestUrl, ex);
+		}
+		catch (IOException ex) {
+			throw new HandshakeFailureException(
+					"Response update failed during upgrade to WebSocket: " + requestUrl, ex);
+		}
+	}
+
+	@Override
+	public ServerWebSocketContainer getContainer(HttpServletRequest request) {
+		return (ServerWebSocketContainer) super.getContainer(request);
 	}
 
 }

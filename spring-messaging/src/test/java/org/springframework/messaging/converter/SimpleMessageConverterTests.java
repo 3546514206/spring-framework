@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,18 +27,19 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link SimpleMessageConverter}.
+ * Unit tests for
+ * {@link org.springframework.messaging.converter.SimpleMessageConverter}.
  *
  * @author Rossen Stoyanchev
  */
-class SimpleMessageConverterTests {
+public class SimpleMessageConverterTests {
 
 	private final SimpleMessageConverter converter = new SimpleMessageConverter();
 
 
 	@Test
-	void toMessageWithPayloadAndHeaders() {
-		MessageHeaders headers = new MessageHeaders(Collections.singletonMap("foo", "bar"));
+	public void toMessageWithPayloadAndHeaders() {
+		MessageHeaders headers = new MessageHeaders(Collections.<String, Object>singletonMap("foo", "bar"));
 		Message<?> message = this.converter.toMessage("payload", headers);
 
 		assertThat(message.getPayload()).isEqualTo("payload");
@@ -46,7 +47,7 @@ class SimpleMessageConverterTests {
 	}
 
 	@Test
-	void toMessageWithPayloadAndMutableHeaders() {
+	public void toMessageWithPayloadAndMutableHeaders() {
 		MessageHeaderAccessor accessor = new MessageHeaderAccessor();
 		accessor.setHeader("foo", "bar");
 		accessor.setLeaveMutable(true);

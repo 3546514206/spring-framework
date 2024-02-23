@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import org.springframework.util.MultiValueMap;
  * @author Mark Pollack
  * @author Chris Beams
  * @author Phillip Webb
- * @author Sam Brannen
  * @since 3.0
  */
 public class StandardMethodMetadata implements MethodMetadata {
@@ -68,8 +67,10 @@ public class StandardMethodMetadata implements MethodMetadata {
 	 * {@link org.springframework.core.annotation.AnnotationAttributes} for compatibility
 	 * with ASM-based {@link AnnotationMetadata} implementations
 	 * @since 3.1.1
+	 * @deprecated since 5.2 in favor of obtaining instances via {@link AnnotationMetadata}
 	 */
-	StandardMethodMetadata(Method introspectedMethod, boolean nestedAnnotationsAsMap) {
+	@Deprecated
+	public StandardMethodMetadata(Method introspectedMethod, boolean nestedAnnotationsAsMap) {
 		Assert.notNull(introspectedMethod, "Method must not be null");
 		this.introspectedMethod = introspectedMethod;
 		this.nestedAnnotationsAsMap = nestedAnnotationsAsMap;
@@ -147,23 +148,6 @@ public class StandardMethodMetadata implements MethodMetadata {
 		}
 		return AnnotatedElementUtils.getAllAnnotationAttributes(this.introspectedMethod,
 				annotationName, classValuesAsString, false);
-	}
-
-
-	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof StandardMethodMetadata that &&
-				this.introspectedMethod.equals(that.introspectedMethod)));
-	}
-
-	@Override
-	public int hashCode() {
-		return this.introspectedMethod.hashCode();
-	}
-
-	@Override
-	public String toString() {
-		return this.introspectedMethod.toString();
 	}
 
 }

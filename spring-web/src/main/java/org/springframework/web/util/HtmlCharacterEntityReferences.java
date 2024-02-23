@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ class HtmlCharacterEntityReferences {
 		}
 		catch (IOException ex) {
 			throw new IllegalStateException(
-					"Failed to parse reference definition file [HtmlCharacterEntityReferences.properties]: " + ex.getMessage());
+					"Failed to parse reference definition file [HtmlCharacterEntityReferences.properties]: " +  ex.getMessage());
 		}
 
 		// Parse reference definition properties
@@ -134,14 +134,18 @@ class HtmlCharacterEntityReferences {
 	@Nullable
 	public String convertToReference(char character, String encoding) {
 		if (encoding.startsWith("UTF-")){
-			return switch (character){
-				case '<' -> "&lt;";
-				case '>' -> "&gt;";
-				case '"' -> "&quot;";
-				case '&' -> "&amp;";
-				case '\'' -> "&#39;";
-				default -> null;
-			};
+			switch (character){
+				case '<':
+					return "&lt;";
+				case '>':
+					return "&gt;";
+				case '"':
+					return "&quot;";
+				case '&':
+					return "&amp;";
+				case '\'':
+					return "&#39;";
+			}
 		}
 		else if (character < 1000 || (character >= 8000 && character < 10000)) {
 			int index = (character < 1000 ? character : character - 7000);

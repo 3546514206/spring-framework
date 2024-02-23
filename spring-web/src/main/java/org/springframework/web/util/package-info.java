@@ -1,5 +1,6 @@
 /**
- * Miscellaneous web utility classes, such as HTML escaping and cookie handling.
+ * Miscellaneous web utility classes, such as HTML escaping,
+ * Log4j initialization, and cookie handling.
  */
 @NonNullApi
 @NonNullFields

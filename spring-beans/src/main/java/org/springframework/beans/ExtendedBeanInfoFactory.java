@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,35 +18,34 @@ package org.springframework.beans;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
+import java.beans.Introspector;
 import java.lang.reflect.Method;
 
 import org.springframework.core.Ordered;
-import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 /**
- * Extension of {@link StandardBeanInfoFactory} that supports "non-standard"
- * JavaBeans setter methods through introspection by Spring's
- * (package-visible) {@code ExtendedBeanInfo} implementation.
- *
- * <p>To be configured via a {@code META-INF/spring.factories} file with the following content:
- * {@code org.springframework.beans.BeanInfoFactory=org.springframework.beans.ExtendedBeanInfoFactory}
+ * {@link BeanInfoFactory} implementation that evaluates whether bean classes have
+ * "non-standard" JavaBeans setter methods and are thus candidates for introspection
+ * by Spring's (package-visible) {@code ExtendedBeanInfo} implementation.
  *
  * <p>Ordered at {@link Ordered#LOWEST_PRECEDENCE} to allow other user-defined
  * {@link BeanInfoFactory} types to take precedence.
  *
  * @author Chris Beams
- * @author Juergen Hoeller
  * @since 3.2
- * @see StandardBeanInfoFactory
+ * @see BeanInfoFactory
  * @see CachedIntrospectionResults
  */
-public class ExtendedBeanInfoFactory extends StandardBeanInfoFactory {
+public class ExtendedBeanInfoFactory implements BeanInfoFactory, Ordered {
 
+	/**
+	 * Return an {@link ExtendedBeanInfo} for the given bean class, if applicable.
+	 */
 	@Override
-	@NonNull
+	@Nullable
 	public BeanInfo getBeanInfo(Class<?> beanClass) throws IntrospectionException {
-		BeanInfo beanInfo = super.getBeanInfo(beanClass);
-		return (supports(beanClass) ? new ExtendedBeanInfo(beanInfo) : beanInfo);
+		return (supports(beanClass) ? new ExtendedBeanInfo(Introspector.getBeanInfo(beanClass)) : null);
 	}
 
 	/**
@@ -60,6 +59,11 @@ public class ExtendedBeanInfoFactory extends StandardBeanInfoFactory {
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public int getOrder() {
+		return Ordered.LOWEST_PRECEDENCE;
 	}
 
 }

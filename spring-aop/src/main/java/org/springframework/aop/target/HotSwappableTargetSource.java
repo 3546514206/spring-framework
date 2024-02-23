@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package org.springframework.aop.target;
 
-import java.io.Serializable;
-
 import org.springframework.aop.TargetSource;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.io.Serializable;
+
 /**
- * {@link org.springframework.aop.TargetSource} implementation that
+ * {@link TargetSource} implementation that
  * caches a local target object, but allows the target to be swapped
  * while the application is running.
  *
@@ -43,7 +42,6 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 
 
 	/** The current target object. */
-	@SuppressWarnings("serial")
 	private Object target;
 
 
@@ -67,8 +65,18 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 	}
 
 	@Override
+	public final boolean isStatic() {
+		return false;
+	}
+
+	@Override
 	public synchronized Object getTarget() {
 		return this.target;
+	}
+
+	@Override
+	public void releaseTarget(Object target) {
+		// nothing to do
 	}
 
 
@@ -87,12 +95,13 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 
 
 	/**
-	 * Two HotSwappableTargetSources are equal if the current target objects are equal.
+	 * Two HotSwappableTargetSources are equal if the current target
+	 * objects are equal.
 	 */
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof HotSwappableTargetSource that &&
-				this.target.equals(that.target)));
+	public boolean equals(Object other) {
+		return (this == other || (other instanceof HotSwappableTargetSource &&
+				this.target.equals(((HotSwappableTargetSource) other).target)));
 	}
 
 	@Override

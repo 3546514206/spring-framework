@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.http.client;
 
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpStatus;
+
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpStatusCode;
-
 /**
  * Represents a client-side HTTP response.
- *
- * <p>Obtained via an invocation of {@link ClientHttpRequest#execute()}.
+ * Obtained via an calling of the {@link ClientHttpRequest#execute()}.
  *
  * <p>A {@code ClientHttpResponse} must be {@linkplain #close() closed},
  * typically in a {@code finally} block.
@@ -36,14 +35,29 @@ import org.springframework.http.HttpStatusCode;
 public interface ClientHttpResponse extends HttpInputMessage, Closeable {
 
 	/**
-	 * Get the HTTP status code as an {@link HttpStatusCode}.
-	 * @return the HTTP status as {@code HttpStatusCode} value (never {@code null})
-	 * @throws IOException in case of I/O errors
+	 * Return the HTTP status code as an {@link HttpStatus} enum value.
+	 *
+	 * @return the HTTP status as an HttpStatus enum value (never {@code null})
+	 * @throws IOException              in case of I/O errors
+	 * @throws IllegalArgumentException in case of an unknown HTTP status code
+	 * @see HttpStatus#valueOf(int)
+	 * @since #getRawStatusCode()
 	 */
-	HttpStatusCode getStatusCode() throws IOException;
+	HttpStatus getStatusCode() throws IOException;
 
 	/**
-	 * Get the HTTP status text of the response.
+	 * Return the HTTP status code (potentially non-standard and not
+	 * resolvable through the {@link HttpStatus} enum) as an integer.
+	 * @return the HTTP status as an integer value
+	 * @throws IOException in case of I/O errors
+	 * @since 3.1.1
+	 * @see #getStatusCode()
+	 * @see HttpStatus#resolve(int)
+	 */
+	int getRawStatusCode() throws IOException;
+
+	/**
+	 * Return the HTTP status text of the response.
 	 * @return the HTTP status text
 	 * @throws IOException in case of I/O errors
 	 */

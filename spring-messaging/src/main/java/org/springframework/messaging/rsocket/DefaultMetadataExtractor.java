@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.rsocket;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,8 +30,6 @@ import io.rsocket.Payload;
 import io.rsocket.metadata.CompositeMetadata;
 import io.rsocket.metadata.RoutingMetadata;
 import io.rsocket.metadata.WellKnownMimeType;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ResolvableType;
@@ -44,7 +42,7 @@ import org.springframework.util.MimeType;
 /**
  * Default {@link MetadataExtractor} implementation that relies on
  * {@link Decoder}s to deserialize the content of metadata entries.
- * <p>By default only {@code "message/x.rsocket.routing.v0"} is extracted and
+ * <p>By default only {@code "message/x.rsocket.routing.v0""} is extracted and
  * saved under {@link MetadataExtractor#ROUTE_KEY}. Use {@code metadataToExtract}
  * methods to specify other metadata mime types of interest to extract.
  *
@@ -52,9 +50,6 @@ import org.springframework.util.MimeType;
  * @since 5.2
  */
 public class DefaultMetadataExtractor implements MetadataExtractor, MetadataExtractorRegistry {
-
-	private static final Log logger = LogFactory.getLog(DefaultMetadataExtractor.class);
-
 
 	private final List<Decoder<?>> decoders;
 
@@ -72,7 +67,7 @@ public class DefaultMetadataExtractor implements MetadataExtractor, MetadataExtr
 	 * Constructor with list of decoders for de-serializing metadata entries.
 	 */
 	public DefaultMetadataExtractor(List<Decoder<?>> decoders) {
-		this.decoders = List.copyOf(decoders);
+		this.decoders = Collections.unmodifiableList(new ArrayList<>(decoders));
 	}
 
 
@@ -123,10 +118,6 @@ public class DefaultMetadataExtractor implements MetadataExtractor, MetadataExtr
 		else {
 			extractEntry(payload.metadata().slice(), metadataMimeType.toString(), result);
 		}
-		if (logger.isDebugEnabled()) {
-			logger.debug("Values extracted from metadata: " + result +
-					" with registrations for " + this.registrations.keySet() + ".");
-		}
 		return result;
 	}
 
@@ -151,7 +142,7 @@ public class DefaultMetadataExtractor implements MetadataExtractor, MetadataExtr
 	private static class EntryExtractor<T> {
 
 		// We only need this to wrap ByteBufs
-		private static final NettyDataBufferFactory bufferFactory =
+		private final static NettyDataBufferFactory bufferFactory =
 				new NettyDataBufferFactory(ByteBufAllocator.DEFAULT);
 
 
@@ -183,7 +174,7 @@ public class DefaultMetadataExtractor implements MetadataExtractor, MetadataExtr
 
 		@Override
 		public String toString() {
-			return "\"" + this.mimeType + "\" => " + this.targetType;
+			return "mimeType=" + this.mimeType + ", targetType=" + this.targetType;
 		}
 	}
 

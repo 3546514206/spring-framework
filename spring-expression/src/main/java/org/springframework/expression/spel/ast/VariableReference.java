@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,21 @@
 
 package org.springframework.expression.spel.ast;
 
-import java.lang.reflect.Modifier;
-import java.util.function.Supplier;
-
 import org.springframework.asm.MethodVisitor;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.EvaluationException;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.CodeFlow;
 import org.springframework.expression.spel.ExpressionState;
 import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.lang.Nullable;
 
+import java.lang.reflect.Modifier;
+
 /**
- * Represents a variable reference &mdash; for example, {@code #someVar}.
+ * Represents a variable reference, eg. #someVar. Note this is different to a *local*
+ * variable like $someVar
  *
  * @author Andy Clement
- * @author Sam Brannen
  * @since 3.0
  */
 public class VariableReference extends SpelNodeImpl {
@@ -92,10 +90,8 @@ public class VariableReference extends SpelNodeImpl {
 	}
 
 	@Override
-	public TypedValue setValueInternal(ExpressionState state, Supplier<TypedValue> valueSupplier)
-			throws EvaluationException {
-
-		return state.assignVariable(this.name, valueSupplier);
+	public void setValue(ExpressionState state, @Nullable Object value) throws SpelEvaluationException {
+		state.setVariable(this.name, value);
 	}
 
 	@Override

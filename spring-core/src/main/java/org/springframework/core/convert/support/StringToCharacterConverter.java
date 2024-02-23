@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.core.convert.support;
 
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.lang.Nullable;
 
 /**
  * Converts a String to a Character.
@@ -28,7 +27,6 @@ import org.springframework.lang.Nullable;
 final class StringToCharacterConverter implements Converter<String, Character> {
 
 	@Override
-	@Nullable
 	public Character convert(String source) {
 		if (source.isEmpty()) {
 			return null;

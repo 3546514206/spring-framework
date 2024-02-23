@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import reactor.core.publisher.Mono;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.http.codec.HttpMessageReader;
 import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.http.server.reactive.observation.ServerRequestObservationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.reactive.function.server.HandlerFunction;
@@ -104,10 +103,6 @@ public class RouterFunctionMapping extends AbstractHandlerMapping implements Ini
 		if (this.routerFunction == null) {
 			initRouterFunctions();
 		}
-		if (this.routerFunction != null) {
-			RouterFunctions.changeParser(this.routerFunction, getPathPatternParser());
-		}
-
 	}
 
 	/**
@@ -120,23 +115,21 @@ public class RouterFunctionMapping extends AbstractHandlerMapping implements Ini
 	}
 
 	private List<RouterFunction<?>> routerFunctions() {
-		return obtainApplicationContext()
+		List<RouterFunction<?>> functions = obtainApplicationContext()
 				.getBeanProvider(RouterFunction.class)
 				.orderedStream()
-				.map(router -> (RouterFunction<?>) router)
+				.map(router -> (RouterFunction<?>)router)
 				.collect(Collectors.toList());
+		return (!CollectionUtils.isEmpty(functions) ? functions : Collections.emptyList());
 	}
 
 	private void logRouterFunctions(List<RouterFunction<?>> routerFunctions) {
-		if (mappingsLogger.isDebugEnabled()) {
-			routerFunctions.forEach(function -> mappingsLogger.debug("Mapped " + function));
-		}
-		else if (logger.isDebugEnabled()) {
+		if (logger.isDebugEnabled()) {
 			int total = routerFunctions.size();
 			String message = total + " RouterFunction(s) in " + formatMappingName();
 			if (logger.isTraceEnabled()) {
 				if (total > 0) {
-					routerFunctions.forEach(function -> logger.trace("Mapped " + function));
+					routerFunctions.forEach(routerFunction -> logger.trace("Mapped " + routerFunction));
 				}
 				else {
 					logger.trace(message);
@@ -161,7 +154,7 @@ public class RouterFunctionMapping extends AbstractHandlerMapping implements Ini
 		}
 	}
 
-	@SuppressWarnings({"unchecked", "removal"})
+	@SuppressWarnings("unchecked")
 	private void setAttributes(
 			Map<String, Object> attributes, ServerRequest serverRequest, HandlerFunction<?> handlerFunction) {
 
@@ -171,11 +164,6 @@ public class RouterFunctionMapping extends AbstractHandlerMapping implements Ini
 		PathPattern matchingPattern = (PathPattern) attributes.get(RouterFunctions.MATCHING_PATTERN_ATTRIBUTE);
 		if (matchingPattern != null) {
 			attributes.put(BEST_MATCHING_PATTERN_ATTRIBUTE, matchingPattern);
-			org.springframework.web.filter.reactive.ServerHttpObservationFilter
-					.findObservationContext(serverRequest.exchange())
-					.ifPresent(context -> context.setPathPattern(matchingPattern.toString()));
-			ServerRequestObservationContext.findCurrent(serverRequest.exchange().getAttributes())
-					.ifPresent(context -> context.setPathPattern(matchingPattern.toString()));
 		}
 		Map<String, String> uriVariables =
 				(Map<String, String>) attributes.get(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE);

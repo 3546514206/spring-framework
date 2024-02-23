@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,18 @@
 
 package org.springframework.web.servlet.resource;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,13 +35,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link ResourceUrlProvider}.
+ * Unit tests for {@link ResourceUrlProvider}.
  *
  * @author Jeremy Grelle
  * @author Rossen Stoyanchev
- * @author Brian Clozel
  */
-class ResourceUrlProviderTests {
+public class ResourceUrlProviderTests {
 
 	private final List<Resource> locations = new ArrayList<>();
 
@@ -58,7 +52,7 @@ class ResourceUrlProviderTests {
 
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
 		this.locations.add(new ClassPathResource("test/", getClass()));
 		this.locations.add(new ClassPathResource("testalternatepath/", getClass()));
 		this.handler.setServletContext(new MockServletContext());
@@ -70,13 +64,13 @@ class ResourceUrlProviderTests {
 
 
 	@Test
-	void getStaticResourceUrl() {
+	public void getStaticResourceUrl() {
 		String url = this.urlProvider.getForLookupPath("/resources/foo.css");
 		assertThat(url).isEqualTo("/resources/foo.css");
 	}
 
 	@Test // SPR-13374
-	void getStaticResourceUrlRequestWithQueryOrHash() {
+	public void getStaticResourceUrlRequestWithQueryOrHash() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setContextPath("/");
 		request.setRequestURI("/");
@@ -91,17 +85,17 @@ class ResourceUrlProviderTests {
 	}
 
 	@Test // SPR-16526
-	void getStaticResourceWithMissingContextPath() {
+	public void getStaticResourceWithMissingContextPath() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setContextPath("/contextpath-longer-than-request-path");
 		request.setRequestURI("/contextpath-longer-than-request-path/style.css");
 		String url = "/resources/foo.css";
 		String resolvedUrl = this.urlProvider.getForRequestUrl(request, url);
-		assertThat(resolvedUrl).isNull();
+		assertThat((Object) resolvedUrl).isNull();
 	}
 
 	@Test
-	void getFingerprintedResourceUrl() {
+	public void getFingerprintedResourceUrl() {
 		Map<String, VersionStrategy> versionStrategyMap = new HashMap<>();
 		versionStrategyMap.put("/**", new ContentVersionStrategy());
 		VersionResourceResolver versionResolver = new VersionResourceResolver();
@@ -117,7 +111,7 @@ class ResourceUrlProviderTests {
 	}
 
 	@Test // SPR-12647
-	void bestPatternMatch() {
+	public void bestPatternMatch() throws Exception {
 		ResourceHttpRequestHandler otherHandler = new ResourceHttpRequestHandler();
 		otherHandler.setLocations(this.locations);
 		Map<String, VersionStrategy> versionStrategyMap = new HashMap<>();
@@ -138,7 +132,8 @@ class ResourceUrlProviderTests {
 	}
 
 	@Test // SPR-12592
-	void initializeOnce() {
+	@SuppressWarnings("resource")
+	public void initializeOnce() throws Exception {
 		AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
 		context.setServletContext(new MockServletContext());
 		context.register(HandlerMappingConfiguration.class);
@@ -149,32 +144,10 @@ class ResourceUrlProviderTests {
 		assertThat(urlProviderBean.isAutodetect()).isFalse();
 	}
 
-	@Test
-	void initializeOnCurrentContext() {
-		AnnotationConfigWebApplicationContext parentContext = new AnnotationConfigWebApplicationContext();
-		parentContext.setServletContext(new MockServletContext());
-		parentContext.register(ParentHandlerMappingConfiguration.class);
-
-		AnnotationConfigWebApplicationContext childContext = new AnnotationConfigWebApplicationContext();
-		childContext.setParent(parentContext);
-		childContext.setServletContext(new MockServletContext());
-		childContext.register(HandlerMappingConfiguration.class);
-
-		parentContext.refresh();
-		childContext.refresh();
-
-		ResourceUrlProvider parentUrlProvider = parentContext.getBean(ResourceUrlProvider.class);
-		assertThat(parentUrlProvider.getHandlerMap()).isEmpty();
-		assertThat(parentUrlProvider.isAutodetect()).isTrue();
-		ResourceUrlProvider childUrlProvider = childContext.getBean(ResourceUrlProvider.class);
-		assertThat(childUrlProvider.getHandlerMap()).containsOnlyKeys("/resources/**");
-		assertThat(childUrlProvider.isAutodetect()).isFalse();
-	}
-
 	@Test // SPR-16296
-	void getForLookupPathShouldNotFailIfPathContainsDoubleSlashes() {
+	public void getForLookupPathShouldNotFailIfPathContainsDoubleSlashes() {
 		// given
-		ResourceResolver mockResourceResolver = mock();
+		ResourceResolver mockResourceResolver = mock(ResourceResolver.class);
 		given(mockResourceResolver.resolveUrlPath(any(), any(), any())).willReturn("some-path");
 
 		ResourceHttpRequestHandler handler = new ResourceHttpRequestHandler();
@@ -200,16 +173,6 @@ class ResourceUrlProviderTests {
 			return new SimpleUrlHandlerMapping(
 				Collections.singletonMap("/resources/**", new ResourceHttpRequestHandler()));
 		}
-
-		@Bean
-		public ResourceUrlProvider resourceUrlProvider() {
-			return new ResourceUrlProvider();
-		}
-	}
-
-	@Configuration
-	@SuppressWarnings({"unused", "WeakerAccess"})
-	static class ParentHandlerMappingConfiguration {
 
 		@Bean
 		public ResourceUrlProvider resourceUrlProvider() {

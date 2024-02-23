@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@ package org.springframework.jms.support.converter;
 
 import java.io.Serializable;
 
-import jakarta.jms.JMSException;
-import jakarta.jms.ObjectMessage;
-import jakarta.jms.Session;
-import jakarta.jms.TextMessage;
+import javax.jms.JMSException;
+import javax.jms.ObjectMessage;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.jms.StubTextMessage;
@@ -37,22 +38,22 @@ import static org.mockito.Mockito.verify;
 /**
  * @author Stephane Nicoll
  */
-class MessagingMessageConverterTests {
+public class MessagingMessageConverterTests {
 
 	private final MessagingMessageConverter converter = new MessagingMessageConverter();
 
 
 	@Test
-	void onlyHandlesMessage() {
+	public void onlyHandlesMessage() throws JMSException {
 		assertThatIllegalArgumentException().isThrownBy(() ->
-				this.converter.toMessage(new Object(), mock()));
+				this.converter.toMessage(new Object(), mock(Session.class)));
 	}
 
 	@Test
-	void simpleObject() throws Exception {
-		Session session = mock();
-		Serializable payload = mock();
-		ObjectMessage jmsMessage = mock();
+	public void simpleObject() throws Exception {
+		Session session = mock(Session.class);
+		Serializable payload = mock(Serializable.class);
+		ObjectMessage jmsMessage = mock(ObjectMessage.class);
 		given(session.createObjectMessage(payload)).willReturn(jmsMessage);
 
 		this.converter.toMessage(MessageBuilder.withPayload(payload).build(), session);
@@ -60,7 +61,7 @@ class MessagingMessageConverterTests {
 	}
 
 	@Test
-	void customPayloadConverter() throws JMSException {
+	public void customPayloadConverter() throws JMSException {
 		TextMessage jmsMsg = new StubTextMessage("1224");
 
 		this.converter.setPayloadConverter(new TestMessageConverter());
@@ -74,7 +75,7 @@ class MessagingMessageConverterTests {
 		private boolean called;
 
 		@Override
-		public Object fromMessage(jakarta.jms.Message message) throws JMSException, MessageConversionException {
+		public Object fromMessage(javax.jms.Message message) throws JMSException, MessageConversionException {
 			if (this.called) {
 				throw new java.lang.IllegalStateException("Converter called twice");
 			}

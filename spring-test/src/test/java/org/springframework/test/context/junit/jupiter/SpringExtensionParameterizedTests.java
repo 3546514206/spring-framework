@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,17 @@
 
 package org.springframework.test.context.junit.jupiter;
 
-import java.util.List;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.junit.SpringJUnitJupiterTestSuite;
 import org.springframework.test.context.junit.jupiter.comics.Cat;
 import org.springframework.test.context.junit.jupiter.comics.Dog;
 import org.springframework.test.context.junit.jupiter.comics.Person;
-import org.springframework.test.context.support.AnnotationConfigContextLoader;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,18 +35,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  * can be used with JUnit Jupiter's {@link ParameterizedTest @ParameterizedTest}
  * support in conjunction with the {@link SpringExtension}.
  *
+ * <p>To run these tests in an IDE that does not have built-in support for the
+ * JUnit Platform, simply run {@link SpringJUnitJupiterTestSuite} as a JUnit 4 test.
+ *
  * @author Sam Brannen
  * @since 5.0
  * @see SpringExtension
  * @see ParameterizedTest
  */
-@SpringJUnitConfig(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
+@SpringJUnitConfig(TestConfig.class)
 class SpringExtensionParameterizedTests {
 
 	@ParameterizedTest
 	@ValueSource(strings = { "Dilbert", "Wally" })
 	void people(String name, @Autowired List<Person> people) {
-		assertThat(people.stream().map(Person::getName).filter(name::equals)).hasSize(1);
+		assertThat(people.stream().map(Person::getName).filter(name::equals)).size().isEqualTo(1);
 	}
 
 	@ParameterizedTest

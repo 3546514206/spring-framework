@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,62 +25,70 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link ManagedSet}.
- *
  * @author Rick Evans
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
-class ManagedSetTests {
+public class ManagedSetTests {
 
 	@Test
-	void mergeSunnyDay() {
-		ManagedSet parent = ManagedSet.of("one", "two");
-		ManagedSet child = ManagedSet.of("three");
+	public void mergeSunnyDay() {
+		ManagedSet parent = new ManagedSet();
+		parent.add("one");
+		parent.add("two");
+		ManagedSet child = new ManagedSet();
 		child.add("three");
-		child.add("four");
 		child.setMergeEnabled(true);
 		Set mergedSet = child.merge(parent);
-		assertThat(mergedSet).as("merge() obviously did not work.").containsExactly("one", "two", "three", "four");
+		assertThat(mergedSet.size()).as("merge() obviously did not work.").isEqualTo(3);
 	}
 
 	@Test
-	void mergeWithNullParent() {
-		ManagedSet child = ManagedSet.of("one");
+	public void mergeWithNullParent() {
+		ManagedSet child = new ManagedSet();
+		child.add("one");
 		child.setMergeEnabled(true);
 		assertThat(child.merge(null)).isSameAs(child);
 	}
 
 	@Test
-	void mergeNotAllowedWhenMergeNotEnabled() {
-		assertThatIllegalStateException().isThrownBy(() -> new ManagedSet().merge(null));
+	public void mergeNotAllowedWhenMergeNotEnabled() {
+		assertThatIllegalStateException().isThrownBy(() ->
+				new ManagedSet().merge(null));
 	}
 
 	@Test
-	void mergeWithNonCompatibleParentType() {
-		ManagedSet child = ManagedSet.of("one");
+	public void mergeWithNonCompatibleParentType() {
+		ManagedSet child = new ManagedSet();
+		child.add("one");
 		child.setMergeEnabled(true);
-		assertThatIllegalArgumentException().isThrownBy(() -> child.merge("hello"));
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				child.merge("hello"));
 	}
 
 	@Test
-	void mergeEmptyChild() {
-		ManagedSet parent = ManagedSet.of("one", "two");
+	public void mergeEmptyChild() {
+		ManagedSet parent = new ManagedSet();
+		parent.add("one");
+		parent.add("two");
 		ManagedSet child = new ManagedSet();
 		child.setMergeEnabled(true);
 		Set mergedSet = child.merge(parent);
-		assertThat(mergedSet).as("merge() obviously did not work.").containsExactly("one", "two");
+		assertThat(mergedSet.size()).as("merge() obviously did not work.").isEqualTo(2);
 	}
 
 	@Test
-	void mergeChildValuesOverrideTheParents() {
+	public void mergeChildValuesOverrideTheParents() {
 		// asserts that the set contract is not violated during a merge() operation...
-		ManagedSet parent = ManagedSet.of("one", "two");
-		ManagedSet child = ManagedSet.of("one");
+		ManagedSet parent = new ManagedSet();
+		parent.add("one");
+		parent.add("two");
+		ManagedSet child = new ManagedSet();
+		child.add("one");
 		child.setMergeEnabled(true);
 		Set mergedSet = child.merge(parent);
-		assertThat(mergedSet).as("merge() obviously did not work.").containsExactly("one", "two");
+		assertThat(mergedSet.size()).as("merge() obviously did not work.").isEqualTo(2);
 	}
 
 }

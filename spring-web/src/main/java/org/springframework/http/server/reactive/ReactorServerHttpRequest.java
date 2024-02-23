@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,25 @@
 
 package org.springframework.http.server.reactive;
 
-import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
-import java.util.concurrent.atomic.AtomicLong;
-
-import javax.net.ssl.SSLSession;
-
-import io.netty.channel.Channel;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.ssl.SslHandler;
-import org.apache.commons.logging.Log;
-import reactor.core.publisher.Flux;
-import reactor.netty.ChannelOperationsId;
-import reactor.netty.Connection;
-import reactor.netty.http.server.HttpServerRequest;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpLogging;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.support.Netty4HeadersAdapter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import reactor.core.publisher.Flux;
+import reactor.netty.Connection;
+import reactor.netty.http.server.HttpServerRequest;
+
+import javax.net.ssl.SSLSession;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Adapt {@link ServerHttpRequest} to the Reactor {@link HttpServerRequest}.
@@ -51,12 +45,6 @@ import org.springframework.util.MultiValueMap;
  */
 class ReactorServerHttpRequest extends AbstractServerHttpRequest {
 
-	private static final Log logger = HttpLogging.forLogName(ReactorServerHttpRequest.class);
-
-
-	private static final AtomicLong logPrefixIndex = new AtomicLong();
-
-
 	private final HttpServerRequest request;
 
 	private final NettyDataBufferFactory bufferFactory;
@@ -65,18 +53,90 @@ class ReactorServerHttpRequest extends AbstractServerHttpRequest {
 	public ReactorServerHttpRequest(HttpServerRequest request, NettyDataBufferFactory bufferFactory)
 			throws URISyntaxException {
 
-		super(HttpMethod.valueOf(request.method().name()), ReactorUriHelper.createUri(request), "",
-				new Netty4HeadersAdapter(request.requestHeaders()));
+		super(initUri(request), "", initHeaders(request));
 		Assert.notNull(bufferFactory, "DataBufferFactory must not be null");
 		this.request = request;
 		this.bufferFactory = bufferFactory;
 	}
 
+	private static URI initUri(HttpServerRequest request) throws URISyntaxException {
+		Assert.notNull(request, "HttpServerRequest must not be null");
+		return new URI(resolveBaseUrl(request).toString() + resolveRequestUri(request));
+	}
+
+	private static URI resolveBaseUrl(HttpServerRequest request) throws URISyntaxException {
+		String scheme = getScheme(request);
+		String header = request.requestHeaders().get(HttpHeaderNames.HOST);
+		if (header != null) {
+			final int portIndex;
+			if (header.startsWith("[")) {
+				portIndex = header.indexOf(':', header.indexOf(']'));
+			}
+			else {
+				portIndex = header.indexOf(':');
+			}
+			if (portIndex != -1) {
+				try {
+					return new URI(scheme, null, header.substring(0, portIndex),
+							Integer.parseInt(header.substring(portIndex + 1)), null, null, null);
+				}
+				catch (NumberFormatException ex) {
+					throw new URISyntaxException(header, "Unable to parse port", portIndex);
+				}
+			}
+			else {
+				return new URI(scheme, header, null, null);
+			}
+		}
+		else {
+			InetSocketAddress localAddress = request.hostAddress();
+			return new URI(scheme, null, localAddress.getHostString(),
+					localAddress.getPort(), null, null, null);
+		}
+	}
+
+	private static String getScheme(HttpServerRequest request) {
+		return request.scheme();
+	}
+
+	private static String resolveRequestUri(HttpServerRequest request) {
+		String uri = request.uri();
+		for (int i = 0; i < uri.length(); i++) {
+			char c = uri.charAt(i);
+			if (c == '/' || c == '?' || c == '#') {
+				break;
+			}
+			if (c == ':' && (i + 2 < uri.length())) {
+				if (uri.charAt(i + 1) == '/' && uri.charAt(i + 2) == '/') {
+					for (int j = i + 3; j < uri.length(); j++) {
+						c = uri.charAt(j);
+						if (c == '/' || c == '?' || c == '#') {
+							return uri.substring(j);
+						}
+					}
+					return "";
+				}
+			}
+		}
+		return uri;
+	}
+
+	private static HttpHeaders initHeaders(HttpServerRequest channel) {
+		NettyHeadersAdapter headersMap = new NettyHeadersAdapter(channel.requestHeaders());
+		return new HttpHeaders(headersMap);
+	}
+
+
+	@Override
+	public String getMethodValue() {
+		return this.request.method().name();
+	}
+
 	@Override
 	protected MultiValueMap<String, HttpCookie> initCookies() {
 		MultiValueMap<String, HttpCookie> cookies = new LinkedMultiValueMap<>();
-		for (CharSequence name : this.request.allCookies().keySet()) {
-			for (Cookie cookie : this.request.allCookies().get(name)) {
+		for (CharSequence name : this.request.cookies().keySet()) {
+			for (Cookie cookie : this.request.cookies().get(name)) {
 				HttpCookie httpCookie = new HttpCookie(name.toString(), cookie.value());
 				cookies.add(name.toString(), httpCookie);
 			}
@@ -85,13 +145,6 @@ class ReactorServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	@Override
-	@Nullable
-	public InetSocketAddress getLocalAddress() {
-		return this.request.hostAddress();
-	}
-
-	@Override
-	@Nullable
 	public InetSocketAddress getRemoteAddress() {
 		return this.request.remoteAddress();
 	}
@@ -99,11 +152,7 @@ class ReactorServerHttpRequest extends AbstractServerHttpRequest {
 	@Override
 	@Nullable
 	protected SslInfo initSslInfo() {
-		Channel channel = ((Connection) this.request).channel();
-		SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
-		if (sslHandler == null && channel.parent() != null) { // HTTP/2
-			sslHandler = channel.parent().pipeline().get(SslHandler.class);
-		}
+		SslHandler sslHandler = ((Connection) this.request).channel().pipeline().get(SslHandler.class);
 		if (sslHandler != null) {
 			SSLSession session = sslHandler.engine().getSession();
 			return new DefaultSslInfo(session);
@@ -125,27 +174,8 @@ class ReactorServerHttpRequest extends AbstractServerHttpRequest {
 	@Override
 	@Nullable
 	protected String initId() {
-		if (this.request instanceof Connection connection) {
-			return connection.channel().id().asShortText() +
-					"-" + logPrefixIndex.incrementAndGet();
-		}
-		return null;
-	}
-
-	@Override
-	protected String initLogPrefix() {
-		String id = null;
-		if (this.request instanceof ChannelOperationsId operationsId) {
-			id = (logger.isDebugEnabled() ? operationsId.asLongText() : operationsId.asShortText());
-		}
-		if (id != null) {
-			return id;
-		}
-		if (this.request instanceof Connection connection) {
-			return connection.channel().id().asShortText() +
-					"-" + logPrefixIndex.incrementAndGet();
-		}
-		return getId();
+		return this.request instanceof Connection ?
+				((Connection) this.request).channel().id().asShortText() : null;
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,29 +31,29 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  * @author Sam Brannen
  */
-class DateTimeFormatterFactoryBeanTests {
+public class DateTimeFormatterFactoryBeanTests {
 
 	private final DateTimeFormatterFactoryBean factory = new DateTimeFormatterFactoryBean();
 
 
 	@Test
-	void isSingleton() {
+	public void isSingleton() {
 		assertThat(factory.isSingleton()).isTrue();
 	}
 
 	@Test
-	void getObjectType() {
+	public void getObjectType() {
 		assertThat(factory.getObjectType()).isEqualTo(DateTimeFormatter.class);
 	}
 
 	@Test
-	void getObject() {
+	public void getObject() {
 		factory.afterPropertiesSet();
 		assertThat(factory.getObject().toString()).isEqualTo(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).toString());
 	}
 
 	@Test
-	void getObjectIsAlwaysSingleton() {
+	public void getObjectIsAlwaysSingleton() {
 		factory.afterPropertiesSet();
 		DateTimeFormatter formatter = factory.getObject();
 		assertThat(formatter.toString()).isEqualTo(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).toString());

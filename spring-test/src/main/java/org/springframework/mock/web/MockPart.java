@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Collections;
 
-import jakarta.servlet.http.Part;
+import javax.servlet.http.Part;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -30,7 +30,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Mock implementation of {@code jakarta.servlet.http.Part}.
+ * Mock implementation of {@code javax.servlet.http.Part}.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
@@ -51,7 +51,7 @@ public class MockPart implements Part {
 
 
 	/**
-	 * Constructor for a part with a name and content only.
+	 * Constructor for a part with byte[] content only.
 	 * @see #getHeaders()
 	 */
 	public MockPart(String name, @Nullable byte[] content) {
@@ -59,25 +59,15 @@ public class MockPart implements Part {
 	}
 
 	/**
-	 * Constructor for a part with a name, filename, and content.
+	 * Constructor for a part with a filename and byte[] content.
 	 * @see #getHeaders()
 	 */
 	public MockPart(String name, @Nullable String filename, @Nullable byte[] content) {
-		this(name, filename, content, null);
-	}
-
-	/**
-	 * Constructor for a part with a name, filename, content, and content type.
-	 * @since 6.1.2
-	 * @see #getHeaders()
-	 */
-	public MockPart(String name, @Nullable String filename, @Nullable byte[] content, @Nullable MediaType contentType) {
 		Assert.hasLength(name, "'name' must not be empty");
 		this.name = name;
 		this.filename = filename;
 		this.content = (content != null ? content : new byte[0]);
 		this.headers.setContentDispositionFormData(name, filename);
-		this.headers.setContentType(contentType);
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2011 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.web.multipart;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -25,9 +25,8 @@ import org.springframework.lang.Nullable;
 /**
  * Provides additional methods for dealing with multipart content within a
  * servlet request, allowing to access uploaded files.
- *
- * <p>Implementations also need to override the standard
- * {@link jakarta.servlet.ServletRequest} methods for parameter access, making
+ * Implementations also need to override the standard
+ * {@link javax.servlet.ServletRequest} methods for parameter access, making
  * multipart parameters available.
  *
  * <p>A concrete implementation is
@@ -41,9 +40,9 @@ import org.springframework.lang.Nullable;
  * @since 29.09.2003
  * @see MultipartResolver
  * @see MultipartFile
- * @see jakarta.servlet.http.HttpServletRequest#getParameter
- * @see jakarta.servlet.http.HttpServletRequest#getParameterNames
- * @see jakarta.servlet.http.HttpServletRequest#getParameterMap
+ * @see javax.servlet.http.HttpServletRequest#getParameter
+ * @see javax.servlet.http.HttpServletRequest#getParameterNames
+ * @see javax.servlet.http.HttpServletRequest#getParameterMap
  * @see org.springframework.web.multipart.support.DefaultMultipartHttpServletRequest
  * @see org.springframework.web.multipart.support.AbstractMultipartHttpServletRequest
  */
@@ -52,6 +51,7 @@ public interface MultipartHttpServletRequest extends HttpServletRequest, Multipa
 	/**
 	 * Return this request's method as a convenient HttpMethod instance.
 	 */
+	@Nullable
 	HttpMethod getRequestMethod();
 
 	/**
@@ -60,10 +60,9 @@ public interface MultipartHttpServletRequest extends HttpServletRequest, Multipa
 	HttpHeaders getRequestHeaders();
 
 	/**
-	 * Return the headers for the specified part of the multipart request.
-	 * <p>If the underlying implementation supports access to part headers,
-	 * then all headers are returned. Otherwise, e.g. for a file upload, the
-	 * returned headers may expose a 'Content-Type' if available.
+	 * Return the headers associated with the specified part of the multipart request.
+	 * <p>If the underlying implementation supports access to headers, then all headers are returned.
+	 * Otherwise, the returned headers will include a 'Content-Type' header at the very least.
 	 */
 	@Nullable
 	HttpHeaders getMultipartHeaders(String paramOrFileName);

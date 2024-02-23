@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,39 +17,39 @@
 package org.springframework.web.cors.reactive;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.server.adapter.ForwardedHeaderTransformer;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.get;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.options;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.options;
 
 /**
  * Test case for reactive {@link CorsUtils}.
- *
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
  */
-class CorsUtilsTests {
+public class CorsUtilsTests {
 
 	@Test
-	void isCorsRequest() {
+	public void isCorsRequest() {
 		ServerHttpRequest request = get("http://domain.example/").header(HttpHeaders.ORIGIN, "https://domain.com").build();
 		assertThat(CorsUtils.isCorsRequest(request)).isTrue();
 	}
 
 	@Test
-	void isNotCorsRequest() {
+	public void isNotCorsRequest() {
 		ServerHttpRequest request = get("/").build();
 		assertThat(CorsUtils.isCorsRequest(request)).isFalse();
 	}
 
 	@Test
-	void isPreFlightRequest() {
+	public void isPreFlightRequest() {
 		ServerHttpRequest request = options("/")
 				.header(HttpHeaders.ORIGIN, "https://domain.com")
 				.header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
@@ -58,7 +58,7 @@ class CorsUtilsTests {
 	}
 
 	@Test
-	void isNotPreFlightRequest() {
+	public void isNotPreFlightRequest() {
 		ServerHttpRequest request = get("/").build();
 		assertThat(CorsUtils.isPreFlightRequest(request)).isFalse();
 
@@ -140,9 +140,15 @@ class CorsUtilsTests {
 	}
 
 	// SPR-16668
+	@SuppressWarnings("deprecation")
 	private ServerHttpRequest adaptFromForwardedHeaders(MockServerHttpRequest.BaseBuilder<?> builder) {
+		AtomicReference<ServerHttpRequest> requestRef = new AtomicReference<>();
 		MockServerWebExchange exchange = MockServerWebExchange.from(builder);
-		return new ForwardedHeaderTransformer().apply(exchange.getRequest());
+		new org.springframework.web.filter.reactive.ForwardedHeaderFilter().filter(exchange, exchange2 -> {
+			requestRef.set(exchange2.getRequest());
+			return Mono.empty();
+		}).block();
+		return requestRef.get();
 	}
 
 }

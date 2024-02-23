@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Andy Wilkinson
  * @author Stephane Maldini
  */
-class StompEncoderTests {
+public class StompEncoderTests {
 
 	private final StompEncoder encoder = new StompEncoder();
 
 
 	@Test
-	void encodeFrameWithNoHeadersAndNoBody() {
+	public void encodeFrameWithNoHeadersAndNoBody() {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.DISCONNECT);
 		Message<byte[]> frame = MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
 
@@ -43,7 +43,7 @@ class StompEncoderTests {
 	}
 
 	@Test
-	void encodeFrameWithHeaders() {
+	public void encodeFrameWithHeaders() {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.CONNECT);
 		headers.setAcceptVersion("1.2");
 		headers.setHost("github.org");
@@ -55,16 +55,16 @@ class StompEncoderTests {
 	}
 
 	@Test
-	void encodeFrameWithHeadersThatShouldBeEscaped() {
+	public void encodeFrameWithHeadersThatShouldBeEscaped() {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.DISCONNECT);
-		headers.addNativeHeader("a:\r\n\\b", "alpha:bravo\r\n\\");
+		headers.addNativeHeader("a:\r\n\\b",  "alpha:bravo\r\n\\");
 		Message<byte[]> frame = MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
 
 		assertThat(new String(encoder.encode(frame))).isEqualTo("DISCONNECT\na\\c\\r\\n\\\\b:alpha\\cbravo\\r\\n\\\\\n\n\0");
 	}
 
 	@Test
-	void encodeFrameWithHeadersBody() {
+	public void encodeFrameWithHeadersBody() {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.SEND);
 		headers.addNativeHeader("a", "alpha");
 		Message<byte[]> frame = MessageBuilder.createMessage(
@@ -74,7 +74,7 @@ class StompEncoderTests {
 	}
 
 	@Test
-	void encodeFrameWithContentLengthPresent() {
+	public void encodeFrameWithContentLengthPresent() {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.SEND);
 		headers.setContentLength(12);
 		Message<byte[]> frame = MessageBuilder.createMessage(

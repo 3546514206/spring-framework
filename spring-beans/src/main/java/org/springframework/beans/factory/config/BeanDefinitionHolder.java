@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,8 @@ import org.springframework.util.StringUtils;
  * @see org.springframework.beans.factory.support.RootBeanDefinition
  * @see org.springframework.beans.factory.support.ChildBeanDefinition
  */
+// BeanDefinition 除了持有 bean 定义，还持与 bean 相关的信息
+//	BeanDefinitionHolder 的生成是通过 Document 文档树解析得到的
 public class BeanDefinitionHolder implements BeanMetadataElement {
 
 	private final BeanDefinition beanDefinition;
@@ -165,15 +167,24 @@ public class BeanDefinitionHolder implements BeanMetadataElement {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof BeanDefinitionHolder that &&
-				this.beanDefinition.equals(that.beanDefinition) &&
-				this.beanName.equals(that.beanName) &&
-				ObjectUtils.nullSafeEquals(this.aliases, that.aliases)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof BeanDefinitionHolder)) {
+			return false;
+		}
+		BeanDefinitionHolder otherHolder = (BeanDefinitionHolder) other;
+		return this.beanDefinition.equals(otherHolder.beanDefinition) &&
+				this.beanName.equals(otherHolder.beanName) &&
+				ObjectUtils.nullSafeEquals(this.aliases, otherHolder.aliases);
 	}
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHash(this.beanDefinition, this.beanName, this.aliases);
+		int hashCode = this.beanDefinition.hashCode();
+		hashCode = 29 * hashCode + this.beanName.hashCode();
+		hashCode = 29 * hashCode + ObjectUtils.nullSafeHashCode(this.aliases);
+		return hashCode;
 	}
 
 }

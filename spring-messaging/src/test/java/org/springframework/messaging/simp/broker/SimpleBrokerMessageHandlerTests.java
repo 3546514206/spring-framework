@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package org.springframework.messaging.simp.broker;
 
-import java.security.Principal;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ScheduledFuture;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,31 +23,30 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import org.springframework.core.testfixture.security.TestPrincipal;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
+import org.springframework.messaging.simp.TestPrincipal;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.TaskScheduler;
+
+import java.security.Principal;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 
 /**
- * Tests for {@link SimpleBrokerMessageHandler}.
+ * Unit tests for {@link SimpleBrokerMessageHandler}.
  *
  * @author Rossen Stoyanchev
  * @since 4.0
@@ -82,14 +75,14 @@ public class SimpleBrokerMessageHandlerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.messageHandler = new SimpleBrokerMessageHandler(
 				this.clientInChannel, this.clientOutChannel, this.brokerChannel, Collections.emptyList());
 	}
 
 
 	@Test
-	void subscribePublish() {
+	public void subscribePublish() {
 		startSession("sess1");
 		startSession("sess2");
 
@@ -114,7 +107,7 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void subscribeDisconnectPublish() {
+	public void subscribeDisconnectPublish() {
 		String sess1 = "sess1";
 		String sess2 = "sess2";
 
@@ -152,7 +145,7 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void connect() {
+	public void connect() {
 		String id = "sess1";
 
 		Message<String> connectMessage = startSession(id);
@@ -166,7 +159,7 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void heartbeatValueWithAndWithoutTaskScheduler() {
+	public void heartbeatValueWithAndWithoutTaskScheduler() {
 		assertThat(this.messageHandler.getHeartbeatValue()).isNull();
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 
@@ -175,23 +168,23 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void startWithHeartbeatValueWithoutTaskScheduler() {
+	public void startWithHeartbeatValueWithoutTaskScheduler() {
 		this.messageHandler.setHeartbeatValue(new long[] {10000, 10000});
 		assertThatIllegalArgumentException().isThrownBy(
 				this.messageHandler::start);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
-	@SuppressWarnings("rawtypes")
 	public void startAndStopWithHeartbeatValue() {
-		ScheduledFuture future = mock();
-		given(this.taskScheduler.scheduleWithFixedDelay(any(Runnable.class), eq(Duration.ofMillis(15000)))).willReturn(future);
+		ScheduledFuture future = mock(ScheduledFuture.class);
+		given(this.taskScheduler.scheduleWithFixedDelay(any(Runnable.class), eq(15000L))).willReturn(future);
 
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 		this.messageHandler.setHeartbeatValue(new long[] {15000, 16000});
 		this.messageHandler.start();
 
-		verify(this.taskScheduler).scheduleWithFixedDelay(any(Runnable.class), eq(Duration.ofMillis(15000)));
+		verify(this.taskScheduler).scheduleWithFixedDelay(any(Runnable.class), eq(15000L));
 		verifyNoMoreInteractions(this.taskScheduler, future);
 
 		this.messageHandler.stop();
@@ -200,23 +193,24 @@ public class SimpleBrokerMessageHandlerTests {
 		verifyNoMoreInteractions(future);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
-	void startWithOneZeroHeartbeatValue() {
+	public void startWithOneZeroHeartbeatValue() {
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 		this.messageHandler.setHeartbeatValue(new long[] {0, 10000});
 		this.messageHandler.start();
 
-		verify(this.taskScheduler).scheduleWithFixedDelay(any(Runnable.class), eq(Duration.ofMillis(10000)));
+		verify(this.taskScheduler).scheduleWithFixedDelay(any(Runnable.class), eq(10000L));
 	}
 
 	@Test
-	void readInactivity() throws Exception {
+	public void readInactivity() throws Exception {
 		this.messageHandler.setHeartbeatValue(new long[] {0, 1});
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 		this.messageHandler.start();
 
 		ArgumentCaptor<Runnable> taskCaptor = ArgumentCaptor.forClass(Runnable.class);
-		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(Duration.ofMillis(1)));
+		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(1L));
 		Runnable heartbeatTask = taskCaptor.getValue();
 		assertThat(heartbeatTask).isNotNull();
 
@@ -230,7 +224,7 @@ public class SimpleBrokerMessageHandlerTests {
 
 		verify(this.clientOutChannel, atLeast(2)).send(this.messageCaptor.capture());
 		List<Message<?>> messages = this.messageCaptor.getAllValues();
-		assertThat(messages).hasSize(2);
+		assertThat(messages.size()).isEqualTo(2);
 
 		MessageHeaders headers = messages.get(0).getHeaders();
 		assertThat(headers.get(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER)).isEqualTo(SimpMessageType.CONNECT_ACK);
@@ -241,13 +235,13 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void writeInactivity() throws Exception {
+	public void writeInactivity() throws Exception {
 		this.messageHandler.setHeartbeatValue(new long[] {1, 0});
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 		this.messageHandler.start();
 
 		ArgumentCaptor<Runnable> taskCaptor = ArgumentCaptor.forClass(Runnable.class);
-		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(Duration.ofMillis(1)));
+		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(1L));
 		Runnable heartbeatTask = taskCaptor.getValue();
 		assertThat(heartbeatTask).isNotNull();
 
@@ -261,7 +255,7 @@ public class SimpleBrokerMessageHandlerTests {
 
 		verify(this.clientOutChannel, times(2)).send(this.messageCaptor.capture());
 		List<Message<?>> messages = this.messageCaptor.getAllValues();
-		assertThat(messages).hasSize(2);
+		assertThat(messages.size()).isEqualTo(2);
 
 		MessageHeaders headers = messages.get(0).getHeaders();
 		assertThat(headers.get(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER)).isEqualTo(SimpMessageType.CONNECT_ACK);
@@ -272,13 +266,13 @@ public class SimpleBrokerMessageHandlerTests {
 	}
 
 	@Test
-	void readWriteIntervalCalculation() throws Exception {
+	public void readWriteIntervalCalculation() throws Exception {
 		this.messageHandler.setHeartbeatValue(new long[] {1, 1});
 		this.messageHandler.setTaskScheduler(this.taskScheduler);
 		this.messageHandler.start();
 
 		ArgumentCaptor<Runnable> taskCaptor = ArgumentCaptor.forClass(Runnable.class);
-		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(Duration.ofMillis(1)));
+		verify(this.taskScheduler).scheduleWithFixedDelay(taskCaptor.capture(), eq(1L));
 		Runnable heartbeatTask = taskCaptor.getValue();
 		assertThat(heartbeatTask).isNotNull();
 
@@ -292,7 +286,7 @@ public class SimpleBrokerMessageHandlerTests {
 
 		verify(this.clientOutChannel, times(1)).send(this.messageCaptor.capture());
 		List<Message<?>> messages = this.messageCaptor.getAllValues();
-		assertThat(messages).hasSize(1);
+		assertThat(messages.size()).isEqualTo(1);
 		assertThat(messages.get(0).getHeaders().get(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER)).isEqualTo(SimpMessageType.CONNECT_ACK);
 	}
 

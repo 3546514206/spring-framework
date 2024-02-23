@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,14 +37,11 @@ import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.support.ConfigurableWebBindingInitializer;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolverBuilder;
-import org.springframework.web.reactive.socket.server.WebSocketService;
-import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -71,17 +68,16 @@ public class DelegatingWebFluxConfigurationTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		delegatingConfig = new DelegatingWebFluxConfiguration();
 		delegatingConfig.setApplicationContext(new StaticApplicationContext());
 		given(webFluxConfigurer.getValidator()).willReturn(null);
 		given(webFluxConfigurer.getMessageCodesResolver()).willReturn(null);
-		given(webFluxConfigurer.getWebSocketService()).willReturn(null);
 	}
 
 
 	@Test
-	void requestMappingHandlerMapping() {
+	public void requestMappingHandlerMapping() throws Exception {
 		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
 		delegatingConfig.requestMappingHandlerMapping(delegatingConfig.webFluxContentTypeResolver());
 
@@ -91,7 +87,7 @@ public class DelegatingWebFluxConfigurationTests {
 	}
 
 	@Test
-	void requestMappingHandlerAdapter() {
+	public void requestMappingHandlerAdapter() throws Exception {
 		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
 		ReactiveAdapterRegistry reactiveAdapterRegistry = delegatingConfig.webFluxAdapterRegistry();
 		ServerCodecConfigurer serverCodecConfigurer = delegatingConfig.serverCodecConfigurer();
@@ -112,11 +108,11 @@ public class DelegatingWebFluxConfigurationTests {
 		boolean condition = initializer.getValidator() instanceof LocalValidatorFactoryBean;
 		assertThat(condition).isTrue();
 		assertThat(initializer.getConversionService()).isSameAs(formatterRegistry.getValue());
-		assertThat(codecsConfigurer.getValue().getReaders()).hasSize(17);
+		assertThat(codecsConfigurer.getValue().getReaders().size()).isEqualTo(13);
 	}
 
 	@Test
-	void resourceHandlerMapping() {
+	public void resourceHandlerMapping() throws Exception {
 		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
 		willAnswer(invocation -> {
 			ResourceHandlerRegistry registry = invocation.getArgument(0);
@@ -126,23 +122,11 @@ public class DelegatingWebFluxConfigurationTests {
 
 		delegatingConfig.resourceHandlerMapping(delegatingConfig.resourceUrlProvider());
 		verify(webFluxConfigurer).addResourceHandlers(any(ResourceHandlerRegistry.class));
-		verify(webFluxConfigurer).addCorsMappings(any(CorsRegistry.class));
 		verify(webFluxConfigurer).configurePathMatching(any(PathMatchConfigurer.class));
 	}
 
 	@Test
-	void webSocketService() {
-		WebSocketService service = mock();
-		given(webFluxConfigurer.getWebSocketService()).willReturn(service);
-
-		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
-		WebSocketHandlerAdapter adapter = delegatingConfig.webFluxWebSocketHandlerAdapter();
-
-		assertThat(adapter.getWebSocketService()).isSameAs(service);
-	}
-
-	@Test
-	void responseBodyResultHandler() {
+	public void responseBodyResultHandler() throws Exception {
 		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
 		delegatingConfig.responseBodyResultHandler(
 				delegatingConfig.webFluxAdapterRegistry(),
@@ -154,7 +138,7 @@ public class DelegatingWebFluxConfigurationTests {
 	}
 
 	@Test
-	void viewResolutionResultHandler() {
+	public void viewResolutionResultHandler() throws Exception {
 		delegatingConfig.setConfigurers(Collections.singletonList(webFluxConfigurer));
 		delegatingConfig.viewResolutionResultHandler(delegatingConfig.webFluxAdapterRegistry(),
 				delegatingConfig.webFluxContentTypeResolver());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,12 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 /**
  * @author Stephane Nicoll
  */
-class JCacheInterceptorTests extends AbstractJCacheTests {
+public class JCacheInterceptorTests extends AbstractJCacheTests {
 
 	private final CacheOperationInvoker dummyInvoker = new DummyInvoker(null);
 
 	@Test
-	void severalCachesNotSupported() {
+	public void severalCachesNotSupported() {
 		JCacheInterceptor interceptor = createInterceptor(createOperationSource(
 				cacheManager, new NamedCacheResolver(cacheManager, "default", "simpleCache"),
 				defaultExceptionCacheResolver, defaultKeyGenerator));
@@ -54,7 +54,7 @@ class JCacheInterceptorTests extends AbstractJCacheTests {
 	}
 
 	@Test
-	void noCacheCouldBeResolved() {
+	public void noCacheCouldBeResolved() {
 		JCacheInterceptor interceptor = createInterceptor(createOperationSource(
 				cacheManager, new NamedCacheResolver(cacheManager), // Returns empty list
 				defaultExceptionCacheResolver, defaultKeyGenerator));
@@ -67,18 +67,18 @@ class JCacheInterceptorTests extends AbstractJCacheTests {
 	}
 
 	@Test
-	void cacheManagerMandatoryIfCacheResolverNotSet() {
+	public void cacheManagerMandatoryIfCacheResolverNotSet() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				createOperationSource(null, null, null, defaultKeyGenerator));
 	}
 
 	@Test
-	void cacheManagerOptionalIfCacheResolversSet() {
+	public void cacheManagerOptionalIfCacheResolversSet() {
 		createOperationSource(null, defaultCacheResolver, defaultExceptionCacheResolver, defaultKeyGenerator);
 	}
 
 	@Test
-	void cacheResultReturnsProperType() {
+	public void cacheResultReturnsProperType() throws Throwable {
 		JCacheInterceptor interceptor = createInterceptor(createOperationSource(
 				cacheManager, defaultCacheResolver, defaultExceptionCacheResolver, defaultKeyGenerator));
 

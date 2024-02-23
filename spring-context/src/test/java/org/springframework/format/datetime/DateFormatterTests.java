@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.format.annotation.DateTimeFormat.ISO;
@@ -30,19 +33,22 @@ import org.springframework.format.annotation.DateTimeFormat.ISO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+
+
+
 /**
  * Tests for {@link DateFormatter}.
  *
  * @author Keith Donald
  * @author Phillip Webb
  */
-class DateFormatterTests {
+public class DateFormatterTests {
 
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
 
 	@Test
-	void shouldPrintAndParseDefault() throws Exception {
+	public void shouldPrintAndParseDefault() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		Date date = getDate(2009, Calendar.JUNE, 1);
@@ -51,7 +57,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseFromPattern() throws ParseException {
+	public void shouldPrintAndParseFromPattern() throws ParseException {
 		DateFormatter formatter = new DateFormatter("yyyy-MM-dd");
 		formatter.setTimeZone(UTC);
 		Date date = getDate(2009, Calendar.JUNE, 1);
@@ -60,7 +66,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseShort() throws Exception {
+	public void shouldPrintAndParseShort() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setStyle(DateFormat.SHORT);
@@ -70,7 +76,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseMedium() throws Exception {
+	public void shouldPrintAndParseMedium() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setStyle(DateFormat.MEDIUM);
@@ -80,7 +86,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseLong() throws Exception {
+	public void shouldPrintAndParseLong() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setStyle(DateFormat.LONG);
@@ -90,7 +96,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseFull() throws Exception {
+	public void shouldPrintAndParseFull() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setStyle(DateFormat.FULL);
@@ -100,7 +106,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseISODate() throws Exception {
+	public void shouldPrintAndParseISODate() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setIso(ISO.DATE);
@@ -111,7 +117,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseISOTime() throws Exception {
+	public void shouldPrintAndParseISOTime() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setIso(ISO.TIME);
@@ -122,7 +128,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldPrintAndParseISODateTime() throws Exception {
+	public void shouldPrintAndParseISODateTime() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setIso(ISO.DATE_TIME);
@@ -132,7 +138,41 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldThrowOnUnsupportedStylePattern() {
+	public void shouldSupportJodaStylePatterns() throws Exception {
+		String[] chars = { "S", "M", "-" };
+		for (String d : chars) {
+			for (String t : chars) {
+				String style = d + t;
+				if (!style.equals("--")) {
+					Date date = getDate(2009, Calendar.JUNE, 10, 14, 23, 0, 0);
+					if (t.equals("-")) {
+						date = getDate(2009, Calendar.JUNE, 10);
+					}
+					else if (d.equals("-")) {
+						date = getDate(1970, Calendar.JANUARY, 1, 14, 23, 0, 0);
+					}
+					testJodaStylePatterns(style, Locale.US, date);
+				}
+			}
+		}
+	}
+
+	private void testJodaStylePatterns(String style, Locale locale, Date date) throws Exception {
+		DateFormatter formatter = new DateFormatter();
+		formatter.setTimeZone(UTC);
+		formatter.setStylePattern(style);
+		DateTimeFormatter jodaFormatter = DateTimeFormat.forStyle(style).withLocale(locale).withZone(DateTimeZone.UTC);
+		String jodaPrinted = jodaFormatter.print(date.getTime());
+		assertThat(formatter.print(date, locale))
+				.as("Unable to print style pattern " + style)
+				.isEqualTo(jodaPrinted);
+		assertThat(formatter.parse(jodaPrinted, locale))
+				.as("Unable to parse style pattern " + style)
+				.isEqualTo(date);
+	}
+
+	@Test
+	public void shouldThrowOnUnsupportedStylePattern() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setStylePattern("OO");
 		assertThatIllegalStateException().isThrownBy(() ->
@@ -141,7 +181,7 @@ class DateFormatterTests {
 	}
 
 	@Test
-	void shouldUseCorrectOrder() {
+	public void shouldUseCorrectOrder() throws Exception {
 		DateFormatter formatter = new DateFormatter();
 		formatter.setTimeZone(UTC);
 		formatter.setStyle(DateFormat.SHORT);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,17 @@
 package org.springframework.test.web.client.samples.matchers;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import jakarta.xml.bind.annotation.XmlAccessType;
-import jakarta.xml.bind.annotation.XmlAccessorType;
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElementWrapper;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +49,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @see ContentRequestMatchersIntegrationTests
  * @see XpathRequestMatchersIntegrationTests
  */
-class XmlContentRequestMatchersIntegrationTests {
+public class XmlContentRequestMatchersIntegrationTests {
 
 	private static final String PEOPLE_XML =
 			"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
@@ -67,7 +69,7 @@ class XmlContentRequestMatchersIntegrationTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		List<Person> composers = Arrays.asList(
 				new Person("Johann Sebastian Bach").setSomeDouble(21),
 				new Person("Johannes Brahms").setSomeDouble(.0025),
@@ -86,7 +88,7 @@ class XmlContentRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void testXmlEqualTo() {
+	public void testXmlEqualTo() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/xml"))
 			.andExpect(content().xml(PEOPLE_XML))
@@ -96,7 +98,7 @@ class XmlContentRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void testHamcrestNodeMatcher() {
+	public void testHamcrestNodeMatcher() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/xml"))
 			.andExpect(content().node(hasXPath("/people/composers/composer[1]")))
@@ -105,8 +107,8 @@ class XmlContentRequestMatchersIntegrationTests {
 		executeAndVerify();
 	}
 
-	private void executeAndVerify() {
-		this.restTemplate.put(URI.create("/composers"), this.people);
+	private void executeAndVerify() throws URISyntaxException {
+		this.restTemplate.put(new URI("/composers"), this.people);
 		this.mockServer.verify();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,36 +22,34 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.MediaType;
-import org.springframework.web.testfixture.http.MockHttpInputMessage;
-import org.springframework.web.testfixture.http.MockHttpOutputMessage;
+import org.springframework.http.MockHttpInputMessage;
+import org.springframework.http.MockHttpOutputMessage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** @author Arjen Poutsma */
-class ByteArrayHttpMessageConverterTests {
+public class ByteArrayHttpMessageConverterTests {
 
 	private ByteArrayHttpMessageConverter converter;
 
-
 	@BeforeEach
-	void setUp() {
+	public void setUp() {
 		converter = new ByteArrayHttpMessageConverter();
 	}
 
-
 	@Test
-	void canRead() {
+	public void canRead() {
 		assertThat(converter.canRead(byte[].class, new MediaType("application", "octet-stream"))).isTrue();
 	}
 
 	@Test
-	void canWrite() {
+	public void canWrite() {
 		assertThat(converter.canWrite(byte[].class, new MediaType("application", "octet-stream"))).isTrue();
 		assertThat(converter.canWrite(byte[].class, MediaType.ALL)).isTrue();
 	}
 
 	@Test
-	void read() throws IOException {
+	public void read() throws IOException {
 		byte[] body = new byte[]{0x1, 0x2};
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
 		inputMessage.getHeaders().setContentType(new MediaType("application", "octet-stream"));
@@ -60,37 +58,13 @@ class ByteArrayHttpMessageConverterTests {
 	}
 
 	@Test
-	void readWithContentLengthHeaderSet() throws IOException {
-		byte[] body = new byte[]{0x1, 0x2, 0x3, 0x4, 0x5};
-		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body);
-		inputMessage.getHeaders().setContentType(new MediaType("application", "octet-stream"));
-		inputMessage.getHeaders().setContentLength(body.length);
-		byte[] result = converter.read(byte[].class, inputMessage);
-		assertThat(result).as("Invalid result").isEqualTo(body);
-	}
-
-	@Test
-	void write() throws IOException {
+	public void write() throws IOException {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		byte[] body = new byte[]{0x1, 0x2};
 		converter.write(body, null, outputMessage);
 		assertThat(outputMessage.getBodyAsBytes()).as("Invalid result").isEqualTo(body);
-		assertThat(outputMessage.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_OCTET_STREAM);
-		assertThat(outputMessage.getHeaders().getContentLength()).isEqualTo(2);
-	}
-
-	@Test
-	void repeatableWrites() throws IOException {
-		MockHttpOutputMessage outputMessage1 = new MockHttpOutputMessage();
-		byte[] body = new byte[]{0x1, 0x2};
-		assertThat(converter.supportsRepeatableWrites(body)).isTrue();
-
-		converter.write(body, null, outputMessage1);
-		assertThat(outputMessage1.getBodyAsBytes()).isEqualTo(body);
-
-		MockHttpOutputMessage outputMessage2 = new MockHttpOutputMessage();
-		converter.write(body, null, outputMessage2);
-		assertThat(outputMessage2.getBodyAsBytes()).isEqualTo(body);
+		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content-type").isEqualTo(new MediaType("application", "octet-stream"));
+		assertThat(outputMessage.getHeaders().getContentLength()).as("Invalid content-length").isEqualTo(2);
 	}
 
 }

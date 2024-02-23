@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,84 +16,86 @@
 
 package org.springframework.messaging.support;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.util.Assert;
-import org.springframework.util.IdGenerator;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.PatternMatchUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 /**
- * Wrapper around {@link MessageHeaders} that provides extra features such as
- * strongly typed accessors for specific headers, the ability to leave headers
- * in a {@link Message} mutable, and the option to suppress automatic generation
- * of {@link MessageHeaders#ID id} and {@link MessageHeaders#TIMESTAMP
- * timestamp} headers. Subclasses such as {@link NativeMessageHeaderAccessor}
- * and others provide support for managing processing vs external source headers
- * as well as protocol specific headers.
+ * A base for classes providing strongly typed getters and setters as well as
+ * behavior around specific categories of headers (e.g. STOMP headers).
+ * Supports creating new headers, modifying existing headers (when still mutable),
+ * or copying and modifying existing headers.
  *
- * <p>Below is a workflow to initialize headers via {@code MessageHeaderAccessor},
- * or one of its subclasses, then create a {@link Message}, and then re-obtain
- * the accessor possibly from a different component:
+ * <p>The method {@link #getMessageHeaders()} provides access to the underlying,
+ * fully-prepared {@link MessageHeaders} that can then be used as-is (i.e.
+ * without copying) to create a single message as follows:
+ *
  * <pre class="code">
- * // Create a message with headers
  * MessageHeaderAccessor accessor = new MessageHeaderAccessor();
  * accessor.setHeader("foo", "bar");
- * MessageHeaders headers = accessor.getMessageHeaders();
- * Message message = MessageBuilder.createMessage("payload", headers);
- *
- * // Later on
- * MessageHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message);
- * Assert.notNull(accessor, "No MessageHeaderAccessor");
+ * Message message = MessageBuilder.createMessage("payload", accessor.getMessageHeaders());
  * </pre>
  *
- * <p>In order for the above to work, all participating components must use
- * {@code MessageHeaders} to create, access, or modify headers, or otherwise
- * {@link MessageHeaderAccessor#getAccessor(Message, Class)} will return null.
- * Below is a workflow that shows how headers are created and left mutable,
- * then modified possibly by a different component, and finally made immutable
- * perhaps before the possibility of being accessed on a different thread:
+ * <p>After the above, by default the {@code MessageHeaderAccessor} becomes
+ * immutable. However it is possible to leave it mutable for further initialization
+ * in the same thread, for example:
+ *
  * <pre class="code">
- * // Create a message with mutable headers
  * MessageHeaderAccessor accessor = new MessageHeaderAccessor();
  * accessor.setHeader("foo", "bar");
  * accessor.setLeaveMutable(true);
- * MessageHeaders headers = accessor.getMessageHeaders();
- * Message message = MessageBuilder.createMessage("payload", headers);
+ * Message message = MessageBuilder.createMessage("payload", accessor.getMessageHeaders());
  *
- * // Later on
- * MessageHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message);
- * if (accessor.isMutable()) {
- *     // It's mutable, just change the headers
- *     accessor.setHeader("bar", "baz");
- * }
- * else {
- *     // It's not, so get a mutable copy, change and re-create
- *     accessor = MessageHeaderAccessor.getMutableAccessor(message);
- *     accessor.setHeader("bar", "baz");
- *     accessor.setLeaveMutable(true); // leave mutable again or not?
- *     message = MessageBuilder.createMessage(message.getPayload(), accessor);
- * }
+ * // later on in the same thread...
  *
- * // Make the accessor immutable
  * MessageHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message);
+ * accessor.setHeader("bar", "baz");
  * accessor.setImmutable();
  * </pre>
+ *
+ * <p>The method {@link #toMap()} returns a copy of the underlying headers. It can
+ * be used to prepare multiple messages from the same {@code MessageHeaderAccessor}
+ * instance:
+ * <pre class="code">
+ * MessageHeaderAccessor accessor = new MessageHeaderAccessor();
+ * MessageBuilder builder = MessageBuilder.withPayload("payload").setHeaders(accessor);
+ *
+ * accessor.setHeader("foo", "bar1");
+ * Message message1 = builder.build();
+ *
+ * accessor.setHeader("foo", "bar2");
+ * Message message2 = builder.build();
+ *
+ * accessor.setHeader("foo", "bar3");
+ * Message  message3 = builder.build();
+ * </pre>
+ *
+ * <p>However note that with the above style, the header accessor is shared and
+ * cannot be re-obtained later on. Alternatively it is also possible to create
+ * one {@code MessageHeaderAccessor} per message:
+ *
+ * <pre class="code">
+ * MessageHeaderAccessor accessor1 = new MessageHeaderAccessor();
+ * accessor.set("foo", "bar1");
+ * Message message1 = MessageBuilder.createMessage("payload", accessor1.getMessageHeaders());
+ *
+ * MessageHeaderAccessor accessor2 = new MessageHeaderAccessor();
+ * accessor.set("foo", "bar2");
+ * Message message2 = MessageBuilder.createMessage("payload", accessor2.getMessageHeaders());
+ *
+ * MessageHeaderAccessor accessor3 = new MessageHeaderAccessor();
+ * accessor.set("foo", "bar3");
+ * Message message3 = MessageBuilder.createMessage("payload", accessor3.getMessageHeaders());
+ * </pre>
+ *
+ * <p>Note that the above examples aim to demonstrate the general idea of using
+ * header accessors. The most likely usage however is through subclasses.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
@@ -153,7 +155,7 @@ public class MessageHeaderAccessor {
 	// Configuration properties
 
 	/**
-	 * By default, when {@link #getMessageHeaders()} is called, {@code "this"}
+	 * By default when {@link #getMessageHeaders()} is called, {@code "this"}
 	 * {@code MessageHeaderAccessor} instance can no longer be used to modify the
 	 * underlying message headers and the returned {@code MessageHeaders} is immutable.
 	 * <p>However when this is set to {@code true}, the returned (underlying)
@@ -173,7 +175,7 @@ public class MessageHeaderAccessor {
 	}
 
 	/**
-	 * By default, when {@link #getMessageHeaders()} is called, {@code "this"}
+	 * By default when {@link #getMessageHeaders()} is called, {@code "this"}
 	 * {@code MessageHeaderAccessor} instance can no longer be used to modify the
 	 * underlying message headers. However if {@link #setLeaveMutable(boolean)}
 	 * is used, this method is necessary to indicate explicitly when the
@@ -378,14 +380,13 @@ public class MessageHeaderAccessor {
 	 * {@link #copyHeadersIfAbsent(Map)} to avoid overwriting values.
 	 */
 	public void copyHeaders(@Nullable Map<String, ?> headersToCopy) {
-		if (headersToCopy == null || this.headers == headersToCopy) {
-			return;
+		if (headersToCopy != null) {
+			headersToCopy.forEach((key, value) -> {
+				if (!isReadOnly(key)) {
+					setHeader(key, value);
+				}
+			});
 		}
-		headersToCopy.forEach((key, value) -> {
-			if (!isReadOnly(key)) {
-				setHeader(key, value);
-			}
-		});
 	}
 
 	/**
@@ -393,14 +394,13 @@ public class MessageHeaderAccessor {
 	 * <p>This operation will <em>not</em> overwrite any existing values.
 	 */
 	public void copyHeadersIfAbsent(@Nullable Map<String, ?> headersToCopy) {
-		if (headersToCopy == null || this.headers == headersToCopy) {
-			return;
+		if (headersToCopy != null) {
+			headersToCopy.forEach((key, value) -> {
+				if (!isReadOnly(key)) {
+					setHeaderIfAbsent(key, value);
+				}
+			});
 		}
-		headersToCopy.forEach((key, value) -> {
-			if (!isReadOnly(key)) {
-				setHeaderIfAbsent(key, value);
-			}
-		});
 	}
 
 	protected boolean isReadOnly(String headerName) {
@@ -416,7 +416,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof UUID uuid ? uuid : UUID.fromString(value.toString()));
+		return (value instanceof UUID ? (UUID) value : UUID.fromString(value.toString()));
 	}
 
 	@Nullable
@@ -425,7 +425,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof Long num ? num : Long.parseLong(value.toString()));
+		return (value instanceof Long ? (Long) value : Long.parseLong(value.toString()));
 	}
 
 	public void setContentType(MimeType contentType) {
@@ -438,7 +438,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof MimeType mimeType ? mimeType : MimeType.valueOf(value.toString()));
+		return (value instanceof MimeType ? (MimeType) value : MimeType.valueOf(value.toString()));
 	}
 
 	private Charset getCharset() {
@@ -495,12 +495,14 @@ public class MessageHeaderAccessor {
 	}
 
 	protected String getShortPayloadLogMessage(Object payload) {
-		if (payload instanceof String payloadText) {
+		if (payload instanceof String) {
+			String payloadText = (String) payload;
 			return (payloadText.length() < 80) ?
 				" payload=" + payloadText :
 				" payload=" + payloadText.substring(0, 80) + "...(truncated)";
 		}
-		else if (payload instanceof byte[] bytes) {
+		else if (payload instanceof byte[]) {
+			byte[] bytes = (byte[]) payload;
 			if (isReadableContentType()) {
 				return (bytes.length < 80) ?
 						" payload=" + new String(bytes, getCharset()) :
@@ -522,7 +524,8 @@ public class MessageHeaderAccessor {
 		if (payload instanceof String) {
 			return " payload=" + payload;
 		}
-		else if (payload instanceof byte[] bytes) {
+		else if (payload instanceof byte[]) {
+			byte[] bytes = (byte[]) payload;
 			if (isReadableContentType()) {
 				return " payload=" + new String(bytes, getCharset());
 			}
@@ -560,21 +563,6 @@ public class MessageHeaderAccessor {
 	 * <p>This is for cases where the existence of an accessor is strongly expected
 	 * (followed up with an assertion) or where an accessor will be created otherwise.
 	 * @param message the message to get an accessor for
-	 * @return an accessor instance of the specified type, or {@code null} if none
-	 * @since 5.1.19
-	 */
-	@Nullable
-	public static MessageHeaderAccessor getAccessor(Message<?> message) {
-		return getAccessor(message.getHeaders(), null);
-	}
-
-	/**
-	 * Return the original {@code MessageHeaderAccessor} used to create the headers
-	 * of the given {@code Message}, or {@code null} if that's not available or if
-	 * its type does not match the required type.
-	 * <p>This is for cases where the existence of an accessor is strongly expected
-	 * (followed up with an assertion) or where an accessor will be created otherwise.
-	 * @param message the message to get an accessor for
 	 * @param requiredType the required accessor type (or {@code null} for any)
 	 * @return an accessor instance of the specified type, or {@code null} if none
 	 * @since 4.1
@@ -598,9 +586,10 @@ public class MessageHeaderAccessor {
 	public static <T extends MessageHeaderAccessor> T getAccessor(
 			MessageHeaders messageHeaders, @Nullable Class<T> requiredType) {
 
-		if (messageHeaders instanceof MutableMessageHeaders mutableHeaders) {
+		if (messageHeaders instanceof MutableMessageHeaders) {
+			MutableMessageHeaders mutableHeaders = (MutableMessageHeaders) messageHeaders;
 			MessageHeaderAccessor headerAccessor = mutableHeaders.getAccessor();
-			if (requiredType == null || requiredType.isInstance(headerAccessor)) {
+			if (requiredType == null || requiredType.isInstance(headerAccessor))  {
 				return (T) headerAccessor;
 			}
 		}
@@ -617,7 +606,8 @@ public class MessageHeaderAccessor {
 	 * @since 4.1
 	 */
 	public static MessageHeaderAccessor getMutableAccessor(Message<?> message) {
-		if (message.getHeaders() instanceof MutableMessageHeaders mutableHeaders) {
+		if (message.getHeaders() instanceof MutableMessageHeaders) {
+			MutableMessageHeaders mutableHeaders = (MutableMessageHeaders) message.getHeaders();
 			MessageHeaderAccessor accessor = mutableHeaders.getAccessor();
 			return (accessor.isMutable() ? accessor : accessor.createAccessor(message));
 		}
@@ -625,11 +615,6 @@ public class MessageHeaderAccessor {
 	}
 
 
-	/**
-	 * Extension of {@link MessageHeaders} that helps to preserve the link to
-	 * the outer {@link MessageHeaderAccessor} instance that created it as well
-	 * as keeps track of whether headers are still mutable.
-	 */
 	@SuppressWarnings("serial")
 	private class MutableMessageHeaders extends MessageHeaders {
 

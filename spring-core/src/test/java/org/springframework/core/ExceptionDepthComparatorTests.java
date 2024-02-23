@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,55 +30,55 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ExceptionDepthComparatorTests {
 
 	@Test
-	void targetBeforeSameDepth() {
+	void targetBeforeSameDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, SameDepthException.class);
 		assertThat(foundClass).isEqualTo(TargetException.class);
 	}
 
 	@Test
-	void sameDepthBeforeTarget() {
+	void sameDepthBeforeTarget() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(SameDepthException.class, TargetException.class);
 		assertThat(foundClass).isEqualTo(TargetException.class);
 	}
 
 	@Test
-	void lowestDepthBeforeTarget() {
+	void lowestDepthBeforeTarget() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, TargetException.class);
 		assertThat(foundClass).isEqualTo(TargetException.class);
 	}
 
 	@Test
-	void targetBeforeLowestDepth() {
+	void targetBeforeLowestDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(TargetException.class, LowestDepthException.class);
 		assertThat(foundClass).isEqualTo(TargetException.class);
 	}
 
 	@Test
-	void noDepthBeforeTarget() {
+	void noDepthBeforeTarget() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, TargetException.class);
 		assertThat(foundClass).isEqualTo(TargetException.class);
 	}
 
 	@Test
-	void noDepthBeforeHighestDepth() {
+	void noDepthBeforeHighestDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(NoDepthException.class, HighestDepthException.class);
 		assertThat(foundClass).isEqualTo(HighestDepthException.class);
 	}
 
 	@Test
-	void highestDepthBeforeNoDepth() {
+	void highestDepthBeforeNoDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, NoDepthException.class);
 		assertThat(foundClass).isEqualTo(HighestDepthException.class);
 	}
 
 	@Test
-	void highestDepthBeforeLowestDepth() {
+	void highestDepthBeforeLowestDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(HighestDepthException.class, LowestDepthException.class);
 		assertThat(foundClass).isEqualTo(LowestDepthException.class);
 	}
 
 	@Test
-	void lowestDepthBeforeHighestDepth() {
+	void lowestDepthBeforeHighestDepth() throws Exception {
 		Class<? extends Throwable> foundClass = findClosestMatch(LowestDepthException.class, HighestDepthException.class);
 		assertThat(foundClass).isEqualTo(LowestDepthException.class);
 	}

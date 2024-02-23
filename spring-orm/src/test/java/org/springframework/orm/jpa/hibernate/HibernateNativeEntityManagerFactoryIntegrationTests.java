@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @since 5.1
  */
-class HibernateNativeEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
+public class HibernateNativeEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
 
 	@Autowired
 	private SessionFactory sessionFactory;
@@ -55,7 +55,7 @@ class HibernateNativeEntityManagerFactoryIntegrationTests extends AbstractContai
 
 	@Override
 	@Test
-	protected void testEntityManagerFactoryImplementsEntityManagerFactoryInfo() {
+	public void testEntityManagerFactoryImplementsEntityManagerFactoryInfo() {
 		boolean condition = entityManagerFactory instanceof EntityManagerFactoryInfo;
 		assertThat(condition).as("Must not have introduced config interface").isFalse();
 	}
@@ -67,7 +67,7 @@ class HibernateNativeEntityManagerFactoryIntegrationTests extends AbstractContai
 		insertPerson(firstName);
 
 		List<Person> people = sharedEntityManager.createQuery("select p from Person as p").getResultList();
-		assertThat(people).hasSize(1);
+		assertThat(people.size()).isEqualTo(1);
 		assertThat(people.get(0).getFirstName()).isEqualTo(firstName);
 		assertThat(people.get(0).postLoaded).isSameAs(applicationContext);
 	}
@@ -80,7 +80,7 @@ class HibernateNativeEntityManagerFactoryIntegrationTests extends AbstractContai
 
 		Query q = sessionFactory.getCurrentSession().createQuery("select p from Person as p");
 		List<Person> people = q.getResultList();
-		assertThat(people).hasSize(1);
+		assertThat(people.size()).isEqualTo(1);
 		assertThat(people.get(0).getFirstName()).isEqualTo(firstName);
 		assertThat(people.get(0).postLoaded).isSameAs(applicationContext);
 	}

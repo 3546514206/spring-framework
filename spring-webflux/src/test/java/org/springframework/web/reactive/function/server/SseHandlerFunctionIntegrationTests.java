@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,16 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.time.Duration;
-import java.util.Objects;
-
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.lang.Nullable;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.TEXT_EVENT_STREAM;
@@ -101,7 +98,7 @@ class SseHandlerFunctionIntegrationTests extends AbstractRouterFunctionIntegrati
 				.uri("/event")
 				.accept(TEXT_EVENT_STREAM)
 				.retrieve()
-				.bodyToFlux(new ParameterizedTypeReference<>() {});
+				.bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {});
 
 		StepVerifier.create(result)
 				.consumeNextWith( event -> {
@@ -168,7 +165,7 @@ class SseHandlerFunctionIntegrationTests extends AbstractRouterFunctionIntegrati
 		}
 
 		@Override
-		public boolean equals(@Nullable Object o) {
+		public boolean equals(Object o) {
 			if (this == o) {
 				return true;
 			}
@@ -176,7 +173,7 @@ class SseHandlerFunctionIntegrationTests extends AbstractRouterFunctionIntegrati
 				return false;
 			}
 			Person person = (Person) o;
-			return Objects.equals(this.name, person.name);
+			return !(this.name != null ? !this.name.equals(person.name) : person.name != null);
 		}
 
 		@Override

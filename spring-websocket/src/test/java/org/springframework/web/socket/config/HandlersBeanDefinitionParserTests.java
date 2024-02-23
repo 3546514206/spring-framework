@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.web.socket.config;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
-import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
@@ -69,13 +69,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Brian Clozel
  * @author Rossen Stoyanchev
  */
-class HandlersBeanDefinitionParserTests {
+public class HandlersBeanDefinitionParserTests {
 
 	private final GenericWebApplicationContext appContext = new GenericWebApplicationContext();
 
 
 	@Test
-	void webSocketHandlers() {
+	public void webSocketHandlers() {
 		loadBeanDefinitions("websocket-config-handlers.xml");
 
 		Map<String, HandlerMapping> handlersMap = this.appContext.getBeansOfType(HandlerMapping.class);
@@ -87,7 +87,7 @@ class HandlersBeanDefinitionParserTests {
 			assertThat(condition2).isTrue();
 			SimpleUrlHandlerMapping shm = (SimpleUrlHandlerMapping) hm;
 
-			if (shm.getUrlMap().containsKey("/foo")) {
+			if (shm.getUrlMap().keySet().contains("/foo")) {
 				assertThat(shm.getUrlMap()).containsOnlyKeys("/foo", "/bar");
 				WebSocketHttpRequestHandler handler = (WebSocketHttpRequestHandler) shm.getUrlMap().get("/foo");
 				assertThat(handler).isNotNull();
@@ -96,7 +96,7 @@ class HandlersBeanDefinitionParserTests {
 				assertThat(handshakeHandler).isNotNull();
 				boolean condition1 = handshakeHandler instanceof DefaultHandshakeHandler;
 				assertThat(condition1).isTrue();
-				assertThat(handler.getHandshakeInterceptors()).isNotEmpty();
+				assertThat(handler.getHandshakeInterceptors().isEmpty()).isFalse();
 				boolean condition = handler.getHandshakeInterceptors().get(0) instanceof OriginHandshakeInterceptor;
 				assertThat(condition).isTrue();
 			}
@@ -109,7 +109,7 @@ class HandlersBeanDefinitionParserTests {
 				assertThat(handshakeHandler).isNotNull();
 				boolean condition1 = handshakeHandler instanceof DefaultHandshakeHandler;
 				assertThat(condition1).isTrue();
-				assertThat(handler.getHandshakeInterceptors()).isNotEmpty();
+				assertThat(handler.getHandshakeInterceptors().isEmpty()).isFalse();
 				boolean condition = handler.getHandshakeInterceptors().get(0) instanceof OriginHandshakeInterceptor;
 				assertThat(condition).isTrue();
 			}
@@ -117,7 +117,7 @@ class HandlersBeanDefinitionParserTests {
 	}
 
 	@Test
-	void webSocketHandlersAttributes() {
+	public void webSocketHandlersAttributes() {
 		loadBeanDefinitions("websocket-config-handlers-attributes.xml");
 
 		HandlerMapping handlerMapping = this.appContext.getBean(HandlerMapping.class);
@@ -152,7 +152,7 @@ class HandlersBeanDefinitionParserTests {
 	}
 
 	@Test
-	void sockJs() {
+	public void sockJs() {
 		loadBeanDefinitions("websocket-config-handlers-sockjs.xml");
 
 		SimpleUrlHandlerMapping handlerMapping = this.appContext.getBean(SimpleUrlHandlerMapping.class);
@@ -195,7 +195,7 @@ class HandlersBeanDefinitionParserTests {
 	}
 
 	@Test
-	void sockJsAttributes() {
+	public void sockJsAttributes() {
 		loadBeanDefinitions("websocket-config-handlers-sockjs-attributes.xml");
 
 		SimpleUrlHandlerMapping handlerMapping = appContext.getBean(SimpleUrlHandlerMapping.class);
@@ -226,8 +226,8 @@ class HandlersBeanDefinitionParserTests {
 		List<HandshakeInterceptor> interceptors = transportService.getHandshakeInterceptors();
 		assertThat(interceptors).extracting("class").containsExactly(OriginHandshakeInterceptor.class);
 		assertThat(transportService.shouldSuppressCors()).isTrue();
-		assertThat(transportService.getAllowedOrigins()).containsExactly("https://mydomain1.example", "https://mydomain2.example");
-		assertThat(transportService.getAllowedOriginPatterns()).containsExactly("https://*.mydomain.example");
+		assertThat(transportService.getAllowedOrigins().contains("https://mydomain1.example")).isTrue();
+		assertThat(transportService.getAllowedOrigins().contains("https://mydomain2.example")).isTrue();
 	}
 
 
@@ -242,7 +242,7 @@ class HandlersBeanDefinitionParserTests {
 		if (handler instanceof WebSocketHandlerDecorator) {
 			handler = ((WebSocketHandlerDecorator) handler).getLastHandler();
 		}
-		assertThat(handler).isInstanceOf(handlerClass);
+		assertThat(handlerClass.isInstance(handler)).isTrue();
 	}
 }
 
@@ -311,7 +311,7 @@ class BarTestInterceptor extends FooTestInterceptor {
 }
 
 
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({ "unchecked", "rawtypes" })
 class TestTaskScheduler implements TaskScheduler {
 
 	@Override
@@ -320,27 +320,27 @@ class TestTaskScheduler implements TaskScheduler {
 	}
 
 	@Override
-	public ScheduledFuture schedule(Runnable task, Instant startTime) {
+	public ScheduledFuture schedule(Runnable task, Date startTime) {
 		return null;
 	}
 
 	@Override
-	public ScheduledFuture scheduleAtFixedRate(Runnable task, Instant startTime, Duration period) {
+	public ScheduledFuture scheduleAtFixedRate(Runnable task, Date startTime, long period) {
 		return null;
 	}
 
 	@Override
-	public ScheduledFuture scheduleAtFixedRate(Runnable task, Duration period) {
+	public ScheduledFuture scheduleAtFixedRate(Runnable task, long period) {
 		return null;
 	}
 
 	@Override
-	public ScheduledFuture scheduleWithFixedDelay(Runnable task, Instant startTime, Duration delay) {
+	public ScheduledFuture scheduleWithFixedDelay(Runnable task, Date startTime, long delay) {
 		return null;
 	}
 
 	@Override
-	public ScheduledFuture scheduleWithFixedDelay(Runnable task, Duration delay) {
+	public ScheduledFuture scheduleWithFixedDelay(Runnable task, long delay) {
 		return null;
 	}
 }
@@ -354,12 +354,12 @@ class TestMessageCodec implements SockJsMessageCodec {
 	}
 
 	@Override
-	public String[] decode(String content) {
+	public String[] decode(String content) throws IOException {
 		return new String[0];
 	}
 
 	@Override
-	public String[] decodeInputStream(InputStream content) {
+	public String[] decodeInputStream(InputStream content) throws IOException {
 		return new String[0];
 	}
 }

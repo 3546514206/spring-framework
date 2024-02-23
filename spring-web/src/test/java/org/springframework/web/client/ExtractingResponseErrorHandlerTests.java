@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,15 +38,15 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Arjen Poutsma
  */
-class ExtractingResponseErrorHandlerTests {
+public class ExtractingResponseErrorHandlerTests {
 
 	private ExtractingResponseErrorHandler errorHandler;
 
-	private final ClientHttpResponse response = mock();
+	private final ClientHttpResponse response = mock(ClientHttpResponse.class);
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		HttpMessageConverter<Object> converter = new MappingJackson2HttpMessageConverter();
 		this.errorHandler = new ExtractingResponseErrorHandler(
 				Collections.singletonList(converter));
@@ -59,35 +59,35 @@ class ExtractingResponseErrorHandlerTests {
 
 
 	@Test
-	void hasError() throws Exception {
-		given(this.response.getStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT);
+	public void hasError() throws Exception {
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT.value());
 		assertThat(this.errorHandler.hasError(this.response)).isTrue();
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.INTERNAL_SERVER_ERROR);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		assertThat(this.errorHandler.hasError(this.response)).isTrue();
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.OK);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.OK.value());
 		assertThat(this.errorHandler.hasError(this.response)).isFalse();
 	}
 
 	@Test
-	void hasErrorOverride() throws Exception {
+	public void hasErrorOverride() throws Exception {
 		this.errorHandler.setSeriesMapping(Collections
 				.singletonMap(HttpStatus.Series.CLIENT_ERROR, null));
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT.value());
 		assertThat(this.errorHandler.hasError(this.response)).isTrue();
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.NOT_FOUND);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.NOT_FOUND.value());
 		assertThat(this.errorHandler.hasError(this.response)).isFalse();
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.OK);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.OK.value());
 		assertThat(this.errorHandler.hasError(this.response)).isFalse();
 	}
 
 	@Test
-	void handleErrorStatusMatch() throws Exception {
-		given(this.response.getStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT);
+	public void handleErrorStatusMatch() throws Exception {
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.I_AM_A_TEAPOT.value());
 		HttpHeaders responseHeaders = new HttpHeaders();
 		responseHeaders.setContentType(MediaType.APPLICATION_JSON);
 		given(this.response.getHeaders()).willReturn(responseHeaders);
@@ -102,8 +102,8 @@ class ExtractingResponseErrorHandlerTests {
 	}
 
 	@Test
-	void handleErrorSeriesMatch() throws Exception {
-		given(this.response.getStatusCode()).willReturn(HttpStatus.INTERNAL_SERVER_ERROR);
+	public void handleErrorSeriesMatch() throws Exception {
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		HttpHeaders responseHeaders = new HttpHeaders();
 		responseHeaders.setContentType(MediaType.APPLICATION_JSON);
 		given(this.response.getHeaders()).willReturn(responseHeaders);
@@ -118,8 +118,8 @@ class ExtractingResponseErrorHandlerTests {
 	}
 
 	@Test
-	void handleNoMatch() throws Exception {
-		given(this.response.getStatusCode()).willReturn(HttpStatus.NOT_FOUND);
+	public void handleNoMatch() throws Exception {
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.NOT_FOUND.value());
 		HttpHeaders responseHeaders = new HttpHeaders();
 		responseHeaders.setContentType(MediaType.APPLICATION_JSON);
 		given(this.response.getHeaders()).willReturn(responseHeaders);
@@ -137,11 +137,11 @@ class ExtractingResponseErrorHandlerTests {
 	}
 
 	@Test
-	void handleNoMatchOverride() throws Exception {
+	public void handleNoMatchOverride() throws Exception {
 		this.errorHandler.setSeriesMapping(Collections
 				.singletonMap(HttpStatus.Series.CLIENT_ERROR, null));
 
-		given(this.response.getStatusCode()).willReturn(HttpStatus.NOT_FOUND);
+		given(this.response.getRawStatusCode()).willReturn(HttpStatus.NOT_FOUND.value());
 		HttpHeaders responseHeaders = new HttpHeaders();
 		responseHeaders.setContentType(MediaType.APPLICATION_JSON);
 		given(this.response.getHeaders()).willReturn(responseHeaders);

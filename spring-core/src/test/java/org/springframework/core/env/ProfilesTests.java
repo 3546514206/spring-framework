@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package org.springframework.core.env;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.util.StringUtils;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -40,30 +39,30 @@ class ProfilesTests {
 
 	@Test
 	void ofWhenNullThrowsException() {
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> Profiles.of((String[]) null))
-			.withMessage("Must specify at least one profile expression");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				Profiles.of((String[]) null))
+			.withMessageContaining("Must specify at least one profile");
 	}
 
 	@Test
 	void ofWhenEmptyThrowsException() {
-		assertThatIllegalArgumentException()
-			.isThrownBy(Profiles::of)
-			.withMessage("Must specify at least one profile expression");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				Profiles.of())
+			.withMessageContaining("Must specify at least one profile");
 	}
 
 	@Test
 	void ofNullElement() {
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> Profiles.of((String) null))
-			.withMessage("Invalid profile expression [null]: must contain text");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				Profiles.of((String) null))
+			.withMessageContaining("must contain text");
 	}
 
 	@Test
 	void ofEmptyElement() {
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> Profiles.of("  "))
-			.withMessage("Invalid profile expression [  ]: must contain text");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				Profiles.of("  "))
+			.withMessageContaining("must contain text");
 	}
 
 	@Test
@@ -272,12 +271,6 @@ class ProfilesTests {
 		assertComplexExpression(profiles);
 	}
 
-	@Test
-	void ofComplexExpressionEnclosedInParentheses() {
-		Profiles profiles = Profiles.of("((spring & framework) | (spring & java))");
-		assertComplexExpression(profiles);
-	}
-
 	private void assertComplexExpression(Profiles profiles) {
 		assertThat(profiles.matches(activeProfiles("spring"))).isFalse();
 		assertThat(profiles.matches(activeProfiles("spring", "framework"))).isTrue();
@@ -294,94 +287,13 @@ class ProfilesTests {
 
 	@Test
 	void sensibleToString() {
-		assertThat(Profiles.of("spring")).hasToString("spring");
-		assertThat(Profiles.of("(spring & framework) | (spring & java)")).hasToString("(spring & framework) | (spring & java)");
-		assertThat(Profiles.of("(spring&framework)|(spring&java)")).hasToString("(spring&framework)|(spring&java)");
-		assertThat(Profiles.of("spring & framework", "java | kotlin")).hasToString("(spring & framework) | (java | kotlin)");
-		assertThat(Profiles.of("java | kotlin", "spring & framework")).hasToString("(java | kotlin) | (spring & framework)");
-		assertThat(Profiles.of("java | kotlin", "spring & framework", "cat | dog")).hasToString("(java | kotlin) | (spring & framework) | (cat | dog)");
+		assertThat(Profiles.of("spring & framework", "java | kotlin").toString()).isEqualTo("spring & framework or java | kotlin");
 	}
 
-	@Test
-	void toStringGeneratesValidCompositeProfileExpression() {
-		assertThatToStringGeneratesValidCompositeProfileExpression("spring");
-		assertThatToStringGeneratesValidCompositeProfileExpression("(spring & kotlin) | (spring & java)");
-		assertThatToStringGeneratesValidCompositeProfileExpression("spring & kotlin", "spring & java");
-		assertThatToStringGeneratesValidCompositeProfileExpression("spring & kotlin", "spring & java", "cat | dog");
-	}
-
-	private static void assertThatToStringGeneratesValidCompositeProfileExpression(String... profileExpressions) {
-		Profiles profiles = Profiles.of(profileExpressions);
-		assertThat(profiles.matches(activeProfiles("spring", "java"))).isTrue();
-		assertThat(profiles.matches(activeProfiles("kotlin"))).isFalse();
-
-		Profiles compositeProfiles = Profiles.of(profiles.toString());
-		assertThat(compositeProfiles.matches(activeProfiles("spring", "java"))).isTrue();
-		assertThat(compositeProfiles.matches(activeProfiles("kotlin"))).isFalse();
-	}
-
-	@Test
-	void sensibleEquals() {
-		assertEqual("(spring & framework) | (spring & java)");
-		assertEqual("(spring&framework)|(spring&java)");
-		assertEqual("spring & framework", "java | kotlin");
-
-		// Ensure order of individual expressions does not affect equals().
-		String expression1 = "A | B";
-		String expression2 = "C & (D | E)";
-		Profiles profiles1 = Profiles.of(expression1, expression2);
-		Profiles profiles2 = Profiles.of(expression2, expression1);
-		assertThat(profiles1).isEqualTo(profiles2);
-		assertThat(profiles2).isEqualTo(profiles1);
-	}
-
-	private void assertEqual(String... expressions) {
-		Profiles profiles1 = Profiles.of(expressions);
-		Profiles profiles2 = Profiles.of(expressions);
-		assertThat(profiles1).isEqualTo(profiles2);
-		assertThat(profiles2).isEqualTo(profiles1);
-	}
-
-	@Test
-	void sensibleHashCode() {
-		assertHashCode("(spring & framework) | (spring & java)");
-		assertHashCode("(spring&framework)|(spring&java)");
-		assertHashCode("spring & framework", "java | kotlin");
-
-		// Ensure order of individual expressions does not affect hashCode().
-		String expression1 = "A | B";
-		String expression2 = "C & (D | E)";
-		Profiles profiles1 = Profiles.of(expression1, expression2);
-		Profiles profiles2 = Profiles.of(expression2, expression1);
-		assertThat(profiles1).hasSameHashCodeAs(profiles2);
-	}
-
-	private void assertHashCode(String... expressions) {
-		Profiles profiles1 = Profiles.of(expressions);
-		Profiles profiles2 = Profiles.of(expressions);
-		assertThat(profiles1).hasSameHashCodeAs(profiles2);
-	}
-
-	@Test
-	void equalsAndHashCodeAreNotBasedOnLogicalStructureOfNodesWithinExpressionTree() {
-		Profiles profiles1 = Profiles.of("A | B");
-		Profiles profiles2 = Profiles.of("B | A");
-
-		assertThat(profiles1.matches(activeProfiles("A"))).isTrue();
-		assertThat(profiles1.matches(activeProfiles("B"))).isTrue();
-		assertThat(profiles2.matches(activeProfiles("A"))).isTrue();
-		assertThat(profiles2.matches(activeProfiles("B"))).isTrue();
-
-		assertThat(profiles1).isNotEqualTo(profiles2);
-		assertThat(profiles2).isNotEqualTo(profiles1);
-		assertThat(profiles1.hashCode()).isNotEqualTo(profiles2.hashCode());
-	}
-
-
-	private static void assertMalformed(Supplier<Profiles> supplier) {
-		assertThatIllegalArgumentException()
-			.isThrownBy(supplier::get)
-			.withMessageStartingWith("Malformed profile expression");
+	private void assertMalformed(Supplier<Profiles> supplier) {
+		assertThatIllegalArgumentException().isThrownBy(
+						supplier::get)
+				.withMessageContaining("Malformed");
 	}
 
 	private static Predicate<String> activeProfiles(String... profiles) {

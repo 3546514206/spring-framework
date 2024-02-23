@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,11 @@
 
 package org.springframework.transaction.reactive;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.transaction.ReactiveTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Operator class that simplifies programmatic transaction demarcation and
@@ -38,14 +37,12 @@ import org.springframework.transaction.TransactionException;
  * application services utilizing this class, making calls to the low-level
  * services via an inner-class callback object.
  *
- * <p><strong>Note:</strong> Transactional Publishers should avoid Subscription
- * cancellation. See the
- * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#tx-prog-operator-cancel">Cancel Signals</a>
- * section of the Spring Framework reference for more details.
+ * <p>Transactional Publishers should avoid Subscription cancellation.
+ * Cancelling initiates asynchronous transaction cleanup that does not allow for
+ * synchronization on completion.
  *
  * @author Mark Paluch
  * @author Juergen Hoeller
- * @author Enric Sala
  * @since 5.2
  * @see #execute
  * @see ReactiveTransactionManager
@@ -70,9 +67,7 @@ public interface TransactionalOperator {
 	 * @throws TransactionException in case of initialization, rollback, or system errors
 	 * @throws RuntimeException if thrown by the TransactionCallback
 	 */
-	default <T> Mono<T> transactional(Mono<T> mono) {
-		return execute(it -> mono).singleOrEmpty();
-	}
+	<T> Mono<T> transactional(Mono<T> mono);
 
 	/**
 	 * Execute the action specified by the given callback object within a transaction.

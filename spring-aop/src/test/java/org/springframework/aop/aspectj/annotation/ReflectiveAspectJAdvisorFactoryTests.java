@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,16 @@
 package org.springframework.aop.aspectj.annotation;
 
 /**
- * Tests for {@link ReflectiveAspectJAdvisorFactory}.
- *
- * <p>Tests are inherited: we only set the test fixture here.
+ * Tests for ReflectiveAtAspectJAdvisorFactory.
+ * Tests are inherited: we only set the test fixture here.
  *
  * @author Rod Johnson
  * @since 2.0
  */
-class ReflectiveAspectJAdvisorFactoryTests extends AbstractAspectJAdvisorFactoryTests {
+public class ReflectiveAspectJAdvisorFactoryTests extends AbstractAspectJAdvisorFactoryTests {
 
 	@Override
-	protected AspectJAdvisorFactory getAdvisorFactory() {
+	protected AspectJAdvisorFactory getFixture() {
 		return new ReflectiveAspectJAdvisorFactory();
 	}
 

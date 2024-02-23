@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.http.converter;
 
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpInputMessage;
@@ -30,11 +32,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  */
-class HttpMessageConverterTests {
+public class HttpMessageConverterTests {
 
 
 	@Test
-	void canRead() {
+	public void canRead() {
 		MediaType mediaType = new MediaType("foo", "bar");
 		HttpMessageConverter<MyType> converter = new MyHttpMessageConverter<>(mediaType);
 
@@ -44,7 +46,7 @@ class HttpMessageConverterTests {
 	}
 
 	@Test
-	void canReadWithWildcardSubtype() {
+	public void canReadWithWildcardSubtype() {
 		MediaType mediaType = new MediaType("foo");
 		HttpMessageConverter<MyType> converter = new MyHttpMessageConverter<>(mediaType);
 
@@ -54,7 +56,7 @@ class HttpMessageConverterTests {
 	}
 
 	@Test
-	void canWrite() {
+	public void canWrite() {
 		MediaType mediaType = new MediaType("foo", "bar");
 		HttpMessageConverter<MyType> converter = new MyHttpMessageConverter<>(mediaType);
 
@@ -64,7 +66,7 @@ class HttpMessageConverterTests {
 	}
 
 	@Test
-	void canWriteWithWildcardInSupportedSubtype() {
+	public void canWriteWithWildcardInSupportedSubtype() {
 		MediaType mediaType = new MediaType("foo");
 		HttpMessageConverter<MyType> converter = new MyHttpMessageConverter<>(mediaType);
 
@@ -87,13 +89,13 @@ class HttpMessageConverterTests {
 
 		@Override
 		protected T readInternal(Class<? extends T> clazz, HttpInputMessage inputMessage)
-				throws HttpMessageNotReadableException {
+				throws IOException, HttpMessageNotReadableException {
 			throw new AssertionError("Not expected");
 		}
 
 		@Override
 		protected void writeInternal(T t, HttpOutputMessage outputMessage)
-				throws HttpMessageNotWritableException {
+				throws IOException, HttpMessageNotWritableException {
 			throw new AssertionError("Not expected");
 		}
 	}

@@ -16,26 +16,20 @@
 
 package org.springframework.test.context.junit4.concurrency;
 
-import java.lang.annotation.Annotation;
-import java.util.Arrays;
-
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.ParallelComputer;
-
-import org.springframework.core.testfixture.TestGroup;
-import org.springframework.test.context.junit4.InheritedConfigSpringJUnit4ClassRunnerAppCtxTests;
-import org.springframework.test.context.junit4.MethodLevelTransactionalSpringRunnerTests;
-import org.springframework.test.context.junit4.SpringJUnit47ClassRunnerRuleTests;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunnerAppCtxTests;
-import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.context.junit4.TimedTransactionalSpringRunnerTests;
+import org.springframework.test.context.junit4.*;
 import org.springframework.test.context.junit4.rules.BaseAppCtxRuleTests;
 import org.springframework.test.context.junit4.rules.BasicAnnotationConfigWacSpringRuleTests;
 import org.springframework.test.context.junit4.rules.SpringClassRule;
 import org.springframework.test.context.junit4.rules.SpringMethodRule;
+import org.springframework.tests.TestGroup;
 import org.springframework.util.ReflectionUtils;
+
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
 
 import static org.junit.Assume.assumeTrue;
 import static org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,22 @@
 package org.springframework.context.support;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.util.Assert;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,10 +48,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @since 02.10.2003
  */
-class BeanFactoryPostProcessorTests {
+public class BeanFactoryPostProcessorTests {
 
 	@Test
-	void registeredBeanFactoryPostProcessor() {
+	public void testRegisteredBeanFactoryPostProcessor() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -60,11 +60,10 @@ class BeanFactoryPostProcessorTests {
 		assertThat(bfpp.wasCalled).isFalse();
 		ac.refresh();
 		assertThat(bfpp.wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	void definedBeanFactoryPostProcessor() {
+	public void testDefinedBeanFactoryPostProcessor() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -72,12 +71,10 @@ class BeanFactoryPostProcessorTests {
 		ac.refresh();
 		TestBeanFactoryPostProcessor bfpp = (TestBeanFactoryPostProcessor) ac.getBean("bfpp");
 		assertThat(bfpp.wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void multipleDefinedBeanFactoryPostProcessors() {
+	public void testMultipleDefinedBeanFactoryPostProcessors() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -86,16 +83,15 @@ class BeanFactoryPostProcessorTests {
 		ac.registerSingleton("bfpp1", TestBeanFactoryPostProcessor.class, pvs1);
 		MutablePropertyValues pvs2 = new MutablePropertyValues();
 		pvs2.add("properties", "key=value");
-		ac.registerSingleton("bfpp2", org.springframework.beans.factory.config.PropertyPlaceholderConfigurer.class, pvs2);
+		ac.registerSingleton("bfpp2", PropertyPlaceholderConfigurer.class, pvs2);
 		ac.refresh();
 		TestBeanFactoryPostProcessor bfpp = (TestBeanFactoryPostProcessor) ac.getBean("bfpp1");
 		assertThat(bfpp.initValue).isEqualTo("value");
 		assertThat(bfpp.wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	void beanFactoryPostProcessorNotExecutedByBeanFactory() {
+	public void testBeanFactoryPostProcessorNotExecutedByBeanFactory() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.registerBeanDefinition("tb1", new RootBeanDefinition(TestBean.class));
 		bf.registerBeanDefinition("tb2", new RootBeanDefinition(TestBean.class));
@@ -105,7 +101,7 @@ class BeanFactoryPostProcessorTests {
 	}
 
 	@Test
-	void beanDefinitionRegistryPostProcessor() {
+	public void testBeanDefinitionRegistryPostProcessor() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -117,11 +113,10 @@ class BeanFactoryPostProcessorTests {
 		assertThat(bdrpp.wasCalled).isTrue();
 		assertThat(ac.getBean("bfpp1", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
 		assertThat(ac.getBean("bfpp2", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	void beanDefinitionRegistryPostProcessorRegisteringAnother() {
+	public void testBeanDefinitionRegistryPostProcessorRegisteringAnother() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -129,11 +124,10 @@ class BeanFactoryPostProcessorTests {
 		ac.refresh();
 		assertThat(ac.getBean("bfpp1", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
 		assertThat(ac.getBean("bfpp2", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	void prioritizedBeanDefinitionRegistryPostProcessorRegisteringAnother() {
+	public void testPrioritizedBeanDefinitionRegistryPostProcessorRegisteringAnother() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerSingleton("tb1", TestBean.class);
 		ac.registerSingleton("tb2", TestBean.class);
@@ -141,27 +135,26 @@ class BeanFactoryPostProcessorTests {
 		ac.refresh();
 		assertThat(ac.getBean("bfpp1", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
 		assertThat(ac.getBean("bfpp2", TestBeanFactoryPostProcessor.class).wasCalled).isTrue();
-		ac.close();
 	}
 
 	@Test
-	void beanFactoryPostProcessorAsApplicationListener() {
+	public void testBeanFactoryPostProcessorAsApplicationListener() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		ac.registerBeanDefinition("bfpp", new RootBeanDefinition(ListeningBeanFactoryPostProcessor.class));
 		ac.refresh();
-		assertThat(ac.getBean(ListeningBeanFactoryPostProcessor.class).received).isInstanceOf(ContextRefreshedEvent.class);
-		ac.close();
+		boolean condition = ac.getBean(ListeningBeanFactoryPostProcessor.class).received instanceof ContextRefreshedEvent;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
-	void beanFactoryPostProcessorWithInnerBeanAsApplicationListener() {
+	public void testBeanFactoryPostProcessorWithInnerBeanAsApplicationListener() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		RootBeanDefinition rbd = new RootBeanDefinition(NestingBeanFactoryPostProcessor.class);
 		rbd.getPropertyValues().add("listeningBean", new RootBeanDefinition(ListeningBean.class));
 		ac.registerBeanDefinition("bfpp", rbd);
 		ac.refresh();
-		assertThat(ac.getBean(NestingBeanFactoryPostProcessor.class).getListeningBean().received).isInstanceOf(ContextRefreshedEvent.class);
-		ac.close();
+		boolean condition = ac.getBean(NestingBeanFactoryPostProcessor.class).getListeningBean().received instanceof ContextRefreshedEvent;
+		assertThat(condition).isTrue();
 	}
 
 
@@ -193,6 +186,10 @@ class BeanFactoryPostProcessorTests {
 		public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 			registry.registerBeanDefinition("bfpp1", new RootBeanDefinition(TestBeanFactoryPostProcessor.class));
 		}
+
+		@Override
+		public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+		}
 	}
 
 
@@ -219,6 +216,10 @@ class BeanFactoryPostProcessorTests {
 		public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 			registry.registerBeanDefinition("anotherpp", new RootBeanDefinition(TestBeanDefinitionRegistryPostProcessor.class));
 			registry.registerBeanDefinition("ppp", new RootBeanDefinition(PrioritizedBeanDefinitionRegistryPostProcessor.class));
+		}
+
+		@Override
+		public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		}
 	}
 

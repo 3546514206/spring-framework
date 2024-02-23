@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,10 @@
 
 package org.springframework.core.io.support;
 
+import org.springframework.core.io.Resource;
+import org.springframework.lang.Nullable;
+import org.springframework.util.*;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -23,14 +27,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Enumeration;
 import java.util.Properties;
-
-import org.springframework.core.io.Resource;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.DefaultPropertiesPersister;
-import org.springframework.util.PropertiesPersister;
-import org.springframework.util.ResourceUtils;
 
 /**
  * Convenient utility methods for loading of {@code java.util.Properties},
@@ -41,7 +37,6 @@ import org.springframework.util.ResourceUtils;
  *
  * @author Juergen Hoeller
  * @author Rob Harrop
- * @author Sebastien Deleuze
  * @since 2.0
  * @see PropertiesLoaderSupport
  */
@@ -71,7 +66,7 @@ public abstract class PropertiesLoaderUtils {
 	public static void fillProperties(Properties props, EncodedResource resource)
 			throws IOException {
 
-		fillProperties(props, resource, DefaultPropertiesPersister.INSTANCE);
+		fillProperties(props, resource, new DefaultPropertiesPersister());
 	}
 
 	/**
@@ -131,14 +126,16 @@ public abstract class PropertiesLoaderUtils {
 	 * @throws IOException if loading failed
 	 */
 	public static void fillProperties(Properties props, Resource resource) throws IOException {
-		try (InputStream is = resource.getInputStream()) {
+		InputStream is = resource.getInputStream();
+		try {
 			String filename = resource.getFilename();
 			if (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {
 				props.loadFromXML(is);
-			}
-			else {
+			} else {
 				props.load(is);
 			}
+		} finally {
+			is.close();
 		}
 	}
 
@@ -179,13 +176,15 @@ public abstract class PropertiesLoaderUtils {
 			URL url = urls.nextElement();
 			URLConnection con = url.openConnection();
 			ResourceUtils.useCachesIfNecessary(con);
-			try (InputStream is = con.getInputStream()) {
+			InputStream is = con.getInputStream();
+			try {
 				if (resourceName.endsWith(XML_FILE_EXTENSION)) {
 					props.loadFromXML(is);
-				}
-				else {
+				} else {
 					props.load(is);
 				}
+			} finally {
+				is.close();
 			}
 		}
 		return props;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,7 @@
 
 package org.springframework.context.annotation.configuration;
 
-import java.io.IOException;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.util.List;
-import java.util.Optional;
-
-import jakarta.inject.Provider;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +24,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.Colour;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +33,15 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.tests.sample.beans.Colour;
+import org.springframework.tests.sample.beans.TestBean;
+
+import javax.inject.Provider;
+import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,50 +53,46 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
-class AutowiredConfigurationTests {
+public class AutowiredConfigurationTests {
 
 	@Test
-	void testAutowiredConfigurationDependencies() {
+	public void testAutowiredConfigurationDependencies() {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
 				AutowiredConfigurationTests.class.getSimpleName() + ".xml", AutowiredConfigurationTests.class);
 
 		assertThat(context.getBean("colour", Colour.class)).isEqualTo(Colour.RED);
 		assertThat(context.getBean("testBean", TestBean.class).getName()).isEqualTo(Colour.RED.toString());
-		context.close();
 	}
 
 	@Test
-	void testAutowiredConfigurationMethodDependencies() {
+	public void testAutowiredConfigurationMethodDependencies() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
 				AutowiredMethodConfig.class, ColorConfig.class);
 
 		assertThat(context.getBean(Colour.class)).isEqualTo(Colour.RED);
 		assertThat(context.getBean(TestBean.class).getName()).isEqualTo("RED-RED");
-		context.close();
 	}
 
 	@Test
-	void testAutowiredConfigurationMethodDependenciesWithOptionalAndAvailable() {
+	public void testAutowiredConfigurationMethodDependenciesWithOptionalAndAvailable() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
 				OptionalAutowiredMethodConfig.class, ColorConfig.class);
 
 		assertThat(context.getBean(Colour.class)).isEqualTo(Colour.RED);
 		assertThat(context.getBean(TestBean.class).getName()).isEqualTo("RED-RED");
-		context.close();
 	}
 
 	@Test
-	void testAutowiredConfigurationMethodDependenciesWithOptionalAndNotAvailable() {
+	public void testAutowiredConfigurationMethodDependenciesWithOptionalAndNotAvailable() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
 				OptionalAutowiredMethodConfig.class);
 
-		assertThat(context.getBeansOfType(Colour.class)).isEmpty();
-		assertThat(context.getBean(TestBean.class).getName()).isEmpty();
-		context.close();
+		assertThat(context.getBeansOfType(Colour.class).isEmpty()).isTrue();
+		assertThat(context.getBean(TestBean.class).getName()).isEqualTo("");
 	}
 
 	@Test
-	void testAutowiredSingleConstructorSupported() {
+	public void testAutowiredSingleConstructorSupported() {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(factory).loadBeanDefinitions(
 				new ClassPathResource("annotation-config.xml", AutowiredConstructorConfig.class));
@@ -106,11 +101,10 @@ class AutowiredConfigurationTests {
 		ctx.registerBeanDefinition("config2", new RootBeanDefinition(ColorConfig.class));
 		ctx.refresh();
 		assertThat(ctx.getBean(Colour.class)).isSameAs(ctx.getBean(AutowiredConstructorConfig.class).colour);
-		ctx.close();
 	}
 
 	@Test
-	void testObjectFactoryConstructorWithTypeVariable() {
+	public void testObjectFactoryConstructorWithTypeVariable() {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(factory).loadBeanDefinitions(
 				new ClassPathResource("annotation-config.xml", ObjectFactoryConstructorConfig.class));
@@ -119,11 +113,10 @@ class AutowiredConfigurationTests {
 		ctx.registerBeanDefinition("config2", new RootBeanDefinition(ColorConfig.class));
 		ctx.refresh();
 		assertThat(ctx.getBean(Colour.class)).isSameAs(ctx.getBean(ObjectFactoryConstructorConfig.class).colour);
-		ctx.close();
 	}
 
 	@Test
-	void testAutowiredAnnotatedConstructorSupported() {
+	public void testAutowiredAnnotatedConstructorSupported() {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(factory).loadBeanDefinitions(
 				new ClassPathResource("annotation-config.xml", MultipleConstructorConfig.class));
@@ -132,65 +125,58 @@ class AutowiredConfigurationTests {
 		ctx.registerBeanDefinition("config2", new RootBeanDefinition(ColorConfig.class));
 		ctx.refresh();
 		assertThat(ctx.getBean(Colour.class)).isSameAs(ctx.getBean(MultipleConstructorConfig.class).colour);
-		ctx.close();
 	}
 
 	@Test
-	void testValueInjection() {
+	public void testValueInjection() {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
 				"ValueInjectionTests.xml", AutowiredConfigurationTests.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	@Test
-	void testValueInjectionWithMetaAnnotation() {
+	public void testValueInjectionWithMetaAnnotation() {
 		AnnotationConfigApplicationContext context =
 				new AnnotationConfigApplicationContext(ValueConfigWithMetaAnnotation.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	@Test
-	void testValueInjectionWithAliasedMetaAnnotation() {
+	public void testValueInjectionWithAliasedMetaAnnotation() {
 		AnnotationConfigApplicationContext context =
 				new AnnotationConfigApplicationContext(ValueConfigWithAliasedMetaAnnotation.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	@Test
-	void testValueInjectionWithProviderFields() {
+	public void testValueInjectionWithProviderFields() {
 		AnnotationConfigApplicationContext context =
 				new AnnotationConfigApplicationContext(ValueConfigWithProviderFields.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	@Test
-	void testValueInjectionWithProviderConstructorArguments() {
+	public void testValueInjectionWithProviderConstructorArguments() {
 		AnnotationConfigApplicationContext context =
 				new AnnotationConfigApplicationContext(ValueConfigWithProviderConstructorArguments.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	@Test
-	void testValueInjectionWithProviderMethodArguments() {
+	public void testValueInjectionWithProviderMethodArguments() {
 		AnnotationConfigApplicationContext context =
 				new AnnotationConfigApplicationContext(ValueConfigWithProviderMethodArguments.class);
 		doTestValueInjection(context);
-		context.close();
 	}
 
 	private void doTestValueInjection(BeanFactory context) {
 		System.clearProperty("myProp");
 
 		TestBean testBean = context.getBean("testBean", TestBean.class);
-		assertThat(testBean.getName()).isNull();
+		assertThat((Object) testBean.getName()).isNull();
 
 		testBean = context.getBean("testBean2", TestBean.class);
-		assertThat(testBean.getName()).isNull();
+		assertThat((Object) testBean.getName()).isNull();
 
 		System.setProperty("myProp", "foo");
 
@@ -203,25 +189,24 @@ class AutowiredConfigurationTests {
 		System.clearProperty("myProp");
 
 		testBean = context.getBean("testBean", TestBean.class);
-		assertThat(testBean.getName()).isNull();
+		assertThat((Object) testBean.getName()).isNull();
 
 		testBean = context.getBean("testBean2", TestBean.class);
-		assertThat(testBean.getName()).isNull();
+		assertThat((Object) testBean.getName()).isNull();
 	}
 
 	@Test
-	void testCustomPropertiesWithClassPathContext() throws IOException {
+	public void testCustomPropertiesWithClassPathContext() throws IOException {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
 				"AutowiredConfigurationTests-custom.xml", AutowiredConfigurationTests.class);
 
 		TestBean testBean = context.getBean("testBean", TestBean.class);
 		assertThat(testBean.getName()).isEqualTo("localhost");
 		assertThat(testBean.getAge()).isEqualTo(contentLength());
-		context.close();
 	}
 
 	@Test
-	void testCustomPropertiesWithGenericContext() throws IOException {
+	public void testCustomPropertiesWithGenericContext() throws IOException {
 		GenericApplicationContext context = new GenericApplicationContext();
 		new XmlBeanDefinitionReader(context).loadBeanDefinitions(
 				new ClassPathResource("AutowiredConfigurationTests-custom.xml", AutowiredConfigurationTests.class));
@@ -230,18 +215,6 @@ class AutowiredConfigurationTests {
 		TestBean testBean = context.getBean("testBean", TestBean.class);
 		assertThat(testBean.getName()).isEqualTo("localhost");
 		assertThat(testBean.getAge()).isEqualTo(contentLength());
-		context.close();
-	}
-
-	@Test
-	void testValueInjectionWithRecord() {
-		System.setProperty("recordBeanName", "enigma");
-		try (GenericApplicationContext context = new AnnotationConfigApplicationContext(RecordBean.class)) {
-			assertThat(context.getBean(RecordBean.class).name()).isEqualTo("enigma");
-		}
-		finally {
-			System.clearProperty("recordBeanName");
-		}
 	}
 
 	private int contentLength() throws IOException {
@@ -281,7 +254,7 @@ class AutowiredConfigurationTests {
 				return new TestBean("");
 			}
 			else {
-				return new TestBean(colour.get() + "-" + colours.get().get(0).toString());
+				return new TestBean(colour.get().toString() + "-" + colours.get().get(0).toString());
 			}
 		}
 	}
@@ -515,10 +488,6 @@ class AutowiredConfigurationTests {
 		public TestBean testBean() throws IOException {
 			return new TestBean(hostname, (int) resource.contentLength());
 		}
-	}
-
-
-	record RecordBean(@Value("${recordBeanName}") String name) {
 	}
 
 }

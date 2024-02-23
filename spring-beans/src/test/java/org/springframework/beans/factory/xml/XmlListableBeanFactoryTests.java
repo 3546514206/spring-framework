@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,24 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.LifecycleBean;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.beans.testfixture.beans.factory.DummyFactory;
-import org.springframework.beans.testfixture.factory.xml.AbstractListableBeanFactoryTests;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.LifecycleBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.tests.sample.beans.factory.DummyFactory;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 09.11.2003
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-class XmlListableBeanFactoryTests extends AbstractListableBeanFactoryTests {
+public class XmlListableBeanFactoryTests extends AbstractListableBeanFactoryTests {
 
 	private DefaultListableBeanFactory parent;
 
@@ -52,7 +50,7 @@ class XmlListableBeanFactoryTests extends AbstractListableBeanFactoryTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		parent = new DefaultListableBeanFactory();
 
 		Map map = new HashMap();
@@ -105,132 +103,132 @@ class XmlListableBeanFactoryTests extends AbstractListableBeanFactoryTests {
 	}
 
 	@Test
-	void beanCount() {
+	public void beanCount() {
 		assertTestBeanCount(13);
 	}
 
 	@Test
-	void lifecycleMethods() {
+	public void lifecycleMethods() {
 		LifecycleBean bean = (LifecycleBean) getBeanFactory().getBean("lifecycle");
 		bean.businessMethod();
 	}
 
 	@Test
-	void protectedLifecycleMethods() {
+	public void protectedLifecycleMethods() {
 		ProtectedLifecycleBean bean = (ProtectedLifecycleBean) getBeanFactory().getBean("protectedLifecycle");
 		bean.businessMethod();
 	}
 
 	@Test
-	void descriptionButNoProperties() {
+	public void descriptionButNoProperties() {
 		TestBean validEmpty = (TestBean) getBeanFactory().getBean("validEmptyWithDescription");
-		assertThat(validEmpty.getAge()).isZero();
+		assertThat(validEmpty.getAge()).isEqualTo(0);
 	}
 
 	/**
 	 * Test that properties with name as well as id creating an alias up front.
 	 */
 	@Test
-	void autoAliasing() {
+	public void autoAliasing() {
 		List beanNames = Arrays.asList(getListableBeanFactory().getBeanDefinitionNames());
 
 		TestBean tb1 = (TestBean) getBeanFactory().getBean("aliased");
 		TestBean alias1 = (TestBean) getBeanFactory().getBean("myalias");
-		assertThat(tb1).isSameAs(alias1);
+		assertThat(tb1 == alias1).isTrue();
 		List tb1Aliases = Arrays.asList(getBeanFactory().getAliases("aliased"));
-		assertThat(tb1Aliases).hasSize(2);
-		assertThat(tb1Aliases).contains("myalias");
-		assertThat(tb1Aliases).contains("youralias");
-		assertThat(beanNames).contains("aliased");
-		assertThat(beanNames).doesNotContain("myalias");
-		assertThat(beanNames).doesNotContain("youralias");
+		assertThat(tb1Aliases.size()).isEqualTo(2);
+		assertThat(tb1Aliases.contains("myalias")).isTrue();
+		assertThat(tb1Aliases.contains("youralias")).isTrue();
+		assertThat(beanNames.contains("aliased")).isTrue();
+		assertThat(beanNames.contains("myalias")).isFalse();
+		assertThat(beanNames.contains("youralias")).isFalse();
 
 		TestBean tb2 = (TestBean) getBeanFactory().getBean("multiAliased");
 		TestBean alias2 = (TestBean) getBeanFactory().getBean("alias1");
 		TestBean alias3 = (TestBean) getBeanFactory().getBean("alias2");
 		TestBean alias3a = (TestBean) getBeanFactory().getBean("alias3");
 		TestBean alias3b = (TestBean) getBeanFactory().getBean("alias4");
-		assertThat(tb2).isSameAs(alias2);
-		assertThat(tb2).isSameAs(alias3);
-		assertThat(tb2).isSameAs(alias3a);
-		assertThat(tb2).isSameAs(alias3b);
+		assertThat(tb2 == alias2).isTrue();
+		assertThat(tb2 == alias3).isTrue();
+		assertThat(tb2 == alias3a).isTrue();
+		assertThat(tb2 == alias3b).isTrue();
 
 		List tb2Aliases = Arrays.asList(getBeanFactory().getAliases("multiAliased"));
-		assertThat(tb2Aliases).hasSize(4);
-		assertThat(tb2Aliases).contains("alias1");
-		assertThat(tb2Aliases).contains("alias2");
-		assertThat(tb2Aliases).contains("alias3");
-		assertThat(tb2Aliases).contains("alias4");
-		assertThat(beanNames).contains("multiAliased");
-		assertThat(beanNames).doesNotContain("alias1");
-		assertThat(beanNames).doesNotContain("alias2");
-		assertThat(beanNames).doesNotContain("alias3");
-		assertThat(beanNames).doesNotContain("alias4");
+		assertThat(tb2Aliases.size()).isEqualTo(4);
+		assertThat(tb2Aliases.contains("alias1")).isTrue();
+		assertThat(tb2Aliases.contains("alias2")).isTrue();
+		assertThat(tb2Aliases.contains("alias3")).isTrue();
+		assertThat(tb2Aliases.contains("alias4")).isTrue();
+		assertThat(beanNames.contains("multiAliased")).isTrue();
+		assertThat(beanNames.contains("alias1")).isFalse();
+		assertThat(beanNames.contains("alias2")).isFalse();
+		assertThat(beanNames.contains("alias3")).isFalse();
+		assertThat(beanNames.contains("alias4")).isFalse();
 
 		TestBean tb3 = (TestBean) getBeanFactory().getBean("aliasWithoutId1");
 		TestBean alias4 = (TestBean) getBeanFactory().getBean("aliasWithoutId2");
 		TestBean alias5 = (TestBean) getBeanFactory().getBean("aliasWithoutId3");
-		assertThat(tb3).isSameAs(alias4);
-		assertThat(tb3).isSameAs(alias5);
+		assertThat(tb3 == alias4).isTrue();
+		assertThat(tb3 == alias5).isTrue();
 		List tb3Aliases = Arrays.asList(getBeanFactory().getAliases("aliasWithoutId1"));
-		assertThat(tb3Aliases).hasSize(2);
-		assertThat(tb3Aliases).contains("aliasWithoutId2");
-		assertThat(tb3Aliases).contains("aliasWithoutId3");
-		assertThat(beanNames).contains("aliasWithoutId1");
-		assertThat(beanNames).doesNotContain("aliasWithoutId2");
-		assertThat(beanNames).doesNotContain("aliasWithoutId3");
+		assertThat(tb3Aliases.size()).isEqualTo(2);
+		assertThat(tb3Aliases.contains("aliasWithoutId2")).isTrue();
+		assertThat(tb3Aliases.contains("aliasWithoutId3")).isTrue();
+		assertThat(beanNames.contains("aliasWithoutId1")).isTrue();
+		assertThat(beanNames.contains("aliasWithoutId2")).isFalse();
+		assertThat(beanNames.contains("aliasWithoutId3")).isFalse();
 
 		TestBean tb4 = (TestBean) getBeanFactory().getBean(TestBean.class.getName() + "#0");
-		assertThat(tb4.getName()).isNull();
+		assertThat(tb4.getName()).isEqualTo(null);
 
 		Map drs = getListableBeanFactory().getBeansOfType(DummyReferencer.class, false, false);
-		assertThat(drs).hasSize(5);
-		assertThat(drs).containsKey(DummyReferencer.class.getName() + "#0");
-		assertThat(drs).containsKey(DummyReferencer.class.getName() + "#1");
-		assertThat(drs).containsKey(DummyReferencer.class.getName() + "#2");
+		assertThat(drs.size()).isEqualTo(5);
+		assertThat(drs.containsKey(DummyReferencer.class.getName() + "#0")).isTrue();
+		assertThat(drs.containsKey(DummyReferencer.class.getName() + "#1")).isTrue();
+		assertThat(drs.containsKey(DummyReferencer.class.getName() + "#2")).isTrue();
 	}
 
 	@Test
-	void factoryNesting() {
+	public void factoryNesting() {
 		ITestBean father = (ITestBean) getBeanFactory().getBean("father");
-		assertThat(father).as("Bean from root context").isNotNull();
+		assertThat(father != null).as("Bean from root context").isTrue();
 
 		TestBean rod = (TestBean) getBeanFactory().getBean("rod");
-		assertThat(rod.getName()).as("Bean from child context").isEqualTo("Rod");
-		assertThat(rod.getSpouse()).as("Bean has external reference").isSameAs(father);
+		assertThat("Rod".equals(rod.getName())).as("Bean from child context").isTrue();
+		assertThat(rod.getSpouse() == father).as("Bean has external reference").isTrue();
 
 		rod = (TestBean) parent.getBean("rod");
-		assertThat(rod.getName()).as("Bean from root context").isEqualTo("Roderick");
+		assertThat("Roderick".equals(rod.getName())).as("Bean from root context").isTrue();
 	}
 
 	@Test
-	void factoryReferences() {
+	public void factoryReferences() {
 		DummyFactory factory = (DummyFactory) getBeanFactory().getBean("&singletonFactory");
 
 		DummyReferencer ref = (DummyReferencer) getBeanFactory().getBean("factoryReferencer");
-		assertThat(ref.getTestBean1()).isSameAs(ref.getTestBean2());
-		assertThat(ref.getDummyFactory()).isSameAs(factory);
+		assertThat(ref.getTestBean1() == ref.getTestBean2()).isTrue();
+		assertThat(ref.getDummyFactory() == factory).isTrue();
 
 		DummyReferencer ref2 = (DummyReferencer) getBeanFactory().getBean("factoryReferencerWithConstructor");
-		assertThat(ref2.getTestBean1()).isSameAs(ref2.getTestBean2());
-		assertThat(ref2.getDummyFactory()).isSameAs(factory);
+		assertThat(ref2.getTestBean1() == ref2.getTestBean2()).isTrue();
+		assertThat(ref2.getDummyFactory() == factory).isTrue();
 	}
 
 	@Test
-	void prototypeReferences() {
+	public void prototypeReferences() {
 		// check that not broken by circular reference resolution mechanism
 		DummyReferencer ref1 = (DummyReferencer) getBeanFactory().getBean("prototypeReferencer");
-		assertThat(ref1.getTestBean1()).as("Not referencing same bean twice").isNotSameAs(ref1.getTestBean2());
+		assertThat(ref1.getTestBean1() != ref1.getTestBean2()).as("Not referencing same bean twice").isTrue();
 		DummyReferencer ref2 = (DummyReferencer) getBeanFactory().getBean("prototypeReferencer");
-		assertThat(ref1).as("Not the same referencer").isNotSameAs(ref2);
-		assertThat(ref2.getTestBean1()).as("Not referencing same bean twice").isNotSameAs(ref2.getTestBean2());
-		assertThat(ref1.getTestBean1()).as("Not referencing same bean twice").isNotSameAs(ref2.getTestBean1());
-		assertThat(ref1.getTestBean2()).as("Not referencing same bean twice").isNotSameAs(ref2.getTestBean2());
-		assertThat(ref1.getTestBean1()).as("Not referencing same bean twice").isNotSameAs(ref2.getTestBean2());
+		assertThat(ref1 != ref2).as("Not the same referencer").isTrue();
+		assertThat(ref2.getTestBean1() != ref2.getTestBean2()).as("Not referencing same bean twice").isTrue();
+		assertThat(ref1.getTestBean1() != ref2.getTestBean1()).as("Not referencing same bean twice").isTrue();
+		assertThat(ref1.getTestBean2() != ref2.getTestBean2()).as("Not referencing same bean twice").isTrue();
+		assertThat(ref1.getTestBean1() != ref2.getTestBean2()).as("Not referencing same bean twice").isTrue();
 	}
 
 	@Test
-	void beanPostProcessor() {
+	public void beanPostProcessor() {
 		TestBean kerry = (TestBean) getBeanFactory().getBean("kerry");
 		TestBean kathy = (TestBean) getBeanFactory().getBean("kathy");
 		DummyFactory factory = (DummyFactory) getBeanFactory().getBean("&singletonFactory");
@@ -242,15 +240,15 @@ class XmlListableBeanFactoryTests extends AbstractListableBeanFactoryTests {
 	}
 
 	@Test
-	void emptyValues() {
+	public void emptyValues() {
 		TestBean rod = (TestBean) getBeanFactory().getBean("rod");
 		TestBean kerry = (TestBean) getBeanFactory().getBean("kerry");
-		assertThat(rod.getTouchy()).as("Touchy is empty").isEqualTo("");
-		assertThat(kerry.getTouchy()).as("Touchy is empty").isEqualTo("");
+		assertThat("".equals(rod.getTouchy())).as("Touchy is empty").isTrue();
+		assertThat("".equals(kerry.getTouchy())).as("Touchy is empty").isTrue();
 	}
 
 	@Test
-	void commentsAndCdataInValue() {
+	public void commentsAndCdataInValue() {
 		TestBean bean = (TestBean) getBeanFactory().getBean("commentsInValue");
 		assertThat(bean.getName()).as("Failed to handle comments and CDATA properly").isEqualTo("this is a <!--comment-->");
 	}

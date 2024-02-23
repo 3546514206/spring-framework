@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,14 @@
 
 package org.springframework.core.codec;
 
-import java.nio.charset.StandardCharsets;
-import java.util.function.Consumer;
-
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.codec.AbstractDecoderTests;
 import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.Flux;
+
+import java.nio.charset.StandardCharsets;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,7 +43,7 @@ class ByteArrayDecoderTests extends AbstractDecoderTests<ByteArrayDecoder> {
 
 	@Override
 	@Test
-	protected void canDecode() {
+	public void canDecode() {
 		assertThat(this.decoder.canDecode(ResolvableType.forClass(byte[].class),
 				MimeTypeUtils.TEXT_PLAIN)).isTrue();
 		assertThat(this.decoder.canDecode(ResolvableType.forClass(Integer.class),
@@ -56,7 +54,7 @@ class ByteArrayDecoderTests extends AbstractDecoderTests<ByteArrayDecoder> {
 
 	@Override
 	@Test
-	protected void decode() {
+	public void decode() {
 		Flux<DataBuffer> input = Flux.concat(
 				dataBuffer(this.fooBytes),
 				dataBuffer(this.barBytes));
@@ -70,7 +68,7 @@ class ByteArrayDecoderTests extends AbstractDecoderTests<ByteArrayDecoder> {
 
 	@Override
 	@Test
-	protected void decodeToMono() {
+	public void decodeToMono() {
 		Flux<DataBuffer> input = Flux.concat(
 				dataBuffer(this.fooBytes),
 				dataBuffer(this.barBytes));

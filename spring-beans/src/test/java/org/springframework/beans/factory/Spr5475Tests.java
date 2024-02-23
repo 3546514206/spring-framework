@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.beans.factory;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -31,35 +30,32 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  * invoking a factory method is not instructive to the user and rather misleading.
  *
  * @author Chris Beams
- * @author Juergen Hoeller
  */
-class Spr5475Tests {
+public class Spr5475Tests {
 
 	@Test
-	void noArgFactoryMethodInvokedWithOneArg() {
+	public void noArgFactoryMethodInvokedWithOneArg() {
 		assertExceptionMessageForMisconfiguredFactoryMethod(
 				rootBeanDefinition(Foo.class)
-					.setFactoryMethod("noArgFactory")
-					.addConstructorArgValue("bogusArg").getBeanDefinition(),
-				"Error creating bean with name 'foo': No matching factory method found on class " +
-				"[org.springframework.beans.factory.Spr5475Tests$Foo]: factory method 'noArgFactory(String)'. " +
-				"Check that a method with the specified name and arguments exists and that it is static.");
+						.setFactoryMethod("noArgFactory")
+						.addConstructorArgValue("bogusArg").getBeanDefinition(),
+				"Error creating bean with name 'foo': No matching factory method found: factory method 'noArgFactory(String)'. " +
+						"Check that a method with the specified name and arguments exists and that it is static.");
 	}
 
 	@Test
-	void noArgFactoryMethodInvokedWithTwoArgs() {
+	public void noArgFactoryMethodInvokedWithTwoArgs() {
 		assertExceptionMessageForMisconfiguredFactoryMethod(
 				rootBeanDefinition(Foo.class)
-					.setFactoryMethod("noArgFactory")
-					.addConstructorArgValue("bogusArg1")
-					.addConstructorArgValue("bogusArg2".getBytes()).getBeanDefinition(),
-				"Error creating bean with name 'foo': No matching factory method found on class " +
-				"[org.springframework.beans.factory.Spr5475Tests$Foo]: factory method 'noArgFactory(String,byte[])'. " +
-				"Check that a method with the specified name and arguments exists and that it is static.");
+						.setFactoryMethod("noArgFactory")
+						.addConstructorArgValue("bogusArg1")
+						.addConstructorArgValue("bogusArg2".getBytes()).getBeanDefinition(),
+				"Error creating bean with name 'foo': No matching factory method found: factory method 'noArgFactory(String,byte[])'. " +
+						"Check that a method with the specified name and arguments exists and that it is static.");
 	}
 
 	@Test
-	void noArgFactoryMethodInvokedWithTwoArgsAndTypesSpecified() {
+	public void noArgFactoryMethodInvokedWithTwoArgsAndTypesSpecified() {
 		RootBeanDefinition def = new RootBeanDefinition(Foo.class);
 		def.setFactoryMethodName("noArgFactory");
 		ConstructorArgumentValues cav = new ConstructorArgumentValues();
@@ -68,9 +64,8 @@ class Spr5475Tests {
 		def.setConstructorArgumentValues(cav);
 
 		assertExceptionMessageForMisconfiguredFactoryMethod(def,
-				"Error creating bean with name 'foo': No matching factory method found on class " +
-				"[org.springframework.beans.factory.Spr5475Tests$Foo]: factory method 'noArgFactory(CharSequence,byte[])'. " +
-				"Check that a method with the specified name and arguments exists and that it is static.");
+				"Error creating bean with name 'foo': No matching factory method found: factory method 'noArgFactory(CharSequence,byte[])'. " +
+						"Check that a method with the specified name and arguments exists and that it is static.");
 	}
 
 	private void assertExceptionMessageForMisconfiguredFactoryMethod(BeanDefinition bd, String expectedMessage) {
@@ -82,7 +77,7 @@ class Spr5475Tests {
 	}
 
 	@Test
-	void singleArgFactoryMethodInvokedWithNoArgs() {
+	public void singleArgFactoryMethodInvokedWithNoArgs() {
 		// calling a factory method that accepts arguments without any arguments emits an exception unlike cases
 		// where a no-arg factory method is called with arguments. Adding this test just to document the difference
 		assertExceptionMessageForMisconfiguredFactoryMethod(

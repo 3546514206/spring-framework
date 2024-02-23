@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,10 @@
 
 package org.springframework.web.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.Collections;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
@@ -40,7 +36,9 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.support.HandlerMethodArgumentResolverComposite;
 import org.springframework.web.method.support.InvocableHandlerMethod;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+
+import java.lang.reflect.Method;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -52,7 +50,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Rossen Stoyanchev
  */
-class ModelFactoryTests {
+public class ModelFactoryTests {
 
 	private NativeWebRequest webRequest;
 
@@ -66,7 +64,7 @@ class ModelFactoryTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setUp() throws Exception {
 		this.webRequest = new ServletWebRequest(new MockHttpServletRequest());
 		this.attributeStore = new DefaultSessionAttributeStore();
 		this.attributeHandler = new SessionAttributesHandler(TestController.class, this.attributeStore);
@@ -76,7 +74,7 @@ class ModelFactoryTests {
 
 
 	@Test
-	void modelAttributeMethod() throws Exception {
+	public void modelAttributeMethod() throws Exception {
 		ModelFactory modelFactory = createModelFactory("modelAttr", Model.class);
 		HandlerMethod handlerMethod = createHandlerMethod("handle");
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
@@ -85,7 +83,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void modelAttributeMethodWithExplicitName() throws Exception {
+	public void modelAttributeMethodWithExplicitName() throws Exception {
 		ModelFactory modelFactory = createModelFactory("modelAttrWithName");
 		HandlerMethod handlerMethod = createHandlerMethod("handle");
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
@@ -94,7 +92,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void modelAttributeMethodWithNameByConvention() throws Exception {
+	public void modelAttributeMethodWithNameByConvention() throws Exception {
 		ModelFactory modelFactory = createModelFactory("modelAttrConvention");
 		HandlerMethod handlerMethod = createHandlerMethod("handle");
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
@@ -103,7 +101,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void modelAttributeMethodWithNullReturnValue() throws Exception {
+	public void modelAttributeMethodWithNullReturnValue() throws Exception {
 		ModelFactory modelFactory = createModelFactory("nullModelAttr");
 		HandlerMethod handlerMethod = createHandlerMethod("handle");
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
@@ -113,7 +111,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void modelAttributeWithBindingDisabled() throws Exception {
+	public void modelAttributeWithBindingDisabled() throws Exception {
 		ModelFactory modelFactory = createModelFactory("modelAttrWithBindingDisabled");
 		HandlerMethod handlerMethod = createHandlerMethod("handle");
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
@@ -123,7 +121,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void modelAttributeFromSessionWithBindingDisabled() throws Exception {
+	public void modelAttributeFromSessionWithBindingDisabled() throws Exception {
 		Foo foo = new Foo();
 		this.attributeStore.storeAttribute(this.webRequest, "foo", foo);
 
@@ -137,7 +135,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void sessionAttribute() throws Exception {
+	public void sessionAttribute() throws Exception {
 		this.attributeStore.storeAttribute(this.webRequest, "sessionAttr", "sessionAttrValue");
 
 		ModelFactory modelFactory = createModelFactory("modelAttr", Model.class);
@@ -148,7 +146,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void sessionAttributeNotPresent() throws Exception {
+	public void sessionAttributeNotPresent() throws Exception {
 		ModelFactory modelFactory = new ModelFactory(null, null, this.attributeHandler);
 		HandlerMethod handlerMethod = createHandlerMethod("handleSessionAttr", String.class);
 		assertThatExceptionOfType(HttpSessionRequiredException.class).isThrownBy(() ->
@@ -156,42 +154,20 @@ class ModelFactoryTests {
 
 		// Now add attribute and try again
 		this.attributeStore.storeAttribute(this.webRequest, "sessionAttr", "sessionAttrValue");
+
 		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
 		assertThat(this.mavContainer.getModel().get("sessionAttr")).isEqualTo("sessionAttrValue");
 	}
 
 	@Test
-	void sessionAttributeByType() throws Exception {
-		ModelFactory modelFactory = new ModelFactory(null, null, this.attributeHandler);
-		HandlerMethod handlerMethod = createHandlerMethod("handleTestBean", TestBean.class);
-		assertThatExceptionOfType(HttpSessionRequiredException.class).isThrownBy(() ->
-				modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod));
-
-		// Now add attribute and try again
-		this.attributeStore.storeAttribute(this.webRequest, "testBean", new TestBean("tb"));
-		modelFactory.initModel(this.webRequest, this.mavContainer, handlerMethod);
-		assertThat(this.mavContainer.getModel().get("testBean")).isEqualTo(new TestBean("tb"));
-		this.mavContainer.setRequestHandled(true);
-		modelFactory.updateModel(this.webRequest, this.mavContainer);
-
-		// Simulate switch to distributed session on different server
-		SessionAttributesHandler newHandler = new SessionAttributesHandler(TestController.class, this.attributeStore);
-		ModelFactory newFactory = new ModelFactory(null, null, newHandler);
-		ModelAndViewContainer newContainer = new ModelAndViewContainer();
-		HandlerMethod modelMethod = createHandlerMethod("handleModel", Model.class);
-		newFactory.initModel(this.webRequest, newContainer, modelMethod);
-		assertThat(newContainer.getModel().get("testBean")).isEqualTo(new TestBean("tb"));
-	}
-
-	@Test
-	void updateModelBindingResult() throws Exception {
+	public void updateModelBindingResult() throws Exception {
 		String commandName = "attr1";
 		Object command = new Object();
 		ModelAndViewContainer container = new ModelAndViewContainer();
 		container.addAttribute(commandName, command);
 
 		WebDataBinder dataBinder = new WebDataBinder(command, commandName);
-		WebDataBinderFactory binderFactory = mock();
+		WebDataBinderFactory binderFactory = mock(WebDataBinderFactory.class);
 		given(binderFactory.createBinder(this.webRequest, command, commandName)).willReturn(dataBinder);
 
 		ModelFactory modelFactory = new ModelFactory(null, binderFactory, this.attributeHandler);
@@ -200,18 +176,18 @@ class ModelFactoryTests {
 		assertThat(container.getModel().get(commandName)).isEqualTo(command);
 		String bindingResultKey = BindingResult.MODEL_KEY_PREFIX + commandName;
 		assertThat(container.getModel().get(bindingResultKey)).isSameAs(dataBinder.getBindingResult());
-		assertThat(container.getModel()).hasSize(2);
+		assertThat(container.getModel().size()).isEqualTo(2);
 	}
 
 	@Test
-	void updateModelSessionAttributesSaved() throws Exception {
+	public void updateModelSessionAttributesSaved() throws Exception {
 		String attributeName = "sessionAttr";
 		String attribute = "value";
 		ModelAndViewContainer container = new ModelAndViewContainer();
 		container.addAttribute(attributeName, attribute);
 
 		WebDataBinder dataBinder = new WebDataBinder(attribute, attributeName);
-		WebDataBinderFactory binderFactory = mock();
+		WebDataBinderFactory binderFactory = mock(WebDataBinderFactory.class);
 		given(binderFactory.createBinder(this.webRequest, attribute, attributeName)).willReturn(dataBinder);
 
 		ModelFactory modelFactory = new ModelFactory(null, binderFactory, this.attributeHandler);
@@ -222,7 +198,7 @@ class ModelFactoryTests {
 	}
 
 	@Test
-	void updateModelSessionAttributesRemoved() throws Exception {
+	public void updateModelSessionAttributesRemoved() throws Exception {
 		String attributeName = "sessionAttr";
 		String attribute = "value";
 		ModelAndViewContainer container = new ModelAndViewContainer();
@@ -231,7 +207,7 @@ class ModelFactoryTests {
 		this.attributeStore.storeAttribute(this.webRequest, attributeName, attribute);
 
 		WebDataBinder dataBinder = new WebDataBinder(attribute, attributeName);
-		WebDataBinderFactory binderFactory = mock();
+		WebDataBinderFactory binderFactory = mock(WebDataBinderFactory.class);
 		given(binderFactory.createBinder(this.webRequest, attribute, attributeName)).willReturn(dataBinder);
 
 		container.getSessionStatus().setComplete();
@@ -244,7 +220,7 @@ class ModelFactoryTests {
 	}
 
 	@Test  // SPR-12542
-	void updateModelWhenRedirecting() throws Exception {
+	public void updateModelWhenRedirecting() throws Exception {
 		String attributeName = "sessionAttr";
 		String attribute = "value";
 		ModelAndViewContainer container = new ModelAndViewContainer();
@@ -256,14 +232,14 @@ class ModelFactoryTests {
 		container.setRedirectModelScenario(true);
 
 		WebDataBinder dataBinder = new WebDataBinder(attribute, attributeName);
-		WebDataBinderFactory binderFactory = mock();
+		WebDataBinderFactory binderFactory = mock(WebDataBinderFactory.class);
 		given(binderFactory.createBinder(this.webRequest, attribute, attributeName)).willReturn(dataBinder);
 
 		ModelFactory modelFactory = new ModelFactory(null, binderFactory, this.attributeHandler);
 		modelFactory.updateModel(this.webRequest, container);
 
 		assertThat(container.getModel().get(queryParamName)).isEqualTo(queryParam);
-		assertThat(container.getModel()).hasSize(1);
+		assertThat(container.getModel().size()).isEqualTo(1);
 		assertThat(this.attributeStore.retrieveAttribute(this.webRequest, attributeName)).isEqualTo(attribute);
 	}
 
@@ -275,7 +251,7 @@ class ModelFactoryTests {
 		InvocableHandlerMethod modelMethod = createHandlerMethod(methodName, parameterTypes);
 		modelMethod.setHandlerMethodArgumentResolvers(resolvers);
 		modelMethod.setDataBinderFactory(null);
-		modelMethod.setParameterNameDiscoverer(new DefaultParameterNameDiscoverer());
+		modelMethod.setParameterNameDiscoverer(new LocalVariableTableParameterNameDiscoverer());
 
 		return new ModelFactory(Collections.singletonList(modelMethod), null, this.attributeHandler);
 	}
@@ -286,7 +262,7 @@ class ModelFactoryTests {
 	}
 
 
-	@SessionAttributes(names = {"sessionAttr", "foo"}, types = TestBean.class)
+	@SessionAttributes({"sessionAttr", "foo"})
 	static class TestController {
 
 		@ModelAttribute
@@ -309,7 +285,7 @@ class ModelFactoryTests {
 			return null;
 		}
 
-		@ModelAttribute(name = "foo", binding = false)
+		@ModelAttribute(name="foo", binding=false)
 		public Foo modelAttrWithBindingDisabled() {
 			return new Foo();
 		}
@@ -318,12 +294,6 @@ class ModelFactoryTests {
 		}
 
 		public void handleSessionAttr(@ModelAttribute("sessionAttr") String sessionAttr) {
-		}
-
-		public void handleTestBean(@ModelAttribute TestBean testBean) {
-		}
-
-		public void handleModel(Model model) {
 		}
 	}
 

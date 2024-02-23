@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,11 +32,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link AbstractDestinationResolvingMessagingTemplate}.
+ * Unit tests for {@link AbstractDestinationResolvingMessagingTemplate}.
  *
  * @author Rossen Stoyanchev
  */
-class DestinationResolvingMessagingTemplateTests {
+public class DestinationResolvingMessagingTemplateTests {
 
 	private TestDestinationResolvingMessagingTemplate template;
 
@@ -48,7 +48,7 @@ class DestinationResolvingMessagingTemplateTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 
 		TestMessageChannelDestinationResolver resolver = new TestMessageChannelDestinationResolver();
 
@@ -58,14 +58,14 @@ class DestinationResolvingMessagingTemplateTests {
 		this.template = new TestDestinationResolvingMessagingTemplate();
 		this.template.setDestinationResolver(resolver);
 
-		this.headers = Collections.singletonMap("key", "value");
+		this.headers = Collections.<String, Object>singletonMap("key", "value");
 
 		this.postProcessor = new TestMessagePostProcessor();
 	}
 
 
 	@Test
-	void send() {
+	public void send() {
 		Message<?> message = new GenericMessage<Object>("payload");
 		this.template.send("myChannel", message);
 
@@ -74,14 +74,14 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void sendNoDestinationResolver() {
+	public void sendNoDestinationResolver() {
 		TestDestinationResolvingMessagingTemplate template = new TestDestinationResolvingMessagingTemplate();
 		assertThatIllegalStateException().isThrownBy(() ->
 				template.send("myChannel", new GenericMessage<Object>("payload")));
 	}
 
 	@Test
-	void convertAndSendPayload() {
+	public void convertAndSendPayload() {
 		this.template.convertAndSend("myChannel", "payload");
 
 		assertThat(this.template.messageChannel).isSameAs(this.myChannel);
@@ -90,7 +90,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertAndSendPayloadAndHeaders() {
+	public void convertAndSendPayloadAndHeaders() {
 		this.template.convertAndSend("myChannel", "payload", this.headers);
 
 		assertThat(this.template.messageChannel).isSameAs(this.myChannel);
@@ -100,7 +100,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertAndSendPayloadWithPostProcessor() {
+	public void convertAndSendPayloadWithPostProcessor() {
 		this.template.convertAndSend("myChannel", "payload", this.postProcessor);
 
 		assertThat(this.template.messageChannel).isSameAs(this.myChannel);
@@ -112,7 +112,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertAndSendPayloadAndHeadersWithPostProcessor() {
+	public void convertAndSendPayloadAndHeadersWithPostProcessor() {
 		this.template.convertAndSend("myChannel", "payload", this.headers, this.postProcessor);
 
 		assertThat(this.template.messageChannel).isSameAs(this.myChannel);
@@ -125,7 +125,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void receive() {
+	public void receive() {
 		Message<?> expected = new GenericMessage<Object>("payload");
 		this.template.setReceiveMessage(expected);
 		Message<?> actual = this.template.receive("myChannel");
@@ -135,7 +135,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void receiveAndConvert() {
+	public void receiveAndConvert() {
 		Message<?> expected = new GenericMessage<Object>("payload");
 		this.template.setReceiveMessage(expected);
 		String payload = this.template.receiveAndConvert("myChannel", String.class);
@@ -145,7 +145,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void sendAndReceive() {
+	public void sendAndReceive() {
 		Message<?> requestMessage = new GenericMessage<Object>("request");
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
@@ -157,7 +157,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertSendAndReceive() {
+	public void convertSendAndReceive() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String actual = this.template.convertSendAndReceive("myChannel", "request", String.class);
@@ -168,7 +168,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertSendAndReceiveWithHeaders() {
+	public void convertSendAndReceiveWithHeaders() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String actual = this.template.convertSendAndReceive("myChannel", "request", this.headers, String.class);
@@ -180,7 +180,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertSendAndReceiveWithPostProcessor() {
+	public void convertSendAndReceiveWithPostProcessor() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String actual = this.template.convertSendAndReceive("myChannel", "request", String.class, this.postProcessor);
@@ -192,7 +192,7 @@ class DestinationResolvingMessagingTemplateTests {
 	}
 
 	@Test
-	void convertSendAndReceiveWithHeadersAndPostProcessor() {
+	public void convertSendAndReceiveWithHeadersAndPostProcessor() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String actual = this.template.convertSendAndReceive("myChannel", "request", this.headers,

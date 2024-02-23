@@ -1,4 +1,5 @@
 apply plugin: "maven-publish"
+apply plugin: 'com.jfrog.artifactory'
 
 publishing {
 	publications {
@@ -49,16 +50,6 @@ publishing {
 	}
 }
 
-configureDeploymentRepository(project)
-
-void configureDeploymentRepository(Project project) {
-	project.plugins.withType(MavenPublishPlugin.class).all {
-		PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
-		if (project.hasProperty("deploymentRepository")) {
-			publishing.repositories.maven {
-				it.url = project.property("deploymentRepository")
-				it.name = "deployment"
-			}
-		}
-	}
+artifactoryPublish {
+	publications(publishing.publications.mavenJava)
 }

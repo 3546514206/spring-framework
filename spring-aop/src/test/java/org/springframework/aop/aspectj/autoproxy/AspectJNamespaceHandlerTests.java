@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.aop.aspectj.autoproxy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.config.AopConfigUtils;
 import org.springframework.aop.config.AopNamespaceUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -29,7 +28,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.beans.factory.xml.XmlReaderContext;
-import org.springframework.beans.testfixture.beans.CollectingReaderEventListener;
+import org.springframework.tests.beans.CollectingReaderEventListener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Chris Beams
  */
-class AspectJNamespaceHandlerTests {
+public class AspectJNamespaceHandlerTests {
 
 	private ParserContext parserContext;
 
@@ -47,7 +46,7 @@ class AspectJNamespaceHandlerTests {
 
 
 	@BeforeEach
-	public void setUp() {
+	public void setUp() throws Exception {
 		SourceExtractor sourceExtractor = new PassThroughSourceExtractor();
 		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this.registry);
 		XmlReaderContext readerContext =
@@ -56,7 +55,7 @@ class AspectJNamespaceHandlerTests {
 	}
 
 	@Test
-	void testRegisterAutoProxyCreator() {
+	public void testRegisterAutoProxyCreator() throws Exception {
 		AopNamespaceUtils.registerAutoProxyCreatorIfNecessary(this.parserContext, null);
 		assertThat(registry.getBeanDefinitionCount()).as("Incorrect number of definitions registered").isEqualTo(1);
 
@@ -65,7 +64,7 @@ class AspectJNamespaceHandlerTests {
 	}
 
 	@Test
-	void testRegisterAspectJAutoProxyCreator() {
+	public void testRegisterAspectJAutoProxyCreator() throws Exception {
 		AopNamespaceUtils.registerAspectJAutoProxyCreatorIfNecessary(this.parserContext, null);
 		assertThat(registry.getBeanDefinitionCount()).as("Incorrect number of definitions registered").isEqualTo(1);
 
@@ -77,7 +76,7 @@ class AspectJNamespaceHandlerTests {
 	}
 
 	@Test
-	void testRegisterAspectJAutoProxyCreatorWithExistingAutoProxyCreator() {
+	public void testRegisterAspectJAutoProxyCreatorWithExistingAutoProxyCreator() throws Exception {
 		AopNamespaceUtils.registerAutoProxyCreatorIfNecessary(this.parserContext, null);
 		assertThat(registry.getBeanDefinitionCount()).isEqualTo(1);
 
@@ -89,7 +88,7 @@ class AspectJNamespaceHandlerTests {
 	}
 
 	@Test
-	void testRegisterAutoProxyCreatorWhenAspectJAutoProxyCreatorAlreadyExists() {
+	public void testRegisterAutoProxyCreatorWhenAspectJAutoProxyCreatorAlreadyExists() throws Exception {
 		AopNamespaceUtils.registerAspectJAutoProxyCreatorIfNecessary(this.parserContext, null);
 		assertThat(registry.getBeanDefinitionCount()).isEqualTo(1);
 

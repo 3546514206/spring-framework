@@ -16,18 +16,17 @@
 
 package org.springframework.web.server.session;
 
-import reactor.core.publisher.Mono;
-
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebSession;
+import reactor.core.publisher.Mono;
 
 /**
- * Main class for access to the {@link WebSession} for an HTTP request.
+ * Main class for for access to the {@link WebSession} for an HTTP request.
  *
  * @author Rossen Stoyanchev
- * @since 5.0
  * @see WebSessionIdResolver
  * @see WebSessionStore
+ * @since 5.0
  */
 public interface WebSessionManager {
 

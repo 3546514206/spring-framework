@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,25 @@
 
 package org.springframework.beans.factory.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Marks a constructor, field, setter method, or config method as to be autowired by
  * Spring's dependency injection facilities. This is an alternative to the JSR-330
- * {@link jakarta.inject.Inject} annotation, adding required-vs-optional semantics.
+ * {@link javax.inject.Inject} annotation, adding required-vs-optional semantics.
  *
  * <h3>Autowired Constructors</h3>
  * <p>Only one constructor of any given bean class may declare this annotation with the
  * {@link #required} attribute set to {@code true}, indicating <i>the</i> constructor
- * to be autowired when used as a Spring bean. Furthermore, if the {@code required}
+ * to autowire when used as a Spring bean. Furthermore, if the {@code required}
  * attribute is set to {@code true}, only a single constructor may be annotated
  * with {@code @Autowired}. If multiple <i>non-required</i> constructors declare the
  * annotation, they will be considered as candidates for autowiring. The constructor
  * with the greatest number of dependencies that can be satisfied by matching beans
  * in the Spring container will be chosen. If none of the candidates can be satisfied,
- * then a primary/default constructor (if present) will be used. Similarly, if a
- * class declares multiple constructors but none of them is annotated with
- * {@code @Autowired}, then a primary/default constructor (if present) will be used.
- * If a class only declares a single constructor to begin with, it will always be used,
- * even if not annotated. An annotated constructor does not have to be public.
+ * then a primary/default constructor (if present) will be used. If a class only
+ * declares a single constructor to begin with, it will always be used, even if not
+ * annotated. An annotated constructor does not have to be public.
  *
  * <h3>Autowired Fields</h3>
  * <p>Fields are injected right after construction of a bean, before any config methods

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,38 +25,36 @@ import org.springframework.util.AntPathMatcher;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DestinationPatternsMessageCondition}.
+ * Unit tests for {@link DestinationPatternsMessageCondition}.
  *
  * @author Rossen Stoyanchev
  */
-class DestinationPatternsMessageConditionTests {
+public class DestinationPatternsMessageConditionTests {
 
 	@Test
-	void prependSlash() {
+	public void prependSlash() {
 		DestinationPatternsMessageCondition c = condition("foo");
-		assertThat(c.getPatterns()).containsExactly("/foo");
+		assertThat(c.getPatterns().iterator().next()).isEqualTo("/foo");
 	}
 
 	@Test
-	void prependSlashWithCustomPathSeparator() {
+	public void prependSlashWithCustomPathSeparator() {
 		DestinationPatternsMessageCondition c =
 				new DestinationPatternsMessageCondition(new String[] {"foo"}, new AntPathMatcher("."));
 
-		assertThat(c.getPatterns())
-				.as("Pre-pending should be disabled when not using '/' as path separator")
-				.containsExactly("foo");
+		assertThat(c.getPatterns().iterator().next()).as("Pre-pending should be disabled when not using '/' as path separator").isEqualTo("foo");
 	}
 
 	// SPR-8255
 
 	@Test
-	void prependNonEmptyPatternsOnly() {
+	public void prependNonEmptyPatternsOnly() {
 		DestinationPatternsMessageCondition c = condition("");
-		assertThat(c.getPatterns()).containsOnly("");
+		assertThat(c.getPatterns().iterator().next()).isEqualTo("");
 	}
 
 	@Test
-	void combineEmptySets() {
+	public void combineEmptySets() {
 		DestinationPatternsMessageCondition c1 = condition();
 		DestinationPatternsMessageCondition c2 = condition();
 
@@ -64,7 +62,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void combineOnePatternWithEmptySet() {
+	public void combineOnePatternWithEmptySet() {
 		DestinationPatternsMessageCondition c1 = condition("/type1", "/type2");
 		DestinationPatternsMessageCondition c2 = condition();
 
@@ -77,7 +75,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void combineMultiplePatterns() {
+	public void combineMultiplePatterns() {
 		DestinationPatternsMessageCondition c1 = condition("/t1", "/t2");
 		DestinationPatternsMessageCondition c2 = condition("/m1", "/m2");
 
@@ -86,7 +84,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void matchDirectPath() {
+	public void matchDirectPath() {
 		DestinationPatternsMessageCondition condition = condition("/foo");
 		DestinationPatternsMessageCondition match = condition.getMatchingCondition(messageTo("/foo"));
 
@@ -94,7 +92,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void matchPattern() {
+	public void matchPattern() {
 		DestinationPatternsMessageCondition condition = condition("/foo/*");
 		DestinationPatternsMessageCondition match = condition.getMatchingCondition(messageTo("/foo/bar"));
 
@@ -102,7 +100,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void matchSortPatterns() {
+	public void matchSortPatterns() {
 		DestinationPatternsMessageCondition condition = condition("/**", "/foo/bar", "/foo/*");
 		DestinationPatternsMessageCondition match = condition.getMatchingCondition(messageTo("/foo/bar"));
 		DestinationPatternsMessageCondition expected = condition("/foo/bar", "/foo/*", "/**");
@@ -111,7 +109,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void compareEqualPatterns() {
+	public void compareEqualPatterns() {
 		DestinationPatternsMessageCondition c1 = condition("/foo*");
 		DestinationPatternsMessageCondition c2 = condition("/foo*");
 
@@ -119,7 +117,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void comparePatternSpecificity() {
+	public void comparePatternSpecificity() {
 		DestinationPatternsMessageCondition c1 = condition("/fo*");
 		DestinationPatternsMessageCondition c2 = condition("/foo");
 
@@ -127,7 +125,7 @@ class DestinationPatternsMessageConditionTests {
 	}
 
 	@Test
-	void compareNumberOfMatchingPatterns() {
+	public void compareNumberOfMatchingPatterns() throws Exception {
 		Message<?> message = messageTo("/foo");
 
 		DestinationPatternsMessageCondition c1 = condition("/foo", "bar");

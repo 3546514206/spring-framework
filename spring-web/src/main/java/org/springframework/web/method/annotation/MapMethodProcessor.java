@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.web.method.annotation;
 
-import java.util.Map;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -27,10 +25,12 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodReturnValueHandler;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
+import java.util.Map;
+
 /**
  * Resolves {@link Map} method arguments and handles {@link Map} return values.
  *
- * <p>A Map return value can be interpreted in more than one way depending
+ * <p>A Map return value can be interpreted in more than one ways depending
  * on the presence of annotations like {@code @ModelAttribute} or
  * {@code @ResponseBody}. As of 5.2 this resolver returns false if the
  * parameter is annotated.
@@ -42,8 +42,8 @@ public class MapMethodProcessor implements HandlerMethodArgumentResolver, Handle
 
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
-		return (Map.class.isAssignableFrom(parameter.getParameterType()) &&
-				parameter.getParameterAnnotations().length == 0);
+		return Map.class.isAssignableFrom(parameter.getParameterType()) &&
+				parameter.getParameterAnnotations().length == 0;
 	}
 
 	@Override
@@ -65,13 +65,13 @@ public class MapMethodProcessor implements HandlerMethodArgumentResolver, Handle
 	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
 			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
 
-		if (returnValue instanceof Map map) {
-			mavContainer.addAllAttributes(map);
+		if (returnValue instanceof Map){
+			mavContainer.addAllAttributes((Map) returnValue);
 		}
 		else if (returnValue != null) {
 			// should not happen
-			throw new UnsupportedOperationException("Unexpected return type [" +
-					returnType.getParameterType().getName() + "] in method: " + returnType.getMethod());
+			throw new UnsupportedOperationException("Unexpected return type: " +
+					returnType.getParameterType().getName() + " in method: " + returnType.getMethod());
 		}
 	}
 

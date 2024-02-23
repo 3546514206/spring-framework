@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 
 	final String displayName;
 
-	final boolean validated;
+	boolean validated = false;
 
 
 	/**
@@ -62,7 +62,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	public AnnotationAttributes() {
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -74,7 +73,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		super(initialCapacity);
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -87,7 +85,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		super(map);
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -111,20 +108,9 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	 * @since 4.2
 	 */
 	public AnnotationAttributes(Class<? extends Annotation> annotationType) {
-		this(annotationType, false);
-	}
-
-	/**
-	 * Create a new, empty {@link AnnotationAttributes} instance for the
-	 * specified {@code annotationType}.
-	 * @param annotationType the annotation type name represented by this
-	 * {@code AnnotationAttributes} instance; never {@code null}
-	 * @param classLoader the ClassLoader to try to load the annotation type on,
-	 * or {@code null} to just store the annotation type name
-	 * @since 4.3.2
-	 */
-	public AnnotationAttributes(String annotationType, @Nullable ClassLoader classLoader) {
-		this(getAnnotationType(annotationType, classLoader), false);
+		Assert.notNull(annotationType, "'annotationType' must not be null");
+		this.annotationType = annotationType;
+		this.displayName = annotationType.getName();
 	}
 
 	/**
@@ -143,6 +129,20 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		this.validated = validated;
 	}
 
+	/**
+	 * Create a new, empty {@link AnnotationAttributes} instance for the
+	 * specified {@code annotationType}.
+	 * @param annotationType the annotation type name represented by this
+	 * {@code AnnotationAttributes} instance; never {@code null}
+	 * @param classLoader the ClassLoader to try to load the annotation type on,
+	 * or {@code null} to just store the annotation type name
+	 * @since 4.3.2
+	 */
+	public AnnotationAttributes(String annotationType, @Nullable ClassLoader classLoader) {
+		Assert.notNull(annotationType, "'annotationType' must not be null");
+		this.annotationType = getAnnotationType(annotationType, classLoader);
+		this.displayName = annotationType;
+	}
 
 	@SuppressWarnings("unchecked")
 	@Nullable
@@ -327,7 +327,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	 */
 	@SuppressWarnings("unchecked")
 	public <A extends Annotation> A[] getAnnotationArray(String attributeName, Class<A> annotationType) {
-		return (A[]) getRequiredAttribute(attributeName, annotationType.arrayType());
+		Object array = Array.newInstance(annotationType, 0);
+		return (A[]) getRequiredAttribute(attributeName, array.getClass());
 	}
 
 	/**
@@ -352,8 +353,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		assertAttributePresence(attributeName, value);
 		assertNotException(attributeName, value);
 		if (!expectedType.isInstance(value) && expectedType.isArray() &&
-				expectedType.componentType().isInstance(value)) {
-			Object array = Array.newInstance(expectedType.componentType(), 1);
+				expectedType.getComponentType().isInstance(value)) {
+			Object array = Array.newInstance(expectedType.getComponentType(), 1);
 			Array.set(array, 0, value);
 			value = array;
 		}
@@ -368,10 +369,10 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	}
 
 	private void assertNotException(String attributeName, Object attributeValue) {
-		if (attributeValue instanceof Throwable throwable) {
+		if (attributeValue instanceof Throwable) {
 			throw new IllegalArgumentException(String.format(
 					"Attribute '%s' for annotation [%s] was not resolvable due to exception [%s]",
-					attributeName, this.displayName, attributeValue), throwable);
+					attributeName, this.displayName, attributeValue), (Throwable) attributeValue);
 		}
 	}
 
@@ -393,11 +394,9 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 			sb.append(entry.getKey());
 			sb.append('=');
 			sb.append(valueToString(entry.getValue()));
-			if (entries.hasNext()) {
-				sb.append(", ");
-			}
+			sb.append(entries.hasNext() ? ", " : "");
 		}
-		sb.append('}');
+		sb.append("}");
 		return sb.toString();
 	}
 
@@ -405,8 +404,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		if (value == this) {
 			return "(this Map)";
 		}
-		if (value instanceof Object[] objects) {
-			return "[" + StringUtils.arrayToDelimitedString(objects, ", ") + "]";
+		if (value instanceof Object[]) {
+			return "[" + StringUtils.arrayToDelimitedString((Object[]) value, ", ") + "]";
 		}
 		return String.valueOf(value);
 	}
@@ -425,8 +424,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		if (map == null) {
 			return null;
 		}
-		if (map instanceof AnnotationAttributes annotationAttributes) {
-			return annotationAttributes;
+		if (map instanceof AnnotationAttributes) {
+			return (AnnotationAttributes) map;
 		}
 		return new AnnotationAttributes(map);
 	}

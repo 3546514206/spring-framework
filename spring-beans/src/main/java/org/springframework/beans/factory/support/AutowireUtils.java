@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,19 @@
 
 package org.springframework.beans.factory.support;
 
-import java.beans.PropertyDescriptor;
-import java.io.Serializable;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Set;
-
 import org.springframework.beans.BeanMetadataElement;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.config.TypedStringValue;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.beans.PropertyDescriptor;
+import java.io.Serializable;
+import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Set;
 
 /**
  * Utility class that contains various methods useful for the implementation of
@@ -51,9 +42,9 @@ import org.springframework.util.ClassUtils;
  */
 abstract class AutowireUtils {
 
-	public static final Comparator<Executable> EXECUTABLE_COMPARATOR = (e1, e2) -> {
+	private static final Comparator<Executable> EXECUTABLE_COMPARATOR = (e1, e2) -> {
 		int result = Boolean.compare(Modifier.isPublic(e2.getModifiers()), Modifier.isPublic(e1.getModifiers()));
-		return (result != 0 ? result : Integer.compare(e2.getParameterCount(), e1.getParameterCount()));
+		return result != 0 ? result : Integer.compare(e2.getParameterCount(), e1.getParameterCount());
 	};
 
 
@@ -97,7 +88,7 @@ abstract class AutowireUtils {
 		// It was declared by CGLIB, but we might still want to autowire it
 		// if it was actually declared by the superclass.
 		Class<?> superclass = wm.getDeclaringClass().getSuperclass();
-		return !ClassUtils.hasMethod(superclass, wm);
+		return !ClassUtils.hasMethod(superclass, wm.getName(), wm.getParameterTypes());
 	}
 
 	/**
@@ -112,7 +103,8 @@ abstract class AutowireUtils {
 		if (setter != null) {
 			Class<?> targetClass = setter.getDeclaringClass();
 			for (Class<?> ifc : interfaces) {
-				if (ifc.isAssignableFrom(targetClass) && ClassUtils.hasMethod(ifc, setter)) {
+				if (ifc.isAssignableFrom(targetClass) &&
+						ClassUtils.hasMethod(ifc, setter.getName(), setter.getParameterTypes())) {
 					return true;
 				}
 			}
@@ -128,7 +120,8 @@ abstract class AutowireUtils {
 	 * @return the resolved value
 	 */
 	public static Object resolveAutowiringValue(Object autowiringValue, Class<?> requiredType) {
-		if (autowiringValue instanceof ObjectFactory<?> factory && !requiredType.isInstance(autowiringValue)) {
+		if (autowiringValue instanceof ObjectFactory && !requiredType.isInstance(autowiringValue)) {
+			ObjectFactory<?> factory = (ObjectFactory<?>) autowiringValue;
 			if (autowiringValue instanceof Serializable && requiredType.isInterface()) {
 				autowiringValue = Proxy.newProxyInstance(requiredType.getClassLoader(),
 						new Class<?>[] {requiredType}, new ObjectFactoryDelegatingInvocationHandler(factory));
@@ -197,7 +190,8 @@ abstract class AutowireUtils {
 				Type methodParameterType = methodParameterTypes[i];
 				Object arg = args[i];
 				if (methodParameterType.equals(genericReturnType)) {
-					if (arg instanceof TypedStringValue typedValue) {
+					if (arg instanceof TypedStringValue) {
+						TypedStringValue typedValue = ((TypedStringValue) arg);
 						if (typedValue.hasTargetType()) {
 							return typedValue.getTargetType();
 						}
@@ -218,19 +212,21 @@ abstract class AutowireUtils {
 					}
 					return method.getReturnType();
 				}
-				else if (methodParameterType instanceof ParameterizedType parameterizedType) {
+				else if (methodParameterType instanceof ParameterizedType) {
+					ParameterizedType parameterizedType = (ParameterizedType) methodParameterType;
 					Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
 					for (Type typeArg : actualTypeArguments) {
 						if (typeArg.equals(genericReturnType)) {
-							if (arg instanceof Class<?> clazz) {
-								return clazz;
+							if (arg instanceof Class) {
+								return (Class<?>) arg;
 							}
 							else {
 								String className = null;
-								if (arg instanceof String name) {
-									className = name;
+								if (arg instanceof String) {
+									className = (String) arg;
 								}
-								else if (arg instanceof TypedStringValue typedValue) {
+								else if (arg instanceof TypedStringValue) {
+									TypedStringValue typedValue = ((TypedStringValue) arg);
 									String targetTypeName = typedValue.getTargetTypeName();
 									if (targetTypeName == null || Class.class.getName().equals(targetTypeName)) {
 										className = typedValue.getValue();
@@ -268,25 +264,30 @@ abstract class AutowireUtils {
 
 		private final ObjectFactory<?> objectFactory;
 
-		ObjectFactoryDelegatingInvocationHandler(ObjectFactory<?> objectFactory) {
+		public ObjectFactoryDelegatingInvocationHandler(ObjectFactory<?> objectFactory) {
 			this.objectFactory = objectFactory;
 		}
 
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-			return switch (method.getName()) {
-				case "equals" -> (proxy == args[0]); // Only consider equal when proxies are identical.
-				case "hashCode" -> System.identityHashCode(proxy); // Use hashCode of proxy.
-				case "toString" -> this.objectFactory.toString();
-				default -> {
-					try {
-						yield method.invoke(this.objectFactory.getObject(), args);
-					}
-					catch (InvocationTargetException ex) {
-						throw ex.getTargetException();
-					}
-				}
-			};
+			String methodName = method.getName();
+			if (methodName.equals("equals")) {
+				// Only consider equal when proxies are identical.
+				return (proxy == args[0]);
+			}
+			else if (methodName.equals("hashCode")) {
+				// Use hashCode of proxy.
+				return System.identityHashCode(proxy);
+			}
+			else if (methodName.equals("toString")) {
+				return this.objectFactory.toString();
+			}
+			try {
+				return method.invoke(this.objectFactory.getObject(), args);
+			}
+			catch (InvocationTargetException ex) {
+				throw ex.getTargetException();
+			}
 		}
 	}
 

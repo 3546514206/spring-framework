@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,6 @@
 
 package org.springframework.http.codec.xml;
 
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.function.Function;
-
-import jakarta.xml.bind.JAXBElement;
-import jakarta.xml.bind.JAXBException;
-import jakarta.xml.bind.MarshalException;
-import jakarta.xml.bind.Marshaller;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlType;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.AbstractSingleValueEncoder;
 import org.springframework.core.codec.CodecException;
@@ -39,17 +25,28 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.log.LogFormatUtils;
-import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.MarshalException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Encode from single value to a byte stream containing XML elements.
  *
- * <p>{@link jakarta.xml.bind.annotation.XmlElements @XmlElements} and
- * {@link jakarta.xml.bind.annotation.XmlElement @XmlElement} can be used
+ * <p>{@link javax.xml.bind.annotation.XmlElements @XmlElements} and
+ * {@link javax.xml.bind.annotation.XmlElement @XmlElement} can be used
  * to specify how collections should be marshalled.
  *
  * @author Sebastien Deleuze
@@ -65,7 +62,7 @@ public class Jaxb2XmlEncoder extends AbstractSingleValueEncoder<Object> {
 
 
 	public Jaxb2XmlEncoder() {
-		super(MimeTypeUtils.APPLICATION_XML, MimeTypeUtils.TEXT_XML, new MediaType("application", "*+xml"));
+		super(MimeTypeUtils.APPLICATION_XML, MimeTypeUtils.TEXT_XML);
 	}
 
 
@@ -122,7 +119,7 @@ public class Jaxb2XmlEncoder extends AbstractSingleValueEncoder<Object> {
 		DataBuffer buffer = bufferFactory.allocateBuffer(1024);
 		try {
 			OutputStream outputStream = buffer.asOutputStream();
-			Class<?> clazz = getMarshallerType(value);
+			Class<?> clazz = ClassUtils.getUserClass(value);
 			Marshaller marshaller = initMarshaller(clazz);
 			marshaller.marshal(value, outputStream);
 			release = false;
@@ -141,16 +138,7 @@ public class Jaxb2XmlEncoder extends AbstractSingleValueEncoder<Object> {
 		}
 	}
 
-	private static Class<?> getMarshallerType(Object value) {
-		if (value instanceof JAXBElement<?> jaxbElement) {
-			return jaxbElement.getDeclaredType();
-		}
-		else {
-			return ClassUtils.getUserClass(value);
-		}
-	}
-
-	private Marshaller initMarshaller(Class<?> clazz) throws CodecException, JAXBException {
+	private Marshaller initMarshaller(Class<?> clazz) throws JAXBException {
 		Marshaller marshaller = this.jaxbContexts.createMarshaller(clazz);
 		marshaller.setProperty(Marshaller.JAXB_ENCODING, StandardCharsets.UTF_8.name());
 		marshaller = this.marshallerProcessor.apply(marshaller);

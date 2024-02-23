@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.context.event;
 
-import java.util.function.Consumer;
-
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
+import org.springframework.core.Ordered;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.Nullable;
 
 /**
  * Extended variant of the standard {@link ApplicationListener} interface,
@@ -28,26 +28,13 @@ import org.springframework.core.ResolvableType;
  *
  * <p>As of Spring Framework 4.2, this interface supersedes the Class-based
  * {@link SmartApplicationListener} with full handling of generic event types.
- * As of 5.3.5, it formally extends {@link SmartApplicationListener}, adapting
- * {@link #supportsEventType(Class)} to {@link #supportsEventType(ResolvableType)}
- * with a default method.
  *
  * @author Stephane Nicoll
- * @author Juergen Hoeller
  * @since 4.2
  * @see SmartApplicationListener
  * @see GenericApplicationListenerAdapter
  */
-public interface GenericApplicationListener extends SmartApplicationListener {
-
-	/**
-	 * Overrides {@link SmartApplicationListener#supportsEventType(Class)} with
-	 * delegation to {@link #supportsEventType(ResolvableType)}.
-	 */
-	@Override
-	default boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
-		return supportsEventType(ResolvableType.forClass(eventType));
-	}
+public interface GenericApplicationListener extends ApplicationListener<ApplicationEvent>, Ordered {
 
 	/**
 	 * Determine whether this listener actually supports the given event type.
@@ -55,17 +42,22 @@ public interface GenericApplicationListener extends SmartApplicationListener {
 	 */
 	boolean supportsEventType(ResolvableType eventType);
 
+	/**
+	 * Determine whether this listener actually supports the given source type.
+	 * <p>The default implementation always returns {@code true}.
+	 * @param sourceType the source type, or {@code null} if no source
+	 */
+	default boolean supportsSourceType(@Nullable Class<?> sourceType) {
+		return true;
+	}
 
 	/**
-	 * Create a new {@code ApplicationListener} for the given event type.
-	 * @param eventType the event to listen to
-	 * @param consumer the consumer to invoke when a matching event is fired
-	 * @param <E> the specific {@code ApplicationEvent} subclass to listen to
-	 * @return a corresponding {@code ApplicationListener} instance
-	 * @since 6.1.3
+	 * Determine this listener's order in a set of listeners for the same event.
+	 * <p>The default implementation returns {@link #LOWEST_PRECEDENCE}.
 	 */
-	static <E extends ApplicationEvent> GenericApplicationListener forEventType(Class<E> eventType, Consumer<E> consumer) {
-		return new GenericApplicationListenerDelegate<>(eventType, consumer);
+	@Override
+	default int getOrder() {
+		return LOWEST_PRECEDENCE;
 	}
 
 }

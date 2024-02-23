@@ -16,9 +16,6 @@
 
 package org.aopalliance.intercept;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 /**
  * Intercepts calls on an interface on its way to the target. These
  * are nested "on top" of the target.
@@ -55,7 +52,6 @@ public interface MethodInterceptor extends Interceptor {
 	 * @throws Throwable if the interceptors or the target object
 	 * throws an exception
 	 */
-	@Nullable
-	Object invoke(@Nonnull MethodInvocation invocation) throws Throwable;
+	Object invoke(MethodInvocation invocation) throws Throwable;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package org.springframework.beans;
 
+import org.springframework.lang.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.lang.Nullable;
 
 /**
  * Abstract implementation of the {@link PropertyAccessor} interface.
@@ -39,8 +39,6 @@ public abstract class AbstractPropertyAccessor extends TypeConverterSupport impl
 	private boolean extractOldValueForEditor = false;
 
 	private boolean autoGrowNestedPaths = false;
-
-	boolean suppressNotWritablePropertyException = false;
 
 
 	@Override
@@ -89,43 +87,29 @@ public abstract class AbstractPropertyAccessor extends TypeConverterSupport impl
 			throws BeansException {
 
 		List<PropertyAccessException> propertyAccessExceptions = null;
-		List<PropertyValue> propertyValues = (pvs instanceof MutablePropertyValues mpvs ?
-				mpvs.getPropertyValueList() : Arrays.asList(pvs.getPropertyValues()));
-
-		if (ignoreUnknown) {
-			this.suppressNotWritablePropertyException = true;
-		}
-		try {
-			for (PropertyValue pv : propertyValues) {
-				// setPropertyValue may throw any BeansException, which won't be caught
+		List<PropertyValue> propertyValues = (pvs instanceof MutablePropertyValues ?
+				((MutablePropertyValues) pvs).getPropertyValueList() : Arrays.asList(pvs.getPropertyValues()));
+		for (PropertyValue pv : propertyValues) {
+			try {
+				// This method may throw any BeansException, which won't be caught
 				// here, if there is a critical failure such as no matching field.
 				// We can attempt to deal only with less serious exceptions.
-				try {
-					setPropertyValue(pv);
+				setPropertyValue(pv);
+			} catch (NotWritablePropertyException ex) {
+				if (!ignoreUnknown) {
+					throw ex;
 				}
-				catch (NotWritablePropertyException ex) {
-					if (!ignoreUnknown) {
-						throw ex;
-					}
-					// Otherwise, just ignore it and continue...
+				// Otherwise, just ignore it and continue...
+			} catch (NullValueInNestedPathException ex) {
+				if (!ignoreInvalid) {
+					throw ex;
 				}
-				catch (NullValueInNestedPathException ex) {
-					if (!ignoreInvalid) {
-						throw ex;
-					}
-					// Otherwise, just ignore it and continue...
+				// Otherwise, just ignore it and continue...
+			} catch (PropertyAccessException ex) {
+				if (propertyAccessExceptions == null) {
+					propertyAccessExceptions = new ArrayList<>();
 				}
-				catch (PropertyAccessException ex) {
-					if (propertyAccessExceptions == null) {
-						propertyAccessExceptions = new ArrayList<>();
-					}
-					propertyAccessExceptions.add(ex);
-				}
-			}
-		}
-		finally {
-			if (ignoreUnknown) {
-				this.suppressNotWritablePropertyException = false;
+				propertyAccessExceptions.add(ex);
 			}
 		}
 

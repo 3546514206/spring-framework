@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,19 @@
 
 package org.springframework.test.web.servlet.result;
 
-import java.util.concurrent.Callable;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.hamcrest.Matcher;
-
-import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.Assert;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.context.request.async.WebAsyncTask;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import java.util.concurrent.Callable;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.test.util.AssertionErrors.assertEquals;
-import static org.springframework.test.util.AssertionErrors.assertFalse;
-import static org.springframework.test.util.AssertionErrors.assertNull;
-import static org.springframework.test.util.AssertionErrors.assertTrue;
 
 /**
  * Factory for assertions on the request.
@@ -55,27 +50,24 @@ public class RequestResultMatchers {
 	}
 
 
+	private static void assertAsyncStarted(HttpServletRequest request) {
+		assertEquals("Async started", true, request.isAsyncStarted());
+	}
+
 	/**
 	 * Assert whether asynchronous processing started, usually as a result of a
 	 * controller method returning {@link Callable} or {@link DeferredResult}.
 	 * <p>The test will await the completion of a {@code Callable} so that
-	 * {@link #asyncResult(Matcher)} or {@link #asyncResult(Object)} can be used
-	 * to assert the resulting value.
-	 * <p>Neither a {@code Callable} nor a {@code DeferredResult} will complete
+	 * {@link #asyncResult(Matcher)} can be used to assert the resulting value.
+	 * Neither a {@code Callable} nor a {@code DeferredResult} will complete
 	 * processing all the way since a {@link MockHttpServletRequest} does not
 	 * perform asynchronous dispatches.
-	 * @see #asyncNotStarted()
 	 */
 	public ResultMatcher asyncStarted() {
-		return result -> assertAsyncStarted(result.getRequest());
-	}
-
-	/**
-	 * Assert that asynchronous processing was not started.
-	 * @see #asyncStarted()
-	 */
-	public ResultMatcher asyncNotStarted() {
-		return result -> assertFalse("Async started", result.getRequest().isAsyncStarted());
+		return result -> {
+			HttpServletRequest request = result.getRequest();
+			assertAsyncStarted(request);
+		};
 	}
 
 	/**
@@ -84,11 +76,34 @@ public class RequestResultMatchers {
 	 * or {@link WebAsyncTask}.
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> ResultMatcher asyncResult(Matcher<? super T> matcher) {
+	public <T> ResultMatcher asyncResult(Matcher<T> matcher) {
 		return result -> {
 			HttpServletRequest request = result.getRequest();
 			assertAsyncStarted(request);
 			assertThat("Async result", (T) result.getAsyncResult(), matcher);
+		};
+	}
+
+	/**
+	 * Assert that asynchronous processing was not started.
+	 *
+	 * @see #asyncStarted()
+	 */
+	public ResultMatcher asyncNotStarted() {
+		return result -> {
+			HttpServletRequest request = result.getRequest();
+			assertEquals("Async started", false, request.isAsyncStarted());
+		};
+	}
+
+	/**
+	 * Assert a request attribute value with the given Hamcrest {@link Matcher}.
+	 */
+	@SuppressWarnings("unchecked")
+	public <T> ResultMatcher attribute(String name, Matcher<T> matcher) {
+		return result -> {
+			T value = (T) result.getRequest().getAttribute(name);
+			assertThat("Request attribute '" + name + "'", value, matcher);
 		};
 	}
 
@@ -98,7 +113,7 @@ public class RequestResultMatchers {
 	 * or {@link WebAsyncTask}. The value matched is the value returned from the
 	 * {@code Callable} or the exception raised.
 	 */
-	public ResultMatcher asyncResult(@Nullable Object expectedResult) {
+	public <T> ResultMatcher asyncResult(Object expectedResult) {
 		return result -> {
 			HttpServletRequest request = result.getRequest();
 			assertAsyncStarted(request);
@@ -107,29 +122,10 @@ public class RequestResultMatchers {
 	}
 
 	/**
-	 * Assert a request attribute value with the given Hamcrest {@link Matcher}.
-	 */
-	@SuppressWarnings("unchecked")
-	public <T> ResultMatcher attribute(String name, Matcher<? super T> matcher) {
-		return result -> {
-			T value = (T) result.getRequest().getAttribute(name);
-			assertThat("Request attribute '" + name + "'", value, matcher);
-		};
-	}
-
-	/**
-	 * Assert a request attribute value.
-	 */
-	public ResultMatcher attribute(String name, @Nullable Object expectedValue) {
-		return result ->
-				assertEquals("Request attribute '" + name + "'", expectedValue, result.getRequest().getAttribute(name));
-	}
-
-	/**
 	 * Assert a session attribute value with the given Hamcrest {@link Matcher}.
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> ResultMatcher sessionAttribute(String name, Matcher<? super T> matcher) {
+	public <T> ResultMatcher sessionAttribute(String name, Matcher<T> matcher) {
 		return result -> {
 			HttpSession session = result.getRequest().getSession();
 			Assert.state(session != null, "No HttpSession");
@@ -139,32 +135,22 @@ public class RequestResultMatchers {
 	}
 
 	/**
+	 * Assert a request attribute value.
+	 */
+	public <T> ResultMatcher attribute(String name, Object expectedValue) {
+		return result ->
+				assertEquals("Request attribute '" + name + "'", expectedValue, result.getRequest().getAttribute(name));
+	}
+
+	/**
 	 * Assert a session attribute value.
 	 */
-	public ResultMatcher sessionAttribute(String name, @Nullable Object value) {
+	public <T> ResultMatcher sessionAttribute(String name, Object value) {
 		return result -> {
 			HttpSession session = result.getRequest().getSession();
 			Assert.state(session != null, "No HttpSession");
 			assertEquals("Session attribute '" + name + "'", value, session.getAttribute(name));
 		};
-	}
-
-	/**
-	 * Assert the given session attributes do not exist.
-	 * @since 5.2.1
-	 */
-	public ResultMatcher sessionAttributeDoesNotExist(String... names) {
-		return result -> {
-			HttpSession session = result.getRequest().getSession();
-			Assert.state(session != null, "No HttpSession");
-			for (String name : names) {
-				assertNull("Session attribute '" + name + "' exists", session.getAttribute(name));
-			}
-		};
-	}
-
-	private static void assertAsyncStarted(HttpServletRequest request) {
-		assertTrue("Async not started", request.isAsyncStarted());
 	}
 
 }

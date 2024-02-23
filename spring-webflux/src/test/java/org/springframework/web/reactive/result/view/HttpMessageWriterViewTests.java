@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,31 @@
 
 package org.springframework.web.reactive.result.view;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-import reactor.test.StepVerifier;
-
 import org.springframework.core.codec.CharSequenceEncoder;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.http.codec.xml.Jaxb2XmlEncoder;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.test.StepVerifier;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.*;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link HttpMessageWriterView}.
- *
+ * Unit tests for {@link HttpMessageWriterView}.
  * @author Rossen Stoyanchev
  */
-class HttpMessageWriterViewTests {
+public class HttpMessageWriterViewTests {
 
 	private HttpMessageWriterView view = new HttpMessageWriterView(new Jackson2JsonEncoder());
 
@@ -54,15 +50,14 @@ class HttpMessageWriterViewTests {
 
 
 	@Test
-	void supportedMediaTypes() {
-		assertThat(this.view.getSupportedMediaTypes()).containsExactly(
+	public void supportedMediaTypes() throws Exception {
+		assertThat(this.view.getSupportedMediaTypes()).isEqualTo(Arrays.asList(
 				MediaType.APPLICATION_JSON,
-				MediaType.parseMediaType("application/*+json"),
-				MediaType.APPLICATION_NDJSON);
+				MediaType.parseMediaType("application/*+json")));
 	}
 
 	@Test
-	void singleMatch() throws Exception {
+	public void singleMatch() throws Exception {
 		this.view.setModelKeys(Collections.singleton("foo2"));
 		this.model.addAttribute("foo1", Collections.singleton("bar1"));
 		this.model.addAttribute("foo2", Collections.singleton("bar2"));
@@ -72,24 +67,24 @@ class HttpMessageWriterViewTests {
 	}
 
 	@Test
-	void noMatch() throws Exception {
+	public void noMatch() throws Exception {
 		this.view.setModelKeys(Collections.singleton("foo2"));
 		this.model.addAttribute("foo1", "bar1");
 
-		assertThat(doRender()).isEmpty();
+		assertThat(doRender()).isEqualTo("");
 	}
 
 	@Test
-	void noMatchBecauseNotSupported() throws Exception {
+	public void noMatchBecauseNotSupported() throws Exception {
 		this.view = new HttpMessageWriterView(new Jaxb2XmlEncoder());
 		this.view.setModelKeys(new HashSet<>(Collections.singletonList("foo1")));
 		this.model.addAttribute("foo1", "bar1");
 
-		assertThat(doRender()).isEmpty();
+		assertThat(doRender()).isEqualTo("");
 	}
 
 	@Test
-	void multipleMatches() throws Exception {
+	public void multipleMatches() throws Exception {
 		this.view.setModelKeys(new HashSet<>(Arrays.asList("foo1", "foo2")));
 		this.model.addAttribute("foo1", Collections.singleton("bar1"));
 		this.model.addAttribute("foo2", Collections.singleton("bar2"));
@@ -99,7 +94,7 @@ class HttpMessageWriterViewTests {
 	}
 
 	@Test
-	void multipleMatchesNotSupported() throws Exception {
+	public void multipleMatchesNotSupported() throws Exception {
 		this.view = new HttpMessageWriterView(CharSequenceEncoder.allMimeTypes());
 		this.view.setModelKeys(new HashSet<>(Arrays.asList("foo1", "foo2")));
 		this.model.addAttribute("foo1", "bar1");
@@ -111,7 +106,7 @@ class HttpMessageWriterViewTests {
 	}
 
 	@Test
-	void render() throws Exception {
+	public void render() throws Exception {
 		Map<String, String> pojoData = new LinkedHashMap<>();
 		pojoData.put("foo", "f");
 		pojoData.put("bar", "b");
@@ -121,16 +116,19 @@ class HttpMessageWriterViewTests {
 		this.view.render(this.model, MediaType.APPLICATION_JSON, exchange).block(Duration.ZERO);
 
 		StepVerifier.create(this.exchange.getResponse().getBody())
-				.consumeNextWith(buf -> assertThat(buf.toString(UTF_8)).isEqualTo("{\"foo\":\"f\",\"bar\":\"b\"}"))
+				.consumeNextWith(buf -> assertThat(dumpString(buf)).isEqualTo("{\"foo\":\"f\",\"bar\":\"b\"}"))
 				.expectComplete()
 				.verify();
+	}
+
+	private String dumpString(DataBuffer buf) {
+		return DataBufferTestUtils.dumpString(buf, StandardCharsets.UTF_8);
 	}
 
 	private String doRender() {
 		this.view.render(this.model, MediaType.APPLICATION_JSON, this.exchange).block(Duration.ZERO);
 		return this.exchange.getResponse().getBodyAsString().block(Duration.ZERO);
 	}
-
 
 
 	@SuppressWarnings("unused")

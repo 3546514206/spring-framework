@@ -5,16 +5,17 @@
 
 	<bean class="org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator"/>
 
-	<bean class="org.springframework.aop.testfixture.aspectj.PerTargetAspect" scope="prototype">
+	<bean class="test.aspect.PerTargetAspect"
+			scope="prototype">
 		<property name="order" value="5"/>
 	</bean>
 	
-	<bean id="adrian" class="org.springframework.beans.testfixture.beans.TestBean" scope="prototype">
+	<bean id="adrian" class="org.springframework.tests.sample.beans.TestBean" scope="prototype">
 		<property name="name" value="adrian"/>
 		<property name="age" value="34"/>
 	</bean>
 
-	<bean id="juergen" class="org.springframework.beans.testfixture.beans.TestBean" scope="prototype">
+	<bean id="juergen" class="org.springframework.tests.sample.beans.TestBean" scope="prototype">
 		<property name="name" value="juergen"/>
 		<property name="age" value="30"/>
 	</bean>

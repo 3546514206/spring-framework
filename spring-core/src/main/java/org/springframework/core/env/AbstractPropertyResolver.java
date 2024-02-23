@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 
 package org.springframework.core.env;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -31,6 +26,10 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.PropertyPlaceholderHelper;
 import org.springframework.util.SystemPropertyUtils;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Abstract base class for resolving properties against any underlying source.
@@ -42,30 +41,18 @@ import org.springframework.util.SystemPropertyUtils;
 public abstract class AbstractPropertyResolver implements ConfigurablePropertyResolver {
 
 	protected final Log logger = LogFactory.getLog(getClass());
-
+	private final Set<String> requiredProperties = new LinkedHashSet<>();
 	@Nullable
 	private volatile ConfigurableConversionService conversionService;
-
 	@Nullable
 	private PropertyPlaceholderHelper nonStrictHelper;
-
 	@Nullable
 	private PropertyPlaceholderHelper strictHelper;
-
 	private boolean ignoreUnresolvableNestedPlaceholders = false;
-
 	private String placeholderPrefix = SystemPropertyUtils.PLACEHOLDER_PREFIX;
-
 	private String placeholderSuffix = SystemPropertyUtils.PLACEHOLDER_SUFFIX;
-
 	@Nullable
 	private String valueSeparator = SystemPropertyUtils.VALUE_SEPARATOR;
-
-	@Nullable
-	private Character escapeCharacter = SystemPropertyUtils.ESCAPE_CHARACTER;
-
-	private final Set<String> requiredProperties = new LinkedHashSet<>();
-
 
 	@Override
 	public ConfigurableConversionService getConversionService() {
@@ -93,6 +80,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	/**
 	 * Set the prefix that placeholders replaced by this resolver must begin with.
 	 * <p>The default is "${".
+	 *
 	 * @see org.springframework.util.SystemPropertyUtils#PLACEHOLDER_PREFIX
 	 */
 	@Override
@@ -104,6 +92,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	/**
 	 * Set the suffix that placeholders replaced by this resolver must end with.
 	 * <p>The default is "}".
+	 *
 	 * @see org.springframework.util.SystemPropertyUtils#PLACEHOLDER_SUFFIX
 	 */
 	@Override
@@ -117,24 +106,12 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	 * resolver and their associated default value, or {@code null} if no such
 	 * special character should be processed as a value separator.
 	 * <p>The default is ":".
+	 *
 	 * @see org.springframework.util.SystemPropertyUtils#VALUE_SEPARATOR
 	 */
 	@Override
 	public void setValueSeparator(@Nullable String valueSeparator) {
 		this.valueSeparator = valueSeparator;
-	}
-
-	/**
-	 * Specify the escape character to use to ignore placeholder prefix
-	 * or value separator, or {@code null} if no escaping should take
-	 * place.
-	 * <p>The default is "\".
-	 * @since 6.2
-	 * @see org.springframework.util.SystemPropertyUtils#ESCAPE_CHARACTER
-	 */
-	@Override
-	public void setEscapeCharacter(@Nullable Character escapeCharacter) {
-		this.escapeCharacter = escapeCharacter;
 	}
 
 	/**
@@ -144,6 +121,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	 * that unresolvable nested placeholders should be passed through in their unresolved
 	 * ${...} form.
 	 * <p>The default is {@code false}.
+	 *
 	 * @since 3.2
 	 */
 	@Override
@@ -156,6 +134,8 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 		Collections.addAll(this.requiredProperties, requiredProperties);
 	}
 
+	//	其中检查环境变量的核心方法为validateRequiredProperties，简单来说就是如果存在环境变量的value
+	//	为空的时候就抛异常，然后停止启动Spring
 	@Override
 	public void validateRequiredProperties() {
 		MissingRequiredPropertiesException ex = new MissingRequiredPropertiesException();
@@ -235,20 +215,18 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	 * {@link #resolveRequiredPlaceholders} do <i>not</i> delegate
 	 * to this method but rather perform their own handling of unresolvable
 	 * placeholders, as specified by each of those methods.
-	 * @since 3.2
+	 *
 	 * @see #setIgnoreUnresolvableNestedPlaceholders
+	 * @since 3.2
 	 */
 	protected String resolveNestedPlaceholders(String value) {
-		if (value.isEmpty()) {
-			return value;
-		}
 		return (this.ignoreUnresolvableNestedPlaceholders ?
 				resolvePlaceholders(value) : resolveRequiredPlaceholders(value));
 	}
 
 	private PropertyPlaceholderHelper createPlaceholderHelper(boolean ignoreUnresolvablePlaceholders) {
 		return new PropertyPlaceholderHelper(this.placeholderPrefix, this.placeholderSuffix,
-				this.valueSeparator, this.escapeCharacter, ignoreUnresolvablePlaceholders);
+				this.valueSeparator, ignoreUnresolvablePlaceholders);
 	}
 
 	private String doResolvePlaceholders(String text, PropertyPlaceholderHelper helper) {
@@ -257,7 +235,8 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 
 	/**
 	 * Convert the given value to the specified target type, if necessary.
-	 * @param value the original property value
+	 *
+	 * @param value      the original property value
 	 * @param targetType the specified target type for property retrieval
 	 * @return the converted value, or the original value if no conversion
 	 * is necessary
@@ -285,6 +264,7 @@ public abstract class AbstractPropertyResolver implements ConfigurablePropertyRe
 	/**
 	 * Retrieve the specified property as a raw String,
 	 * i.e. without resolution of nested placeholders.
+	 *
 	 * @param key the property name to resolve
 	 * @return the property value or {@code null} if none found
 	 */

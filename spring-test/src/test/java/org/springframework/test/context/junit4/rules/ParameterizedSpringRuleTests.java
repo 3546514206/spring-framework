@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,18 @@
 
 package org.springframework.test.context.junit4.rules;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.testfixture.beans.Employee;
-import org.springframework.beans.testfixture.beans.Pet;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.tests.sample.beans.Employee;
+import org.springframework.tests.sample.beans.Pet;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @see org.springframework.test.context.junit4.ParameterizedDependencyInjectionTests
  */
 @RunWith(Parameterized.class)
-@ContextConfiguration("../ParameterizedDependencyInjectionTests-context.xml")
+@ContextConfiguration("/org/springframework/test/context/junit4/ParameterizedDependencyInjectionTests-context.xml")
 public class ParameterizedSpringRuleTests {
 
 	private static final AtomicInteger invocationCount = new AtomicInteger();

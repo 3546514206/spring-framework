@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,23 @@
 
 package org.springframework.web.servlet.tags.form;
 
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.Collections;
-import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.jsp.JspException;
 import org.junit.jupiter.api.BeforeEach;
-
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockPageContext;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.StaticWebApplicationContext;
-import org.springframework.web.servlet.support.JspAwareRequestContext;
-import org.springframework.web.servlet.support.RequestContext;
-import org.springframework.web.servlet.support.RequestContextUtils;
-import org.springframework.web.servlet.support.RequestDataValueProcessor;
-import org.springframework.web.servlet.support.RequestDataValueProcessorWrapper;
+import org.springframework.web.servlet.support.*;
 import org.springframework.web.servlet.tags.AbstractTagTests;
 import org.springframework.web.servlet.tags.RequestContextAwareTag;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockPageContext;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.Collections;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -104,7 +99,7 @@ public abstract class AbstractHtmlElementTagTests extends AbstractTagTests {
 	}
 
 	protected RequestDataValueProcessor getMockRequestDataValueProcessor() {
-		RequestDataValueProcessor mockProcessor = mock();
+		RequestDataValueProcessor mockProcessor = mock(RequestDataValueProcessor.class);
 		HttpServletRequest request = (HttpServletRequest) getPageContext().getRequest();
 		WebApplicationContext wac = RequestContextUtils.findWebApplicationContext(request);
 		wac.getBean(RequestDataValueProcessorWrapper.class).setRequestDataValueProcessor(mockProcessor);
@@ -124,20 +119,19 @@ public abstract class AbstractHtmlElementTagTests extends AbstractTagTests {
 
 	protected final void assertContainsAttribute(String output, String attributeName, String attributeValue) {
 		String attributeString = attributeName + "=\"" + attributeValue + "\"";
-		assertThat(output).as("Expected to find attribute '" + attributeName +
+		assertThat(output.contains(attributeString)).as("Expected to find attribute '" + attributeName +
 				"' with value '" + attributeValue +
-				"' in output + '" + output + "'").contains(attributeString);
+				"' in output + '" + output + "'").isTrue();
 	}
 
 	protected final void assertAttributeNotPresent(String output, String attributeName) {
-		assertThat(output).as("Unexpected attribute '" + attributeName + "' in output '" + output + "'.")
-				.doesNotContain(attributeName + "=\"");
+		boolean condition = !output.contains(attributeName + "=\"");
+		assertThat(condition).as("Unexpected attribute '" + attributeName + "' in output '" + output + "'.").isTrue();
 	}
 
 	protected final void assertBlockTagContains(String output, String desiredContents) {
-		String contents = output.substring(output.indexOf(">") + 1, output.lastIndexOf('<'));
-		assertThat(contents).as("Expected to find '" + desiredContents + "' in the contents of block tag '" + output + "'")
-				.contains(desiredContents);
+		String contents = output.substring(output.indexOf(">") + 1, output.lastIndexOf("<"));
+		assertThat(contents.contains(desiredContents)).as("Expected to find '" + desiredContents + "' in the contents of block tag '" + output + "'").isTrue();
 	}
 
 }

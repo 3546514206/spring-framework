@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,6 @@
  */
 
 package org.springframework.web.servlet.config;
-
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.w3c.dom.Element;
 
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -41,19 +36,11 @@ import org.springframework.util.xml.DomUtils;
 import org.springframework.web.servlet.handler.MappedInterceptor;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter;
-import org.springframework.web.servlet.resource.CachingResourceResolver;
-import org.springframework.web.servlet.resource.CachingResourceTransformer;
-import org.springframework.web.servlet.resource.ContentVersionStrategy;
-import org.springframework.web.servlet.resource.CssLinkResourceTransformer;
-import org.springframework.web.servlet.resource.FixedVersionStrategy;
-import org.springframework.web.servlet.resource.PathResourceResolver;
-import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
-import org.springframework.web.servlet.resource.ResourceResolver;
-import org.springframework.web.servlet.resource.ResourceTransformer;
-import org.springframework.web.servlet.resource.ResourceUrlProvider;
-import org.springframework.web.servlet.resource.ResourceUrlProviderExposingInterceptor;
-import org.springframework.web.servlet.resource.VersionResourceResolver;
-import org.springframework.web.servlet.resource.WebJarsResourceResolver;
+import org.springframework.web.servlet.resource.*;
+import org.w3c.dom.Element;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link org.springframework.beans.factory.xml.BeanDefinitionParser} that parses a
@@ -81,7 +68,7 @@ class ResourcesBeanDefinitionParser implements BeanDefinitionParser {
 
 	private static final String RESOURCE_URL_PROVIDER = "mvcResourceUrlProvider";
 
-	private static final boolean webJarsPresent = ClassUtils.isPresent(
+	private static final boolean isWebJarsAssetLocatorPresent = ClassUtils.isPresent(
 			"org.webjars.WebJarAssetLocator", ResourcesBeanDefinitionParser.class.getClassLoader());
 
 
@@ -331,7 +318,7 @@ class ResourcesBeanDefinitionParser implements BeanDefinitionParser {
 		}
 
 		if (isAutoRegistration) {
-			if (webJarsPresent) {
+			if (isWebJarsAssetLocatorPresent) {
 				RootBeanDefinition webJarsResolverDef = new RootBeanDefinition(WebJarsResourceResolver.class);
 				webJarsResolverDef.setSource(source);
 				webJarsResolverDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);

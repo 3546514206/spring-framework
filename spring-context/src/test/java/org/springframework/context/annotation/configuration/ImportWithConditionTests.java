@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2012-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,12 +33,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Andy Wilkinson
  */
-class ImportWithConditionTests {
+public class ImportWithConditionTests {
 
 	private AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 
 	@Test
-	void conditionalThenUnconditional() {
+	public void conditionalThenUnconditional() throws Exception {
 		this.context.register(ConditionalThenUnconditional.class);
 		this.context.refresh();
 		assertThat(this.context.containsBean("beanTwo")).isFalse();
@@ -46,7 +46,7 @@ class ImportWithConditionTests {
 	}
 
 	@Test
-	void unconditionalThenConditional() {
+	public void unconditionalThenConditional() throws Exception {
 		this.context.register(UnconditionalThenConditional.class);
 		this.context.refresh();
 		assertThat(this.context.containsBean("beanTwo")).isFalse();
@@ -59,7 +59,6 @@ class ImportWithConditionTests {
 	protected static class ConditionalThenUnconditional {
 
 		@Autowired
-		@SuppressWarnings("unused")
 		private BeanOne beanOne;
 	}
 
@@ -69,7 +68,6 @@ class ImportWithConditionTests {
 	protected static class UnconditionalThenConditional {
 
 		@Autowired
-		@SuppressWarnings("unused")
 		private BeanOne beanOne;
 	}
 

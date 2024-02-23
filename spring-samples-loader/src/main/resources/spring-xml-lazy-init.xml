@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean name="man" class="edu.zjnu.xml.inject.Man" lazy-init="true">
+		<!--        <constructor-arg value="杨海波"/>-->
+		<property name="age" value="18"/>
+		<property name="name" value="杨海波"/>
+		<property name="wife" ref="wife"/>
+	</bean>
+
+	<!--   azy-init 设置只对scop属性为singleton的bean起作用，且默认为 false -->
+	<bean name="wife" class="edu.zjnu.xml.inject.Wife" lazy-init="default">
+		<property name="age" value="16"/>
+		<property name="name" value="新垣结衣"/>
+	</bean>
+
+</beans>

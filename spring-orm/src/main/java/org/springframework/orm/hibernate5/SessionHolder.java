@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package org.springframework.orm.hibernate5;
+
+import javax.persistence.EntityManager;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
@@ -38,6 +40,8 @@ import org.springframework.orm.jpa.EntityManagerHolder;
  */
 public class SessionHolder extends EntityManagerHolder {
 
+	private final Session session;
+
 	@Nullable
 	private Transaction transaction;
 
@@ -46,12 +50,14 @@ public class SessionHolder extends EntityManagerHolder {
 
 
 	public SessionHolder(Session session) {
-		super(session);
+		// Check below is always true against Hibernate >= 5.2 but not against 5.0/5.1 at runtime
+		super(EntityManager.class.isInstance(session) ? session : null);
+		this.session = session;
 	}
 
 
 	public Session getSession() {
-		return (Session) getEntityManager();
+		return this.session;
 	}
 
 	public void setTransaction(@Nullable Transaction transaction) {

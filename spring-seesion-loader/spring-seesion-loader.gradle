@@ -1,0 +1,78 @@
+plugins {
+    id 'java'
+    id 'war'
+    id 'idea'
+}
+
+group 'org.springframework'
+version '5.2.0.RELEASE'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+idea {
+    module {
+        downloadSources = true
+    }
+}
+
+dependencies {
+
+    optional(project(":spring-core"))
+    optional(project(":spring-aop"))
+    optional(project(":spring-beans"))
+    optional(project(":spring-context"))
+    optional(project(":spring-jdbc"))
+    optional(project(":spring-orm"))
+    optional(project(":spring-tx"))
+    optional(project(":spring-web"))
+    optional(project(":spring-webflux"))
+    optional(project(":spring-webmvc"))
+    optional(project(":spring-websocket"))
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'com.alibaba', name: 'fastjson', version: '1.2.75'
+    // https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api
+    implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '3.1.0'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2
+    implementation group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.7.0'
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+//    implementation group: 'mysql', name: 'mysql-connector-java', version: '5.1.29'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
+    // https://mvnrepository.com/artifact/org.aspectj/aspectjweaver
+    runtimeOnly group: 'org.aspectj', name: 'aspectjweaver', version: '1.8.1'
+    // https://mvnrepository.com/artifact/cglib/cglib
+    implementation group: 'cglib', name: 'cglib', version: '2.2.2'
+    // https://mvnrepository.com/artifact/org.mybatis/mybatis
+
+//    implementation(group: 'org.mybatis', name: 'mybatis', version: '3.4.4')
+
+    implementation(group: 'org.mybatis', name: 'mybatis', version: '3.2.5')
+
+    // https://mvnrepository.com/artifact/org.mybatis/mybatis-spring
+    implementation group: 'org.mybatis', name: 'mybatis-spring', version: '1.3.0'
+    // https://mvnrepository.com/artifact/commons-codec/commons-codec
+    implementation group: 'commons-codec', name: 'commons-codec', version: '1.10'
+    // https://mvnrepository.com/artifact/com.alibaba/druid
+    implementation group: 'com.alibaba', name: 'druid', version: '1.0.29'
+    // https://mvnrepository.com/artifact/com.github.pagehelper/pagehelper
+    implementation group: 'com.github.pagehelper', name: 'pagehelper', version: '5.1.2'
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12
+    testImplementation group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25', ext: 'pom'
+    // https://mvnrepository.com/artifact/log4j/log4j
+    implementation group: 'log4j', name: 'log4j', version: '1.2.17'
+    // https://mvnrepository.com/artifact/org.springframework.session/spring-session-data-redis
+    implementation group: 'org.springframework.session', name: 'spring-session-data-redis', version: '1.3.1.RELEASE'
+
+
+}
+
+//将src文件夹中的资源文件同时打包
+processResources {
+    from('src/main/resources') {
+        include 'mapper/*.xml'
+    }
+}

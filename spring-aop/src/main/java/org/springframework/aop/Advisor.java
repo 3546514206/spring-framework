@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,14 +33,21 @@ import org.aopalliance.aop.Advice;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
+
+/**
+ * Advice 定义了切面的增强逻辑，而 Pointcut 决定了增强点(AOP联盟定义中，语言开发环境中指的"基础")。
+ * 而通知器 Advisor 负责将他们结合起来。
+ */
 public interface Advisor {
 
 	/**
 	 * Common placeholder for an empty {@code Advice} to be returned from
 	 * {@link #getAdvice()} if no proper advice has been configured (yet).
+	 *
 	 * @since 5.0
 	 */
-	Advice EMPTY_ADVICE = new Advice() {};
+	Advice EMPTY_ADVICE = new Advice() {
+	};
 
 
 	/**
@@ -62,11 +69,8 @@ public interface Advisor {
 	 * Typical Advisor implementations always return {@code true}.
 	 * Use singleton/prototype bean definitions or appropriate programmatic
 	 * proxy creation to ensure that Advisors have the correct lifecycle model.
-	 * <p>As of 6.0.10, the default implementation returns {@code true}.
 	 * @return whether this advice is associated with a particular target instance
 	 */
-	default boolean isPerInstance() {
-		return true;
-	}
+	boolean isPerInstance();
 
 }

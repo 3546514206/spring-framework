@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,20 @@
 
 package org.springframework.web.reactive.result.view;
 
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
-
-import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.Ordered;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.lang.Nullable;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -51,15 +39,21 @@ import org.springframework.web.reactive.accept.HeaderContentTypeResolver;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
 import org.springframework.web.server.NotAcceptableStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+import rx.Completable;
+
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.get;
-import static org.springframework.web.testfixture.method.ResolvableMethod.on;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
+import static org.springframework.web.method.ResolvableMethod.on;
 
 /**
  * ViewResolutionResultHandler relying on a canned {@link TestViewResolver}
@@ -67,13 +61,13 @@ import static org.springframework.web.testfixture.method.ResolvableMethod.on;
  *
  * @author Rossen Stoyanchev
  */
-class ViewResolutionResultHandlerTests {
+public class ViewResolutionResultHandlerTests {
 
 	private final BindingContext bindingContext = new BindingContext();
 
 
 	@Test
-	void supports() {
+	public void supports() {
 		testSupports(on(Handler.class).annotPresent(ModelAttribute.class).resolveReturnType(String.class));
 		testSupports(on(Handler.class).annotNotPresent(ModelAttribute.class).resolveReturnType(String.class));
 		testSupports(on(Handler.class).resolveReturnType(Mono.class, String.class));
@@ -122,7 +116,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void viewResolverOrder() {
+	public void viewResolverOrder() {
 		TestViewResolver resolver1 = new TestViewResolver("account");
 		TestViewResolver resolver2 = new TestViewResolver("profile");
 		resolver1.setOrder(2);
@@ -133,7 +127,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void handleReturnValueTypes() {
+	public void handleReturnValueTypes() {
 		Object returnValue;
 		MethodParameter returnType;
 		ViewResolver resolver = new TestViewResolver("account");
@@ -197,7 +191,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void handleWithMultipleResolvers() {
+	public void handleWithMultipleResolvers() {
 		testHandle("/account",
 				on(Handler.class).annotNotPresent(ModelAttribute.class).resolveReturnType(String.class),
 				"profile", "profile: {id=123}",
@@ -205,7 +199,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void defaultViewName() {
+	public void defaultViewName() {
 		testDefaultViewName(null, on(Handler.class).annotPresent(ModelAttribute.class).resolveReturnType(String.class));
 		testDefaultViewName(Mono.empty(), on(Handler.class).resolveReturnType(Mono.class, String.class));
 		testDefaultViewName(Mono.empty(), on(Handler.class).resolveReturnType(Mono.class, Void.class));
@@ -231,7 +225,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void unresolvedViewName() {
+	public void unresolvedViewName() {
 		String returnValue = "account";
 		MethodParameter returnType = on(Handler.class).annotPresent(ModelAttribute.class).resolveReturnType(String.class);
 		HandlerResult result = new HandlerResult(new Object(), returnValue, returnType, this.bindingContext);
@@ -246,7 +240,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void contentNegotiation() {
+	public void contentNegotiation() {
 		TestBean value = new TestBean("Joe");
 		MethodParameter returnType = on(Handler.class).resolveReturnType(TestBean.class);
 		HandlerResult handlerResult = new HandlerResult(new Object(), value, returnType, this.bindingContext);
@@ -268,7 +262,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test
-	void contentNegotiationWith406() {
+	public void contentNegotiationWith406() {
 		TestBean value = new TestBean("Joe");
 		MethodParameter returnType = on(Handler.class).resolveReturnType(TestBean.class);
 		HandlerResult handlerResult = new HandlerResult(new Object(), value, returnType, this.bindingContext);
@@ -284,7 +278,7 @@ class ViewResolutionResultHandlerTests {
 	}
 
 	@Test  // SPR-15291
-	void contentNegotiationWithRedirect() {
+	public void contentNegotiationWithRedirect() {
 		HandlerResult handlerResult = new HandlerResult(new Object(), "redirect:/",
 				on(Handler.class).annotNotPresent(ModelAttribute.class).resolveReturnType(String.class),
 				this.bindingContext);
@@ -329,7 +323,7 @@ class ViewResolutionResultHandlerTests {
 
 	private void assertResponseBody(MockServerWebExchange exchange, String responseBody) {
 		StepVerifier.create(exchange.getResponse().getBody())
-				.consumeNextWith(buf -> assertThat(buf.toString(UTF_8)).isEqualTo(responseBody))
+				.consumeNextWith(buf -> assertThat(DataBufferTestUtils.dumpString(buf, UTF_8)).isEqualTo(responseBody))
 				.expectComplete()
 				.verify();
 	}
@@ -396,9 +390,9 @@ class ViewResolutionResultHandlerTests {
 				response.getHeaders().setContentType(mediaType);
 			}
 			model = new TreeMap<>(model);
-			String value = this.name + ": " + model;
+			String value = this.name + ": " + model.toString();
 			ByteBuffer byteBuffer = ByteBuffer.wrap(value.getBytes(UTF_8));
-			DataBuffer dataBuffer = DefaultDataBufferFactory.sharedInstance.wrap(byteBuffer);
+			DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(byteBuffer);
 			return response.writeWith(Flux.just(dataBuffer));
 		}
 	}

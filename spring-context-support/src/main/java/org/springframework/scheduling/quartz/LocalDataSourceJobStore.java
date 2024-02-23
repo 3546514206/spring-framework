@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package org.springframework.scheduling.quartz;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
-
-import javax.sql.DataSource;
-
 import org.quartz.SchedulerConfigException;
 import org.quartz.impl.jdbcjobstore.JobStoreCMT;
 import org.quartz.impl.jdbcjobstore.SimpleSemaphore;
@@ -29,18 +23,19 @@ import org.quartz.spi.ClassLoadHelper;
 import org.quartz.spi.SchedulerSignaler;
 import org.quartz.utils.ConnectionProvider;
 import org.quartz.utils.DBConnectionManager;
-
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.lang.Nullable;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+
 /**
  * Subclass of Quartz's {@link JobStoreCMT} class that delegates to a Spring-managed
  * {@link DataSource} instead of using a Quartz-managed JDBC connection pool.
  * This JobStore will be used if SchedulerFactoryBean's "dataSource" property is set.
- * You may also configure it explicitly, possibly as a custom subclass of this
- * {@code LocalDataSourceJobStore} or as an equivalent {@code JobStoreCMT} variant.
  *
  * <p>Supports both transactional and non-transactional DataSource access.
  * With a non-XA DataSource and local Spring transactions, a single DataSource
@@ -60,8 +55,6 @@ import org.springframework.lang.Nullable;
  * @since 1.1
  * @see SchedulerFactoryBean#setDataSource
  * @see SchedulerFactoryBean#setNonTransactionalDataSource
- * @see SchedulerFactoryBean#getConfigTimeDataSource()
- * @see SchedulerFactoryBean#getConfigTimeNonTransactionalDataSource()
  * @see org.springframework.jdbc.datasource.DataSourceUtils#doGetConnection
  * @see org.springframework.jdbc.datasource.DataSourceUtils#releaseConnection
  */
@@ -111,10 +104,13 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 						// Return a transactional Connection, if any.
 						return DataSourceUtils.doGetConnection(dataSource);
 					}
+
 					@Override
 					public void shutdown() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
+
+					/* Quartz 2.2 initialize method */
 					@Override
 					public void initialize() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
@@ -139,10 +135,13 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 						// Always return a non-transactional Connection.
 						return nonTxDataSourceToUse.getConnection();
 					}
+
 					@Override
 					public void shutdown() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
 					}
+
+					/* Quartz 2.2 initialize method */
 					@Override
 					public void initialize() {
 						// Do nothing - a Spring-managed DataSource has its own lifecycle.
@@ -152,8 +151,7 @@ public class LocalDataSourceJobStore extends JobStoreCMT {
 
 		// No, if HSQL is the platform, we really don't want to use locks...
 		try {
-			String productName = JdbcUtils.extractDatabaseMetaData(this.dataSource,
-					DatabaseMetaData::getDatabaseProductName);
+			String productName = JdbcUtils.extractDatabaseMetaData(this.dataSource, "getDatabaseProductName");
 			productName = JdbcUtils.commonDatabaseName(productName);
 			if (productName != null && productName.toLowerCase().contains("hsql")) {
 				setUseDBLocks(false);

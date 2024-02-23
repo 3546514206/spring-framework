@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,15 +37,15 @@ import static org.mockito.Mockito.verify;
  * @author Juergen Hoeller
  * @since 22.02.2005
  */
-class BatchSqlUpdateTests {
+public class BatchSqlUpdateTests {
 
 	@Test
-	void testBatchUpdateWithExplicitFlush() throws Exception {
+	public void testBatchUpdateWithExplicitFlush() throws Exception {
 		doTestBatchUpdate(false);
 	}
 
 	@Test
-	void testBatchUpdateWithFlushThroughBatchSize() throws Exception {
+	public void testBatchUpdateWithFlushThroughBatchSize() throws Exception {
 		doTestBatchUpdate(true);
 	}
 
@@ -54,14 +54,14 @@ class BatchSqlUpdateTests {
 		final int[] ids = new int[] { 100, 200 };
 		final int[] rowsAffected = new int[] { 1, 2 };
 
-		Connection connection = mock();
-		DataSource dataSource = mock();
+		Connection connection = mock(Connection.class);
+		DataSource dataSource = mock(DataSource.class);
 		given(dataSource.getConnection()).willReturn(connection);
-		PreparedStatement preparedStatement = mock();
+		PreparedStatement preparedStatement = mock(PreparedStatement.class);
 		given(preparedStatement.getConnection()).willReturn(connection);
 		given(preparedStatement.executeBatch()).willReturn(rowsAffected);
 
-		DatabaseMetaData mockDatabaseMetaData = mock();
+		DatabaseMetaData mockDatabaseMetaData = mock(DatabaseMetaData.class);
 		given(mockDatabaseMetaData.supportsBatchUpdates()).willReturn(true);
 		given(connection.prepareStatement(sql)).willReturn(preparedStatement);
 		given(connection.getMetaData()).willReturn(mockDatabaseMetaData);
@@ -77,32 +77,32 @@ class BatchSqlUpdateTests {
 
 		if (flushThroughBatchSize) {
 			assertThat(update.getQueueCount()).isEqualTo(0);
-			assertThat(update.getRowsAffected()).hasSize(2);
+			assertThat(update.getRowsAffected().length).isEqualTo(2);
 		}
 		else {
 			assertThat(update.getQueueCount()).isEqualTo(2);
-			assertThat(update.getRowsAffected()).isEmpty();
+			assertThat(update.getRowsAffected().length).isEqualTo(0);
 		}
 
 		int[] actualRowsAffected = update.flush();
 		assertThat(update.getQueueCount()).isEqualTo(0);
 
 		if (flushThroughBatchSize) {
-			assertThat(actualRowsAffected).as("flush did not execute updates").isEmpty();
+			assertThat(actualRowsAffected.length == 0).as("flush did not execute updates").isTrue();
 		}
 		else {
-			assertThat(actualRowsAffected).as("executed 2 updates").hasSize(2);
+			assertThat(actualRowsAffected.length == 2).as("executed 2 updates").isTrue();
 			assertThat(actualRowsAffected[0]).isEqualTo(rowsAffected[0]);
 			assertThat(actualRowsAffected[1]).isEqualTo(rowsAffected[1]);
 		}
 
 		actualRowsAffected = update.getRowsAffected();
-		assertThat(actualRowsAffected).as("executed 2 updates").hasSize(2);
+		assertThat(actualRowsAffected.length == 2).as("executed 2 updates").isTrue();
 		assertThat(actualRowsAffected[0]).isEqualTo(rowsAffected[0]);
 		assertThat(actualRowsAffected[1]).isEqualTo(rowsAffected[1]);
 
 		update.reset();
-		assertThat(update.getRowsAffected()).isEmpty();
+		assertThat(update.getRowsAffected().length).isEqualTo(0);
 
 		verify(preparedStatement).setObject(1, ids[0], Types.INTEGER);
 		verify(preparedStatement).setObject(1, ids[1], Types.INTEGER);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package org.springframework.web.servlet.handler;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.StaticApplicationContext;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.ConfigurableWebApplicationContext;
 import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockServletContext;
-import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.ServletException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -35,42 +35,44 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
-class BeanNameUrlHandlerMappingTests {
+public class BeanNameUrlHandlerMappingTests {
+
+	public static final String CONF = "/org/springframework/web/servlet/handler/map1.xml";
 
 	private ConfigurableWebApplicationContext wac;
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		MockServletContext sc = new MockServletContext("");
 		wac = new XmlWebApplicationContext();
 		wac.setServletContext(sc);
-		wac.setConfigLocations("/org/springframework/web/servlet/handler/map1.xml");
+		wac.setConfigLocations(new String[] {CONF});
 		wac.refresh();
 	}
 
 	@Test
-	void requestsWithoutHandlers() throws Exception {
+	public void requestsWithoutHandlers() throws Exception {
 		HandlerMapping hm = (HandlerMapping) wac.getBean("handlerMapping");
 
-		MockHttpServletRequest req = new MockHttpServletRequest("GET", "/myapp/mypath/nonsense.html");
+		MockHttpServletRequest req = new MockHttpServletRequest("GET", "/mypath/nonsense.html");
 		req.setContextPath("/myapp");
 		Object h = hm.getHandler(req);
-		assertThat(h).as("Handler is null").isNull();
+		assertThat(h == null).as("Handler is null").isTrue();
 
 		req = new MockHttpServletRequest("GET", "/foo/bar/baz.html");
 		h = hm.getHandler(req);
-		assertThat(h).as("Handler is null").isNull();
+		assertThat(h == null).as("Handler is null").isTrue();
 	}
 
 	@Test
-	void requestsWithSubPaths() throws Exception {
+	public void requestsWithSubPaths() throws Exception {
 		HandlerMapping hm = (HandlerMapping) wac.getBean("handlerMapping");
 		doTestRequestsWithSubPaths(hm);
 	}
 
 	@Test
-	void requestsWithSubPathsInParentContext() throws Exception {
+	public void requestsWithSubPathsInParentContext() throws Exception {
 		BeanNameUrlHandlerMapping hm = new BeanNameUrlHandlerMapping();
 		hm.setDetectHandlersInAncestorContexts(true);
 		hm.setApplicationContext(new StaticApplicationContext(wac));
@@ -117,14 +119,9 @@ class BeanNameUrlHandlerMappingTests {
 	}
 
 	@Test
-	void requestsWithFullPaths() throws Exception {
-
-		UrlPathHelper pathHelper = new UrlPathHelper();
-		pathHelper.setAlwaysUseFullPath(true);
-
+	public void requestsWithFullPaths() throws Exception {
 		BeanNameUrlHandlerMapping hm = new BeanNameUrlHandlerMapping();
-		hm.setPatternParser(null);  // the test targets AntPathPatcher-specific feature
-		hm.setUrlPathHelper(pathHelper);
+		hm.setAlwaysUseFullPath(true);
 		hm.setApplicationContext(wac);
 		Object bean = wac.getBean("godCtrl");
 
@@ -155,7 +152,7 @@ class BeanNameUrlHandlerMappingTests {
 	}
 
 	@Test
-	void asteriskMatches() throws Exception {
+	public void asteriskMatches() throws Exception {
 		HandlerMapping hm = (HandlerMapping) wac.getBean("handlerMapping");
 		Object bean = wac.getBean("godCtrl");
 
@@ -169,11 +166,11 @@ class BeanNameUrlHandlerMappingTests {
 
 		req = new MockHttpServletRequest("GET", "/mypath/tes");
 		hec = hm.getHandler(req);
-		assertThat(hec).as("Handler is correct bean").isNull();
+		assertThat(hec == null).as("Handler is correct bean").isTrue();
 	}
 
 	@Test
-	void overlappingMappings() throws Exception {
+	public void overlappingMappings() throws Exception {
 		BeanNameUrlHandlerMapping hm = (BeanNameUrlHandlerMapping) wac.getBean("handlerMapping");
 		Object anotherHandler = new Object();
 		hm.registerHandler("/mypath/testaross*", anotherHandler);
@@ -189,11 +186,11 @@ class BeanNameUrlHandlerMappingTests {
 
 		req = new MockHttpServletRequest("GET", "/mypath/tes");
 		hec = hm.getHandler(req);
-		assertThat(hec).as("Handler is correct bean").isNull();
+		assertThat(hec == null).as("Handler is correct bean").isTrue();
 	}
 
 	@Test
-	void doubleMappings() {
+	public void doubleMappings() throws ServletException {
 		BeanNameUrlHandlerMapping hm = (BeanNameUrlHandlerMapping) wac.getBean("handlerMapping");
 		assertThatIllegalStateException().isThrownBy(() ->
 				hm.registerHandler("/mypath/welcome.html", new Object()));

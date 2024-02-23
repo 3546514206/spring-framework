@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,7 @@
 
 package org.springframework.mock.http.client.reactive;
 
-import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.function.Function;
-
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -38,6 +28,15 @@ import org.springframework.http.client.reactive.ClientHttpRequest;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Mock implementation of {@link ClientHttpRequest}.
@@ -48,9 +47,11 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 public class MockClientHttpRequest extends AbstractClientHttpRequest {
 
-	private final HttpMethod httpMethod;
+	private HttpMethod httpMethod;
 
-	private final URI url;
+	private URI url;
+
+	private final DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
 
 	private Flux<DataBuffer> body = Flux.error(
 			new IllegalStateException("The body is not set. " +
@@ -79,6 +80,7 @@ public class MockClientHttpRequest extends AbstractClientHttpRequest {
 	 * <p>The default write handler consumes and caches the request body so it
 	 * may be accessed subsequently, e.g. in test assertions. Use this property
 	 * when the request body is an infinite stream.
+	 *
 	 * @param writeHandler the write handler to use returning {@code Mono<Void>}
 	 * when the body has been "written" (i.e. consumed).
 	 */
@@ -100,13 +102,7 @@ public class MockClientHttpRequest extends AbstractClientHttpRequest {
 
 	@Override
 	public DataBufferFactory bufferFactory() {
-		return DefaultDataBufferFactory.sharedInstance;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T getNativeRequest() {
-		return (T) this;
+		return this.bufferFactory;
 	}
 
 	@Override
@@ -143,6 +139,13 @@ public class MockClientHttpRequest extends AbstractClientHttpRequest {
 		return this.body;
 	}
 
+	private static String bufferToString(DataBuffer buffer, Charset charset) {
+		Assert.notNull(charset, "'charset' must not be null");
+		byte[] bytes = new byte[buffer.readableByteCount()];
+		buffer.read(bytes);
+		return new String(bytes, charset);
+	}
+
 	/**
 	 * Aggregate response data and convert to a String using the "Content-Type"
 	 * charset or "UTF-8" by default.
@@ -152,13 +155,13 @@ public class MockClientHttpRequest extends AbstractClientHttpRequest {
 		Charset charset = Optional.ofNullable(getHeaders().getContentType()).map(MimeType::getCharset)
 				.orElse(StandardCharsets.UTF_8);
 
-		return DataBufferUtils.join(getBody())
-				.map(buffer -> {
-					String s = buffer.toString(charset);
-					DataBufferUtils.release(buffer);
-					return s;
+		return getBody()
+				.reduce(bufferFactory().allocateBuffer(), (previous, current) -> {
+					previous.write(current);
+					DataBufferUtils.release(current);
+					return previous;
 				})
-				.defaultIfEmpty("");
+				.map(buffer -> bufferToString(buffer, charset));
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Andy Clement
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0
  */
 public class Ternary extends SpelNodeImpl {
@@ -63,7 +62,7 @@ public class Ternary extends SpelNodeImpl {
 
 	@Override
 	public String toStringAST() {
-		return "(" + getChild(0).toStringAST() + " ? " + getChild(1).toStringAST() + " : " + getChild(2).toStringAST() + ")";
+		return getChild(0).toStringAST() + " ? " + getChild(1).toStringAST() + " : " + getChild(2).toStringAST();
 	}
 
 	private void computeExitTypeDescriptor() {
@@ -75,7 +74,7 @@ public class Ternary extends SpelNodeImpl {
 				this.exitTypeDescriptor = leftDescriptor;
 			}
 			else {
-				// Use the easiest to compute common supertype
+				// Use the easiest to compute common super type
 				this.exitTypeDescriptor = "Ljava/lang/Object";
 			}
 		}

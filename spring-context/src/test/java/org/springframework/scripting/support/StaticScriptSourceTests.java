@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link StaticScriptSource}.
+ * Unit tests for the StaticScriptSource class.
  *
  * @author Rick Evans
  * @author Sam Brannen
  */
-class StaticScriptSourceTests {
+public class StaticScriptSourceTests {
 
 	private static final String SCRIPT_TEXT = "print($hello) if $true;";
 
@@ -35,49 +35,49 @@ class StaticScriptSourceTests {
 
 
 	@Test
-	void createWithNullScript() {
+	public void createWithNullScript() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new StaticScriptSource(null));
 	}
 
 	@Test
-	void createWithEmptyScript() {
+	public void createWithEmptyScript() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new StaticScriptSource(""));
 	}
 
 	@Test
-	void createWithWhitespaceOnlyScript() {
+	public void createWithWhitespaceOnlyScript() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new StaticScriptSource("   \n\n\t  \t\n"));
 	}
 
 	@Test
-	void isModifiedIsTrueByDefault() {
+	public void isModifiedIsTrueByDefault() throws Exception {
 		assertThat(source.isModified()).as("Script must be flagged as 'modified' when first created.").isTrue();
 	}
 
 	@Test
-	void gettingScriptTogglesIsModified() {
+	public void gettingScriptTogglesIsModified() throws Exception {
 		source.getScriptAsString();
 		assertThat(source.isModified()).as("Script must be flagged as 'not modified' after script is read.").isFalse();
 	}
 
 	@Test
-	void gettingScriptViaToStringDoesNotToggleIsModified() {
+	public void gettingScriptViaToStringDoesNotToggleIsModified() throws Exception {
 		boolean isModifiedState = source.isModified();
 		source.toString();
 		assertThat(source.isModified()).as("Script's 'modified' flag must not change after script is read via toString().").isEqualTo(isModifiedState);
 	}
 
 	@Test
-	void isModifiedToggledWhenDifferentScriptIsSet() {
+	public void isModifiedToggledWhenDifferentScriptIsSet() throws Exception {
 		source.setScript("use warnings;");
 		assertThat(source.isModified()).as("Script must be flagged as 'modified' when different script is passed in.").isTrue();
 	}
 
 	@Test
-	void isModifiedNotToggledWhenSameScriptIsSet() {
+	public void isModifiedNotToggledWhenSameScriptIsSet() throws Exception {
 		source.setScript(SCRIPT_TEXT);
 		assertThat(source.isModified()).as("Script must not be flagged as 'modified' when same script is passed in.").isFalse();
 	}

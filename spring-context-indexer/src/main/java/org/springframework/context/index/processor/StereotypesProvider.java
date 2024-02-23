@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package org.springframework.context.index.processor;
 
-import java.util.Set;
-
 import javax.lang.model.element.Element;
+import java.util.Set;
 
 /**
  * Provide the list of stereotypes that match an {@link Element}.
- *
- * <p>If an element has one or more stereotypes, it is referenced in the index
+ * If an element has one more stereotypes, it is referenced in the index
  * of candidate components and each stereotype can be queried individually.
  *
  * @author Stephane Nicoll

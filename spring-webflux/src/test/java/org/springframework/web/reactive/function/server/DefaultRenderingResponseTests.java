@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,51 +16,41 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.result.view.AbstractView;
-import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.reactive.result.view.View;
 import org.springframework.web.reactive.result.view.ViewResolver;
 import org.springframework.web.reactive.result.view.ViewResolverSupport;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 /**
  * @author Arjen Poutsma
  */
-class DefaultRenderingResponseTests {
+public class DefaultRenderingResponseTests {
 
 	@Test
-	void create() {
+	public void create() {
 		String name = "foo";
 		Mono<RenderingResponse> result = RenderingResponse.create(name).build();
 		StepVerifier.create(result)
@@ -70,7 +60,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void headers() {
+	public void headers() {
 		HttpHeaders headers = new HttpHeaders();
 		Mono<RenderingResponse> result = RenderingResponse.create("foo").headers(headers).build();
 		StepVerifier.create(result)
@@ -81,7 +71,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void modelAttribute() {
+	public void modelAttribute() {
 		Mono<RenderingResponse> result = RenderingResponse.create("foo")
 				.modelAttribute("foo", "bar").build();
 		StepVerifier.create(result)
@@ -91,7 +81,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void modelAttributeConventions() {
+	public void modelAttributeConventions() {
 		Mono<RenderingResponse> result = RenderingResponse.create("foo")
 				.modelAttribute("bar").build();
 		StepVerifier.create(result)
@@ -101,7 +91,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void modelAttributes() {
+	public void modelAttributes() {
 		Map<String, String> model = Collections.singletonMap("foo", "bar");
 		Mono<RenderingResponse> result = RenderingResponse.create("foo")
 				.modelAttributes(model).build();
@@ -112,7 +102,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void modelAttributesConventions() {
+	public void modelAttributesConventions() {
 		Set<String> model = Collections.singleton("bar");
 		Mono<RenderingResponse> result = RenderingResponse.create("foo")
 				.modelAttributes(model).build();
@@ -123,7 +113,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void cookies() {
+	public void cookies() {
 		MultiValueMap<String, ResponseCookie> newCookies = new LinkedMultiValueMap<>();
 		newCookies.add("name", ResponseCookie.from("name", "value").build());
 		Mono<RenderingResponse> result =
@@ -136,20 +126,20 @@ class DefaultRenderingResponseTests {
 
 
 	@Test
-	void render() {
+	public void render() {
 		Map<String, Object> model = Collections.singletonMap("foo", "bar");
 		Mono<RenderingResponse> result = RenderingResponse.create("view").modelAttributes(model).build();
 
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("http://localhost"));
-		ViewResolver viewResolver = mock();
-		View view = mock();
+		ViewResolver viewResolver = mock(ViewResolver.class);
+		View view = mock(View.class);
 		given(viewResolver.resolveViewName("view", Locale.ENGLISH)).willReturn(Mono.just(view));
 		given(view.render(model, null, exchange)).willReturn(Mono.empty());
 
 		List<ViewResolver> viewResolvers = new ArrayList<>();
 		viewResolvers.add(viewResolver);
 
-		HandlerStrategies mockConfig = mock();
+		HandlerStrategies mockConfig = mock(HandlerStrategies.class);
 		given(mockConfig.viewResolvers()).willReturn(viewResolvers);
 
 		StepVerifier.create(result)
@@ -160,53 +150,18 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void writeTo() {
-		Map<String, Object> model = Collections.singletonMap("foo", "bar");
-		RenderingResponse renderingResponse = RenderingResponse.create("view")
-				.status(HttpStatus.FOUND)
-				.modelAttributes(model)
-				.build().block(Duration.of(5, ChronoUnit.MILLIS));
-		assertThat(renderingResponse).isNotNull();
-
-		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("http://localhost"));
-		MediaType contentType = MediaType.APPLICATION_PDF;
-		exchange.getResponse().getHeaders().setContentType(contentType);
-
-		ViewResolver viewResolver = mock();
-		RedirectView view = mock();
-		given(viewResolver.resolveViewName(eq("view"), any())).willReturn(Mono.just(view));
-		given(view.render(model, contentType, exchange)).willReturn(Mono.empty());
-
-		List<ViewResolver> viewResolvers = new ArrayList<>();
-		viewResolvers.add(viewResolver);
-
-		HandlerStrategies mockConfig = mock();
-		given(mockConfig.viewResolvers()).willReturn(viewResolvers);
-
-		ServerResponse.Context context = mock();
-		given(context.viewResolvers()).willReturn(viewResolvers);
-
-		Mono<Void> result = renderingResponse.writeTo(exchange, context);
-		StepVerifier.create(result)
-				.expectComplete()
-				.verify();
-
-		verify(view).setStatusCode(HttpStatus.FOUND);
-	}
-
-	@Test
-	void defaultContentType() {
+	public void defaultContentType() {
 		Mono<RenderingResponse> result = RenderingResponse.create("view").build();
 
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("http://localhost"));
 		TestView view = new TestView();
-		ViewResolver viewResolver = mock();
+		ViewResolver viewResolver = mock(ViewResolver.class);
 		given(viewResolver.resolveViewName(any(), any())).willReturn(Mono.just(view));
 
 		List<ViewResolver> viewResolvers = new ArrayList<>();
 		viewResolvers.add(viewResolver);
 
-		ServerResponse.Context context = mock();
+		ServerResponse.Context context = mock(ServerResponse.Context.class);
 		given(context.viewResolvers()).willReturn(viewResolvers);
 
 		StepVerifier.create(result.flatMap(response -> response.writeTo(exchange, context)))
@@ -228,7 +183,7 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void notModifiedEtag() {
+	public void notModifiedEtag() {
 		String etag = "\"foo\"";
 		RenderingResponse responseMono = RenderingResponse.create("bar")
 				.header(HttpHeaders.ETAG, etag)
@@ -250,9 +205,9 @@ class DefaultRenderingResponseTests {
 	}
 
 	@Test
-	void notModifiedLastModified() {
+	public void notModifiedLastModified() {
 		ZonedDateTime now = ZonedDateTime.now();
-		ZonedDateTime oneMinuteBeforeNow = now.minusMinutes(1);
+		ZonedDateTime oneMinuteBeforeNow = now.minus(1, ChronoUnit.MINUTES);
 
 		RenderingResponse responseMono = RenderingResponse.create("bar")
 				.header(HttpHeaders.LAST_MODIFIED, DateTimeFormatter.RFC_1123_DATE_TIME.format(oneMinuteBeforeNow))

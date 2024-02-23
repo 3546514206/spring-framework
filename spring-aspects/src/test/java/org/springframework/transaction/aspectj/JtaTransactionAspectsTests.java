@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,18 @@
 
 package org.springframework.transaction.aspectj;
 
-import java.io.IOException;
-
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.transaction.testfixture.CallCountingTransactionManager;
+import org.springframework.tests.transaction.CallCountingTransactionManager;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIOException;
+import javax.transaction.Transactional;
+import java.io.IOException;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Stephane Nicoll
@@ -47,14 +44,14 @@ public class JtaTransactionAspectsTests {
 	}
 
 	@Test
-	void commitOnAnnotatedPublicMethod() throws Throwable {
+	public void commitOnAnnotatedPublicMethod() throws Throwable {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new JtaAnnotationPublicAnnotatedMember().echo(null);
 		assertThat(this.txManager.commits).isEqualTo(1);
 	}
 
 	@Test
-	void matchingRollbackOnApplied() {
+	public void matchingRollbackOnApplied() throws Throwable {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		InterruptedException test = new InterruptedException();
 		assertThatExceptionOfType(InterruptedException.class).isThrownBy(() ->
@@ -65,7 +62,7 @@ public class JtaTransactionAspectsTests {
 	}
 
 	@Test
-	void nonMatchingRollbackOnApplied() {
+	public void nonMatchingRollbackOnApplied() throws Throwable {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		IOException test = new IOException();
 		assertThatIOException().isThrownBy(() ->
@@ -76,35 +73,35 @@ public class JtaTransactionAspectsTests {
 	}
 
 	@Test
-	void commitOnAnnotatedProtectedMethod() {
+	public void commitOnAnnotatedProtectedMethod() {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new JtaAnnotationProtectedAnnotatedMember().doInTransaction();
 		assertThat(this.txManager.commits).isEqualTo(1);
 	}
 
 	@Test
-	void nonAnnotatedMethodCallingProtectedMethod() {
+	public void nonAnnotatedMethodCallingProtectedMethod() {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new JtaAnnotationProtectedAnnotatedMember().doSomething();
 		assertThat(this.txManager.commits).isEqualTo(1);
 	}
 
 	@Test
-	void commitOnAnnotatedPrivateMethod() {
+	public void commitOnAnnotatedPrivateMethod() {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new JtaAnnotationPrivateAnnotatedMember().doInTransaction();
 		assertThat(this.txManager.commits).isEqualTo(1);
 	}
 
 	@Test
-	void nonAnnotatedMethodCallingPrivateMethod() {
+	public void nonAnnotatedMethodCallingPrivateMethod() {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new JtaAnnotationPrivateAnnotatedMember().doSomething();
 		assertThat(this.txManager.commits).isEqualTo(1);
 	}
 
 	@Test
-	void notTransactional() {
+	public void notTransactional() {
 		assertThat(this.txManager.begun).isEqualTo(0);
 		new TransactionAspectTests.NotTransactional().noop();
 		assertThat(this.txManager.begun).isEqualTo(0);

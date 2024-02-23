@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package org.springframework.web.socket.sockjs.frame;
 import org.springframework.util.Assert;
 
 /**
- * A base class for SockJS message codec that provides an implementation of
+ * An base class for SockJS message codec that provides an implementation of
  * {@link #encode(String[])}.
  *
  * @author Rossen Stoyanchev
@@ -46,7 +46,7 @@ public abstract class AbstractSockJsMessageCodec implements SockJsMessageCodec {
 	}
 
 	/**
-	 * Apply standard JSON string quoting (see <a href="https://www.json.org/">json.org</a>).
+	 * Apply standard JSON string quoting (see https://www.json.org/).
 	 */
 	protected abstract char[] applyJsonQuoting(String content);
 
@@ -59,7 +59,9 @@ public abstract class AbstractSockJsMessageCodec implements SockJsMessageCodec {
 			if (isSockJsSpecialChar(c)) {
 				result.append('\\').append('u');
 				String hex = Integer.toHexString(c).toLowerCase();
-				result.append("0".repeat(Math.max(0, (4 - hex.length()))));
+				for (int i = 0; i < (4 - hex.length()); i++) {
+					result.append('0');
+				}
 				result.append(hex);
 			}
 			else {

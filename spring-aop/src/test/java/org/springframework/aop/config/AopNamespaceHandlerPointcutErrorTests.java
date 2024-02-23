@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,40 +17,36 @@
 package org.springframework.aop.config;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
+import org.springframework.beans.factory.parsing.BeanDefinitionParsingException;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.core.io.ClassPathResource;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
  * @author Mark Fisher
  * @author Chris Beams
- * @author Sam Brannen
  */
-class AopNamespaceHandlerPointcutErrorTests {
+public class AopNamespaceHandlerPointcutErrorTests {
 
 	@Test
-	void duplicatePointcutConfig() {
+	public void testDuplicatePointcutConfig() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(bf);
-		ClassPathResource resource = qualifiedResource(getClass(), "pointcutDuplication.xml");
-
-		assertThatExceptionOfType(BeanDefinitionStoreException.class)
-				.isThrownBy(() -> reader.loadBeanDefinitions(resource));
+		assertThatExceptionOfType(BeanDefinitionStoreException.class).isThrownBy(() ->
+				new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
+						qualifiedResource(getClass(), "pointcutDuplication.xml")))
+			.satisfies(ex -> ex.contains(BeanDefinitionParsingException.class));
 	}
 
 	@Test
-	void missingPointcutConfig() {
+	public void testMissingPointcutConfig() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(bf);
-		ClassPathResource resource = qualifiedResource(getClass(), "pointcutMissing.xml");
-
-		assertThatExceptionOfType(BeanDefinitionStoreException.class)
-				.isThrownBy(() -> reader.loadBeanDefinitions(resource));
+		assertThatExceptionOfType(BeanDefinitionStoreException.class).isThrownBy(() ->
+				new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
+						qualifiedResource(getClass(), "pointcutMissing.xml")))
+			.satisfies(ex -> ex.contains(BeanDefinitionParsingException.class));
 	}
 
 }

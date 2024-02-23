@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,20 +38,20 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Dave Syer
  * @author Juergen Hoeller
  */
-class YamlMapFactoryBeanTests {
+public class YamlMapFactoryBeanTests {
 
 	private final YamlMapFactoryBean factory = new YamlMapFactoryBean();
 
 
 	@Test
-	void testSetIgnoreResourceNotFound() {
+	public void testSetIgnoreResourceNotFound() {
 		this.factory.setResolutionMethod(YamlMapFactoryBean.ResolutionMethod.OVERRIDE_AND_IGNORE);
 		this.factory.setResources(new FileSystemResource("non-exsitent-file.yml"));
-		assertThat(this.factory.getObject()).isEmpty();
+		assertThat(this.factory.getObject().size()).isEqualTo(0);
 	}
 
 	@Test
-	void testSetBarfOnResourceNotFound() {
+	public void testSetBarfOnResourceNotFound() {
 		assertThatIllegalStateException().isThrownBy(() -> {
 				this.factory.setResources(new FileSystemResource("non-exsitent-file.yml"));
 				this.factory.getObject().size();
@@ -59,23 +59,23 @@ class YamlMapFactoryBeanTests {
 	}
 
 	@Test
-	void testGetObject() {
+	public void testGetObject() {
 		this.factory.setResources(new ByteArrayResource("foo: bar".getBytes()));
-		assertThat(this.factory.getObject()).hasSize(1);
+		assertThat(this.factory.getObject().size()).isEqualTo(1);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
-	void testOverrideAndRemoveDefaults() {
+	public void testOverrideAndRemoveDefaults() {
 		this.factory.setResources(new ByteArrayResource("foo:\n  bar: spam".getBytes()),
 				new ByteArrayResource("foo:\n  spam: bar".getBytes()));
 
-		assertThat(this.factory.getObject()).hasSize(1);
-		assertThat(((Map<String, Object>) this.factory.getObject().get("foo"))).hasSize(2);
+		assertThat(this.factory.getObject().size()).isEqualTo(1);
+		assertThat(((Map<String, Object>) this.factory.getObject().get("foo")).size()).isEqualTo(2);
 	}
 
 	@Test
-	void testFirstFound() {
+	public void testFirstFound() {
 		this.factory.setResolutionMethod(YamlProcessor.ResolutionMethod.FIRST_FOUND);
 		this.factory.setResources(new AbstractResource() {
 			@Override
@@ -88,18 +88,19 @@ class YamlMapFactoryBeanTests {
 			}
 		}, new ByteArrayResource("foo:\n  spam: bar".getBytes()));
 
-		assertThat(this.factory.getObject()).hasSize(1);
+		assertThat(this.factory.getObject().size()).isEqualTo(1);
 	}
 
 	@Test
-	void testMapWithPeriodsInKey() {
+	public void testMapWithPeriodsInKey() {
 		this.factory.setResources(new ByteArrayResource("foo:\n  ? key1.key2\n  : value".getBytes()));
 		Map<String, Object> map = this.factory.getObject();
 
-		assertThat(map).hasSize(1);
+		assertThat(map.size()).isEqualTo(1);
 		assertThat(map.containsKey("foo")).isTrue();
 		Object object = map.get("foo");
-		assertThat(object).isInstanceOf(LinkedHashMap.class);
+		boolean condition = object instanceof LinkedHashMap;
+		assertThat(condition).isTrue();
 		@SuppressWarnings("unchecked")
 		Map<String, Object> sub = (Map<String, Object>) object;
 		assertThat(sub.containsKey("key1.key2")).isTrue();
@@ -107,22 +108,23 @@ class YamlMapFactoryBeanTests {
 	}
 
 	@Test
-	void testMapWithIntegerValue() {
+	public void testMapWithIntegerValue() {
 		this.factory.setResources(new ByteArrayResource("foo:\n  ? key1.key2\n  : 3".getBytes()));
 		Map<String, Object> map = this.factory.getObject();
 
-		assertThat(map).hasSize(1);
+		assertThat(map.size()).isEqualTo(1);
 		assertThat(map.containsKey("foo")).isTrue();
 		Object object = map.get("foo");
-		assertThat(object).isInstanceOf(LinkedHashMap.class);
+		boolean condition = object instanceof LinkedHashMap;
+		assertThat(condition).isTrue();
 		@SuppressWarnings("unchecked")
 		Map<String, Object> sub = (Map<String, Object>) object;
-		assertThat(sub).hasSize(1);
-		assertThat(sub.get("key1.key2")).isEqualTo(3);
+		assertThat(sub.size()).isEqualTo(1);
+		assertThat(sub.get("key1.key2")).isEqualTo(Integer.valueOf(3));
 	}
 
 	@Test
-	void testDuplicateKey() {
+	public void testDuplicateKey() {
 		this.factory.setResources(new ByteArrayResource("mymap:\n  foo: bar\nmymap:\n  bar: foo".getBytes()));
 		assertThatExceptionOfType(DuplicateKeyException.class).isThrownBy(() ->
 				this.factory.getObject().get("mymap"));

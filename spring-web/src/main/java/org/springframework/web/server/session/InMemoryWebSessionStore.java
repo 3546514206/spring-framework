@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,12 @@
 
 package org.springframework.web.server.session;
 
+import org.springframework.util.Assert;
+import org.springframework.util.IdGenerator;
+import org.springframework.util.JdkIdGenerator;
+import org.springframework.web.server.WebSession;
+import reactor.core.publisher.Mono;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,16 +32,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import org.springframework.util.Assert;
-import org.springframework.util.IdGenerator;
-import org.springframework.util.JdkIdGenerator;
-import org.springframework.web.server.WebSession;
 
 /**
  * Simple Map-based storage for {@link WebSession} instances.
@@ -113,14 +110,9 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 
 	@Override
 	public Mono<WebSession> createWebSession() {
-
-		// Opportunity to clean expired sessions
 		Instant now = this.clock.instant();
 		this.expiredSessionChecker.checkIfNecessary(now);
-
-		return Mono.<WebSession>fromSupplier(() -> new InMemoryWebSession(now))
-				.subscribeOn(Schedulers.boundedElastic())
-				.publishOn(Schedulers.parallel());
+		return Mono.fromSupplier(() -> new InMemoryWebSession(now));
 	}
 
 	@Override
@@ -230,17 +222,12 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 
 		@Override
 		public Mono<Void> changeSessionId() {
-			return Mono.<Void>defer(() -> {
-						String currentId = this.id.get();
-						InMemoryWebSessionStore.this.sessions.remove(currentId);
-						String newId = String.valueOf(idGenerator.generateId());
-						this.id.set(newId);
-						InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
-						return Mono.empty();
-					})
-					.subscribeOn(Schedulers.boundedElastic())
-					.publishOn(Schedulers.parallel())
-					.then();
+			String currentId = this.id.get();
+			InMemoryWebSessionStore.this.sessions.remove(currentId);
+			String newId = String.valueOf(idGenerator.generateId());
+			this.id.set(newId);
+			InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
+			return Mono.empty();
 		}
 
 		@Override
@@ -316,9 +303,11 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		/** Max time between expiration checks. */
 		private static final int CHECK_PERIOD = 60 * 1000;
 
-		private final Lock lock = new ReentrantLock();
+
+		private final ReentrantLock lock = new ReentrantLock();
 
 		private Instant checkTime = clock.instant().plus(CHECK_PERIOD, ChronoUnit.MILLIS);
+
 
 		public void checkIfNecessary(Instant now) {
 			if (this.checkTime.isBefore(now)) {

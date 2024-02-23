@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,11 @@
 
 package org.springframework.aop.framework;
 
-import java.io.FileNotFoundException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.IntroductionAdvisor;
 import org.springframework.aop.IntroductionInterceptor;
@@ -36,12 +29,6 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.support.DefaultIntroductionAdvisor;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.aop.support.DynamicMethodMatcherPointcut;
-import org.springframework.aop.testfixture.advice.CountingBeforeAdvice;
-import org.springframework.aop.testfixture.advice.MyThrowsHandler;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.aop.testfixture.interceptor.TimestampIntroductionInterceptor;
-import org.springframework.aop.testfixture.mixin.Lockable;
-import org.springframework.aop.testfixture.mixin.LockedException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.FactoryBean;
@@ -49,21 +36,30 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.Person;
-import org.springframework.beans.testfixture.beans.SideEffectBean;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.testfixture.beans.TestApplicationListener;
+import org.springframework.context.TestListener;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.testfixture.TimeStamped;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
 import org.springframework.lang.Nullable;
+import org.springframework.tests.TimeStamped;
+import org.springframework.tests.aop.advice.CountingBeforeAdvice;
+import org.springframework.tests.aop.advice.MyThrowsHandler;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.aop.interceptor.TimestampIntroductionInterceptor;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.Person;
+import org.springframework.tests.sample.beans.SideEffectBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.util.SerializationTestUtils;
+import test.mixin.Lockable;
+import test.mixin.LockedException;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIOException;
+import java.io.FileNotFoundException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.LinkedList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Rod Johnson
@@ -71,7 +67,7 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
  * @author Chris Beams
  * @since 13.03.2003
  */
-class ProxyFactoryBeanTests {
+public class ProxyFactoryBeanTests {
 
 	private static final Class<?> CLASS = ProxyFactoryBeanTests.class;
 	private static final String CLASSNAME = CLASS.getSimpleName();
@@ -92,9 +88,9 @@ class ProxyFactoryBeanTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setUp() throws Exception {
 		DefaultListableBeanFactory parent = new DefaultListableBeanFactory();
-		parent.registerBeanDefinition("target2", new RootBeanDefinition(TestApplicationListener.class));
+		parent.registerBeanDefinition("target2", new RootBeanDefinition(TestListener.class));
 		this.factory = new DefaultListableBeanFactory(parent);
 		new XmlBeanDefinitionReader((BeanDefinitionRegistry) this.factory).loadBeanDefinitions(
 				new ClassPathResource(CONTEXT, getClass()));
@@ -102,25 +98,25 @@ class ProxyFactoryBeanTests {
 
 
 	@Test
-	void testIsDynamicProxyWhenInterfaceSpecified() {
+	public void testIsDynamicProxyWhenInterfaceSpecified() {
 		ITestBean test1 = (ITestBean) factory.getBean("test1");
 		assertThat(Proxy.isProxyClass(test1.getClass())).as("test1 is a dynamic proxy").isTrue();
 	}
 
 	@Test
-	void testIsDynamicProxyWhenInterfaceSpecifiedForPrototype() {
+	public void testIsDynamicProxyWhenInterfaceSpecifiedForPrototype() {
 		ITestBean test1 = (ITestBean) factory.getBean("test2");
 		assertThat(Proxy.isProxyClass(test1.getClass())).as("test2 is a dynamic proxy").isTrue();
 	}
 
 	@Test
-	void testIsDynamicProxyWhenAutodetectingInterfaces() {
+	public void testIsDynamicProxyWhenAutodetectingInterfaces() {
 		ITestBean test1 = (ITestBean) factory.getBean("test3");
 		assertThat(Proxy.isProxyClass(test1.getClass())).as("test3 is a dynamic proxy").isTrue();
 	}
 
 	@Test
-	void testIsDynamicProxyWhenAutodetectingInterfacesForPrototype() {
+	public void testIsDynamicProxyWhenAutodetectingInterfacesForPrototype() {
 		ITestBean test1 = (ITestBean) factory.getBean("test4");
 		assertThat(Proxy.isProxyClass(test1.getClass())).as("test4 is a dynamic proxy").isTrue();
 	}
@@ -130,7 +126,7 @@ class ProxyFactoryBeanTests {
 	 * interceptor chain and targetSource property.
 	 */
 	@Test
-	void testDoubleTargetSourcesAreRejected() {
+	public void testDoubleTargetSourcesAreRejected() {
 		testDoubleTargetSourceIsRejected("doubleTarget");
 		// Now with conversion from arbitrary bean to a TargetSource
 		testDoubleTargetSourceIsRejected("arbitraryTarget");
@@ -139,28 +135,24 @@ class ProxyFactoryBeanTests {
 	private void testDoubleTargetSourceIsRejected(String name) {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(DBL_TARGETSOURCE_CONTEXT, CLASS));
-
-		assertThatExceptionOfType(BeanCreationException.class).as("Should not allow TargetSource to be specified in interceptorNames as well as targetSource property")
-				.isThrownBy(() -> bf.getBean(name))
-				.havingCause()
-				.isInstanceOf(AopConfigException.class)
-				.withMessageContaining("TargetSource");
+		assertThatExceptionOfType(BeanCreationException.class).as("Should not allow TargetSource to be specified in interceptorNames as well as targetSource property").isThrownBy(() ->
+				bf.getBean(name))
+			.withCauseInstanceOf(AopConfigException.class)
+			.satisfies(ex -> assertThat(ex.getCause().getMessage()).contains("TargetSource"));
 	}
 
 	@Test
-	void testTargetSourceNotAtEndOfInterceptorNamesIsRejected() {
+	public void testTargetSourceNotAtEndOfInterceptorNamesIsRejected() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(NOTLAST_TARGETSOURCE_CONTEXT, CLASS));
-
-		assertThatExceptionOfType(BeanCreationException.class).as("TargetSource or non-advised object must be last in interceptorNames")
-				.isThrownBy(() -> bf.getBean("targetSourceNotLast"))
-				.havingCause()
-				.isInstanceOf(AopConfigException.class)
-				.withMessageContaining("interceptorNames");
+		assertThatExceptionOfType(BeanCreationException.class).as("TargetSource or non-advised object must be last in interceptorNames").isThrownBy(() ->
+				bf.getBean("targetSourceNotLast"))
+			.withCauseInstanceOf(AopConfigException.class)
+			.satisfies(ex -> assertThat(ex.getCause().getMessage()).contains("interceptorNames"));
 	}
 
 	@Test
-	void testGetObjectTypeWithDirectTarget() {
+	public void testGetObjectTypeWithDirectTarget() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(TARGETSOURCE_CONTEXT, CLASS));
 
@@ -169,38 +161,34 @@ class ProxyFactoryBeanTests {
 		assertThat(cba.getCalls()).isEqualTo(0);
 
 		ITestBean tb = (ITestBean) bf.getBean("directTarget");
-		assertThat(tb.getName()).isEqualTo("Adam");
+		assertThat(tb.getName().equals("Adam")).isTrue();
 		assertThat(cba.getCalls()).isEqualTo(1);
 
 		ProxyFactoryBean pfb = (ProxyFactoryBean) bf.getBean("&directTarget");
-		assertThat(pfb.getObjectType()).isAssignableTo(TestBean.class);
+		assertThat(TestBean.class.isAssignableFrom(pfb.getObjectType())).as("Has correct object type").isTrue();
 	}
 
 	@Test
-	void testGetObjectTypeWithTargetViaTargetSource() {
+	public void testGetObjectTypeWithTargetViaTargetSource() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(TARGETSOURCE_CONTEXT, CLASS));
 		ITestBean tb = (ITestBean) bf.getBean("viaTargetSource");
-		assertThat(tb.getName()).isEqualTo("Adam");
+		assertThat(tb.getName().equals("Adam")).isTrue();
 		ProxyFactoryBean pfb = (ProxyFactoryBean) bf.getBean("&viaTargetSource");
-		assertThat(pfb.getObjectType()).isAssignableTo(TestBean.class);
+		assertThat(TestBean.class.isAssignableFrom(pfb.getObjectType())).as("Has correct object type").isTrue();
 	}
 
 	@Test
-	void testGetObjectTypeWithNoTargetOrTargetSource() {
+	public void testGetObjectTypeWithNoTargetOrTargetSource() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(TARGETSOURCE_CONTEXT, CLASS));
 
 		ITestBean tb = (ITestBean) bf.getBean("noTarget");
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(tb::getName).withMessage("getName");
+		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
+				tb.getName())
+			.withMessage("getName");
 		FactoryBean<?> pfb = (ProxyFactoryBean) bf.getBean("&noTarget");
-		assertThat(pfb.getObjectType()).isAssignableTo(ITestBean.class);
-	}
-
-	@Test
-	void testGetObjectTypeOnUninitializedFactoryBean() {
-		ProxyFactoryBean pfb = new ProxyFactoryBean();
-		assertThat(pfb.getObjectType()).isNull();
+		assertThat(ITestBean.class.isAssignableFrom(pfb.getObjectType())).as("Has correct object type").isTrue();
 	}
 
 	/**
@@ -208,7 +196,7 @@ class ProxyFactoryBeanTests {
 	 * Interceptors and interfaces and the target are the same.
 	 */
 	@Test
-	void testSingletonInstancesAreEqual() {
+	public void testSingletonInstancesAreEqual() {
 		ITestBean test1 = (ITestBean) factory.getBean("test1");
 		ITestBean test1_1 = (ITestBean) factory.getBean("test1");
 		//assertTrue("Singleton instances ==", test1 == test1_1);
@@ -225,20 +213,20 @@ class ProxyFactoryBeanTests {
 		pc1.addAdvice(1, di);
 		assertThat(pc2.getAdvisors()).isEqualTo(pc1.getAdvisors());
 		assertThat(pc2.getAdvisors().length).as("Now have one more advisor").isEqualTo((oldLength + 1));
-		assertThat(di.getCount()).isEqualTo(0);
+		assertThat(0).isEqualTo(di.getCount());
 		test1.setAge(5);
 		assertThat(test1.getAge()).isEqualTo(test1_1.getAge());
-		assertThat(di.getCount()).isEqualTo(3);
+		assertThat(3).isEqualTo(di.getCount());
 	}
 
 	@Test
-	void testPrototypeInstancesAreNotEqual() {
-		assertThat(factory.getType("prototype")).isAssignableTo(ITestBean.class);
+	public void testPrototypeInstancesAreNotEqual() {
+		assertThat(ITestBean.class.isAssignableFrom(factory.getType("prototype"))).as("Has correct object type").isTrue();
 		ITestBean test2 = (ITestBean) factory.getBean("prototype");
 		ITestBean test2_1 = (ITestBean) factory.getBean("prototype");
-		assertThat(test2).as("Prototype instances !=").isNotSameAs(test2_1);
-		assertThat(test2).as("Prototype instances equal").isEqualTo(test2_1);
-		assertThat(factory.getType("prototype")).isAssignableTo(ITestBean.class);
+		assertThat(test2 != test2_1).as("Prototype instances !=").isTrue();
+		assertThat(test2.equals(test2_1)).as("Prototype instances equal").isTrue();
+		assertThat(ITestBean.class.isAssignableFrom(factory.getType("prototype"))).as("Has correct object type").isTrue();
 	}
 
 	/**
@@ -268,7 +256,7 @@ class ProxyFactoryBeanTests {
 		assertThat(prototype2FirstInstance.getCount()).isEqualTo(INITIAL_COUNT + 1);
 
 		SideEffectBean prototype2SecondInstance = (SideEffectBean) bf.getBean(beanName);
-		assertThat(prototype2FirstInstance).as("Prototypes are not ==").isNotSameAs(prototype2SecondInstance);
+		assertThat(prototype2FirstInstance == prototype2SecondInstance).as("Prototypes are not ==").isFalse();
 		assertThat(prototype2SecondInstance.getCount()).isEqualTo(INITIAL_COUNT);
 		assertThat(prototype2FirstInstance.getCount()).isEqualTo(INITIAL_COUNT + 1);
 
@@ -276,7 +264,7 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testCglibPrototypeInstance() {
+	public void testCglibPrototypeInstance() {
 		Object prototype = testPrototypeInstancesAreIndependent("cglibPrototype");
 		assertThat(AopUtils.isCglibProxy(prototype)).as("It's a cglib proxy").isTrue();
 		assertThat(AopUtils.isJdkDynamicProxy(prototype)).as("It's not a dynamic proxy").isFalse();
@@ -286,24 +274,24 @@ class ProxyFactoryBeanTests {
 	 * Test invoker is automatically added to manipulate target.
 	 */
 	@Test
-	void testAutoInvoker() {
+	public void testAutoInvoker() {
 		String name = "Hieronymous";
 		TestBean target = (TestBean) factory.getBean("test");
 		target.setName(name);
 		ITestBean autoInvoker = (ITestBean) factory.getBean("autoInvoker");
-		assertThat(autoInvoker.getName()).isEqualTo(name);
+		assertThat(autoInvoker.getName().equals(name)).isTrue();
 	}
 
 	@Test
-	void testCanGetFactoryReferenceAndManipulate() {
+	public void testCanGetFactoryReferenceAndManipulate() {
 		ProxyFactoryBean config = (ProxyFactoryBean) factory.getBean("&test1");
-		assertThat(config.getObjectType()).isAssignableTo(ITestBean.class);
-		assertThat(factory.getType("test1")).isAssignableTo(ITestBean.class);
+		assertThat(ITestBean.class.isAssignableFrom(config.getObjectType())).as("Has correct object type").isTrue();
+		assertThat(ITestBean.class.isAssignableFrom(factory.getType("test1"))).as("Has correct object type").isTrue();
 		// Trigger lazy initialization.
 		config.getObject();
 		assertThat(config.getAdvisors().length).as("Have one advisors").isEqualTo(1);
-		assertThat(config.getObjectType()).isAssignableTo(ITestBean.class);
-		assertThat(factory.getType("test1")).isAssignableTo(ITestBean.class);
+		assertThat(ITestBean.class.isAssignableFrom(config.getObjectType())).as("Has correct object type").isTrue();
+		assertThat(ITestBean.class.isAssignableFrom(factory.getType("test1"))).as("Has correct object type").isTrue();
 
 		ITestBean tb = (ITestBean) factory.getBean("test1");
 		// no exception
@@ -311,15 +299,18 @@ class ProxyFactoryBeanTests {
 
 		final Exception ex = new UnsupportedOperationException("invoke");
 		// Add evil interceptor to head of list
-		config.addAdvice(0, (MethodInterceptor) invocation -> {
-			throw ex;
+		config.addAdvice(0, new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation invocation) throws Throwable {
+				throw ex;
+			}
 		});
-		assertThat(config.getAdvisors()).as("Have correct advisor count").hasSize(2);
+		assertThat(config.getAdvisors().length).as("Have correct advisor count").isEqualTo(2);
 
 		ITestBean tb1 = (ITestBean) factory.getBean("test1");
-		assertThatException()
-			.isThrownBy(tb1::toString)
-			.isSameAs(ex);
+		assertThatExceptionOfType(Exception.class).isThrownBy(
+				tb1::toString)
+			.satisfies(thrown -> assertThat(thrown).isSameAs(ex));
 	}
 
 	/**
@@ -327,7 +318,7 @@ class ProxyFactoryBeanTests {
 	 * autowire without ambiguity from target and proxy
 	 */
 	@Test
-	void testTargetAsInnerBean() {
+	public void testTargetAsInnerBean() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(INNER_BEAN_TARGET_CONTEXT, CLASS));
 		ITestBean itb = (ITestBean) bf.getBean("testBean");
@@ -343,7 +334,7 @@ class ProxyFactoryBeanTests {
 	 * Each instance will be independent.
 	 */
 	@Test
-	void testCanAddAndRemoveAspectInterfacesOnPrototype() {
+	public void testCanAddAndRemoveAspectInterfacesOnPrototype() {
 		assertThat(factory.getBean("test2")).as("Shouldn't implement TimeStamped before manipulation")
 				.isNotInstanceOf(TimeStamped.class);
 
@@ -354,31 +345,31 @@ class ProxyFactoryBeanTests {
 		// Add to head of interceptor chain
 		int oldCount = config.getAdvisors().length;
 		config.addAdvisor(0, new DefaultIntroductionAdvisor(ti, TimeStamped.class));
-		assertThat(config.getAdvisors()).hasSize(oldCount + 1);
+		assertThat(config.getAdvisors().length == oldCount + 1).isTrue();
 
 		TimeStamped ts = (TimeStamped) factory.getBean("test2");
 		assertThat(ts.getTimeStamp()).isEqualTo(time);
 
 		// Can remove
 		config.removeAdvice(ti);
-		assertThat(config.getAdvisors()).hasSize(oldCount);
+		assertThat(config.getAdvisors().length == oldCount).isTrue();
 
 		// Check no change on existing object reference
-		assertThat(ts.getTimeStamp()).isEqualTo(time);
+		assertThat(ts.getTimeStamp() == time).isTrue();
 
 		assertThat(factory.getBean("test2")).as("Should no longer implement TimeStamped")
 				.isNotInstanceOf(TimeStamped.class);
 
 		// Now check non-effect of removing interceptor that isn't there
 		config.removeAdvice(new DebugInterceptor());
-		assertThat(config.getAdvisors()).hasSize(oldCount);
+		assertThat(config.getAdvisors().length == oldCount).isTrue();
 
 		ITestBean it = (ITestBean) ts;
 		DebugInterceptor debugInterceptor = new DebugInterceptor();
 		config.addAdvice(0, debugInterceptor);
 		it.getSpouse();
 		// Won't affect existing reference
-		assertThat(debugInterceptor.getCount()).isEqualTo(0);
+		assertThat(debugInterceptor.getCount() == 0).isTrue();
 		it = (ITestBean) factory.getBean("test2");
 		it.getSpouse();
 		assertThat(debugInterceptor.getCount()).isEqualTo(1);
@@ -402,7 +393,7 @@ class ProxyFactoryBeanTests {
 	 * singleton.
 	 */
 	@Test
-	void testCanAddAndRemoveAdvicesOnSingleton() {
+	public void testCanAddAndRemoveAdvicesOnSingleton() {
 		ITestBean it = (ITestBean) factory.getBean("test1");
 		Advised pc = (Advised) it;
 		it.getAge();
@@ -415,22 +406,23 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testMethodPointcuts() {
+	public void testMethodPointcuts() {
 		ITestBean tb = (ITestBean) factory.getBean("pointcuts");
 		PointcutForVoid.reset();
-		assertThat(PointcutForVoid.methodNames).as("No methods intercepted").isEmpty();
+		assertThat(PointcutForVoid.methodNames.isEmpty()).as("No methods intercepted").isTrue();
 		tb.getAge();
-		assertThat(PointcutForVoid.methodNames).as("Not void: shouldn't have intercepted").isEmpty();
+		assertThat(PointcutForVoid.methodNames.isEmpty()).as("Not void: shouldn't have intercepted").isTrue();
 		tb.setAge(1);
 		tb.getAge();
 		tb.setName("Tristan");
 		tb.toString();
-		assertThat(PointcutForVoid.methodNames).as("Recorded wrong number of invocations")
-				.containsExactly("setAge", "setName");
+		assertThat(PointcutForVoid.methodNames.size()).as("Recorded wrong number of invocations").isEqualTo(2);
+		assertThat(PointcutForVoid.methodNames.get(0).equals("setAge")).isTrue();
+		assertThat(PointcutForVoid.methodNames.get(1).equals("setName")).isTrue();
 	}
 
 	@Test
-	void testCanAddThrowsAdviceWithoutAdvisor() {
+	public void testCanAddThrowsAdviceWithoutAdvisor() throws Throwable {
 		DefaultListableBeanFactory f = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(f).loadBeanDefinitions(new ClassPathResource(THROWS_ADVICE_CONTEXT, CLASS));
 		MyThrowsHandler th = (MyThrowsHandler) f.getBean("throwsAdvice");
@@ -444,7 +436,8 @@ class ProxyFactoryBeanTests {
 		assertThat(cba.getCalls()).isEqualTo(2);
 		assertThat(th.getCalls()).isEqualTo(0);
 		Exception expected = new Exception();
-		assertThatException().isThrownBy(() -> echo.echoException(1, expected))
+		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+				echo.echoException(1, expected))
 			.matches(expected::equals);
 		// No throws handler method: count should still be 0
 		assertThat(th.getCalls()).isEqualTo(0);
@@ -463,30 +456,30 @@ class ProxyFactoryBeanTests {
 	// TODO put in sep file to check quality of error message
 	/*
 	@Test
-	void testNoInterceptorNamesWithoutTarget() {
+	public void testNoInterceptorNamesWithoutTarget() {
 		assertThatExceptionOfType(AopConfigurationException.class).as("Should require interceptor names").isThrownBy(() ->
 				ITestBean tb = (ITestBean) factory.getBean("noInterceptorNamesWithoutTarget"));
 	}
 
 	@Test
-	void testNoInterceptorNamesWithTarget() {
+	public void testNoInterceptorNamesWithTarget() {
 		ITestBean tb = (ITestBean) factory.getBean("noInterceptorNamesWithoutTarget");
 	}
 	*/
 
 	@Test
-	void testEmptyInterceptorNames() {
+	public void testEmptyInterceptorNames() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(INVALID_CONTEXT, CLASS));
-		assertThat(bf.getBean("emptyInterceptorNames")).isInstanceOf(ITestBean.class);
-		assertThat(Proxy.isProxyClass(bf.getBean("emptyInterceptorNames").getClass())).isTrue();
+		assertThatExceptionOfType(BeanCreationException.class).as("Interceptor names cannot be empty").isThrownBy(() ->
+				bf.getBean("emptyInterceptorNames"));
 	}
 
 	/**
 	 * Globals must be followed by a target.
 	 */
 	@Test
-	void testGlobalsWithoutTarget() {
+	public void testGlobalsWithoutTarget() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(INVALID_CONTEXT, CLASS));
 		assertThatExceptionOfType(BeanCreationException.class).as("Should require target name").isThrownBy(() ->
@@ -501,31 +494,31 @@ class ProxyFactoryBeanTests {
 	 * to be included in proxiedInterface [].
 	 */
 	@Test
-	void testGlobalsCanAddAspectInterfaces() {
+	public void testGlobalsCanAddAspectInterfaces() {
 		AddedGlobalInterface agi = (AddedGlobalInterface) factory.getBean("autoInvoker");
-		assertThat(agi.globalsAdded()).isEqualTo(-1);
+		assertThat(agi.globalsAdded() == -1).isTrue();
 
 		ProxyFactoryBean pfb = (ProxyFactoryBean) factory.getBean("&validGlobals");
 		// Trigger lazy initialization.
 		pfb.getObject();
 		// 2 globals + 2 explicit
-		assertThat(pfb.getAdvisors()).as("Have 2 globals and 2 explicit advisors").hasSize(3);
+		assertThat(pfb.getAdvisors().length).as("Have 2 globals and 2 explicit advisors").isEqualTo(3);
 
 		ApplicationListener<?> l = (ApplicationListener<?>) factory.getBean("validGlobals");
 		agi = (AddedGlobalInterface) l;
-		assertThat(agi.globalsAdded()).isEqualTo(-1);
+		assertThat(agi.globalsAdded() == -1).isTrue();
 
-		assertThat(factory.getBean("test1")).as("Aspect interface shouldn't be implemented without globals")
+		assertThat(factory.getBean("test1")).as("Aspect interface should't be implemeneted without globals")
 				.isNotInstanceOf(AddedGlobalInterface.class);
 	}
 
 	@Test
-	void testSerializableSingletonProxy() throws Exception {
+	public void testSerializableSingletonProxy() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(SERIALIZATION_CONTEXT, CLASS));
 		Person p = (Person) bf.getBean("serializableSingleton");
 		assertThat(bf.getBean("serializableSingleton")).as("Should be a Singleton").isSameAs(p);
-		Person p2 = SerializationTestUtils.serializeAndDeserialize(p);
+		Person p2 = (Person) SerializationTestUtils.serializeAndDeserialize(p);
 		assertThat(p2).isEqualTo(p);
 		assertThat(p2).isNotSameAs(p);
 		assertThat(p2.getName()).isEqualTo("serializableSingleton");
@@ -543,24 +536,24 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testSerializablePrototypeProxy() throws Exception {
+	public void testSerializablePrototypeProxy() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(SERIALIZATION_CONTEXT, CLASS));
 		Person p = (Person) bf.getBean("serializablePrototype");
 		assertThat(bf.getBean("serializablePrototype")).as("Should not be a Singleton").isNotSameAs(p);
-		Person p2 = SerializationTestUtils.serializeAndDeserialize(p);
+		Person p2 = (Person) SerializationTestUtils.serializeAndDeserialize(p);
 		assertThat(p2).isEqualTo(p);
 		assertThat(p2).isNotSameAs(p);
 		assertThat(p2.getName()).isEqualTo("serializablePrototype");
 	}
 
 	@Test
-	void testSerializableSingletonProxyFactoryBean() throws Exception {
+	public void testSerializableSingletonProxyFactoryBean() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(SERIALIZATION_CONTEXT, CLASS));
 		Person p = (Person) bf.getBean("serializableSingleton");
 		ProxyFactoryBean pfb = (ProxyFactoryBean) bf.getBean("&serializableSingleton");
-		ProxyFactoryBean pfb2 = SerializationTestUtils.serializeAndDeserialize(pfb);
+		ProxyFactoryBean pfb2 = (ProxyFactoryBean) SerializationTestUtils.serializeAndDeserialize(pfb);
 		Person p2 = (Person) pfb2.getObject();
 		assertThat(p2).isEqualTo(p);
 		assertThat(p2).isNotSameAs(p);
@@ -568,7 +561,7 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testProxyNotSerializableBecauseOfAdvice() throws Exception {
+	public void testProxyNotSerializableBecauseOfAdvice() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(SERIALIZATION_CONTEXT, CLASS));
 		Person p = (Person) bf.getBean("interceptorNotSerializableSingleton");
@@ -576,7 +569,7 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testPrototypeAdvisor() {
+	public void testPrototypeAdvisor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(CONTEXT, CLASS));
 
@@ -591,13 +584,14 @@ class ProxyFactoryBeanTests {
 
 		((Lockable) bean1).lock();
 
-		assertThatExceptionOfType(LockedException.class).isThrownBy(() -> bean1.setAge(5));
+		assertThatExceptionOfType(LockedException.class).isThrownBy(() ->
+				bean1.setAge(5));
 
-		bean2.setAge(6); //do not expect LockedException
+		bean2.setAge(6); //do not expect LockedException"
 	}
 
 	@Test
-	void testPrototypeInterceptorSingletonTarget() {
+	public void testPrototypeInterceptorSingletonTarget() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(CONTEXT, CLASS));
 
@@ -611,7 +605,8 @@ class ProxyFactoryBeanTests {
 
 		((Lockable) bean1).lock();
 
-		assertThatExceptionOfType(LockedException.class).isThrownBy(() -> bean1.setAge(5));
+		assertThatExceptionOfType(LockedException.class).isThrownBy(() ->
+				bean1.setAge(5));
 
 		// do not expect LockedException
 		bean2.setAge(6);
@@ -622,14 +617,14 @@ class ProxyFactoryBeanTests {
 	 * Checks for correct use of getType() by bean factory.
 	 */
 	@Test
-	void testInnerBeanTargetUsingAutowiring() {
+	public void testInnerBeanTargetUsingAutowiring() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(AUTOWIRING_CONTEXT, CLASS));
 		bf.getBean("testBean");
 	}
 
 	@Test
-	void testFrozenFactoryBean() {
+	public void testFrozenFactoryBean() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(new ClassPathResource(FROZEN_CONTEXT, CLASS));
 
@@ -638,43 +633,13 @@ class ProxyFactoryBeanTests {
 	}
 
 	@Test
-	void testDetectsInterfaces() {
+	public void testDetectsInterfaces() throws Exception {
 		ProxyFactoryBean fb = new ProxyFactoryBean();
 		fb.setTarget(new TestBean());
 		fb.addAdvice(new DebugInterceptor());
 		fb.setBeanFactory(new DefaultListableBeanFactory());
-
 		ITestBean proxy = (ITestBean) fb.getObject();
 		assertThat(AopUtils.isJdkDynamicProxy(proxy)).isTrue();
-	}
-
-	@Test
-	void testWithInterceptorNames() {
-		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.registerSingleton("debug", new DebugInterceptor());
-
-		ProxyFactoryBean fb = new ProxyFactoryBean();
-		fb.setTarget(new TestBean());
-		fb.setInterceptorNames("debug");
-		fb.setBeanFactory(bf);
-
-		Advised proxy = (Advised) fb.getObject();
-		assertThat(proxy.getAdvisorCount()).isEqualTo(1);
-	}
-
-	@Test
-	void testWithLateInterceptorNames() {
-		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.registerSingleton("debug", new DebugInterceptor());
-
-		ProxyFactoryBean fb = new ProxyFactoryBean();
-		fb.setTarget(new TestBean());
-		fb.setBeanFactory(bf);
-		fb.getObject();
-
-		fb.setInterceptorNames("debug");
-		Advised proxy = (Advised) fb.getObject();
-		assertThat(proxy.getAdvisorCount()).isEqualTo(1);
 	}
 
 
@@ -684,21 +649,24 @@ class ProxyFactoryBeanTests {
 	@SuppressWarnings("serial")
 	public static class PointcutForVoid extends DefaultPointcutAdvisor {
 
-		public static List<String> methodNames = new ArrayList<>();
+		public static List<String> methodNames = new LinkedList<>();
 
 		public static void reset() {
 			methodNames.clear();
 		}
 
 		public PointcutForVoid() {
-			setAdvice((MethodInterceptor) invocation -> {
-				methodNames.add(invocation.getMethod().getName());
-				return invocation.proceed();
+			setAdvice(new MethodInterceptor() {
+				@Override
+				public Object invoke(MethodInvocation invocation) throws Throwable {
+					methodNames.add(invocation.getMethod().getName());
+					return invocation.proceed();
+				}
 			});
 			setPointcut(new DynamicMethodMatcherPointcut() {
 				@Override
 				public boolean matches(Method m, @Nullable Class<?> targetClass, Object... args) {
-					return m.getReturnType() == void.class;
+					return m.getReturnType() == Void.TYPE;
 				}
 			});
 		}
@@ -713,7 +681,6 @@ class ProxyFactoryBeanTests {
 			this.tb = tb;
 		}
 	}
-
 
 	/**
 	 * Aspect interface
@@ -739,7 +706,7 @@ class ProxyFactoryBeanTests {
 		@Override
 		public Object invoke(MethodInvocation mi) throws Throwable {
 			if (mi.getMethod().getDeclaringClass().equals(AddedGlobalInterface.class)) {
-				return -1;
+				return new Integer(-1);
 			}
 			return mi.proceed();
 		}

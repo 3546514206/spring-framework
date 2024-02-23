@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,35 +18,30 @@ package org.springframework.web.context.request;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.ScopeNotActiveException;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.CountingTestBean;
-import org.springframework.beans.testfixture.beans.DerivedTestBean;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.beans.testfixture.beans.factory.DummyFactory;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.tests.sample.beans.DerivedTestBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.tests.sample.beans.factory.DummyFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Juergen Hoeller
  */
-class RequestScopedProxyTests {
+public class RequestScopedProxyTests {
 
 	private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.beanFactory.registerScope("request", new RequestScope());
 		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this.beanFactory);
 		reader.loadBeanDefinitions(new ClassPathResource("requestScopedProxyTests.xml", getClass()));
@@ -55,7 +50,7 @@ class RequestScopedProxyTests {
 
 
 	@Test
-	void testGetFromScope() {
+	public void testGetFromScope() throws Exception {
 		String name = "requestScopedObject";
 		TestBean bean = (TestBean) this.beanFactory.getBean(name);
 		assertThat(AopUtils.isCglibProxy(bean)).isTrue();
@@ -80,7 +75,7 @@ class RequestScopedProxyTests {
 	}
 
 	@Test
-	void testGetFromScopeThroughDynamicProxy() {
+	public void testGetFromScopeThroughDynamicProxy() throws Exception {
 		String name = "requestScopedProxy";
 		ITestBean bean = (ITestBean) this.beanFactory.getBean(name);
 		// assertTrue(AopUtils.isJdkDynamicProxy(bean));
@@ -105,7 +100,7 @@ class RequestScopedProxyTests {
 	}
 
 	@Test
-	void testDestructionAtRequestCompletion() {
+	public void testDestructionAtRequestCompletion() throws Exception {
 		String name = "requestScopedDisposableObject";
 		DerivedTestBean bean = (DerivedTestBean) this.beanFactory.getBean(name);
 		assertThat(AopUtils.isCglibProxy(bean)).isTrue();
@@ -131,7 +126,7 @@ class RequestScopedProxyTests {
 	}
 
 	@Test
-	void testGetFromFactoryBeanInScope() {
+	public void testGetFromFactoryBeanInScope() throws Exception {
 		String name = "requestScopedFactoryBean";
 		TestBean bean = (TestBean) this.beanFactory.getBean(name);
 		assertThat(AopUtils.isCglibProxy(bean)).isTrue();
@@ -153,7 +148,7 @@ class RequestScopedProxyTests {
 	}
 
 	@Test
-	void testGetInnerBeanFromScope() {
+	public void testGetInnerBeanFromScope() throws Exception {
 		TestBean bean = (TestBean) this.beanFactory.getBean("outerBean");
 		assertThat(AopUtils.isAopProxy(bean)).isFalse();
 		assertThat(AopUtils.isCglibProxy(bean.getSpouse())).isTrue();
@@ -177,7 +172,7 @@ class RequestScopedProxyTests {
 	}
 
 	@Test
-	void testGetAnonymousInnerBeanFromScope() {
+	public void testGetAnonymousInnerBeanFromScope() throws Exception {
 		TestBean bean = (TestBean) this.beanFactory.getBean("outerBean");
 		assertThat(AopUtils.isAopProxy(bean)).isFalse();
 		assertThat(AopUtils.isCglibProxy(bean.getSpouse())).isTrue();
@@ -200,32 +195,6 @@ class RequestScopedProxyTests {
 		}
 		finally {
 			RequestContextHolder.setRequestAttributes(null);
-		}
-	}
-
-	@Test
-	void scopeNotAvailable() {
-		assertThatExceptionOfType(ScopeNotActiveException.class).isThrownBy(
-				() -> this.beanFactory.getBean(CountingTestBean.class).absquatulate());
-
-		ObjectProvider<CountingTestBean> beanProvider = this.beanFactory.getBeanProvider(CountingTestBean.class);
-		assertThatExceptionOfType(ScopeNotActiveException.class).isThrownBy(() -> beanProvider.getObject().absquatulate());
-		beanProvider.ifAvailable(TestBean::absquatulate);
-		beanProvider.ifUnique(TestBean::absquatulate);
-
-		ObjectProvider<CountingTestBean> provider = this.beanFactory.createBean(ProviderBean.class).provider;
-		assertThatExceptionOfType(ScopeNotActiveException.class).isThrownBy(() -> provider.getObject().absquatulate());
-		provider.ifAvailable(TestBean::absquatulate);
-		provider.ifUnique(TestBean::absquatulate);
-	}
-
-
-	public static class ProviderBean {
-
-		public ObjectProvider<CountingTestBean> provider;
-
-		public ProviderBean(ObjectProvider<CountingTestBean> provider) {
-			this.provider = provider;
 		}
 	}
 

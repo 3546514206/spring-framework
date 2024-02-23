@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 package org.springframework.aop.config;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.testfixture.beans.ITestBean;
+import org.springframework.tests.sample.beans.ITestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,10 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Chris Beams
  */
-class AopNamespaceHandlerProxyTargetClassTests extends AopNamespaceHandlerTests {
+public class AopNamespaceHandlerProxyTargetClassTests extends AopNamespaceHandlerTests {
 
 	@Test
-	void testIsClassProxy() {
+	public void testIsClassProxy() {
 		ITestBean bean = getTestBean();
 		assertThat(AopUtils.isCglibProxy(bean)).as("Should be a CGLIB proxy").isTrue();
 		assertThat(((Advised) bean).isExposeProxy()).as("Should expose proxy").isTrue();

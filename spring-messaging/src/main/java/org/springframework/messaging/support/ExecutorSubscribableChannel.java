@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.messaging.support;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -87,8 +86,8 @@ public class ExecutorSubscribableChannel extends AbstractSubscribableChannel {
 	}
 
 	private void updateExecutorInterceptorsFor(ChannelInterceptor interceptor) {
-		if (interceptor instanceof ExecutorChannelInterceptor executorChannelInterceptor) {
-			this.executorInterceptors.add(executorChannelInterceptor);
+		if (interceptor instanceof ExecutorChannelInterceptor) {
+			this.executorInterceptors.add((ExecutorChannelInterceptor) interceptor);
 		}
 	}
 
@@ -97,18 +96,11 @@ public class ExecutorSubscribableChannel extends AbstractSubscribableChannel {
 	public boolean sendInternal(Message<?> message, long timeout) {
 		for (MessageHandler handler : getSubscribers()) {
 			SendTask sendTask = new SendTask(message, handler);
-			if (this.executor != null) {
-				try {
-					this.executor.execute(sendTask);
-				}
-				catch (RejectedExecutionException ex) {
-					// Probably on shutdown -> run send task locally instead
-					sendTask.run();
-				}
+			if (this.executor == null) {
+				sendTask.run();
 			}
 			else {
-				// No executor configured -> always run send tasks locally
-				sendTask.run();
+				this.executor.execute(sendTask);
 			}
 		}
 		return true;
@@ -154,8 +146,8 @@ public class ExecutorSubscribableChannel extends AbstractSubscribableChannel {
 			}
 			catch (Exception ex) {
 				triggerAfterMessageHandled(message, ex);
-				if (ex instanceof MessagingException messagingException) {
-					throw messagingException;
+				if (ex instanceof MessagingException) {
+					throw (MessagingException) ex;
 				}
 				String description = "Failed to handle " + message + " to " + this + " in " + this.messageHandler;
 				throw new MessageDeliveryException(message, description, ex);

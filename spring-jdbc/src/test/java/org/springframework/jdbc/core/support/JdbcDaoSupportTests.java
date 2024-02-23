@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,11 +32,11 @@ import static org.mockito.Mockito.mock;
  * @author Juergen Hoeller
  * @since 30.07.2003
  */
-class JdbcDaoSupportTests {
+public class JdbcDaoSupportTests {
 
 	@Test
-	void testJdbcDaoSupportWithDataSource() {
-		DataSource ds = mock();
+	public void testJdbcDaoSupportWithDataSource() throws Exception {
+		DataSource ds = mock(DataSource.class);
 		final List<String> test = new ArrayList<>();
 		JdbcDaoSupport dao = new JdbcDaoSupport() {
 			@Override
@@ -48,11 +48,11 @@ class JdbcDaoSupportTests {
 		dao.afterPropertiesSet();
 		assertThat(dao.getDataSource()).as("Correct DataSource").isEqualTo(ds);
 		assertThat(dao.getJdbcTemplate().getDataSource()).as("Correct JdbcTemplate").isEqualTo(ds);
-		assertThat(test).as("initDao called").hasSize(1);
+		assertThat(test.size()).as("initDao called").isEqualTo(1);
 	}
 
 	@Test
-	void testJdbcDaoSupportWithJdbcTemplate() {
+	public void testJdbcDaoSupportWithJdbcTemplate() throws Exception {
 		JdbcTemplate template = new JdbcTemplate();
 		final List<String> test = new ArrayList<>();
 		JdbcDaoSupport dao = new JdbcDaoSupport() {
@@ -64,7 +64,7 @@ class JdbcDaoSupportTests {
 		dao.setJdbcTemplate(template);
 		dao.afterPropertiesSet();
 		assertThat(template).as("Correct JdbcTemplate").isEqualTo(dao.getJdbcTemplate());
-		assertThat(test).as("initDao called").hasSize(1);
+		assertThat(test.size()).as("initDao called").isEqualTo(1);
 	}
 
 }

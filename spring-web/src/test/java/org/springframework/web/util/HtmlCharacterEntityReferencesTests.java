@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,11 @@
 
 package org.springframework.web.util;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StreamTokenizer;
-import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,12 +28,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Martin Kersten
  * @author Juergen Hoeller
  */
-class HtmlCharacterEntityReferencesTests {
+public class HtmlCharacterEntityReferencesTests {
 
 	private static final String DTD_FILE = "HtmlCharacterEntityReferences.dtd";
 
 	@Test
-	void testSupportsAllCharacterEntityReferencesDefinedByHtml() {
+	public void testSupportsAllCharacterEntityReferencesDefinedByHtml() {
 		HtmlCharacterEntityReferences references = new HtmlCharacterEntityReferences();
 		Map<Integer, String> charactersMap = getReferenceCharacterMap();
 		for (int character = 0; character < 10000; character++) {
@@ -81,7 +76,7 @@ class HtmlCharacterEntityReferencesTests {
 
 	// SPR-9293
 	@Test
-	void testConvertToReferenceUTF8() {
+	public void testConvertToReferenceUTF8() {
 		HtmlCharacterEntityReferences entityReferences = new HtmlCharacterEntityReferences();
 		String utf8 = "UTF-8";
 		assertThat(entityReferences.convertToReference('<', utf8)).isEqualTo("&lt;");
@@ -99,7 +94,7 @@ class HtmlCharacterEntityReferencesTests {
 		while (entityIterator.hasNext()) {
 			int character = entityIterator.getReferredCharacter();
 			String entityName = entityIterator.nextEntry();
-			referencedCharactersMap.put(character, entityName);
+			referencedCharactersMap.put(new Integer(character), entityName);
 		}
 		return referencedCharactersMap;
 	}
@@ -119,7 +114,7 @@ class HtmlCharacterEntityReferencesTests {
 				if (inputStream == null) {
 					throw new IOException("Cannot find definition resource [" + DTD_FILE + "]");
 				}
-				tokenizer = new StreamTokenizer(new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)));
+				tokenizer = new StreamTokenizer(new BufferedReader(new InputStreamReader(inputStream, "UTF-8")));
 			}
 			catch (IOException ex) {
 				throw new IllegalStateException("Failed to open definition resource [" + DTD_FILE + "]");
@@ -175,7 +170,7 @@ class HtmlCharacterEntityReferencesTests {
 		private int nextReferredCharacterId() throws IOException {
 			String reference = nextWordToken();
 			if (reference != null && reference.startsWith("&#") && reference.endsWith(";")) {
-				return Integer.parseInt(reference, 2, reference.length() - 1, 10);
+				return Integer.parseInt(reference.substring(2, reference.length() - 1));
 			}
 			return -1;
 		}

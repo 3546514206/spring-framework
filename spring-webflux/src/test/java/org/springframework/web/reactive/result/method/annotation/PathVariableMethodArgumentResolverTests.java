@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,38 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.annotation.SynthesizingMethodParameter;
 import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.support.ConfigurableWebBindingInitializer;
 import org.springframework.web.reactive.BindingContext;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.server.ServerErrorException;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link PathVariableMethodArgumentResolver}.
+ * Unit tests for {@link PathVariableMethodArgumentResolver}.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  */
-class PathVariableMethodArgumentResolverTests {
+public class PathVariableMethodArgumentResolverTests {
 
 	private PathVariableMethodArgumentResolver resolver;
 
@@ -62,7 +61,7 @@ class PathVariableMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		this.resolver = new PathVariableMethodArgumentResolver(null, ReactiveAdapterRegistry.getSharedInstance());
 
 		Method method = ReflectionUtils.findMethod(getClass(), "handle", (Class<?>[]) null);
@@ -75,7 +74,7 @@ class PathVariableMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		assertThat(this.resolver.supportsParameter(this.paramNamedString)).isTrue();
 		assertThat(this.resolver.supportsParameter(this.paramString)).isFalse();
 		assertThatIllegalStateException().isThrownBy(() ->
@@ -84,7 +83,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgument() {
+	public void resolveArgument() {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("name", "value");
 		this.exchange.getAttributes().put(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriTemplateVars);
@@ -96,7 +95,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentNotRequired() {
+	public void resolveArgumentNotRequired() {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("name", "value");
 		this.exchange.getAttributes().put(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriTemplateVars);
@@ -108,7 +107,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentWrappedAsOptional() {
+	public void resolveArgumentWrappedAsOptional() {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("name", "value");
 		this.exchange.getAttributes().put(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriTemplateVars);
@@ -123,7 +122,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void handleMissingValue() {
+	public void handleMissingValue() {
 		BindingContext bindingContext = new BindingContext();
 		Mono<Object> mono = this.resolver.resolveArgument(this.paramNamedString, bindingContext, this.exchange);
 		StepVerifier.create(mono)
@@ -133,7 +132,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void nullIfNotRequired() {
+	public void nullIfNotRequired() {
 		BindingContext bindingContext = new BindingContext();
 		Mono<Object> mono = this.resolver.resolveArgument(this.paramNotRequired, bindingContext, this.exchange);
 		StepVerifier.create(mono)
@@ -143,7 +142,7 @@ class PathVariableMethodArgumentResolverTests {
 	}
 
 	@Test
-	void wrapEmptyWithOptional() {
+	public void wrapEmptyWithOptional() {
 		BindingContext bindingContext = new BindingContext();
 		Mono<Object> mono = this.resolver.resolveArgument(this.paramOptional, bindingContext, this.exchange);
 
@@ -151,7 +150,7 @@ class PathVariableMethodArgumentResolverTests {
 				.consumeNextWith(value -> {
 					boolean condition = value instanceof Optional;
 					assertThat(condition).isTrue();
-					assertThat(((Optional<?>) value)).isNotPresent();
+					assertThat(((Optional<?>) value).isPresent()).isFalse();
 				})
 				.expectComplete()
 				.verify();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,19 @@
 package org.springframework.context;
 
 /**
- * An extension of the {@link Lifecycle} interface for those objects that require
- * to be started upon {@code ApplicationContext} refresh and/or shutdown in a
- * particular order.
- *
- * <p>The {@link #isAutoStartup()} return value indicates whether this object should
+ * An extension of the {@link Lifecycle} interface for those objects that require to
+ * be started upon ApplicationContext refresh and/or shutdown in a particular order.
+ * The {@link #isAutoStartup()} return value indicates whether this object should
  * be started at the time of a context refresh. The callback-accepting
  * {@link #stop(Runnable)} method is useful for objects that have an asynchronous
  * shutdown process. Any implementation of this interface <i>must</i> invoke the
  * callback's {@code run()} method upon shutdown completion to avoid unnecessary
- * delays in the overall {@code ApplicationContext} shutdown.
+ * delays in the overall ApplicationContext shutdown.
  *
  * <p>This interface extends {@link Phased}, and the {@link #getPhase()} method's
- * return value indicates the phase within which this {@code Lifecycle} component
- * should be started and stopped. The startup process begins with the <i>lowest</i>
- * phase value and ends with the <i>highest</i> phase value ({@code Integer.MIN_VALUE}
+ * return value indicates the phase within which this Lifecycle component should
+ * be started and stopped. The startup process begins with the <i>lowest</i> phase
+ * value and ends with the <i>highest</i> phase value ({@code Integer.MIN_VALUE}
  * is the lowest possible, and {@code Integer.MAX_VALUE} is the highest possible).
  * The shutdown process will apply the reverse order. Any components with the
  * same value will be arbitrarily ordered within the same phase.
@@ -46,11 +44,9 @@ package org.springframework.context;
  *
  * <p>Any {@code Lifecycle} components within the context that do not also
  * implement {@code SmartLifecycle} will be treated as if they have a phase
- * value of {@code 0}. This allows a {@code SmartLifecycle} component to start
- * before those {@code Lifecycle} components if the {@code SmartLifecycle}
- * component has a negative phase value, or the {@code SmartLifecycle} component
- * may start after those {@code Lifecycle} components if the {@code SmartLifecycle}
- * component has a positive phase value.
+ * value of 0. That way a {@code SmartLifecycle} implementation may start
+ * before those {@code Lifecycle} components if it has a negative phase value,
+ * or it may start after those components if it has a positive phase value.
  *
  * <p>Note that, due to the auto-startup support in {@code SmartLifecycle}, a
  * {@code SmartLifecycle} bean instance will usually get initialized on startup
@@ -59,7 +55,6 @@ package org.springframework.context;
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0
  * @see LifecycleProcessor
  * @see ConfigurableApplicationContext
@@ -68,16 +63,13 @@ public interface SmartLifecycle extends Lifecycle, Phased {
 
 	/**
 	 * The default phase for {@code SmartLifecycle}: {@code Integer.MAX_VALUE}.
-	 * <p>This is different from the common phase {@code 0} associated with regular
+	 * <p>This is different from the common phase 0 associated with regular
 	 * {@link Lifecycle} implementations, putting the typically auto-started
-	 * {@code SmartLifecycle} beans into a later startup phase and an earlier
-	 * shutdown phase.
-	 * <p>Note that certain {@code SmartLifecycle} components come with a different
-	 * default phase: e.g. executors/schedulers with {@code Integer.MAX_VALUE / 2}.
-	 * @since 5.1
+	 * {@code SmartLifecycle} beans into a separate later shutdown phase.
+	 *
 	 * @see #getPhase()
-	 * @see org.springframework.scheduling.concurrent.ExecutorConfigurationSupport#DEFAULT_PHASE
-	 * @see org.springframework.context.support.DefaultLifecycleProcessor#setTimeoutPerShutdownPhase
+	 * @see org.springframework.context.support.DefaultLifecycleProcessor#getPhase(Lifecycle)
+	 * @since 5.1
 	 */
 	int DEFAULT_PHASE = Integer.MAX_VALUE;
 
@@ -124,8 +116,7 @@ public interface SmartLifecycle extends Lifecycle, Phased {
 	/**
 	 * Return the phase that this lifecycle object is supposed to run in.
 	 * <p>The default implementation returns {@link #DEFAULT_PHASE} in order to
-	 * let {@code stop()} callbacks execute before regular {@code Lifecycle}
-	 * implementations.
+	 * let stop callbacks execute after regular {@code Lifecycle} implementations.
 	 * @see #isAutoStartup()
 	 * @see #start()
 	 * @see #stop(Runnable)

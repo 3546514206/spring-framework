@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,17 @@
 
 package org.springframework.context.annotation;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
+import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.index.CandidateComponentsIndex;
 import org.springframework.context.index.CandidateComponentsIndexLoader;
-import org.springframework.core.SpringProperties;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
@@ -48,29 +38,26 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.ClassFormatException;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Indexed;
-import org.springframework.stereotype.Repository;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.*;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.util.*;
+
 /**
- * A component provider that scans for candidate components starting from a
- * specified base package. Can use the {@linkplain CandidateComponentsIndex component
- * index}, if it is available, and scans the classpath otherwise.
- *
- * <p>Candidate components are identified by applying exclude and include filters.
- * {@link AnnotationTypeFilter} and {@link AssignableTypeFilter} include filters
- * for an annotation/target-type that is annotated with {@link Indexed} are
+ * A component provider that provides candidate components from a base package. Can
+ * use {@link CandidateComponentsIndex the index} if it is available of scans the
+ * classpath otherwise. Candidate components are identified by applying exclude and
+ * include filters. {@link AnnotationTypeFilter}, {@link AssignableTypeFilter} include
+ * filters on an annotation/superclass that are annotated with {@link Indexed} are
  * supported: if any other include filter is specified, the index is ignored and
  * classpath scanning is used instead.
  *
@@ -83,38 +70,24 @@ import org.springframework.util.ClassUtils;
  * @author Ramnivas Laddad
  * @author Chris Beams
  * @author Stephane Nicoll
- * @author Sam Brannen
  * @since 2.5
  * @see org.springframework.core.type.classreading.MetadataReaderFactory
  * @see org.springframework.core.type.AnnotationMetadata
  * @see ScannedGenericBeanDefinition
  * @see CandidateComponentsIndex
  */
-@SuppressWarnings("removal") // components index
 public class ClassPathScanningCandidateComponentProvider implements EnvironmentCapable, ResourceLoaderAware {
 
 	static final String DEFAULT_RESOURCE_PATTERN = "**/*.class";
-
-	/**
-	 * System property that instructs Spring to ignore class format exceptions during
-	 * classpath scanning, in particular for unsupported class file versions.
-	 * By default, such a class format mismatch leads to a classpath scanning failure.
-	 * @since 6.1.2
-	 * @see ClassFormatException
-	 */
-	public static final String IGNORE_CLASSFORMAT_PROPERTY_NAME = "spring.classformat.ignore";
-
-	private static final boolean shouldIgnoreClassFormatException =
-			SpringProperties.getFlag(IGNORE_CLASSFORMAT_PROPERTY_NAME);
 
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	private String resourcePattern = DEFAULT_RESOURCE_PATTERN;
 
-	private final List<TypeFilter> includeFilters = new ArrayList<>();
+	private final List<TypeFilter> includeFilters = new LinkedList<>();
 
-	private final List<TypeFilter> excludeFilters = new ArrayList<>();
+	private final List<TypeFilter> excludeFilters = new LinkedList<>();
 
 	@Nullable
 	private Environment environment;
@@ -216,10 +189,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * {@link Component @Component} meta-annotation including the
 	 * {@link Repository @Repository}, {@link Service @Service}, and
 	 * {@link Controller @Controller} stereotype annotations.
-	 * <p>Also supports Jakarta EE's {@link jakarta.annotation.ManagedBean} and
-	 * JSR-330's {@link jakarta.inject.Named} annotations (as well as their
-	 * pre-Jakarta {@code javax.annotation.ManagedBean} and {@code javax.inject.Named}
-	 * equivalents), if available.
+	 * <p>Also supports Java EE 6's {@link javax.annotation.ManagedBean} and
+	 * JSR-330's {@link javax.inject.Named} annotations, if available.
+	 *
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
@@ -227,27 +199,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
-					((Class<? extends Annotation>) ClassUtils.forName("jakarta.annotation.ManagedBean", cl)), false));
-			logger.trace("JSR-250 'jakarta.annotation.ManagedBean' found and supported for component scanning");
-		}
-		catch (ClassNotFoundException ex) {
-			// JSR-250 1.1 API (as included in Jakarta EE) not available - simply skip.
-		}
-		try {
-			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("javax.annotation.ManagedBean", cl)), false));
 			logger.trace("JSR-250 'javax.annotation.ManagedBean' found and supported for component scanning");
 		}
 		catch (ClassNotFoundException ex) {
-			// JSR-250 1.1 API not available - simply skip.
-		}
-		try {
-			this.includeFilters.add(new AnnotationTypeFilter(
-					((Class<? extends Annotation>) ClassUtils.forName("jakarta.inject.Named", cl)), false));
-			logger.trace("JSR-330 'jakarta.inject.Named' annotation found and supported for component scanning");
-		}
-		catch (ClassNotFoundException ex) {
-			// JSR-330 API (as included in Jakarta EE) not available - simply skip.
+			// JSR-250 1.1 API (as included in Java EE 6) not available - simply skip.
 		}
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
@@ -339,7 +295,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 
 
 	/**
-	 * Scan the component index or class path for candidate components.
+	 * Scan the class path for candidate components.
 	 * @param basePackage the package to check for annotated classes
 	 * @return a corresponding Set of autodetected bean definitions
 	 */
@@ -353,7 +309,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	}
 
 	/**
-	 * Determine if the component index can be used by this instance.
+	 * Determine if the index can be used by this instance.
 	 * @return {@code true} if the index is available and the configuration of this
 	 * instance is supported by it, {@code false} otherwise
 	 * @since 5.0
@@ -375,14 +331,13 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @see #extractStereotype(TypeFilter)
 	 */
 	private boolean indexSupportsIncludeFilter(TypeFilter filter) {
-		if (filter instanceof AnnotationTypeFilter annotationTypeFilter) {
-			Class<? extends Annotation> annotationType = annotationTypeFilter.getAnnotationType();
-			return (AnnotationUtils.isAnnotationDeclaredLocally(Indexed.class, annotationType) ||
-					annotationType.getName().startsWith("jakarta.") ||
-					annotationType.getName().startsWith("javax."));
+		if (filter instanceof AnnotationTypeFilter) {
+			Class<? extends Annotation> annotation = ((AnnotationTypeFilter) filter).getAnnotationType();
+			return (AnnotationUtils.isAnnotationDeclaredLocally(Indexed.class, annotation) ||
+					annotation.getName().startsWith("javax."));
 		}
-		if (filter instanceof AssignableTypeFilter assignableTypeFilter) {
-			Class<?> target = assignableTypeFilter.getTargetType();
+		if (filter instanceof AssignableTypeFilter) {
+			Class<?> target = ((AssignableTypeFilter) filter).getTargetType();
 			return AnnotationUtils.isAnnotationDeclaredLocally(Indexed.class, target);
 		}
 		return false;
@@ -397,11 +352,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@Nullable
 	private String extractStereotype(TypeFilter filter) {
-		if (filter instanceof AnnotationTypeFilter annotationTypeFilter) {
-			return annotationTypeFilter.getAnnotationType().getName();
+		if (filter instanceof AnnotationTypeFilter) {
+			return ((AnnotationTypeFilter) filter).getAnnotationType().getName();
 		}
-		if (filter instanceof AssignableTypeFilter assignableTypeFilter) {
-			return assignableTypeFilter.getTargetType().getName();
+		if (filter instanceof AssignableTypeFilter) {
+			return ((AssignableTypeFilter) filter).getTargetType().getName();
 		}
 		return null;
 	}
@@ -422,15 +377,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			for (String type : types) {
 				MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(type);
 				if (isCandidateComponent(metadataReader)) {
-					ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
-					sbd.setSource(metadataReader.getResource());
+					AnnotatedGenericBeanDefinition sbd = new AnnotatedGenericBeanDefinition(
+							metadataReader.getAnnotationMetadata());
 					if (isCandidateComponent(sbd)) {
 						if (debugEnabled) {
 							logger.debug("Using candidate component class from index: " + type);
 						}
 						candidates.add(sbd);
-					}
-					else {
+					} else {
 						if (debugEnabled) {
 							logger.debug("Ignored because not a concrete top-level class: " + type);
 						}
@@ -458,56 +412,39 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
 			for (Resource resource : resources) {
-				String filename = resource.getFilename();
-				if (filename != null && filename.contains(ClassUtils.CGLIB_CLASS_SEPARATOR)) {
-					// Ignore CGLIB-generated classes in the classpath
-					continue;
-				}
 				if (traceEnabled) {
 					logger.trace("Scanning " + resource);
 				}
-				try {
-					MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
-					if (isCandidateComponent(metadataReader)) {
-						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
-						sbd.setSource(resource);
-						if (isCandidateComponent(sbd)) {
-							if (debugEnabled) {
-								logger.debug("Identified candidate component class: " + resource);
+				if (resource.isReadable()) {
+					try {
+						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						if (isCandidateComponent(metadataReader)) {
+							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
+							sbd.setResource(resource);
+							sbd.setSource(resource);
+							if (isCandidateComponent(sbd)) {
+								if (debugEnabled) {
+									logger.debug("Identified candidate component class: " + resource);
+								}
+								candidates.add(sbd);
+							} else {
+								if (debugEnabled) {
+									logger.debug("Ignored because not a concrete top-level class: " + resource);
+								}
 							}
-							candidates.add(sbd);
-						}
-						else {
-							if (debugEnabled) {
-								logger.debug("Ignored because not a concrete top-level class: " + resource);
+						} else {
+							if (traceEnabled) {
+								logger.trace("Ignored because not matching any filter: " + resource);
 							}
 						}
+					} catch (Throwable ex) {
+						throw new BeanDefinitionStoreException(
+								"Failed to read candidate component class: " + resource, ex);
 					}
-					else {
-						if (traceEnabled) {
-							logger.trace("Ignored because not matching any filter: " + resource);
-						}
-					}
-				}
-				catch (FileNotFoundException ex) {
+				} else {
 					if (traceEnabled) {
-						logger.trace("Ignored non-readable " + resource + ": " + ex.getMessage());
+						logger.trace("Ignored because not readable: " + resource);
 					}
-				}
-				catch (ClassFormatException ex) {
-					if (shouldIgnoreClassFormatException) {
-						if (debugEnabled) {
-							logger.debug("Ignored incompatible class format in " + resource + ": " + ex.getMessage());
-						}
-					}
-					else {
-						throw new BeanDefinitionStoreException("Incompatible class format in " + resource +
-								": set system property 'spring.classformat.ignore' to 'true' " +
-								"if you mean to ignore such files during classpath scanning", ex);
-					}
-				}
-				catch (Throwable ex) {
-					throw new BeanDefinitionStoreException("Failed to read candidate component class: " + resource, ex);
 				}
 			}
 		}
@@ -583,10 +520,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * Clear the local metadata cache, if any, removing all cached class metadata.
 	 */
 	public void clearCache() {
-		if (this.metadataReaderFactory instanceof CachingMetadataReaderFactory cmrf) {
+		if (this.metadataReaderFactory instanceof CachingMetadataReaderFactory) {
 			// Clear cache in externally provided MetadataReaderFactory; this is a no-op
 			// for a shared cache since it'll be cleared by the ApplicationContext.
-			cmrf.clearCache();
+			((CachingMetadataReaderFactory) this.metadataReaderFactory).clearCache();
 		}
 	}
 

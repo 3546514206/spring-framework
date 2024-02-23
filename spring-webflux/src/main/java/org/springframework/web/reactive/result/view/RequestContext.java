@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,6 @@
 
 package org.springframework.web.reactive.result.view;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
@@ -37,7 +31,9 @@ import org.springframework.validation.Errors;
 import org.springframework.web.bind.EscapedErrors;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.HtmlUtils;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriTemplate;
+
+import java.util.*;
 
 /**
  * Context holder for request-specific state, like the {@link MessageSource} to
@@ -72,7 +68,7 @@ public class RequestContext {
 	private Map<String, Errors> errorsMap;
 
 	@Nullable
-	private final RequestDataValueProcessor dataValueProcessor;
+	private RequestDataValueProcessor dataValueProcessor;
 
 
 	public RequestContext(ServerWebExchange exchange, Map<String, Object> model, MessageSource messageSource) {
@@ -92,8 +88,8 @@ public class RequestContext {
 		LocaleContext localeContext = exchange.getLocaleContext();
 		Locale locale = localeContext.getLocale();
 		this.locale = (locale != null ? locale : Locale.getDefault());
-		TimeZone timeZone = (localeContext instanceof TimeZoneAwareLocaleContext tzaLocaleContext ?
-				tzaLocaleContext.getTimeZone() : null);
+		TimeZone timeZone = (localeContext instanceof TimeZoneAwareLocaleContext ?
+				((TimeZoneAwareLocaleContext) localeContext).getTimeZone() : null);
 		this.timeZone = (timeZone != null ? timeZone : TimeZone.getDefault());
 
 		this.defaultHtmlEscape = null;  // TODO
@@ -164,7 +160,7 @@ public class RequestContext {
 	 * no explicit default given.
 	 */
 	public boolean isDefaultHtmlEscape() {
-		return (this.defaultHtmlEscape != null && this.defaultHtmlEscape);
+		return (this.defaultHtmlEscape != null && this.defaultHtmlEscape.booleanValue());
 	}
 
 	/**
@@ -218,7 +214,8 @@ public class RequestContext {
 	 */
 	public String getContextUrl(String relativeUrl, Map<String, ?> params) {
 		String url = StringUtils.applyRelativePath(getContextPath() + "/", relativeUrl);
-		url = UriComponentsBuilder.fromUriString(url).buildAndExpand(params).encode().toUri().toASCIIString();
+		UriTemplate template = new UriTemplate(url);
+		url = template.expand(params).toASCIIString();
 		return getExchange().transformUrl(url);
 	}
 
@@ -241,7 +238,8 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 *
+	 * @param code           code of the message
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @return the message
 	 */
@@ -251,7 +249,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @return the message
@@ -262,7 +260,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message as a List, or {@code null} if none
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @return the message
@@ -273,7 +271,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param defaultMessage the String to return if the lookup fails
 	 * @param htmlEscape if the message should be HTML-escaped
@@ -289,7 +287,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
 	 */
@@ -299,7 +297,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
@@ -310,7 +308,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code, using the "defaultHtmlEscape" setting.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message as a List, or {@code null} if none
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
@@ -321,7 +319,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the message for the given code.
-	 * @param code the code of the message
+	 * @param code code of the message
 	 * @param args arguments for the message, or {@code null} if none
 	 * @param htmlEscape if the message should be HTML-escaped
 	 * @return the message
@@ -357,7 +355,7 @@ public class RequestContext {
 	/**
 	 * Retrieve the Errors instance for the given bind object, using the
 	 * "defaultHtmlEscape" setting.
-	 * @param name the name of the bind object
+	 * @param name name of the bind object
 	 * @return the Errors instance, or {@code null} if not found
 	 */
 	@Nullable
@@ -367,7 +365,7 @@ public class RequestContext {
 
 	/**
 	 * Retrieve the Errors instance for the given bind object.
-	 * @param name the name of the bind object
+	 * @param name name of the bind object
 	 * @param htmlEscape create an Errors instance with automatic HTML escaping?
 	 * @return the Errors instance, or {@code null} if not found
 	 */
@@ -385,15 +383,15 @@ public class RequestContext {
 			}
 		}
 
-		if (errors instanceof BindException bindException) {
-			errors = bindException.getBindingResult();
+		if (errors instanceof BindException) {
+			errors = ((BindException) errors).getBindingResult();
 		}
 
 		if (htmlEscape && !(errors instanceof EscapedErrors)) {
 			errors = new EscapedErrors(errors);
 		}
-		else if (!htmlEscape && errors instanceof EscapedErrors escapedErrors) {
-			errors = escapedErrors.getSource();
+		else if (!htmlEscape && errors instanceof EscapedErrors) {
+			errors = ((EscapedErrors) errors).getSource();
 		}
 
 		this.errorsMap.put(name, errors);

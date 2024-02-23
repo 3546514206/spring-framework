@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpResponse;
@@ -31,24 +23,26 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * A specialization of {@link ResponseBodyEmitter} for sending
  * <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
- * @author Sam Brannen
- * @author Brian Clozel
  * @since 4.2
  */
 public class SseEmitter extends ResponseBodyEmitter {
 
-	private static final MediaType TEXT_PLAIN = new MediaType("text", "plain", StandardCharsets.UTF_8);
+	static final MediaType TEXT_PLAIN = new MediaType("text", "plain", StandardCharsets.UTF_8);
 
-	/**
-	 * Guards access to write operations on the response.
-	 */
-	private final Lock writeLock = new ReentrantLock();
+	static final MediaType TEXT_EVENTSTREAM = new MediaType("text", "event-stream", StandardCharsets.UTF_8);
+
 
 	/**
 	 * Create a new SseEmitter instance.
@@ -62,7 +56,8 @@ public class SseEmitter extends ResponseBodyEmitter {
 	 * <p>By default not set in which case the default configured in the MVC
 	 * Java Config or the MVC namespace is used, or if that's not set, then the
 	 * timeout depends on the default of the underlying server.
-	 * @param timeout the timeout value in milliseconds
+	 *
+	 * @param timeout timeout value in milliseconds
 	 * @since 4.2.2
 	 */
 	public SseEmitter(Long timeout) {
@@ -76,7 +71,7 @@ public class SseEmitter extends ResponseBodyEmitter {
 
 		HttpHeaders headers = outputMessage.getHeaders();
 		if (headers.getContentType() == null) {
-			headers.setContentType(MediaType.TEXT_EVENT_STREAM);
+			headers.setContentType(TEXT_EVENTSTREAM);
 		}
 	}
 
@@ -130,12 +125,10 @@ public class SseEmitter extends ResponseBodyEmitter {
 	 */
 	public void send(SseEventBuilder builder) throws IOException {
 		Set<DataWithMediaType> dataToSend = builder.build();
-		this.writeLock.lock();
-		try {
-			super.send(dataToSend);
-		}
-		finally {
-			this.writeLock.unlock();
+		synchronized (this) {
+			for (DataWithMediaType entry : dataToSend) {
+				super.send(entry.getData(), entry.getMediaType());
+			}
 		}
 	}
 
@@ -186,7 +179,7 @@ public class SseEmitter extends ResponseBodyEmitter {
 		SseEventBuilder data(Object object, @Nullable MediaType mediaType);
 
 		/**
-		 * Return one or more Object-MediaType pairs to write via
+		 * Return one or more Object-MediaType  pairs to write via
 		 * {@link #send(Object, MediaType)}.
 		 * @since 4.2.3
 		 */
@@ -206,25 +199,25 @@ public class SseEmitter extends ResponseBodyEmitter {
 
 		@Override
 		public SseEventBuilder id(String id) {
-			append("id:").append(id).append('\n');
+			append("id:").append(id).append("\n");
 			return this;
 		}
 
 		@Override
 		public SseEventBuilder name(String name) {
-			append("event:").append(name).append('\n');
+			append("event:").append(name).append("\n");
 			return this;
 		}
 
 		@Override
 		public SseEventBuilder reconnectTime(long reconnectTimeMillis) {
-			append("retry:").append(String.valueOf(reconnectTimeMillis)).append('\n');
+			append("retry:").append(String.valueOf(reconnectTimeMillis)).append("\n");
 			return this;
 		}
 
 		@Override
 		public SseEventBuilder comment(String comment) {
-			append(':').append(comment).append('\n');
+			append(":").append(comment).append("\n");
 			return this;
 		}
 
@@ -237,11 +230,8 @@ public class SseEmitter extends ResponseBodyEmitter {
 		public SseEventBuilder data(Object object, @Nullable MediaType mediaType) {
 			append("data:");
 			saveAppendedText();
-			if (object instanceof String text) {
-				object = StringUtils.replace(text, "\n", "\ndata:");
-			}
 			this.dataToSend.add(new DataWithMediaType(object, mediaType));
-			append('\n');
+			append("\n");
 			return this;
 		}
 
@@ -253,20 +243,12 @@ public class SseEmitter extends ResponseBodyEmitter {
 			return this;
 		}
 
-		SseEventBuilderImpl append(char ch) {
-			if (this.sb == null) {
-				this.sb = new StringBuilder();
-			}
-			this.sb.append(ch);
-			return this;
-		}
-
 		@Override
 		public Set<DataWithMediaType> build() {
 			if (!StringUtils.hasLength(this.sb) && this.dataToSend.isEmpty()) {
 				return Collections.emptySet();
 			}
-			append('\n');
+			append("\n");
 			saveAppendedText();
 			return this.dataToSend;
 		}

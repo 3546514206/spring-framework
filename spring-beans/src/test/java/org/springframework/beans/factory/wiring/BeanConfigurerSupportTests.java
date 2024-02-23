@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 package org.springframework.beans.factory.wiring;
 
 import org.junit.jupiter.api.Test;
-
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -33,19 +33,19 @@ import static org.mockito.Mockito.verify;
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
-class BeanConfigurerSupportTests {
+public class BeanConfigurerSupportTests {
 
 	@Test
-	void supplyIncompatibleBeanFactoryImplementation() {
+	public void supplyIncompatibleBeanFactoryImplementation() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
-				new StubBeanConfigurerSupport().setBeanFactory(mock()));
+				new StubBeanConfigurerSupport().setBeanFactory(mock(BeanFactory.class)));
 	}
 
 	@Test
-	void configureBeanDoesNothingIfBeanWiringInfoResolverResolvesToNull() {
+	public void configureBeanDoesNothingIfBeanWiringInfoResolverResolvesToNull() throws Exception {
 		TestBean beanInstance = new TestBean();
 
-		BeanWiringInfoResolver resolver = mock();
+		BeanWiringInfoResolver resolver = mock(BeanWiringInfoResolver.class);
 
 		BeanConfigurerSupport configurer = new StubBeanConfigurerSupport();
 		configurer.setBeanWiringInfoResolver(resolver);
@@ -56,7 +56,7 @@ class BeanConfigurerSupportTests {
 	}
 
 	@Test
-	void configureBeanDoesNothingIfNoBeanFactoryHasBeenSet() {
+	public void configureBeanDoesNothingIfNoBeanFactoryHasBeenSet() throws Exception {
 		TestBean beanInstance = new TestBean();
 		BeanConfigurerSupport configurer = new StubBeanConfigurerSupport();
 		configurer.configureBean(beanInstance);
@@ -64,7 +64,7 @@ class BeanConfigurerSupportTests {
 	}
 
 	@Test
-	void configureBeanReallyDoesDefaultToUsingTheFullyQualifiedClassNameOfTheSuppliedBeanInstance() {
+	public void configureBeanReallyDoesDefaultToUsingTheFullyQualifiedClassNameOfTheSuppliedBeanInstance() throws Exception {
 		TestBean beanInstance = new TestBean();
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class);
 		builder.addPropertyValue("name", "Harriet Wheeler");
@@ -80,7 +80,7 @@ class BeanConfigurerSupportTests {
 	}
 
 	@Test
-	void configureBeanPerformsAutowiringByNameIfAppropriateBeanWiringInfoResolverIsPluggedIn() {
+	public void configureBeanPerformsAutowiringByNameIfAppropriateBeanWiringInfoResolverIsPluggedIn() throws Exception {
 		TestBean beanInstance = new TestBean();
 		// spouse for autowiring by name...
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class);
@@ -89,7 +89,7 @@ class BeanConfigurerSupportTests {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		factory.registerBeanDefinition("spouse", builder.getBeanDefinition());
 
-		BeanWiringInfoResolver resolver = mock();
+		BeanWiringInfoResolver resolver = mock(BeanWiringInfoResolver.class);
 		given(resolver.resolveWiringInfo(beanInstance)).willReturn(new BeanWiringInfo(BeanWiringInfo.AUTOWIRE_BY_NAME, false));
 
 		BeanConfigurerSupport configurer = new StubBeanConfigurerSupport();
@@ -100,7 +100,7 @@ class BeanConfigurerSupportTests {
 	}
 
 	@Test
-	void configureBeanPerformsAutowiringByTypeIfAppropriateBeanWiringInfoResolverIsPluggedIn() {
+	public void configureBeanPerformsAutowiringByTypeIfAppropriateBeanWiringInfoResolverIsPluggedIn() throws Exception {
 		TestBean beanInstance = new TestBean();
 		// spouse for autowiring by type...
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.rootBeanDefinition(TestBean.class);
@@ -109,7 +109,7 @@ class BeanConfigurerSupportTests {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		factory.registerBeanDefinition("Mmm, I fancy a salad!", builder.getBeanDefinition());
 
-		BeanWiringInfoResolver resolver = mock();
+		BeanWiringInfoResolver resolver = mock(BeanWiringInfoResolver.class);
 		given(resolver.resolveWiringInfo(beanInstance)).willReturn(new BeanWiringInfo(BeanWiringInfo.AUTOWIRE_BY_TYPE, false));
 
 		BeanConfigurerSupport configurer = new StubBeanConfigurerSupport();

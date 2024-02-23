@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ package org.springframework.jms.annotation;
 
 import java.lang.reflect.Method;
 
-import jakarta.jms.JMSException;
+import javax.jms.JMSException;
+import javax.jms.Session;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.context.ApplicationContext;
@@ -65,7 +67,7 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	abstract void defaultContainerFactory();
 
 	@Test
-	abstract void jmsHandlerMethodFactoryConfiguration();
+	abstract void jmsHandlerMethodFactoryConfiguration() throws JMSException;
 
 	@Test
 	abstract void jmsListenerIsRepeatable();
@@ -83,8 +85,8 @@ abstract class AbstractJmsAnnotationDrivenTests {
 				context.getBean("jmsListenerContainerFactory", JmsListenerContainerTestFactory.class);
 		JmsListenerContainerTestFactory simpleFactory =
 				context.getBean("simpleFactory", JmsListenerContainerTestFactory.class);
-		assertThat(defaultFactory.getListenerContainers()).hasSize(1);
-		assertThat(simpleFactory.getListenerContainers()).hasSize(1);
+		assertThat(defaultFactory.getListenerContainers().size()).isEqualTo(1);
+		assertThat(simpleFactory.getListenerContainers().size()).isEqualTo(1);
 	}
 
 	/**
@@ -95,7 +97,7 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	protected void testFullConfiguration(ApplicationContext context) {
 		JmsListenerContainerTestFactory simpleFactory =
 				context.getBean("simpleFactory", JmsListenerContainerTestFactory.class);
-		assertThat(simpleFactory.getListenerContainers()).hasSize(1);
+		assertThat(simpleFactory.getListenerContainers().size()).isEqualTo(1);
 		MethodJmsListenerEndpoint endpoint = (MethodJmsListenerEndpoint)
 				simpleFactory.getListenerContainers().get(0).getEndpoint();
 		assertThat(endpoint.getId()).isEqualTo("listener1");
@@ -111,26 +113,25 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	}
 
 	/**
-	 * Test for {@link CustomBean} and an endpoint manually registered
+	 * Test for {@link CustomBean} and an manually endpoint registered
 	 * with "myCustomEndpointId". The custom endpoint does not provide
-	 * any factory, so it's registered with the default one
+	 * any factory so it's registered with the default one
 	 */
 	protected void testCustomConfiguration(ApplicationContext context) {
 		JmsListenerContainerTestFactory defaultFactory =
 				context.getBean("jmsListenerContainerFactory", JmsListenerContainerTestFactory.class);
 		JmsListenerContainerTestFactory customFactory =
 				context.getBean("customFactory", JmsListenerContainerTestFactory.class);
-		assertThat(defaultFactory.getListenerContainers()).hasSize(1);
-		assertThat(customFactory.getListenerContainers()).hasSize(1);
+		assertThat(defaultFactory.getListenerContainers().size()).isEqualTo(1);
+		assertThat(customFactory.getListenerContainers().size()).isEqualTo(1);
 		JmsListenerEndpoint endpoint = defaultFactory.getListenerContainers().get(0).getEndpoint();
 		assertThat(endpoint.getClass()).as("Wrong endpoint type").isEqualTo(SimpleJmsListenerEndpoint.class);
 		assertThat(((SimpleJmsListenerEndpoint) endpoint).getMessageListener()).as("Wrong listener set in custom endpoint").isEqualTo(context.getBean("simpleMessageListener"));
 
 		JmsListenerEndpointRegistry customRegistry =
 				context.getBean("customRegistry", JmsListenerEndpointRegistry.class);
-		assertThat(customRegistry.getListenerContainerIds()).as("Wrong number of containers in the registry")
-				.hasSize(2);
-		assertThat(customRegistry.getListenerContainers()).as("Wrong number of containers in the registry").hasSize(2);
+		assertThat(customRegistry.getListenerContainerIds().size()).as("Wrong number of containers in the registry").isEqualTo(2);
+		assertThat(customRegistry.getListenerContainers().size()).as("Wrong number of containers in the registry").isEqualTo(2);
 		assertThat(customRegistry.getListenerContainer("listenerId")).as("Container with custom id on the annotation should be found").isNotNull();
 		assertThat(customRegistry.getListenerContainer("myCustomEndpointId")).as("Container created with custom id should be found").isNotNull();
 	}
@@ -143,7 +144,7 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	protected void testExplicitContainerFactoryConfiguration(ApplicationContext context) {
 		JmsListenerContainerTestFactory defaultFactory =
 				context.getBean("simpleFactory", JmsListenerContainerTestFactory.class);
-		assertThat(defaultFactory.getListenerContainers()).hasSize(1);
+		assertThat(defaultFactory.getListenerContainers().size()).isEqualTo(1);
 	}
 
 	/**
@@ -153,7 +154,7 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	protected void testDefaultContainerFactoryConfiguration(ApplicationContext context) {
 		JmsListenerContainerTestFactory defaultFactory =
 				context.getBean("jmsListenerContainerFactory", JmsListenerContainerTestFactory.class);
-		assertThat(defaultFactory.getListenerContainers()).hasSize(1);
+		assertThat(defaultFactory.getListenerContainers().size()).isEqualTo(1);
 	}
 
 	/**
@@ -165,14 +166,14 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	protected void testJmsHandlerMethodFactoryConfiguration(ApplicationContext context) throws JMSException {
 		JmsListenerContainerTestFactory simpleFactory =
 				context.getBean("defaultFactory", JmsListenerContainerTestFactory.class);
-		assertThat(simpleFactory.getListenerContainers()).hasSize(1);
+		assertThat(simpleFactory.getListenerContainers().size()).isEqualTo(1);
 		MethodJmsListenerEndpoint endpoint = (MethodJmsListenerEndpoint)
 				simpleFactory.getListenerContainers().get(0).getEndpoint();
 
 		SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
 		endpoint.setupListenerContainer(container);
 		MessagingMessageListenerAdapter listener = (MessagingMessageListenerAdapter) container.getMessageListener();
-		listener.onMessage(new StubTextMessage("failValidation"), mock());
+		listener.onMessage(new StubTextMessage("failValidation"), mock(Session.class));
 	}
 
 	/**
@@ -182,13 +183,13 @@ abstract class AbstractJmsAnnotationDrivenTests {
 	protected void testJmsListenerRepeatable(ApplicationContext context) {
 		JmsListenerContainerTestFactory simpleFactory =
 				context.getBean("jmsListenerContainerFactory", JmsListenerContainerTestFactory.class);
-		assertThat(simpleFactory.getListenerContainers()).hasSize(2);
+		assertThat(simpleFactory.getListenerContainers().size()).isEqualTo(2);
 
 		MethodJmsListenerEndpoint first = (MethodJmsListenerEndpoint)
 				simpleFactory.getListenerContainer("first").getEndpoint();
 		assertThat(first.getId()).isEqualTo("first");
 		assertThat(first.getDestination()).isEqualTo("myQueue");
-		assertThat(first.getConcurrency()).isNull();
+		assertThat(first.getConcurrency()).isEqualTo(null);
 
 		MethodJmsListenerEndpoint second = (MethodJmsListenerEndpoint)
 				simpleFactory.getListenerContainer("second").getEndpoint();

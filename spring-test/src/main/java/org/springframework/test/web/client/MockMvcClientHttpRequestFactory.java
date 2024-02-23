@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.test.web.client;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -23,7 +24,6 @@ import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpResponse;
@@ -32,17 +32,25 @@ import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+
 
 /**
  * A {@link ClientHttpRequestFactory} for requests executed via {@link MockMvc}.
  *
+ * <p>As of 5.0 this class also implements
+ * {@link org.springframework.http.client.AsyncClientHttpRequestFactory
+ * AsyncClientHttpRequestFactory}. However note that
+ * {@link org.springframework.web.client.AsyncRestTemplate} and related classes
+ * have been deprecated at the same time.
+ *
  * @author Rossen Stoyanchev
  * @since 3.2
  */
-public class MockMvcClientHttpRequestFactory implements ClientHttpRequestFactory {
+@SuppressWarnings("deprecation")
+public class MockMvcClientHttpRequestFactory
+		implements ClientHttpRequestFactory, org.springframework.http.client.AsyncClientHttpRequestFactory {
 
 	private final MockMvc mockMvc;
 
@@ -57,8 +65,18 @@ public class MockMvcClientHttpRequestFactory implements ClientHttpRequestFactory
 	public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) {
 		return new MockClientHttpRequest(httpMethod, uri) {
 			@Override
-			public ClientHttpResponse executeInternal() {
+			public ClientHttpResponse executeInternal() throws IOException {
 				return getClientHttpResponse(httpMethod, uri, getHeaders(), getBodyAsBytes());
+			}
+		};
+	}
+
+	@Override
+	public org.springframework.http.client.AsyncClientHttpRequest createAsyncRequest(URI uri, HttpMethod method) {
+		return new org.springframework.mock.http.client.MockAsyncClientHttpRequest(method, uri) {
+			@Override
+			protected ClientHttpResponse executeInternal() throws IOException {
+				return getClientHttpResponse(method, uri, getHeaders(), getBodyAsBytes());
 			}
 		};
 	}
@@ -72,16 +90,8 @@ public class MockMvcClientHttpRequestFactory implements ClientHttpRequestFactory
 					.andReturn()
 					.getResponse();
 
-			HttpStatusCode status = HttpStatusCode.valueOf(servletResponse.getStatus());
+			HttpStatus status = HttpStatus.valueOf(servletResponse.getStatus());
 			byte[] body = servletResponse.getContentAsByteArray();
-			if (body.length == 0) {
-				String error = servletResponse.getErrorMessage();
-				if (StringUtils.hasLength(error)) {
-					// sendError message as default body
-					body = error.getBytes(StandardCharsets.UTF_8);
-				}
-			}
-
 			MockClientHttpResponse clientResponse = new MockClientHttpResponse(body, status);
 			clientResponse.getHeaders().putAll(getResponseHeaders(servletResponse));
 			return clientResponse;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,10 @@ import org.springframework.lang.Nullable;
 
 /**
  * Interface to be implemented by @{@link org.springframework.context.annotation.Configuration
- * Configuration} classes annotated with @{@link EnableCaching} that wish or need to specify
- * explicitly how caches are resolved and how keys are generated for annotation-driven
- * cache management.
+ * Configuration} classes annotated with @{@link EnableCaching} that wish or need to
+ * specify explicitly how caches are resolved and how keys are generated for annotation-driven
+ * cache management. Consider extending {@link CachingConfigurerSupport}, which provides a
+ * stub implementation of all interface methods.
  *
  * <p>See @{@link EnableCaching} for general examples and context; see
  * {@link #cacheManager()}, {@link #cacheResolver()} and {@link #keyGenerator()}
@@ -36,6 +37,7 @@ import org.springframework.lang.Nullable;
  * @author Stephane Nicoll
  * @since 3.1
  * @see EnableCaching
+ * @see CachingConfigurerSupport
  */
 public interface CachingConfigurer {
 
@@ -50,7 +52,7 @@ public interface CachingConfigurer {
 	 * <pre class="code">
 	 * &#064;Configuration
 	 * &#064;EnableCaching
-	 * public class AppConfig implements CachingConfigurer {
+	 * public class AppConfig extends CachingConfigurerSupport {
 	 *     &#064;Bean // important!
 	 *     &#064;Override
 	 *     public CacheManager cacheManager() {
@@ -62,9 +64,7 @@ public interface CachingConfigurer {
 	 * See @{@link EnableCaching} for more complete examples.
 	 */
 	@Nullable
-	default CacheManager cacheManager() {
-		return null;
-	}
+	CacheManager cacheManager();
 
 	/**
 	 * Return the {@link CacheResolver} bean to use to resolve regular caches for
@@ -77,7 +77,7 @@ public interface CachingConfigurer {
 	 * <pre class="code">
 	 * &#064;Configuration
 	 * &#064;EnableCaching
-	 * public class AppConfig implements CachingConfigurer {
+	 * public class AppConfig extends CachingConfigurerSupport {
 	 *     &#064;Bean // important!
 	 *     &#064;Override
 	 *     public CacheResolver cacheResolver() {
@@ -89,9 +89,7 @@ public interface CachingConfigurer {
 	 * See {@link EnableCaching} for more complete examples.
 	 */
 	@Nullable
-	default CacheResolver cacheResolver() {
-		return null;
-	}
+	CacheResolver cacheResolver();
 
 	/**
 	 * Return the key generator bean to use for annotation-driven cache management.
@@ -100,7 +98,7 @@ public interface CachingConfigurer {
 	 * <pre class="code">
 	 * &#064;Configuration
 	 * &#064;EnableCaching
-	 * public class AppConfig implements CachingConfigurer {
+	 * public class AppConfig extends CachingConfigurerSupport {
 	 *     &#064;Bean // important!
 	 *     &#064;Override
 	 *     public KeyGenerator keyGenerator() {
@@ -112,9 +110,7 @@ public interface CachingConfigurer {
 	 * See @{@link EnableCaching} for more complete examples.
 	 */
 	@Nullable
-	default KeyGenerator keyGenerator() {
-		return null;
-	}
+	KeyGenerator keyGenerator();
 
 	/**
 	 * Return the {@link CacheErrorHandler} to use to handle cache-related errors.
@@ -125,7 +121,7 @@ public interface CachingConfigurer {
 	 * <pre class="code">
 	 * &#064;Configuration
 	 * &#064;EnableCaching
-	 * public class AppConfig implements CachingConfigurer {
+	 * public class AppConfig extends CachingConfigurerSupport {
 	 *     &#064;Bean // important!
 	 *     &#064;Override
 	 *     public CacheErrorHandler errorHandler() {
@@ -137,8 +133,6 @@ public interface CachingConfigurer {
 	 * See @{@link EnableCaching} for more complete examples.
 	 */
 	@Nullable
-	default CacheErrorHandler errorHandler() {
-		return null;
-	}
+	CacheErrorHandler errorHandler();
 
 }

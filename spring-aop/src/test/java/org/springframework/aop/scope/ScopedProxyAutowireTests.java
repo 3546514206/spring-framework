@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,30 @@
 
 package org.springframework.aop.scope;
 
-import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
  * @author Mark Fisher
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class ScopedProxyAutowireTests {
+public class ScopedProxyAutowireTests {
 
 	@Test
-	void testScopedProxyInheritsAutowireCandidateFalse() {
+	public void testScopedProxyInheritsAutowireCandidateFalse() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				qualifiedResource(ScopedProxyAutowireTests.class, "scopedAutowireFalse.xml"));
 
-		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, false, false))).contains("scoped");
-		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, true, false))).contains("scoped");
+		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, false, false)).contains("scoped")).isTrue();
+		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, true, false)).contains("scoped")).isTrue();
 		assertThat(bf.containsSingleton("scoped")).isFalse();
 		TestBean autowired = (TestBean) bf.getBean("autowired");
 		TestBean unscoped = (TestBean) bf.getBean("unscoped");
@@ -48,13 +47,13 @@ class ScopedProxyAutowireTests {
 	}
 
 	@Test
-	void testScopedProxyReplacesAutowireCandidateTrue() {
+	public void testScopedProxyReplacesAutowireCandidateTrue() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				qualifiedResource(ScopedProxyAutowireTests.class, "scopedAutowireTrue.xml"));
 
-		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, true, false))).contains("scoped");
-		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, false, false))).contains("scoped");
+		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, true, false)).contains("scoped")).isTrue();
+		assertThat(Arrays.asList(bf.getBeanNamesForType(TestBean.class, false, false)).contains("scoped")).isTrue();
 		assertThat(bf.containsSingleton("scoped")).isFalse();
 		TestBean autowired = (TestBean) bf.getBean("autowired");
 		TestBean scoped = (TestBean) bf.getBean("scoped");

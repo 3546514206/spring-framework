@@ -1,17 +1,19 @@
-plugins {
-	id "com.gradle.enterprise" version "3.16.1"
-	id "io.spring.ge.conventions" version "0.0.15"
-	id "org.gradle.toolchains.foojay-resolver-convention" version "0.7.0"
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url 'https://repo.spring.io/plugins-release' }
+    }
 }
 
 include "spring-aop"
 include "spring-aspects"
 include "spring-beans"
 include "spring-context"
-include "spring-context-indexer"
 include "spring-context-support"
+include "spring-context-indexer"
 include "spring-core"
-include "spring-core-test"
+include "kotlin-coroutines"
+project(':kotlin-coroutines').projectDir = file('spring-core/kotlin-coroutines')
 include "spring-expression"
 include "spring-instrument"
 include "spring-jcl"
@@ -20,36 +22,28 @@ include "spring-jms"
 include "spring-messaging"
 include "spring-orm"
 include "spring-oxm"
-include "spring-r2dbc"
 include "spring-test"
 include "spring-tx"
 include "spring-web"
-include "spring-webflux"
 include "spring-webmvc"
+include "spring-webflux"
 include "spring-websocket"
-include "framework-api"
 include "framework-bom"
-include "framework-docs"
-include "framework-platform"
 include "integration-tests"
+// Spring 使用案例
+include "spring-samples-loader"
+// 最简单的 Spring MVC 案例
+include "spring-web-loader"
+// 标准的 SSM 工程
+include 'spring-ssm-loader'
+// Spring Session 案例
+include "spring-seesion-loader"
+
 
 rootProject.name = "spring"
-rootProject.children.each {project ->
-	project.buildFileName = "${project.name}.gradle"
+rootProject.children.each { project ->
+    project.buildFileName = "${project.name}.gradle"
 }
 
-settings.gradle.projectsLoaded {
-	gradleEnterprise {
-		buildScan {
-			File buildDir = settings.gradle.rootProject
-					.getLayout().getBuildDirectory().getAsFile().get()
-			buildDir.mkdirs()
-			new File(buildDir, "build-scan-uri.txt").text = "(build scan not generated)"
-			buildScanPublished { scan ->
-				if (buildDir.exists()) {
-					new File(buildDir, "build-scan-uri.txt").text = "${scan.buildScanUri}\n"
-				}
-			}
-		}
-	}
-}
+include 'spring-schemas-ext'
+

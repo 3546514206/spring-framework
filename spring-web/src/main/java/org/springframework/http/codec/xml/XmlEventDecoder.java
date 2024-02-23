@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,28 @@
 
 package org.springframework.http.codec.xml;
 
+import com.fasterxml.aalto.AsyncByteBufferFeeder;
+import com.fasterxml.aalto.AsyncXMLInputFactory;
+import com.fasterxml.aalto.AsyncXMLStreamReader;
+import com.fasterxml.aalto.evt.EventAllocatorImpl;
+import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.reactivestreams.Publisher;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.codec.AbstractDecoder;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.xml.StaxUtils;
+import reactor.core.Exceptions;
+import reactor.core.publisher.Flux;
+
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.XMLEvent;
+import javax.xml.stream.util.XMLEventAllocator;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -23,39 +45,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.XMLEvent;
-import javax.xml.stream.util.XMLEventAllocator;
-
-import com.fasterxml.aalto.AsyncByteBufferFeeder;
-import com.fasterxml.aalto.AsyncXMLInputFactory;
-import com.fasterxml.aalto.AsyncXMLStreamReader;
-import com.fasterxml.aalto.evt.EventAllocatorImpl;
-import com.fasterxml.aalto.stax.InputFactoryImpl;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-
-import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.AbstractDecoder;
-import org.springframework.core.codec.DecodingException;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferLimitException;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.MediaType;
-import org.springframework.lang.Nullable;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.util.xml.StaxUtils;
-
 /**
  * Decodes a {@link DataBuffer} stream into a stream of {@link XMLEvent XMLEvents}.
  *
  * <p>Given the following XML:
  *
  * <pre class="code">
- * &lt;root&gt;
+ * &lt;root>
  *     &lt;child&gt;foo&lt;/child&gt;
  *     &lt;child&gt;bar&lt;/child&gt;
  * &lt;/root&gt;
@@ -91,60 +87,35 @@ public class XmlEventDecoder extends AbstractDecoder<XMLEvent> {
 
 	boolean useAalto = aaltoPresent;
 
-	private int maxInMemorySize = 256 * 1024;
-
 
 	public XmlEventDecoder() {
-		super(MimeTypeUtils.APPLICATION_XML, MimeTypeUtils.TEXT_XML, new MediaType("application", "*+xml"));
-	}
-
-
-	/**
-	 * Set the max number of bytes that can be buffered by this decoder. This
-	 * is either the size the entire input when decoding as a whole, or when
-	 * using async parsing via Aalto XML, it is size one top-level XML tree.
-	 * When the limit is exceeded, {@link DataBufferLimitException} is raised.
-	 * <p>By default this is set to 256K.
-	 * @param byteCount the max number of bytes to buffer, or -1 for unlimited
-	 * @since 5.1.11
-	 */
-	public void setMaxInMemorySize(int byteCount) {
-		this.maxInMemorySize = byteCount;
-	}
-
-	/**
-	 * Return the {@link #setMaxInMemorySize configured} byte count limit.
-	 * @since 5.1.11
-	 */
-	public int getMaxInMemorySize() {
-		return this.maxInMemorySize;
+		super(MimeTypeUtils.APPLICATION_XML, MimeTypeUtils.TEXT_XML);
 	}
 
 
 	@Override
+	@SuppressWarnings({"rawtypes", "unchecked", "cast"})  // XMLEventReader is Iterator<Object> on JDK 9
 	public Flux<XMLEvent> decode(Publisher<DataBuffer> input, ResolvableType elementType,
 			@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {
 
 		if (this.useAalto) {
-			AaltoDataBufferToXmlEvent mapper = new AaltoDataBufferToXmlEvent(this.maxInMemorySize);
+			AaltoDataBufferToXmlEvent mapper = new AaltoDataBufferToXmlEvent();
 			return Flux.from(input)
 					.flatMapIterable(mapper)
 					.doFinally(signalType -> mapper.endOfInput());
 		}
 		else {
-			return DataBufferUtils.join(input, this.maxInMemorySize)
-					.flatMapIterable(buffer -> {
+			return DataBufferUtils.join(input).
+					flatMapIterable(buffer -> {
 						try {
 							InputStream is = buffer.asInputStream();
-							Iterator<Object> eventReader = inputFactory.createXMLEventReader(is);
+							Iterator eventReader = inputFactory.createXMLEventReader(is);
 							List<XMLEvent> result = new ArrayList<>();
 							eventReader.forEachRemaining(event -> result.add((XMLEvent) event));
 							return result;
-						}
-						catch (XMLStreamException ex) {
-							throw new DecodingException(ex.getMessage(), ex);
-						}
-						finally {
+						} catch (XMLStreamException ex) {
+							throw Exceptions.propagate(ex);
+						} finally {
 							DataBufferUtils.release(buffer);
 						}
 					});
@@ -165,28 +136,11 @@ public class XmlEventDecoder extends AbstractDecoder<XMLEvent> {
 
 		private final XMLEventAllocator eventAllocator = EventAllocatorImpl.getDefaultInstance();
 
-		private final int maxInMemorySize;
-
-		private int byteCount;
-
-		private int elementDepth;
-
-
-		public AaltoDataBufferToXmlEvent(int maxInMemorySize) {
-			this.maxInMemorySize = maxInMemorySize;
-		}
-
 
 		@Override
 		public List<? extends XMLEvent> apply(DataBuffer dataBuffer) {
 			try {
-				increaseByteCount(dataBuffer);
-				AsyncByteBufferFeeder inputFeeder = this.streamReader.getInputFeeder();
-				try (DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers()) {
-					while (iterator.hasNext()) {
-						inputFeeder.feedInput(iterator.next());
-					}
-				}
+				this.streamReader.getInputFeeder().feedInput(dataBuffer.asByteBuffer());
 				List<XMLEvent> events = new ArrayList<>();
 				while (true) {
 					if (this.streamReader.next() == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
@@ -199,56 +153,21 @@ public class XmlEventDecoder extends AbstractDecoder<XMLEvent> {
 						if (event.isEndDocument()) {
 							break;
 						}
-						checkDepthAndResetByteCount(event);
 					}
-				}
-				if (this.maxInMemorySize > 0 && this.byteCount > this.maxInMemorySize) {
-					raiseLimitException();
 				}
 				return events;
 			}
 			catch (XMLStreamException ex) {
-				throw new DecodingException(ex.getMessage(), ex);
+				throw Exceptions.propagate(ex);
 			}
 			finally {
 				DataBufferUtils.release(dataBuffer);
 			}
 		}
 
-		private void increaseByteCount(DataBuffer dataBuffer) {
-			if (this.maxInMemorySize > 0) {
-				if (dataBuffer.readableByteCount() > Integer.MAX_VALUE - this.byteCount) {
-					raiseLimitException();
-				}
-				else {
-					this.byteCount += dataBuffer.readableByteCount();
-				}
-			}
-		}
-
-		private void checkDepthAndResetByteCount(XMLEvent event) {
-			if (this.maxInMemorySize > 0) {
-				if (event.isStartElement()) {
-					this.byteCount = this.elementDepth == 1 ? 0 : this.byteCount;
-					this.elementDepth++;
-				}
-				else if (event.isEndElement()) {
-					this.elementDepth--;
-					this.byteCount = this.elementDepth == 1 ? 0 : this.byteCount;
-				}
-			}
-		}
-
-		private void raiseLimitException() {
-			throw new DataBufferLimitException(
-					"Exceeded limit on max bytes per XML top-level node: " + this.maxInMemorySize);
-		}
-
 		public void endOfInput() {
 			this.streamReader.getInputFeeder().endOfInput();
 		}
 	}
-
-
 
 }

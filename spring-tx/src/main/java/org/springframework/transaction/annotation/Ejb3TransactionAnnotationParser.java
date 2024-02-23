@@ -16,19 +16,18 @@
 
 package org.springframework.transaction.annotation;
 
-import java.io.Serializable;
-import java.lang.reflect.AnnotatedElement;
-
-import jakarta.ejb.ApplicationException;
-import jakarta.ejb.TransactionAttributeType;
-
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttribute;
 
+import javax.ejb.ApplicationException;
+import javax.ejb.TransactionAttributeType;
+import java.io.Serializable;
+import java.lang.reflect.AnnotatedElement;
+
 /**
- * Strategy implementation for parsing EJB3's {@link jakarta.ejb.TransactionAttribute}
+ * Strategy implementation for parsing EJB3's {@link javax.ejb.TransactionAttribute}
  * annotation.
  *
  * @author Juergen Hoeller
@@ -39,29 +38,28 @@ public class Ejb3TransactionAnnotationParser implements TransactionAnnotationPar
 
 	@Override
 	public boolean isCandidateClass(Class<?> targetClass) {
-		return AnnotationUtils.isCandidateClass(targetClass, jakarta.ejb.TransactionAttribute.class);
+		return AnnotationUtils.isCandidateClass(targetClass, javax.ejb.TransactionAttribute.class);
 	}
 
 	@Override
 	@Nullable
 	public TransactionAttribute parseTransactionAnnotation(AnnotatedElement element) {
-		jakarta.ejb.TransactionAttribute ann = element.getAnnotation(jakarta.ejb.TransactionAttribute.class);
+		javax.ejb.TransactionAttribute ann = element.getAnnotation(javax.ejb.TransactionAttribute.class);
 		if (ann != null) {
 			return parseTransactionAnnotation(ann);
-		}
-		else {
+		} else {
 			return null;
 		}
 	}
 
-	public TransactionAttribute parseTransactionAnnotation(jakarta.ejb.TransactionAttribute ann) {
+	public TransactionAttribute parseTransactionAnnotation(javax.ejb.TransactionAttribute ann) {
 		return new Ejb3TransactionAttribute(ann.value());
 	}
 
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (other instanceof Ejb3TransactionAnnotationParser);
+		return (this == other || other instanceof Ejb3TransactionAnnotationParser);
 	}
 
 	@Override

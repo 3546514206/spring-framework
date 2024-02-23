@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.http.server;
 
-import java.util.List;
-
 import org.springframework.util.MultiValueMap;
+
+import java.util.List;
 
 /**
  * Structured representation of a URI path parsed via {@link #parsePath(String)}
@@ -124,7 +124,6 @@ public interface PathContainer {
 
 		/**
 		 * Path parameters associated with this path segment.
-		 * @return an unmodifiable map containing the parameters
 		 */
 		MultiValueMap<String, String> parameters();
 	}
@@ -137,18 +136,17 @@ public interface PathContainer {
 	class Options {
 
 		/**
-		 * Options for HTTP URL paths.
-		 * <p>Separator '/' with URL decoding and parsing of path parameters.
+		 * Options for HTTP URL paths:
+		 * <p>Separator '/' with URL decoding and parsing of path params.
 		 */
-		public static final Options HTTP_PATH = Options.create('/', true);
+		public final static Options HTTP_PATH = Options.create('/', true);
 
 		/**
-		 * Options for a message route.
-		 * <p>Separator '.' with neither URL decoding nor parsing of path parameters.
-		 * Escape sequences for the separator character in segment values are still
-		 * decoded.
+		 * Options for a message route:
+		 * <p>Separator '.' without URL decoding nor parsing of params. Escape
+		 * sequences for the separator char in segment values are still decoded.
 		 */
-		public static final Options MESSAGE_ROUTE = Options.create('.', false);
+		public final static Options MESSAGE_ROUTE = Options.create('.', false);
 
 		private final char separator;
 

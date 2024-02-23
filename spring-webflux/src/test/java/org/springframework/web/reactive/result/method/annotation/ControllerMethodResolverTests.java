@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapterRegistry;
@@ -32,12 +26,9 @@ import org.springframework.core.codec.ByteBufferDecoder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.method.ResolvableMethod;
 import org.springframework.web.reactive.BindingContext;
 import org.springframework.web.reactive.result.method.HandlerMethodArgumentResolver;
 import org.springframework.web.reactive.result.method.InvocableHandlerMethod;
@@ -45,16 +36,20 @@ import org.springframework.web.reactive.result.method.SyncHandlerMethodArgumentR
 import org.springframework.web.reactive.result.method.SyncInvocableHandlerMethod;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.method.ResolvableMethod;
+import reactor.core.publisher.Mono;
+
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ControllerMethodResolver}.
+ * Unit tests for {@link ControllerMethodResolver}.
  *
  * @author Rossen Stoyanchev
  */
-class ControllerMethodResolverTests {
+public class ControllerMethodResolverTests {
 
 	private ControllerMethodResolver methodResolver;
 
@@ -62,22 +57,21 @@ class ControllerMethodResolverTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		ArgumentResolverConfigurer resolvers = new ArgumentResolverConfigurer();
 		resolvers.addCustomResolver(new CustomArgumentResolver());
 		resolvers.addCustomResolver(new CustomSyncArgumentResolver());
 
 		ServerCodecConfigurer codecs = ServerCodecConfigurer.create();
-		codecs.customCodecs().register(new ByteArrayDecoder());
-		codecs.customCodecs().register(new ByteBufferDecoder());
+		codecs.customCodecs().decoder(new ByteArrayDecoder());
+		codecs.customCodecs().decoder(new ByteBufferDecoder());
 
 		AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext();
 		applicationContext.registerBean(TestControllerAdvice.class);
 		applicationContext.refresh();
 
 		this.methodResolver = new ControllerMethodResolver(
-				resolvers, ReactiveAdapterRegistry.getSharedInstance(), applicationContext,
-				codecs.getReaders(), null);
+				resolvers, ReactiveAdapterRegistry.getSharedInstance(), applicationContext, codecs.getReaders());
 
 		Method method = ResolvableMethod.on(TestController.class).mockCall(TestController::handle).method();
 		this.handlerMethod = new HandlerMethod(new TestController(), method);
@@ -85,7 +79,7 @@ class ControllerMethodResolverTests {
 
 
 	@Test
-	void requestMappingArgumentResolvers() {
+	public void requestMappingArgumentResolvers() {
 		InvocableHandlerMethod invocable = this.methodResolver.getRequestMappingMethod(this.handlerMethod);
 		List<HandlerMethodArgumentResolver> resolvers = invocable.getResolvers();
 
@@ -106,6 +100,7 @@ class ControllerMethodResolverTests {
 		assertThat(next(resolvers, index).getClass()).isEqualTo(SessionAttributeMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(RequestAttributeMethodArgumentResolver.class);
 
+		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(HttpEntityMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ModelMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ErrorsMethodArgumentResolver.class);
@@ -113,7 +108,6 @@ class ControllerMethodResolverTests {
 		assertThat(next(resolvers, index).getClass()).isEqualTo(PrincipalMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(SessionStatusMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(WebSessionMethodArgumentResolver.class);
-		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomSyncArgumentResolver.class);
@@ -123,10 +117,10 @@ class ControllerMethodResolverTests {
 	}
 
 	@Test
-	void modelAttributeArgumentResolvers() {
+	public void modelAttributeArgumentResolvers() {
 		List<InvocableHandlerMethod> methods = this.methodResolver.getModelAttributeMethods(this.handlerMethod);
 
-		assertThat(methods).as("Expected one each from Controller + ControllerAdvice").hasSize(2);
+		assertThat(methods.size()).as("Expected one each from Controller + ControllerAdvice").isEqualTo(2);
 		InvocableHandlerMethod invocable = methods.get(0);
 		List<HandlerMethodArgumentResolver> resolvers = invocable.getResolvers();
 
@@ -145,12 +139,12 @@ class ControllerMethodResolverTests {
 		assertThat(next(resolvers, index).getClass()).isEqualTo(SessionAttributeMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(RequestAttributeMethodArgumentResolver.class);
 
+		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ModelMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ErrorsMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ServerWebExchangeMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(PrincipalMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(WebSessionMethodArgumentResolver.class);
-		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomSyncArgumentResolver.class);
@@ -160,11 +154,11 @@ class ControllerMethodResolverTests {
 	}
 
 	@Test
-	void initBinderArgumentResolvers() {
+	public void initBinderArgumentResolvers() {
 		List<SyncInvocableHandlerMethod> methods =
 				this.methodResolver.getInitBinderMethods(this.handlerMethod);
 
-		assertThat(methods).as("Expected one each from Controller + ControllerAdvice").hasSize(2);
+		assertThat(methods.size()).as("Expected one each from Controller + ControllerAdvice").isEqualTo(2);
 		SyncInvocableHandlerMethod invocable = methods.get(0);
 		List<SyncHandlerMethodArgumentResolver> resolvers = invocable.getResolvers();
 
@@ -190,7 +184,7 @@ class ControllerMethodResolverTests {
 	}
 
 	@Test
-	void exceptionHandlerArgumentResolvers() {
+	public void exceptionHandlerArgumentResolvers() {
 		InvocableHandlerMethod invocable = this.methodResolver.getExceptionHandlerMethod(
 				new ResponseStatusException(HttpStatus.BAD_REQUEST, "reason"), this.handlerMethod);
 
@@ -212,11 +206,11 @@ class ControllerMethodResolverTests {
 		assertThat(next(resolvers, index).getClass()).isEqualTo(SessionAttributeMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(RequestAttributeMethodArgumentResolver.class);
 
+		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ModelMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(ServerWebExchangeMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(PrincipalMethodArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(WebSessionMethodArgumentResolver.class);
-		assertThat(next(resolvers, index).getClass()).isEqualTo(ContinuationHandlerMethodArgumentResolver.class);
 
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomArgumentResolver.class);
 		assertThat(next(resolvers, index).getClass()).isEqualTo(CustomSyncArgumentResolver.class);
@@ -225,7 +219,7 @@ class ControllerMethodResolverTests {
 	}
 
 	@Test
-	void exceptionHandlerFromControllerAdvice() {
+	public void exceptionHandlerFromControllerAdvice() {
 		InvocableHandlerMethod invocable = this.methodResolver.getExceptionHandlerMethod(
 				new IllegalStateException("reason"), this.handlerMethod);
 

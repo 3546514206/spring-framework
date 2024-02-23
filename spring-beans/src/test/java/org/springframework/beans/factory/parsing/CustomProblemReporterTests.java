@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package org.springframework.beans.factory.parsing;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+import org.springframework.tests.sample.beans.TestBean;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.beans.testfixture.beans.TestBean;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
  * @author Rob Harrop
  * @author Chris Beams
  * @since 2.0
  */
-class CustomProblemReporterTests {
+public class CustomProblemReporterTests {
 
 	private CollatingProblemReporter problemReporter;
 
@@ -44,7 +43,7 @@ class CustomProblemReporterTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.problemReporter = new CollatingProblemReporter();
 		this.beanFactory = new DefaultListableBeanFactory();
 		this.reader = new XmlBeanDefinitionReader(this.beanFactory);
@@ -53,9 +52,9 @@ class CustomProblemReporterTests {
 
 
 	@Test
-	void testErrorsAreCollated() {
+	public void testErrorsAreCollated() {
 		this.reader.loadBeanDefinitions(qualifiedResource(CustomProblemReporterTests.class, "context.xml"));
-		assertThat(this.problemReporter.getErrors()).as("Incorrect number of errors collated").hasSize(4);
+		assertThat(this.problemReporter.getErrors().length).as("Incorrect number of errors collated").isEqualTo(4);
 
 		TestBean bean = (TestBean) this.beanFactory.getBean("validBean");
 		assertThat(bean).isNotNull();

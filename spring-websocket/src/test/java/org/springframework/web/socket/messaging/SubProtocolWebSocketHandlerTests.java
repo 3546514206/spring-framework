@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.web.socket.messaging;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -68,10 +67,10 @@ public class SubProtocolWebSocketHandlerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.webSocketHandler = new SubProtocolWebSocketHandler(this.inClientChannel, this.outClientChannel);
 		given(stompHandler.getSupportedProtocols()).willReturn(Arrays.asList("v10.stomp", "v11.stomp", "v12.stomp"));
-		given(mqttHandler.getSupportedProtocols()).willReturn(List.of("MQTT"));
+		given(mqttHandler.getSupportedProtocols()).willReturn(Arrays.asList("MQTT"));
 		this.session = new TestWebSocketSession();
 		this.session.setId("1");
 		this.session.setOpen(true);
@@ -79,7 +78,7 @@ public class SubProtocolWebSocketHandlerTests {
 
 
 	@Test
-	void subProtocolMatch() throws Exception {
+	public void subProtocolMatch() throws Exception {
 		this.webSocketHandler.setProtocolHandlers(Arrays.asList(stompHandler, mqttHandler));
 		this.session.setAcceptedProtocol("v12.sToMp");
 		this.webSocketHandler.afterConnectionEstablished(session);
@@ -90,7 +89,7 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void subProtocolDefaultHandlerOnly() throws Exception {
+	public void subProtocolDefaultHandlerOnly() throws Exception {
 		this.webSocketHandler.setDefaultProtocolHandler(stompHandler);
 		this.session.setAcceptedProtocol("v12.sToMp");
 		this.webSocketHandler.afterConnectionEstablished(session);
@@ -100,7 +99,7 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void subProtocolNoMatch() {
+	public void subProtocolNoMatch() throws Exception {
 		this.webSocketHandler.setDefaultProtocolHandler(defaultHandler);
 		this.webSocketHandler.setProtocolHandlers(Arrays.asList(stompHandler, mqttHandler));
 		this.session.setAcceptedProtocol("wamp");
@@ -110,7 +109,7 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void nullSubProtocol() throws Exception {
+	public void nullSubProtocol() throws Exception {
 		this.webSocketHandler.setDefaultProtocolHandler(defaultHandler);
 		this.webSocketHandler.afterConnectionEstablished(session);
 
@@ -121,7 +120,7 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void emptySubProtocol() throws Exception {
+	public void emptySubProtocol() throws Exception {
 		this.session.setAcceptedProtocol("");
 		this.webSocketHandler.setDefaultProtocolHandler(this.defaultHandler);
 		this.webSocketHandler.afterConnectionEstablished(session);
@@ -133,8 +132,8 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void noSubProtocolOneHandler() throws Exception {
-		this.webSocketHandler.setProtocolHandlers(List.of(stompHandler));
+	public void noSubProtocolOneHandler() throws Exception {
+		this.webSocketHandler.setProtocolHandlers(Arrays.asList(stompHandler));
 		this.webSocketHandler.afterConnectionEstablished(session);
 
 		verify(this.stompHandler).afterSessionStarted(
@@ -142,14 +141,14 @@ public class SubProtocolWebSocketHandlerTests {
 	}
 
 	@Test
-	void noSubProtocolTwoHandlers() {
+	public void noSubProtocolTwoHandlers() throws Exception {
 		this.webSocketHandler.setProtocolHandlers(Arrays.asList(stompHandler, mqttHandler));
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.webSocketHandler.afterConnectionEstablished(session));
 	}
 
 	@Test
-	void noSubProtocolNoDefaultHandler() {
+	public void noSubProtocolNoDefaultHandler() throws Exception {
 		this.webSocketHandler.setProtocolHandlers(Arrays.asList(stompHandler, mqttHandler));
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.webSocketHandler.afterConnectionEstablished(session));
@@ -165,7 +164,7 @@ public class SubProtocolWebSocketHandlerTests {
 		session1.setAcceptedProtocol("v12.stomp");
 		session2.setAcceptedProtocol("v12.stomp");
 
-		this.webSocketHandler.setProtocolHandlers(List.of(this.stompHandler));
+		this.webSocketHandler.setProtocolHandlers(Arrays.asList(this.stompHandler));
 		this.webSocketHandler.afterConnectionEstablished(session1);
 		this.webSocketHandler.afterConnectionEstablished(session2);
 
@@ -182,18 +181,13 @@ public class SubProtocolWebSocketHandlerTests {
 		this.webSocketHandler.start();
 		this.webSocketHandler.handleMessage(session1, new TextMessage("foo"));
 
-		TestWebSocketSession session3 = new TestWebSocketSession("id3");
-		session3.setOpen(true);
-		session3.setAcceptedProtocol("v12.stomp");
-		this.webSocketHandler.afterConnectionEstablished(session1);
-
 		assertThat(session1.isOpen()).isTrue();
 		assertThat(session1.getCloseStatus()).isNull();
 
 		assertThat(session2.isOpen()).isFalse();
 		assertThat(session2.getCloseStatus()).isEqualTo(CloseStatus.SESSION_NOT_RELIABLE);
 
-		assertThat(handlerAccessor.getPropertyValue("lastSessionCheckTime")).isNotEqualTo(sixtyOneSecondsAgo);
+		assertThat(handlerAccessor.getPropertyValue("lastSessionCheckTime")).as("lastSessionCheckTime not updated").isNotEqualTo(sixtyOneSecondsAgo);
 	}
 
 }

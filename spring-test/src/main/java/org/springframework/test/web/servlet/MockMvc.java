@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.test.web.servlet;
 
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.Filter;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import org.springframework.beans.Mergeable;
 import org.springframework.lang.Nullable;
@@ -56,11 +55,9 @@ import org.springframework.web.servlet.DispatcherServlet;
  * MockMvc mockMvc = webAppContextSetup(wac).build();
  *
  * mockMvc.perform(get("/form"))
- *     .andExpectAll(
- *         status().isOk(),
- *         content().contentType("text/html"),
- *         forwardedUrl("/WEB-INF/layouts/main.jsp")
- *     );
+ *     .andExpect(status().isOk())
+ *     .andExpect(content().mimeType("text/html"))
+ *     .andExpect(forwardedUrl("/WEB-INF/layouts/main.jsp"));
  * </pre>
  *
  * @author Rossen Stoyanchev
@@ -80,9 +77,6 @@ public final class MockMvc {
 
 	@Nullable
 	private RequestBuilder defaultRequestBuilder;
-
-	@Nullable
-	private Charset defaultResponseCharacterEncoding;
 
 	private List<ResultMatcher> defaultResultMatchers = new ArrayList<>();
 
@@ -110,14 +104,6 @@ public final class MockMvc {
 	 */
 	void setDefaultRequest(@Nullable RequestBuilder requestBuilder) {
 		this.defaultRequestBuilder = requestBuilder;
-	}
-
-	/**
-	 * The default character encoding to be applied to every response.
-	 * @see org.springframework.test.web.servlet.setup.ConfigurableMockMvcBuilder#defaultResponseCharacterEncoding(Charset)
-	 */
-	void setDefaultResponseCharacterEncoding(@Nullable Charset defaultResponseCharacterEncoding) {
-		this.defaultResponseCharacterEncoding = defaultResponseCharacterEncoding;
 	}
 
 	/**
@@ -165,8 +151,8 @@ public final class MockMvc {
 	 * @see org.springframework.test.web.servlet.result.MockMvcResultMatchers
 	 */
 	public ResultActions perform(RequestBuilder requestBuilder) throws Exception {
-		if (this.defaultRequestBuilder != null && requestBuilder instanceof Mergeable mergeable) {
-			requestBuilder = (RequestBuilder) mergeable.merge(this.defaultRequestBuilder);
+		if (this.defaultRequestBuilder != null && requestBuilder instanceof Mergeable) {
+			requestBuilder = (RequestBuilder) ((Mergeable) requestBuilder).merge(this.defaultRequestBuilder);
 		}
 
 		MockHttpServletRequest request = requestBuilder.buildRequest(this.servletContext);
@@ -183,12 +169,8 @@ public final class MockMvc {
 			servletResponse = mockResponse;
 		}
 
-		if (this.defaultResponseCharacterEncoding != null) {
-			mockResponse.setDefaultCharacterEncoding(this.defaultResponseCharacterEncoding.name());
-		}
-
-		if (requestBuilder instanceof SmartRequestBuilder smartRequestBuilder) {
-			request = smartRequestBuilder.postProcessRequest(request);
+		if (requestBuilder instanceof SmartRequestBuilder) {
+			request = ((SmartRequestBuilder) requestBuilder).postProcessRequest(request);
 		}
 
 		MvcResult mvcResult = new DefaultMvcResult(request, mockResponse);
@@ -227,19 +209,19 @@ public final class MockMvc {
 	}
 
 	private MockHttpServletResponse unwrapResponseIfNecessary(ServletResponse servletResponse) {
-		while (servletResponse instanceof HttpServletResponseWrapper wrapper) {
-			servletResponse = wrapper.getResponse();
+		while (servletResponse instanceof HttpServletResponseWrapper) {
+			servletResponse = ((HttpServletResponseWrapper) servletResponse).getResponse();
 		}
 		Assert.isInstanceOf(MockHttpServletResponse.class, servletResponse);
 		return (MockHttpServletResponse) servletResponse;
 	}
 
 	private void applyDefaultResultActions(MvcResult mvcResult) throws Exception {
-		for (ResultHandler handler : this.defaultResultHandlers) {
-			handler.handle(mvcResult);
-		}
 		for (ResultMatcher matcher : this.defaultResultMatchers) {
 			matcher.match(mvcResult);
+		}
+		for (ResultHandler handler : this.defaultResultHandlers) {
+			handler.handle(mvcResult);
 		}
 	}
 

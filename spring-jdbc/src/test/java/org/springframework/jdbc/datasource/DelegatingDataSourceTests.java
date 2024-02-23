@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,23 +34,22 @@ import static org.mockito.Mockito.verify;
  *
  * @author Phillip Webb
  */
-class DelegatingDataSourceTests {
+public class DelegatingDataSourceTests {
 
-	private final DataSource delegate = mock();
+	private final DataSource delegate = mock(DataSource.class);
 
 	private DelegatingDataSource dataSource = new DelegatingDataSource(delegate);
 
-
 	@Test
-	void shouldDelegateGetConnection() throws Exception {
-		Connection connection = mock();
+	public void shouldDelegateGetConnection() throws Exception {
+		Connection connection = mock(Connection.class);
 		given(delegate.getConnection()).willReturn(connection);
 		assertThat(dataSource.getConnection()).isEqualTo(connection);
 	}
 
 	@Test
-	void shouldDelegateGetConnectionWithUsernameAndPassword() throws Exception {
-		Connection connection = mock();
+	public void shouldDelegateGetConnectionWithUsernameAndPassword() throws Exception {
+		Connection connection = mock(Connection.class);
 		String username = "username";
 		String password = "password";
 		given(delegate.getConnection(username, password)).willReturn(connection);
@@ -58,64 +57,62 @@ class DelegatingDataSourceTests {
 	}
 
 	@Test
-	void shouldDelegateGetLogWriter() throws Exception {
+	public void shouldDelegateGetLogWriter() throws Exception {
 		PrintWriter writer = new PrintWriter(new ByteArrayOutputStream());
 		given(delegate.getLogWriter()).willReturn(writer);
 		assertThat(dataSource.getLogWriter()).isEqualTo(writer);
 	}
 
 	@Test
-	void shouldDelegateSetLogWriter() throws Exception {
+	public void shouldDelegateSetLogWriter() throws Exception {
 		PrintWriter writer = new PrintWriter(new ByteArrayOutputStream());
 		dataSource.setLogWriter(writer);
 		verify(delegate).setLogWriter(writer);
 	}
 
 	@Test
-	void shouldDelegateGetLoginTimeout() throws Exception {
+	public void shouldDelegateGetLoginTimeout() throws Exception {
 		int timeout = 123;
 		given(delegate.getLoginTimeout()).willReturn(timeout);
 		assertThat(dataSource.getLoginTimeout()).isEqualTo(timeout);
 	}
 
 	@Test
-	void shouldDelegateSetLoginTimeoutWithSeconds() throws Exception {
+	public void shouldDelegateSetLoginTimeoutWithSeconds() throws Exception {
 		int timeout = 123;
 		dataSource.setLoginTimeout(timeout);
 		verify(delegate).setLoginTimeout(timeout);
 	}
 
 	@Test
-	void shouldDelegateUnwrapWithoutImplementing() throws Exception {
-		ExampleWrapper wrapper = mock();
+	public void shouldDelegateUnwrapWithoutImplementing() throws Exception {
+		ExampleWrapper wrapper = mock(ExampleWrapper.class);
 		given(delegate.unwrap(ExampleWrapper.class)).willReturn(wrapper);
 		assertThat(dataSource.unwrap(ExampleWrapper.class)).isEqualTo(wrapper);
 	}
 
 	@Test
-	void shouldDelegateUnwrapImplementing() throws Exception {
+	public void shouldDelegateUnwrapImplementing() throws Exception {
 		dataSource = new DelegatingDataSourceWithWrapper();
 		assertThat(dataSource.unwrap(ExampleWrapper.class)).isSameAs(dataSource);
 	}
 
 	@Test
-	void shouldDelegateIsWrapperForWithoutImplementing() throws Exception {
+	public void shouldDelegateIsWrapperForWithoutImplementing() throws Exception {
 		given(delegate.isWrapperFor(ExampleWrapper.class)).willReturn(true);
 		assertThat(dataSource.isWrapperFor(ExampleWrapper.class)).isTrue();
 	}
 
 	@Test
-	void shouldDelegateIsWrapperForImplementing() throws Exception {
+	public void shouldDelegateIsWrapperForImplementing() throws Exception {
 		dataSource = new DelegatingDataSourceWithWrapper();
 		assertThat(dataSource.isWrapperFor(ExampleWrapper.class)).isTrue();
 	}
 
-
-	public interface ExampleWrapper {
+	public static interface ExampleWrapper {
 	}
 
 	private static class DelegatingDataSourceWithWrapper extends DelegatingDataSource
 			implements ExampleWrapper {
 	}
-
 }

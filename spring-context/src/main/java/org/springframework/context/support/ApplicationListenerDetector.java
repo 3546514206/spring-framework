@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package org.springframework.context.support;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.lang.Nullable;
+import org.springframework.util.ObjectUtils;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@code BeanPostProcessor} that detects beans which implement the {@code ApplicationListener}
@@ -59,9 +58,7 @@ class ApplicationListenerDetector implements DestructionAwareBeanPostProcessor, 
 
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
-		if (ApplicationListener.class.isAssignableFrom(beanType)) {
-			this.singletonNames.put(beanName, beanDefinition.isSingleton());
-		}
+		this.singletonNames.put(beanName, beanDefinition.isSingleton());
 	}
 
 	@Override
@@ -71,12 +68,12 @@ class ApplicationListenerDetector implements DestructionAwareBeanPostProcessor, 
 
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) {
-		if (bean instanceof ApplicationListener<?> applicationListener) {
+		if (bean instanceof ApplicationListener) {
 			// potentially not detected as a listener by getBeanNamesForType retrieval
 			Boolean flag = this.singletonNames.get(beanName);
 			if (Boolean.TRUE.equals(flag)) {
 				// singleton bean (top-level or inner): register on the fly
-				this.applicationContext.addApplicationListener(applicationListener);
+				this.applicationContext.addApplicationListener((ApplicationListener<?>) bean);
 			}
 			else if (Boolean.FALSE.equals(flag)) {
 				if (logger.isWarnEnabled() && !this.applicationContext.containsBean(beanName)) {
@@ -94,10 +91,10 @@ class ApplicationListenerDetector implements DestructionAwareBeanPostProcessor, 
 
 	@Override
 	public void postProcessBeforeDestruction(Object bean, String beanName) {
-		if (bean instanceof ApplicationListener<?> applicationListener) {
+		if (bean instanceof ApplicationListener) {
 			try {
 				ApplicationEventMulticaster multicaster = this.applicationContext.getApplicationEventMulticaster();
-				multicaster.removeApplicationListener(applicationListener);
+				multicaster.removeApplicationListener((ApplicationListener<?>) bean);
 				multicaster.removeApplicationListenerBean(beanName);
 			}
 			catch (IllegalStateException ex) {
@@ -114,13 +111,13 @@ class ApplicationListenerDetector implements DestructionAwareBeanPostProcessor, 
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof ApplicationListenerDetector that &&
-				this.applicationContext == that.applicationContext));
+		return (this == other || (other instanceof ApplicationListenerDetector &&
+				this.applicationContext == ((ApplicationListenerDetector) other).applicationContext));
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(this.applicationContext);
+		return ObjectUtils.nullSafeHashCode(this.applicationContext);
 	}
 
 }

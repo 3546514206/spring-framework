@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
- * JUnit Jupiter based unit tests for {@link TestContextManager}, which verify proper
+ * JUnit 4 based unit tests for {@link TestContextManager}, which verify proper
  * support for <em>suppressed exceptions</em> thrown by {@link TestExecutionListener
  * TestExecutionListeners}.
  *
@@ -36,23 +36,23 @@ import static org.assertj.core.api.Assertions.fail;
 class TestContextManagerSuppressedExceptionsTests {
 
 	@Test
-	void afterTestExecution() {
+	void afterTestExecution() throws Exception {
 		test("afterTestExecution", FailingAfterTestExecutionTestCase.class,
 			(tcm, c, m) -> tcm.afterTestExecution(this, m, null));
 	}
 
 	@Test
-	void afterTestMethod() {
+	void afterTestMethod() throws Exception {
 		test("afterTestMethod", FailingAfterTestMethodTestCase.class,
 			(tcm, c, m) -> tcm.afterTestMethod(this, m, null));
 	}
 
 	@Test
-	void afterTestClass() {
+	void afterTestClass() throws Exception {
 		test("afterTestClass", FailingAfterTestClassTestCase.class, (tcm, c, m) -> tcm.afterTestClass());
 	}
 
-	private void test(String useCase, Class<?> testClass, Callback callback) {
+	private void test(String useCase, Class<?> testClass, Callback callback) throws Exception {
 		TestContextManager testContextManager = new TestContextManager(testClass);
 		assertThat(testContextManager.getTestExecutionListeners().size()).as("Registered TestExecutionListeners").isEqualTo(2);
 

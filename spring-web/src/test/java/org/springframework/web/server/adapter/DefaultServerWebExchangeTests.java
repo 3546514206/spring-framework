@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,39 +17,38 @@
 package org.springframework.web.server.adapter;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.codec.ServerCodecConfigurer;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver;
 import org.springframework.web.server.session.DefaultWebSessionManager;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DefaultServerWebExchange}.
+ * Unit tests for {@link DefaultServerWebExchange}.
  *
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  */
-class DefaultServerWebExchangeTests {
+public class DefaultServerWebExchangeTests {
 
 	@Test
-	void transformUrlDefault() {
+	public void transformUrlDefault() {
 		ServerWebExchange exchange = createExchange();
 		assertThat(exchange.transformUrl("/foo")).isEqualTo("/foo");
 	}
 
 	@Test
-	void transformUrlWithEncoder() {
+	public void transformUrlWithEncoder() {
 		ServerWebExchange exchange = createExchange();
 		exchange.addUrlTransformer(s -> s + "?nonce=123");
 		assertThat(exchange.transformUrl("/foo")).isEqualTo("/foo?nonce=123");
 	}
 
 	@Test
-	void transformUrlWithMultipleEncoders() {
+	public void transformUrlWithMultipleEncoders() {
 		ServerWebExchange exchange = createExchange();
 		exchange.addUrlTransformer(s -> s + ";p=abc");
 		exchange.addUrlTransformer(s -> s + "?q=123");

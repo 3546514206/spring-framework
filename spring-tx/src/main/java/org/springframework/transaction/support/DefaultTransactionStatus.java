@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,16 +51,11 @@ import org.springframework.util.Assert;
 public class DefaultTransactionStatus extends AbstractTransactionStatus {
 
 	@Nullable
-	private final String transactionName;
-
-	@Nullable
 	private final Object transaction;
 
 	private final boolean newTransaction;
 
 	private final boolean newSynchronization;
-
-	private final boolean nested;
 
 	private final boolean readOnly;
 
@@ -72,7 +67,6 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 
 	/**
 	 * Create a new {@code DefaultTransactionStatus} instance.
-	 * @param transactionName the defined name of the transaction
 	 * @param transaction underlying transaction object that can hold state
 	 * for the internal transaction implementation
 	 * @param newTransaction if the transaction is new, otherwise participating
@@ -85,35 +79,19 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	 * debug logging should be enabled.
 	 * @param suspendedResources a holder for resources that have been suspended
 	 * for this transaction, if any
-	 * @since 6.1
 	 */
 	public DefaultTransactionStatus(
-			@Nullable String transactionName, @Nullable Object transaction, boolean newTransaction,
-			boolean newSynchronization, boolean nested, boolean readOnly, boolean debug,
-			@Nullable Object suspendedResources) {
+			@Nullable Object transaction, boolean newTransaction, boolean newSynchronization,
+			boolean readOnly, boolean debug, @Nullable Object suspendedResources) {
 
-		this.transactionName = transactionName;
 		this.transaction = transaction;
 		this.newTransaction = newTransaction;
 		this.newSynchronization = newSynchronization;
-		this.nested = nested;
 		this.readOnly = readOnly;
 		this.debug = debug;
 		this.suspendedResources = suspendedResources;
 	}
 
-	@Deprecated(since = "6.1", forRemoval = true)
-	public DefaultTransactionStatus(@Nullable Object transaction, boolean newTransaction,
-			boolean newSynchronization, boolean readOnly, boolean debug, @Nullable Object suspendedResources) {
-
-		this(null, transaction, newTransaction, newSynchronization, false, readOnly, debug, suspendedResources);
-	}
-
-
-	@Override
-	public String getTransactionName() {
-		return (this.transactionName != null ? this.transactionName : "");
-	}
 
 	/**
 	 * Return the underlying transaction object.
@@ -124,7 +102,9 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 		return this.transaction;
 	}
 
-	@Override
+	/**
+	 * Return whether there is an actual transaction active.
+	 */
 	public boolean hasTransaction() {
 		return (this.transaction != null);
 	}
@@ -135,18 +115,16 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	}
 
 	/**
-	 * Return if a new transaction synchronization has been opened for this transaction.
+	 * Return if a new transaction synchronization has been opened
+	 * for this transaction.
 	 */
 	public boolean isNewSynchronization() {
 		return this.newSynchronization;
 	}
 
-	@Override
-	public boolean isNested() {
-		return this.nested;
-	}
-
-	@Override
+	/**
+	 * Return if this transaction is defined as read-only transaction.
+	 */
 	public boolean isReadOnly() {
 		return this.readOnly;
 	}
@@ -183,8 +161,8 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	 */
 	@Override
 	public boolean isGlobalRollbackOnly() {
-		return (this.transaction instanceof SmartTransactionObject smartTransactionObject &&
-				smartTransactionObject.isRollbackOnly());
+		return ((this.transaction instanceof SmartTransactionObject) &&
+				((SmartTransactionObject) this.transaction).isRollbackOnly());
 	}
 
 	/**
@@ -196,11 +174,11 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	@Override
 	protected SavepointManager getSavepointManager() {
 		Object transaction = this.transaction;
-		if (!(transaction instanceof SavepointManager savepointManager)) {
+		if (!(transaction instanceof SavepointManager)) {
 			throw new NestedTransactionNotSupportedException(
 					"Transaction object [" + this.transaction + "] does not support savepoints");
 		}
-		return savepointManager;
+		return (SavepointManager) transaction;
 	}
 
 	/**
@@ -220,8 +198,8 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	 */
 	@Override
 	public void flush() {
-		if (this.transaction instanceof SmartTransactionObject smartTransactionObject) {
-			smartTransactionObject.flush();
+		if (this.transaction instanceof SmartTransactionObject) {
+			((SmartTransactionObject) this.transaction).flush();
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 package org.springframework.web.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.SynthesizingMethodParameter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  */
-class RequestHeaderMapMethodArgumentResolverTests {
+public class RequestHeaderMapMethodArgumentResolverTests {
 
 	private RequestHeaderMapMethodArgumentResolver resolver;
 
@@ -60,7 +59,7 @@ class RequestHeaderMapMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		resolver = new RequestHeaderMapMethodArgumentResolver();
 
 		Method method = getClass().getMethod("params", Map.class, MultiValueMap.class, HttpHeaders.class, Map.class);
@@ -75,7 +74,7 @@ class RequestHeaderMapMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		assertThat(resolver.supportsParameter(paramMap)).as("Map parameter not supported").isTrue();
 		assertThat(resolver.supportsParameter(paramMultiValueMap)).as("MultiValueMap parameter not supported").isTrue();
 		assertThat(resolver.supportsParameter(paramHttpHeaders)).as("HttpHeaders parameter not supported").isTrue();
@@ -83,7 +82,7 @@ class RequestHeaderMapMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveMapArgument() throws Exception {
+	public void resolveMapArgument() throws Exception {
 		String name = "foo";
 		String value = "bar";
 		Map<String, String> expected = Collections.singletonMap(name, value);
@@ -97,7 +96,7 @@ class RequestHeaderMapMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveMultiValueMapArgument() throws Exception {
+	public void resolveMultiValueMapArgument() throws Exception {
 		String name = "foo";
 		String value1 = "bar";
 		String value2 = "baz";
@@ -117,7 +116,7 @@ class RequestHeaderMapMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveHttpHeadersArgument() throws Exception {
+	public void resolveHttpHeadersArgument() throws Exception {
 		String name = "foo";
 		String value1 = "bar";
 		String value2 = "baz";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@
 
 package org.springframework.web.filter.reactive;
 
-import java.time.Duration;
-
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Greg Turnquist
  * @author Rossen Stoyanchev
  */
-class HiddenHttpMethodFilterTests {
+public class HiddenHttpMethodFilterTests {
 
 	private final HiddenHttpMethodFilter filter = new HiddenHttpMethodFilter();
 
@@ -44,38 +44,48 @@ class HiddenHttpMethodFilterTests {
 
 
 	@Test
-	void filterWithParameter() {
+	public void filterWithParameter() {
 		postForm("_method=DELETE").block(Duration.ZERO);
 		assertThat(this.filterChain.getHttpMethod()).isEqualTo(HttpMethod.DELETE);
 	}
 
 	@Test
-	void filterWithParameterMethodNotAllowed() {
+	public void filterWithParameterMethodNotAllowed() {
 		postForm("_method=TRACE").block(Duration.ZERO);
 		assertThat(this.filterChain.getHttpMethod()).isEqualTo(HttpMethod.POST);
 	}
 
 	@Test
-	void filterWithNoParameter() {
+	public void filterWithNoParameter() {
 		postForm("").block(Duration.ZERO);
 		assertThat(this.filterChain.getHttpMethod()).isEqualTo(HttpMethod.POST);
 	}
 
 	@Test
-	void filterWithEmptyStringParameter() {
+	public void filterWithEmptyStringParameter() {
 		postForm("_method=").block(Duration.ZERO);
 		assertThat(this.filterChain.getHttpMethod()).isEqualTo(HttpMethod.POST);
 	}
 
 	@Test
-	void filterWithDifferentMethodParam() {
+	public void filterWithDifferentMethodParam() {
 		this.filter.setMethodParamName("_foo");
 		postForm("_foo=DELETE").block(Duration.ZERO);
 		assertThat(this.filterChain.getHttpMethod()).isEqualTo(HttpMethod.DELETE);
 	}
 
 	@Test
-	void filterWithHttpPut() {
+	public void filterWithInvalidMethodValue() {
+		StepVerifier.create(postForm("_method=INVALID"))
+				.consumeErrorWith(error -> {
+					assertThat(error).isInstanceOf(IllegalArgumentException.class);
+					assertThat(error.getMessage()).isEqualTo("HttpMethod 'INVALID' not supported");
+				})
+				.verify();
+	}
+
+	@Test
+	public void filterWithHttpPut() {
 
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				MockServerHttpRequest.put("/")

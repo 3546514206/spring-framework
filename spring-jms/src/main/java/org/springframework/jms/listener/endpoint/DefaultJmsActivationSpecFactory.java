@@ -16,8 +16,9 @@
 
 package org.springframework.jms.listener.endpoint;
 
-import jakarta.jms.Session;
-import jakarta.resource.spi.ResourceAdapter;
+import javax.jms.Session;
+import javax.resource.spi.ResourceAdapter;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -32,7 +33,7 @@ import org.springframework.beans.BeanWrapper;
  * <p>An ActivationSpec factory is effectively dependent on the concrete
  * JMS provider, e.g. on ActiveMQ. This default implementation simply
  * guesses the ActivationSpec class name from the provider's class name
- * ("ActiveMQResourceAdapter" &rarr; "ActiveMQActivationSpec" in the same package,
+ * ("ActiveMQResourceAdapter" -> "ActiveMQActivationSpec" in the same package,
  * or "ActivationSpecImpl" in the same package as the ResourceAdapter class),
  * and populates the ActivationSpec properties as suggested by the
  * JCA 1.5 specification (Appendix B). Specify the 'activationSpecClass'
@@ -67,7 +68,7 @@ public class DefaultJmsActivationSpecFactory extends StandardJmsActivationSpecFa
 
 	/**
 	 * This implementation guesses the ActivationSpec class name from the
-	 * provider's class name: e.g. "ActiveMQResourceAdapter" &rarr;
+	 * provider's class name: e.g. "ActiveMQResourceAdapter" ->
 	 * "ActiveMQActivationSpec" in the same package, or a class named
 	 * "ActivationSpecImpl" in the same package as the ResourceAdapter class.
 	 */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package org.springframework.web.servlet.mvc.annotation;
 
-import java.io.IOException;
-import java.io.Writer;
-
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
 import org.springframework.aop.interceptor.SimpleTraceInterceptor;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.lang.Nullable;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletConfig;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.GenericWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletConfig;
+
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.io.Writer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,13 +41,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Arjen Poutsma
  * @since 3.0
  */
-class JdkProxyControllerTests {
+public class JdkProxyControllerTests {
 
 	private DispatcherServlet servlet;
 
 
 	@Test
-	void typeLevel() throws Exception {
+	public void typeLevel() throws Exception {
 		initServlet(TypeLevelImpl.class);
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/test");
@@ -58,7 +57,7 @@ class JdkProxyControllerTests {
 	}
 
 	@Test
-	void methodLevel() throws Exception {
+	public void methodLevel() throws Exception {
 		initServlet(MethodLevelImpl.class);
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/test");
@@ -68,7 +67,7 @@ class JdkProxyControllerTests {
 	}
 
 	@Test
-	void typeAndMethodLevel() throws Exception {
+	public void typeAndMethodLevel() throws Exception {
 		initServlet(TypeAndMethodLevelImpl.class);
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/hotels/bookings");
@@ -78,6 +77,7 @@ class JdkProxyControllerTests {
 	}
 
 
+	@SuppressWarnings("serial")
 	private void initServlet(final Class<?> controllerclass) throws ServletException {
 		servlet = new DispatcherServlet() {
 			@Override

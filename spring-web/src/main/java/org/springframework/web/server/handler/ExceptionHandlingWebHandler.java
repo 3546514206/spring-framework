@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,17 @@
 
 package org.springframework.web.server.handler;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import reactor.core.publisher.Mono;
-
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebExceptionHandler;
 import org.springframework.web.server.WebHandler;
+import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * WebHandler decorator that invokes one or more {@link WebExceptionHandler WebExceptionHandlers}
@@ -37,13 +36,6 @@ import org.springframework.web.server.WebHandler;
  * @since 5.0
  */
 public class ExceptionHandlingWebHandler extends WebHandlerDecorator {
-
-	/**
-	 * Name of the {@link ServerWebExchange#getAttributes() attribute} that
-	 * contains the exception handled by {@link WebExceptionHandler WebExceptionHandlers}.
-	 * @since 6.1
-	 */
-	public static final String HANDLED_WEB_EXCEPTION = ExceptionHandlingWebHandler.class.getSimpleName() + ".handledException";
 
 	private final List<WebExceptionHandler> exceptionHandlers;
 
@@ -81,8 +73,7 @@ public class ExceptionHandlingWebHandler extends WebHandlerDecorator {
 		}
 
 		for (WebExceptionHandler handler : this.exceptionHandlers) {
-			completion = completion.doOnError(error -> exchange.getAttributes().put(HANDLED_WEB_EXCEPTION, error))
-					.onErrorResume(ex -> handler.handle(exchange, ex));
+			completion = completion.onErrorResume(ex -> handler.handle(exchange, ex));
 		}
 		return completion;
 	}
@@ -103,7 +94,7 @@ public class ExceptionHandlingWebHandler extends WebHandlerDecorator {
 			String query = StringUtils.hasText(rawQuery) ? "?" + rawQuery : "";
 			HttpMethod httpMethod = request.getMethod();
 			String description = "HTTP " + httpMethod + " \"" + request.getPath() + query + "\"";
-			return Mono.<Void>error(ex).checkpoint(description + " [ExceptionHandlingWebHandler]");
+			return Mono.error(ex).checkpoint(description + " [ExceptionHandlingWebHandler]").cast(Void.class);
 		}
 	}
 

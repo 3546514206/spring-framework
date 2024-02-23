@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,61 +16,40 @@
 
 package org.springframework.core;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link AttributeAccessorSupport}.
- *
  * @author Rob Harrop
  * @author Sam Brannen
  * @since 2.0
  */
 class AttributeAccessorSupportTests {
 
-	private static final String NAME = "name";
+	private static final String NAME = "foo";
 
-	private static final String VALUE = "value";
+	private static final String VALUE = "bar";
 
-	private final AttributeAccessor attributeAccessor = new SimpleAttributeAccessorSupport();
-
+	private AttributeAccessor attributeAccessor = new SimpleAttributeAccessorSupport();
 
 	@Test
-	void setAndGet() {
+	void setAndGet() throws Exception {
 		this.attributeAccessor.setAttribute(NAME, VALUE);
 		assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo(VALUE);
 	}
 
 	@Test
-	void setAndHas() {
+	void setAndHas() throws Exception {
 		assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();
 		this.attributeAccessor.setAttribute(NAME, VALUE);
 		assertThat(this.attributeAccessor.hasAttribute(NAME)).isTrue();
 	}
 
 	@Test
-	void computeAttribute() {
-		AtomicInteger atomicInteger = new AtomicInteger();
-		Function<String, String> computeFunction = name -> "computed-" + atomicInteger.incrementAndGet();
-
-		assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();
-		this.attributeAccessor.computeAttribute(NAME, computeFunction);
-		assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo("computed-1");
-		this.attributeAccessor.computeAttribute(NAME, computeFunction);
-		assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo("computed-1");
-
-		this.attributeAccessor.removeAttribute(NAME);
-		assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();
-		this.attributeAccessor.computeAttribute(NAME, computeFunction);
-		assertThat(this.attributeAccessor.getAttribute(NAME)).isEqualTo("computed-2");
-	}
-
-	@Test
-	void remove() {
+	void remove() throws Exception {
 		assertThat(this.attributeAccessor.hasAttribute(NAME)).isFalse();
 		this.attributeAccessor.setAttribute(NAME, VALUE);
 		assertThat(this.attributeAccessor.removeAttribute(NAME)).isEqualTo(VALUE);
@@ -78,10 +57,13 @@ class AttributeAccessorSupportTests {
 	}
 
 	@Test
-	void attributeNames() {
+	void attributeNames() throws Exception {
 		this.attributeAccessor.setAttribute(NAME, VALUE);
 		this.attributeAccessor.setAttribute("abc", "123");
-		assertThat(this.attributeAccessor.attributeNames()).contains("abc", NAME);
+		String[] attributeNames = this.attributeAccessor.attributeNames();
+		Arrays.sort(attributeNames);
+		assertThat(Arrays.binarySearch(attributeNames, NAME) > -1).isTrue();
+		assertThat(Arrays.binarySearch(attributeNames, "abc") > -1).isTrue();
 	}
 
 	@SuppressWarnings("serial")

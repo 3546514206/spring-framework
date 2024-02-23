@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.beans.support;
 
-import java.beans.PropertyEditor;
-import java.lang.reflect.Method;
-
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
@@ -27,6 +24,9 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.MethodInvoker;
 import org.springframework.util.ReflectionUtils;
+
+import java.beans.PropertyEditor;
+import java.lang.reflect.Method;
 
 /**
  * Subclass of {@link MethodInvoker} that tries to convert the given
@@ -98,11 +98,11 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 */
 	public void registerCustomEditor(Class<?> requiredType, PropertyEditor propertyEditor) {
 		TypeConverter converter = getTypeConverter();
-		if (!(converter instanceof PropertyEditorRegistry registry)) {
+		if (!(converter instanceof PropertyEditorRegistry)) {
 			throw new IllegalStateException(
 					"TypeConverter does not implement PropertyEditorRegistry interface: " + converter);
 		}
-		registry.registerCustomEditor(requiredType, propertyEditor);
+		((PropertyEditorRegistry) converter).registerCustomEditor(requiredType, propertyEditor);
 	}
 
 
@@ -111,7 +111,6 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 	 * @see #doFindMatchingMethod
 	 */
 	@Override
-	@Nullable
 	protected Method findMatchingMethod() {
 		Method matchingMethod = super.findMatchingMethod();
 		// Second pass: look for method where arguments can be converted to parameter types.
@@ -147,17 +146,15 @@ public class ArgumentConvertingMethodInvoker extends MethodInvoker {
 			for (Method candidate : candidates) {
 				if (candidate.getName().equals(targetMethod)) {
 					// Check if the inspected method has the correct number of parameters.
-					int parameterCount = candidate.getParameterCount();
-					if (parameterCount == argCount) {
-						Class<?>[] paramTypes = candidate.getParameterTypes();
+					Class<?>[] paramTypes = candidate.getParameterTypes();
+					if (paramTypes.length == argCount) {
 						Object[] convertedArguments = new Object[argCount];
 						boolean match = true;
 						for (int j = 0; j < argCount && match; j++) {
 							// Verify that the supplied argument is assignable to the method parameter.
 							try {
 								convertedArguments[j] = converter.convertIfNecessary(arguments[j], paramTypes[j]);
-							}
-							catch (TypeMismatchException ex) {
+							} catch (TypeMismatchException ex) {
 								// Ignore -> simply doesn't match.
 								match = false;
 							}

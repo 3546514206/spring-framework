@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package org.springframework.orm.hibernate5;
 import org.hibernate.Session;
 
 import org.springframework.lang.Nullable;
-import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 
 /**
  * Simple synchronization adapter that propagates a {@code flush()} call
@@ -28,7 +28,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
  * @author Juergen Hoeller
  * @since 4.2
  */
-public class SpringFlushSynchronization implements TransactionSynchronization {
+public class SpringFlushSynchronization extends TransactionSynchronizationAdapter {
 
 	private final Session session;
 
@@ -43,9 +43,11 @@ public class SpringFlushSynchronization implements TransactionSynchronization {
 		SessionFactoryUtils.flush(this.session, false);
 	}
 
+
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof SpringFlushSynchronization that && this.session == that.session));
+		return (this == other || (other instanceof SpringFlushSynchronization &&
+				this.session == ((SpringFlushSynchronization) other).session));
 	}
 
 	@Override

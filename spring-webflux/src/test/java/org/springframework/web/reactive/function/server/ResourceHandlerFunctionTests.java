@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,25 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.List;
-import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.HttpMessageWriter;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.web.reactive.result.view.ViewResolver;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.EnumSet;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,17 +42,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Arjen Poutsma
  * @since 5.0
  */
-class ResourceHandlerFunctionTests {
+public class ResourceHandlerFunctionTests {
 
 	private final Resource resource = new ClassPathResource("response.txt", getClass());
 
-	private final ResourceHandlerFunction handlerFunction = new ResourceHandlerFunction(this.resource, (r, h) -> {});
+	private final ResourceHandlerFunction handlerFunction = new ResourceHandlerFunction(this.resource);
 
 	private ServerResponse.Context context;
 
 
 	@BeforeEach
-	void createContext() {
+	public void createContext() {
 		HandlerStrategies strategies = HandlerStrategies.withDefaults();
 		context = new ServerResponse.Context() {
 			@Override
@@ -69,7 +68,7 @@ class ResourceHandlerFunctionTests {
 
 
 	@Test
-	void get() throws IOException {
+	public void get() throws IOException {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("http://localhost"));
 		MockServerHttpResponse mockResponse = exchange.getResponse();
 
@@ -106,7 +105,7 @@ class ResourceHandlerFunctionTests {
 	}
 
 	@Test
-	void head() throws IOException {
+	public void head() throws IOException {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.head("http://localhost"));
 		MockServerHttpResponse mockResponse = exchange.getResponse();
 
@@ -132,7 +131,7 @@ class ResourceHandlerFunctionTests {
 	}
 
 	@Test
-	void options() {
+	public void options() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.options("http://localhost"));
 		MockServerHttpResponse mockResponse = exchange.getResponse();
 
@@ -141,7 +140,7 @@ class ResourceHandlerFunctionTests {
 		Mono<ServerResponse> responseMono = this.handlerFunction.handle(request);
 		Mono<Void> result = responseMono.flatMap(response -> {
 			assertThat(response.statusCode()).isEqualTo(HttpStatus.OK);
-			assertThat(response.headers().getAllow()).isEqualTo(Set.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS));
+			assertThat(response.headers().getAllow()).isEqualTo(EnumSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS));
 			return response.writeTo(exchange, context);
 		});
 
@@ -150,7 +149,7 @@ class ResourceHandlerFunctionTests {
 				.expectComplete()
 				.verify();
 		assertThat(mockResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(mockResponse.getHeaders().getAllow()).isEqualTo(Set.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS));
+		assertThat(mockResponse.getHeaders().getAllow()).isEqualTo(EnumSet.of(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS));
 
 		StepVerifier.create(mockResponse.getBody()).expectComplete().verify();
 	}

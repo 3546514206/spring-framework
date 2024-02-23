@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.util.ReflectionUtils;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,10 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 3.1
  * @see org.springframework.util.ReflectionUtilsTests
  */
-class ReflectionUtilsIntegrationTests {
+public class ReflectionUtilsIntegrationTests {
 
 	@Test
-	void getUniqueDeclaredMethods_withCovariantReturnType_andCglibRewrittenMethodNames() {
+	public void getUniqueDeclaredMethods_withCovariantReturnType_andCglibRewrittenMethodNames() throws Exception {
 		Class<?> cglibLeaf = new ConfigurationClassEnhancer().enhance(Leaf.class, null);
 		int m1MethodCount = 0;
 		Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(cglibLeaf);
@@ -54,7 +53,7 @@ class ReflectionUtilsIntegrationTests {
 
 
 	@Configuration
-	abstract static class Parent {
+	static abstract class Parent {
 		public abstract Number m1();
 	}
 
@@ -64,7 +63,7 @@ class ReflectionUtilsIntegrationTests {
 		@Override
 		@Bean
 		public Integer m1() {
-			return 42;
+			return new Integer(42);
 		}
 	}
 

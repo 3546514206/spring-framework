@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.test.web.reactive.server;
 
 import org.junit.jupiter.api.Test;
@@ -26,8 +25,7 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 /**
- * Tests for {@link DefaultRouterFunctionSpec}.
- *
+ * Unit tests for {@link DefaultRouterFunctionSpec}.
  * @author Rossen Stoyanchev
  */
 public class DefaultRouterFunctionSpecTests {

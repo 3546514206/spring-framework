@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,28 +30,28 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Stephane Nicoll
  */
-class PropertyMatchesTests {
+public class PropertyMatchesTests {
 
 	@Test
-	void simpleBeanPropertyTypo() {
+	public void simpleBeanPropertyTypo() {
 		PropertyMatches matches = PropertyMatches.forProperty("naem", SampleBeanProperties.class);
 		assertThat(matches.getPossibleMatches()).contains("name");
 	}
 
 	@Test
-	void complexBeanPropertyTypo() {
+	public void complexBeanPropertyTypo() {
 		PropertyMatches matches = PropertyMatches.forProperty("desriptn", SampleBeanProperties.class);
 		assertThat(matches.getPossibleMatches()).isEmpty();
 	}
 
 	@Test
-	void unknownBeanProperty() {
+	public void unknownBeanProperty() {
 		PropertyMatches matches = PropertyMatches.forProperty("unknown", SampleBeanProperties.class);
 		assertThat(matches.getPossibleMatches()).isEmpty();
 	}
 
 	@Test
-	void severalMatchesBeanProperty() {
+	public void severalMatchesBeanProperty() {
 		PropertyMatches matches = PropertyMatches.forProperty("counter", SampleBeanProperties.class);
 		assertThat(matches.getPossibleMatches()).contains("counter1");
 		assertThat(matches.getPossibleMatches()).contains("counter2");
@@ -59,7 +59,7 @@ class PropertyMatchesTests {
 	}
 
 	@Test
-	void simpleBeanPropertyErrorMessage() {
+	public void simpleBeanPropertyErrorMessage() {
 		PropertyMatches matches = PropertyMatches.forProperty("naem", SampleBeanProperties.class);
 		String msg = matches.buildErrorMessage();
 		assertThat(msg).contains("naem");
@@ -69,7 +69,7 @@ class PropertyMatchesTests {
 	}
 
 	@Test
-	void complexBeanPropertyErrorMessage() {
+	public void complexBeanPropertyErrorMessage() {
 		PropertyMatches matches = PropertyMatches.forProperty("counter", SampleBeanProperties.class);
 		String msg = matches.buildErrorMessage();
 		assertThat(msg).contains("counter");
@@ -79,25 +79,25 @@ class PropertyMatchesTests {
 	}
 
 	@Test
-	void simpleFieldPropertyTypo() {
+	public void simpleFieldPropertyTypo() {
 		PropertyMatches matches = PropertyMatches.forField("naem", SampleFieldProperties.class);
 		assertThat(matches.getPossibleMatches()).contains("name");
 	}
 
 	@Test
-	void complexFieldPropertyTypo() {
+	public void complexFieldPropertyTypo() {
 		PropertyMatches matches = PropertyMatches.forField("desriptn", SampleFieldProperties.class);
 		assertThat(matches.getPossibleMatches()).isEmpty();
 	}
 
 	@Test
-	void unknownFieldProperty() {
+	public void unknownFieldProperty() {
 		PropertyMatches matches = PropertyMatches.forField("unknown", SampleFieldProperties.class);
 		assertThat(matches.getPossibleMatches()).isEmpty();
 	}
 
 	@Test
-	void severalMatchesFieldProperty() {
+	public void severalMatchesFieldProperty() {
 		PropertyMatches matches = PropertyMatches.forField("counter", SampleFieldProperties.class);
 		assertThat(matches.getPossibleMatches()).contains("counter1");
 		assertThat(matches.getPossibleMatches()).contains("counter2");
@@ -105,7 +105,7 @@ class PropertyMatchesTests {
 	}
 
 	@Test
-	void simpleFieldPropertyErrorMessage() {
+	public void simpleFieldPropertyErrorMessage() {
 		PropertyMatches matches = PropertyMatches.forField("naem", SampleFieldProperties.class);
 		String msg = matches.buildErrorMessage();
 		assertThat(msg).contains("naem");
@@ -115,7 +115,7 @@ class PropertyMatchesTests {
 	}
 
 	@Test
-	void complexFieldPropertyErrorMessage() {
+	public void complexFieldPropertyErrorMessage() {
 		PropertyMatches matches = PropertyMatches.forField("counter", SampleFieldProperties.class);
 		String msg = matches.buildErrorMessage();
 		assertThat(msg).contains("counter");

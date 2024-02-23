@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.aop.support.AopUtils;
-import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.MethodClassKey;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.StringValueResolver;
 
 /**
  * Abstract implementation of {@link TransactionAttributeSource} that caches
@@ -51,8 +49,7 @@ import org.springframework.util.StringValueResolver;
  * @author Juergen Hoeller
  * @since 1.1
  */
-public abstract class AbstractFallbackTransactionAttributeSource
-		implements TransactionAttributeSource, EmbeddedValueResolverAware {
+public abstract class AbstractFallbackTransactionAttributeSource implements TransactionAttributeSource {
 
 	/**
 	 * Canonical value held in cache to indicate no transaction attribute was
@@ -74,21 +71,12 @@ public abstract class AbstractFallbackTransactionAttributeSource
 	 */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	@Nullable
-	private transient StringValueResolver embeddedValueResolver;
-
 	/**
 	 * Cache of TransactionAttributes, keyed by method on a specific target class.
 	 * <p>As this base class is not marked Serializable, the cache will be recreated
 	 * after serialization - provided that the concrete subclass is Serializable.
 	 */
 	private final Map<Object, TransactionAttribute> attributeCache = new ConcurrentHashMap<>(1024);
-
-
-	@Override
-	public void setEmbeddedValueResolver(StringValueResolver resolver) {
-		this.embeddedValueResolver = resolver;
-	}
 
 
 	/**
@@ -128,9 +116,8 @@ public abstract class AbstractFallbackTransactionAttributeSource
 			}
 			else {
 				String methodIdentification = ClassUtils.getQualifiedMethodName(method, targetClass);
-				if (txAttr instanceof DefaultTransactionAttribute dta) {
-					dta.setDescriptor(methodIdentification);
-					dta.resolveAttributeStrings(this.embeddedValueResolver);
+				if (txAttr instanceof DefaultTransactionAttribute) {
+					((DefaultTransactionAttribute) txAttr).setDescriptor(methodIdentification);
 				}
 				if (logger.isTraceEnabled()) {
 					logger.trace("Adding transactional method '" + methodIdentification + "' with attribute: " + txAttr);
@@ -162,7 +149,7 @@ public abstract class AbstractFallbackTransactionAttributeSource
 	 */
 	@Nullable
 	protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
-		// Don't allow non-public methods, as configured.
+		// Don't allow no-public methods as required.
 		if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {
 			return null;
 		}

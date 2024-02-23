@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,85 +16,57 @@
 
 package org.springframework.util;
 
-import java.io.NotSerializableException;
-import java.io.Serializable;
-import java.math.BigInteger;
-
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import java.math.BigInteger;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
- * Tests for {@link SerializationUtils}.
+ * Test for static utility to help with serialization.
  *
  * @author Dave Syer
- * @author Sam Brannen
  * @since 3.0.5
  */
 class SerializationUtilsTests {
 
-	private static final BigInteger FOO = new BigInteger(
+	private static BigInteger FOO = new BigInteger(
 			"-9702942423549012526722364838327831379660941553432801565505143675386108883970811292563757558516603356009681061" +
-			"5697574744209306031461371833798723505120163874786203211176873686513374052845353833564048");
+					"5697574744209306031461371833798723505120163874786203211176873686513374052845353833564048");
 
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void serializeCycleSunnyDay() {
+	void serializeCycleSunnyDay() throws Exception {
 		assertThat(SerializationUtils.deserialize(SerializationUtils.serialize("foo"))).isEqualTo("foo");
 	}
 
 	@Test
-	void serializeNonSerializableRecord() {
-		record Person(String firstName, String lastName) {}
-		Person jane = new Person("Jane", "Doe");
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> SerializationUtils.serialize(jane))
-			.withCauseExactlyInstanceOf(NotSerializableException.class);
+	void deserializeUndefined() throws Exception {
+		byte[] bytes = FOO.toByteArray();
+		assertThatIllegalStateException().isThrownBy(() ->
+				SerializationUtils.deserialize(bytes));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void serializeAndDeserializeSerializableRecord() {
-		record Person(String firstName, String lastName) implements Serializable {}
-		Person jane = new Person("Jane", "Doe");
-		assertThat(SerializationUtils.deserialize(SerializationUtils.serialize(jane))).isEqualTo(jane);
+	void serializeNonSerializable() throws Exception {
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				SerializationUtils.serialize(new Object()));
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void deserializeUndefined() {
-		assertThatIllegalStateException().isThrownBy(() -> SerializationUtils.deserialize(FOO.toByteArray()));
+	void deserializeNonSerializable() throws Exception {
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				SerializationUtils.deserialize("foo".getBytes()));
 	}
 
 	@Test
-	void serializeNonSerializable() {
-		assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.serialize(new Object()));
-	}
-
-	@Test
-	@SuppressWarnings("deprecation")
-	void deserializeNonSerializable() {
-		assertThatIllegalArgumentException().isThrownBy(() -> SerializationUtils.deserialize("foo".getBytes()));
-	}
-
-	@Test
-	void serializeNull() {
+	void serializeNull() throws Exception {
 		assertThat(SerializationUtils.serialize(null)).isNull();
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void deserializeNull() {
+	void deserializeNull() throws Exception {
 		assertThat(SerializationUtils.deserialize(null)).isNull();
-	}
-
-	@Test
-	void cloneException() {
-		IllegalArgumentException ex = new IllegalArgumentException("foo");
-		assertThat(SerializationUtils.clone(ex)).hasMessage("foo").isNotSameAs(ex);
 	}
 
 }

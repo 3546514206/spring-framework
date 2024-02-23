@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,18 @@
 
 package org.springframework.web.servlet.view.freemarker;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-
 import freemarker.template.Configuration;
 import freemarker.template.SimpleHash;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
-
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.support.StaticWebApplicationContext;
@@ -46,9 +38,14 @@ import org.springframework.web.servlet.support.RequestContext;
 import org.springframework.web.servlet.theme.FixedThemeResolver;
 import org.springframework.web.servlet.view.AbstractTemplateView;
 import org.springframework.web.servlet.view.DummyMacroRequestContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,43 +55,44 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Sam Brannen
  * @since 25.01.2005
  */
-@SuppressWarnings("deprecation")
 public class FreeMarkerMacroTests {
 
 	private static final String TEMPLATE_FILE = "test.ftl";
 
-	private final StaticWebApplicationContext wac = new StaticWebApplicationContext();
+	private StaticWebApplicationContext wac;
 
-	private final MockServletContext servletContext = new MockServletContext();
+	private MockHttpServletRequest request;
 
-	private final MockHttpServletRequest request = new MockHttpServletRequest();
+	private MockHttpServletResponse response;
 
-	private final MockHttpServletResponse response = new MockHttpServletResponse();
-
-	private final FreeMarkerConfigurer fc = new FreeMarkerConfigurer();
-
-	private Path templateLoaderPath;
+	private FreeMarkerConfigurer fc;
 
 
 	@BeforeEach
-	void setUp() throws Exception {
-		this.templateLoaderPath = Files.createTempDirectory("servlet-").toAbsolutePath();
+	public void setUp() throws Exception {
+		ServletContext sc = new MockServletContext();
+		wac = new StaticWebApplicationContext();
+		wac.setServletContext(sc);
 
-		fc.setTemplateLoaderPaths("classpath:/", "file://" + this.templateLoaderPath);
+		// final Template expectedTemplate = new Template();
+		fc = new FreeMarkerConfigurer();
+		fc.setTemplateLoaderPaths("classpath:/", "file://" + System.getProperty("java.io.tmpdir"));
+		fc.setServletContext(sc);
 		fc.afterPropertiesSet();
 
-		wac.setServletContext(servletContext);
 		wac.getDefaultListableBeanFactory().registerSingleton("freeMarkerConfigurer", fc);
 		wac.refresh();
 
+		request = new MockHttpServletRequest();
 		request.setAttribute(DispatcherServlet.WEB_APPLICATION_CONTEXT_ATTRIBUTE, wac);
 		request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, new AcceptHeaderLocaleResolver());
 		request.setAttribute(DispatcherServlet.THEME_RESOLVER_ATTRIBUTE, new FixedThemeResolver());
+		response = new MockHttpServletResponse();
 	}
 
 
 	@Test
-	void testExposeSpringMacroHelpers() throws Exception {
+	public void testExposeSpringMacroHelpers() throws Exception {
 		FreeMarkerView fv = new FreeMarkerView() {
 			@Override
 			@SuppressWarnings("rawtypes")
@@ -117,7 +115,7 @@ public class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void testSpringMacroRequestContextAttributeUsed() {
+	public void testSpringMacroRequestContextAttributeUsed() {
 		final String helperTool = "wrongType";
 
 		FreeMarkerView fv = new FreeMarkerView() {
@@ -142,150 +140,149 @@ public class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void testName() throws Exception {
+	public void testName() throws Exception {
 		assertThat(getMacroOutput("NAME")).isEqualTo("Darren");
 	}
 
 	@Test
-	@DisabledForJreRange(min = JRE.JAVA_21)
 	public void testAge() throws Exception {
 		assertThat(getMacroOutput("AGE")).isEqualTo("99");
 	}
 
 	@Test
-	void testMessage() throws Exception {
+	public void testMessage() throws Exception {
 		assertThat(getMacroOutput("MESSAGE")).isEqualTo("Howdy Mundo");
 	}
 
 	@Test
-	void testDefaultMessage() throws Exception {
+	public void testDefaultMessage() throws Exception {
 		assertThat(getMacroOutput("DEFAULTMESSAGE")).isEqualTo("hi planet");
 	}
 
 	@Test
-	void testMessageArgs() throws Exception {
+	public void testMessageArgs() throws Exception {
 		assertThat(getMacroOutput("MESSAGEARGS")).isEqualTo("Howdy[World]");
 	}
 
 	@Test
-	void testMessageArgsWithDefaultMessage() throws Exception {
+	public void testMessageArgsWithDefaultMessage() throws Exception {
 		assertThat(getMacroOutput("MESSAGEARGSWITHDEFAULTMESSAGE")).isEqualTo("Hi");
 	}
 
 	@Test
-	void testTheme() throws Exception {
+	public void testTheme() throws Exception {
 		assertThat(getMacroOutput("THEME")).isEqualTo("Howdy! Mundo!");
 	}
 
 	@Test
-	void testDefaultTheme() throws Exception {
+	public void testDefaultTheme() throws Exception {
 		assertThat(getMacroOutput("DEFAULTTHEME")).isEqualTo("hi! planet!");
 	}
 
 	@Test
-	void testThemeArgs() throws Exception {
+	public void testThemeArgs() throws Exception {
 		assertThat(getMacroOutput("THEMEARGS")).isEqualTo("Howdy![World]");
 	}
 
 	@Test
-	void testThemeArgsWithDefaultMessage() throws Exception {
+	public void testThemeArgsWithDefaultMessage() throws Exception {
 		assertThat(getMacroOutput("THEMEARGSWITHDEFAULTMESSAGE")).isEqualTo("Hi!");
 	}
 
 	@Test
-	void testUrl() throws Exception {
+	public void testUrl() throws Exception {
 		assertThat(getMacroOutput("URL")).isEqualTo("/springtest/aftercontext.html");
 	}
 
 	@Test
-	void testUrlParams() throws Exception {
+	public void testUrlParams() throws Exception {
 		assertThat(getMacroOutput("URLPARAMS")).isEqualTo("/springtest/aftercontext/bar?spam=bucket");
 	}
 
 	@Test
-	void testForm1() throws Exception {
-		assertThat(getMacroOutput("FORM1")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" >");
+	public void testForm1() throws Exception {
+		assertThat(getMacroOutput("FORM1")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\"     >");
 	}
 
 	@Test
-	void testForm2() throws Exception {
-		assertThat(getMacroOutput("FORM2")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" class=\"myCssClass\" >");
+	public void testForm2() throws Exception {
+		assertThat(getMacroOutput("FORM2")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" class=\"myCssClass\"    >");
 	}
 
 	@Test
-	void testForm3() throws Exception {
+	public void testForm3() throws Exception {
 		assertThat(getMacroOutput("FORM3")).isEqualTo("<textarea id=\"name\" name=\"name\" >\nDarren</textarea>");
 	}
 
 	@Test
-	void testForm4() throws Exception {
+	public void testForm4() throws Exception {
 		assertThat(getMacroOutput("FORM4")).isEqualTo("<textarea id=\"name\" name=\"name\" rows=10 cols=30>\nDarren</textarea>");
 	}
 
 	// TODO verify remaining output for forms 5, 6, 7, 8, and 14 (fix whitespace)
 
 	@Test
-	void testForm9() throws Exception {
-		assertThat(getMacroOutput("FORM9")).isEqualTo("<input type=\"password\" id=\"name\" name=\"name\" value=\"\" >");
+	public void testForm9() throws Exception {
+		assertThat(getMacroOutput("FORM9")).isEqualTo("<input type=\"password\" id=\"name\" name=\"name\" value=\"\"     >");
 	}
 
 	@Test
-	void testForm10() throws Exception {
-		assertThat(getMacroOutput("FORM10")).isEqualTo("<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\" >");
+	public void testForm10() throws Exception {
+		assertThat(getMacroOutput("FORM10")).isEqualTo("<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\"     >");
 	}
 
 	@Test
-	void testForm11() throws Exception {
-		assertThat(getMacroOutput("FORM11")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" >");
+	public void testForm11() throws Exception {
+		assertThat(getMacroOutput("FORM11")).isEqualTo("<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\"     >");
 	}
 
 	@Test
-	void testForm12() throws Exception {
-		assertThat(getMacroOutput("FORM12")).isEqualTo("<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\" >");
+	public void testForm12() throws Exception {
+		assertThat(getMacroOutput("FORM12")).isEqualTo("<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\"     >");
 	}
 
 	@Test
-	void testForm13() throws Exception {
-		assertThat(getMacroOutput("FORM13")).isEqualTo("<input type=\"password\" id=\"name\" name=\"name\" value=\"\" >");
+	public void testForm13() throws Exception {
+		assertThat(getMacroOutput("FORM13")).isEqualTo("<input type=\"password\" id=\"name\" name=\"name\" value=\"\"     >");
 	}
 
 	@Test
-	void testForm15() throws Exception {
+	public void testForm15() throws Exception {
 		String output = getMacroOutput("FORM15");
-		assertThat(output).as("Wrong output: " + output)
-				.startsWith("<input type=\"hidden\" name=\"_name\" value=\"on\"/>");
-		assertThat(output).as("Wrong output: " + output)
-				.contains("<input type=\"checkbox\" id=\"name\" name=\"name\" />");
+		assertThat(output.startsWith("<input type=\"hidden\" name=\"_name\" value=\"on\"/>")).as("Wrong output: " + output).isTrue();
+		assertThat(output.contains("<input type=\"checkbox\" id=\"name\" name=\"name\" />")).as("Wrong output: " + output).isTrue();
 	}
 
 	@Test
-	void testForm16() throws Exception {
+	public void testForm16() throws Exception {
 		String output = getMacroOutput("FORM16");
-		assertThat(output).as("Wrong output: " + output)
-				.startsWith("<input type=\"hidden\" name=\"_jedi\" value=\"on\"/>");
-		assertThat(output).as("Wrong output: " + output)
-				.contains("<input type=\"checkbox\" id=\"jedi\" name=\"jedi\" checked=\"checked\" />");
+		assertThat(output.startsWith(
+				"<input type=\"hidden\" name=\"_jedi\" value=\"on\"/>")).as("Wrong output: " + output).isTrue();
+		assertThat(output.contains(
+				"<input type=\"checkbox\" id=\"jedi\" name=\"jedi\" checked=\"checked\" />")).as("Wrong output: " + output).isTrue();
 	}
 
 	@Test
-	void testForm17() throws Exception {
-		assertThat(getMacroOutput("FORM17")).isEqualTo("<input type=\"text\" id=\"spouses0.name\" name=\"spouses[0].name\" value=\"Fred\" >");
+	public void testForm17() throws Exception {
+		assertThat(getMacroOutput("FORM17")).isEqualTo("<input type=\"text\" id=\"spouses0.name\" name=\"spouses[0].name\" value=\"Fred\"     >");
 	}
 
 	@Test
-	void testForm18() throws Exception {
+	public void testForm18() throws Exception {
 		String output = getMacroOutput("FORM18");
-		assertThat(output).as("Wrong output: " + output)
-				.startsWith("<input type=\"hidden\" name=\"_spouses[0].jedi\" value=\"on\"/>");
-		assertThat(output).as("Wrong output: " + output)
-				.contains("<input type=\"checkbox\" id=\"spouses0.jedi\" name=\"spouses[0].jedi\" checked=\"checked\" />");
+		assertThat(output.startsWith(
+				"<input type=\"hidden\" name=\"_spouses[0].jedi\" value=\"on\"/>")).as("Wrong output: " + output).isTrue();
+		assertThat(output.contains(
+				"<input type=\"checkbox\" id=\"spouses0.jedi\" name=\"spouses[0].jedi\" checked=\"checked\" />")).as("Wrong output: " + output).isTrue();
 	}
 
 
 	private String getMacroOutput(String name) throws Exception {
 		String macro = fetchMacro(name);
 		assertThat(macro).isNotNull();
-		storeTemplateInTempDir(macro);
+
+		FileSystemResource resource = new FileSystemResource(System.getProperty("java.io.tmpdir") + "/tmp.ftl");
+		FileCopyUtils.copy("<#import \"spring.ftl\" as spring />\n" + macro, new FileWriter(resource.getPath()));
 
 		DummyMacroRequestContext rc = new DummyMacroRequestContext(request);
 		Map<String, String> msgMap = new HashMap<>();
@@ -325,40 +322,28 @@ public class FreeMarkerMacroTests {
 		view.setUrl("tmp.ftl");
 		view.setExposeSpringMacroHelpers(false);
 		view.setConfiguration(config);
-		view.setServletContext(servletContext);
+		view.setServletContext(new MockServletContext());
 
 		view.render(model, request, response);
 
-		return getOutput();
+		// tokenize output and ignore whitespace
+		String output = response.getContentAsString();
+		output = output.replace("\r\n", "\n");
+		return output.trim();
 	}
 
-	private static String fetchMacro(String name) throws Exception {
-		for (String macro : loadMacros()) {
+	private String fetchMacro(String name) throws Exception {
+		ClassPathResource resource = new ClassPathResource("test.ftl", getClass());
+		assertThat(resource.exists()).isTrue();
+		String all = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+		all = all.replace("\r\n", "\n");
+		String[] macros = StringUtils.delimitedListToStringArray(all, "\n\n");
+		for (String macro : macros) {
 			if (macro.startsWith(name)) {
 				return macro.substring(macro.indexOf("\n")).trim();
 			}
 		}
 		return null;
-	}
-
-	private static String[] loadMacros() throws IOException {
-		ClassPathResource resource = new ClassPathResource("test.ftl", FreeMarkerMacroTests.class);
-		assertThat(resource.exists()).isTrue();
-		String all = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
-		all = all.replace("\r\n", "\n");
-		return StringUtils.delimitedListToStringArray(all, "\n\n");
-	}
-
-	private void storeTemplateInTempDir(String macro) throws IOException {
-		Files.writeString(this.templateLoaderPath.resolve("tmp.ftl"),
-				"<#import \"spring.ftl\" as spring />\n" + macro
-		);
-	}
-
-	private String getOutput() throws IOException {
-		String output = response.getContentAsString();
-		output = output.replace("\r\n", "\n").replaceAll(" +"," ");
-		return output.trim();
 	}
 
 }

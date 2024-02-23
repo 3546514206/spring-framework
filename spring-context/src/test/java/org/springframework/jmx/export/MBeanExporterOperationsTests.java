@@ -16,18 +16,18 @@
 
 package org.springframework.jmx.export;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.jmx.AbstractMBeanServerTests;
+import org.springframework.jmx.JmxTestBean;
+import org.springframework.jmx.export.naming.ObjectNamingStrategy;
+import org.springframework.jmx.support.ObjectNameManager;
+
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanInfo;
 import javax.management.ObjectName;
 import javax.management.modelmbean.ModelMBeanInfo;
 import javax.management.modelmbean.ModelMBeanInfoSupport;
 import javax.management.modelmbean.RequiredModelMBean;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.jmx.AbstractMBeanServerTests;
-import org.springframework.jmx.JmxTestBean;
-import org.springframework.jmx.support.ObjectNameManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -36,10 +36,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Rob Harrop
  * @author Juergen Hoeller
  */
-class MBeanExporterOperationsTests extends AbstractMBeanServerTests {
+public class MBeanExporterOperationsTests extends AbstractMBeanServerTests {
 
 	@Test
-	void testRegisterManagedResourceWithUserSuppliedObjectName() throws Exception {
+	public void testRegisterManagedResourceWithUserSuppliedObjectName() throws Exception {
 		ObjectName objectName = ObjectNameManager.getInstance("spring:name=Foo");
 
 		JmxTestBean bean = new JmxTestBean();
@@ -54,7 +54,7 @@ class MBeanExporterOperationsTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testRegisterExistingMBeanWithUserSuppliedObjectName() throws Exception {
+	public void testRegisterExistingMBeanWithUserSuppliedObjectName() throws Exception {
 		ObjectName objectName = ObjectNameManager.getInstance("spring:name=Foo");
 		ModelMBeanInfo info = new ModelMBeanInfoSupport("myClass", "myDescription", null, null, null, null);
 		RequiredModelMBean bean = new RequiredModelMBean(info);
@@ -68,12 +68,17 @@ class MBeanExporterOperationsTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testRegisterManagedResourceWithGeneratedObjectName() throws Exception {
+	public void testRegisterManagedResourceWithGeneratedObjectName() throws Exception {
 		final ObjectName objectNameTemplate = ObjectNameManager.getInstance("spring:type=Test");
 
 		MBeanExporter exporter = new MBeanExporter();
 		exporter.setServer(getServer());
-		exporter.setNamingStrategy((managedBean, beanKey) -> objectNameTemplate);
+		exporter.setNamingStrategy(new ObjectNamingStrategy() {
+			@Override
+			public ObjectName getObjectName(Object managedBean, String beanKey) {
+				return objectNameTemplate;
+			}
+		});
 
 		JmxTestBean bean1 = new JmxTestBean();
 		JmxTestBean bean2 = new JmxTestBean();
@@ -89,13 +94,18 @@ class MBeanExporterOperationsTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testRegisterManagedResourceWithGeneratedObjectNameWithoutUniqueness() throws Exception {
+	public void testRegisterManagedResourceWithGeneratedObjectNameWithoutUniqueness() throws Exception {
 		final ObjectName objectNameTemplate = ObjectNameManager.getInstance("spring:type=Test");
 
 		MBeanExporter exporter = new MBeanExporter();
 		exporter.setServer(getServer());
 		exporter.setEnsureUniqueRuntimeObjectNames(false);
-		exporter.setNamingStrategy((managedBean, beanKey) -> objectNameTemplate);
+		exporter.setNamingStrategy(new ObjectNamingStrategy() {
+			@Override
+			public ObjectName getObjectName(Object managedBean, String beanKey) {
+				return objectNameTemplate;
+			}
+		});
 
 		JmxTestBean bean1 = new JmxTestBean();
 		JmxTestBean bean2 = new JmxTestBean();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,40 @@
 
 package org.springframework.web.servlet.tags;
 
-import jakarta.servlet.jsp.JspException;
-import jakarta.servlet.jsp.PageContext;
-import jakarta.servlet.jsp.tagext.Tag;
-import jakarta.servlet.jsp.tagext.TagSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.test.MockBodyContent;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 
-import org.springframework.web.testfixture.servlet.MockBodyContent;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.PageContext;
+import javax.servlet.jsp.tagext.Tag;
+import javax.servlet.jsp.tagext.TagSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Tests for {@link ParamTag}.
+ * Unit tests for {@link ParamTag}.
  *
  * @author Scott Andrews
  * @author Nicholas Williams
  */
-class ParamTagTests extends AbstractTagTests {
+public class ParamTagTests extends AbstractTagTests {
 
 	private final ParamTag tag = new ParamTag();
 
 	private MockParamSupportTag parent = new MockParamSupportTag();
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		PageContext context = createPageContext();
 		tag.setPageContext(context);
 		tag.setParent(parent);
 	}
 
 	@Test
-	void paramWithNameAndValue() throws JspException {
+	public void paramWithNameAndValue() throws JspException {
 		tag.setName("name");
 		tag.setValue("value");
 
@@ -61,7 +61,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void paramWithBodyValue() throws JspException {
+	public void paramWithBodyValue() throws JspException {
 		tag.setName("name");
 		tag.setBodyContent(new MockBodyContent("value", new MockHttpServletResponse()));
 
@@ -73,7 +73,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void paramWithImplicitNullValue() throws JspException {
+	public void paramWithImplicitNullValue() throws JspException {
 		tag.setName("name");
 
 		int action = tag.doEndTag();
@@ -84,7 +84,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void paramWithExplicitNullValue() throws JspException {
+	public void paramWithExplicitNullValue() throws JspException {
 		tag.setName("name");
 		tag.setValue(null);
 
@@ -96,7 +96,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void paramWithValueThenReleaseThenBodyValue() throws JspException {
+	public void paramWithValueThenReleaseThenBodyValue() throws JspException {
 		tag.setName("name1");
 		tag.setValue("value1");
 
@@ -122,7 +122,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void paramWithNoParent() {
+	public void paramWithNoParent() throws Exception {
 		tag.setName("name");
 		tag.setValue("value");
 		tag.setParent(null);
@@ -131,7 +131,7 @@ class ParamTagTests extends AbstractTagTests {
 	}
 
 	@SuppressWarnings("serial")
-	private static class MockParamSupportTag extends TagSupport implements ParamAware {
+	private class MockParamSupportTag extends TagSupport implements ParamAware {
 
 		private Param param;
 

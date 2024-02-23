@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ import org.springframework.messaging.handler.invocation.CompletableFutureReturnV
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.messaging.handler.invocation.HandlerMethodReturnValueHandler;
 import org.springframework.messaging.handler.invocation.HandlerMethodReturnValueHandlerComposite;
+import org.springframework.messaging.handler.invocation.ListenableFutureReturnValueHandler;
 import org.springframework.messaging.handler.invocation.ReactiveReturnValueHandler;
 import org.springframework.messaging.simp.SimpAttributesContextHolder;
 import org.springframework.messaging.simp.SimpLogging;
@@ -120,10 +121,7 @@ public class SimpAnnotationMethodMessageHandler extends AbstractMethodMessageHan
 	@Nullable
 	private MessageHeaderInitializer headerInitializer;
 
-	@Nullable
-	private Integer phase;
-
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 	private final Object lifecycleMonitor = new Object();
 
@@ -274,20 +272,6 @@ public class SimpAnnotationMethodMessageHandler extends AbstractMethodMessageHan
 		return this.headerInitializer;
 	}
 
-	/**
-	 * Set the phase that this handler should run in.
-	 * <p>By default, this is {@link SmartLifecycle#DEFAULT_PHASE}.
-	 * @since 6.1.4
-	 */
-	public void setPhase(int phase) {
-		this.phase = phase;
-	}
-
-	@Override
-	public int getPhase() {
-		return (this.phase != null ? this.phase : SmartLifecycle.super.getPhase());
-	}
-
 
 	@Override
 	public final void start() {
@@ -322,8 +306,8 @@ public class SimpAnnotationMethodMessageHandler extends AbstractMethodMessageHan
 	@Override
 	protected List<HandlerMethodArgumentResolver> initArgumentResolvers() {
 		ApplicationContext context = getApplicationContext();
-		ConfigurableBeanFactory beanFactory = (context instanceof ConfigurableApplicationContext cac ?
-				cac.getBeanFactory() : null);
+		ConfigurableBeanFactory beanFactory = (context instanceof ConfigurableApplicationContext ?
+				((ConfigurableApplicationContext) context).getBeanFactory() : null);
 
 		List<HandlerMethodArgumentResolver> resolvers = new ArrayList<>();
 
@@ -343,13 +327,12 @@ public class SimpAnnotationMethodMessageHandler extends AbstractMethodMessageHan
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	protected List<? extends HandlerMethodReturnValueHandler> initReturnValueHandlers() {
 		List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
 
 		// Single-purpose return value types
 
-		handlers.add(new org.springframework.messaging.handler.invocation.ListenableFutureReturnValueHandler());
+		handlers.add(new ListenableFutureReturnValueHandler());
 		handlers.add(new CompletableFutureReturnValueHandler());
 		if (reactorPresent) {
 			handlers.add(new ReactiveReturnValueHandler());

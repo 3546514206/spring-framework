@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,37 @@
 
 package org.springframework.messaging.simp;
 
+import org.junit.jupiter.api.Test;
+
 import java.security.Principal;
 import java.util.Collections;
 import java.util.function.Consumer;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.testfixture.security.TestPrincipal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link SimpMessageHeaderAccessor}.
+ * Unit tests for SimpMessageHeaderAccessor.
  *
  * @author Rossen Stoyanchev
  */
-class SimpMessageHeaderAccessorTests {
+public class SimpMessageHeaderAccessorTests {
 
 
 	@Test
-	void getShortLogMessage() {
+	public void getShortLogMessage() {
 		assertThat(SimpMessageHeaderAccessor.create().getShortLogMessage("p"))
 				.isEqualTo("MESSAGE session=null payload=p");
 	}
 
 	@Test
-	void getLogMessageWithValuesSet() {
+	public void getLogMessageWithValuesSet() {
 		SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
 		accessor.setDestination("/destination");
 		accessor.setSubscriptionId("subscription");
 		accessor.setSessionId("session");
 		accessor.setUser(new TestPrincipal("user"));
-		accessor.setSessionAttributes(Collections.singletonMap("key", "value"));
+		accessor.setSessionAttributes(Collections.<String, Object>singletonMap("key", "value"));
 
 		assertThat(accessor.getShortLogMessage("p"))
 				.isEqualTo(("MESSAGE destination=/destination subscriptionId=subscription " +
@@ -56,13 +54,13 @@ class SimpMessageHeaderAccessorTests {
 	}
 
 	@Test
-	void getDetailedLogMessageWithValuesSet() {
+	public void getDetailedLogMessageWithValuesSet() {
 		SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
 		accessor.setDestination("/destination");
 		accessor.setSubscriptionId("subscription");
 		accessor.setSessionId("session");
 		accessor.setUser(new TestPrincipal("user"));
-		accessor.setSessionAttributes(Collections.singletonMap("key", "value"));
+		accessor.setSessionAttributes(Collections.<String, Object>singletonMap("key", "value"));
 		accessor.setNativeHeader("nativeKey", "nativeValue");
 
 		assertThat(accessor.getDetailedLogMessage("p"))
@@ -72,16 +70,16 @@ class SimpMessageHeaderAccessorTests {
 	}
 
 	@Test
-	void userChangeCallback() {
+	public void userChangeCallback() {
 		UserCallback userCallback = new UserCallback();
 		SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
 		accessor.setUserChangeCallback(userCallback);
 
-		Principal user1 = mock();
+		Principal user1 = mock(Principal.class);
 		accessor.setUser(user1);
 		assertThat(userCallback.getUser()).isEqualTo(user1);
 
-		Principal user2 = mock();
+		Principal user2 = mock(Principal.class);
 		accessor.setUser(user2);
 		assertThat(userCallback.getUser()).isEqualTo(user2);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,12 @@
 
 package org.springframework.http.server.reactive;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import reactor.core.publisher.Mono;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,25 +29,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link ContextPathCompositeHandler}.
+ * Unit tests for {@link ContextPathCompositeHandler}.
  *
  * @author Rossen Stoyanchev
  */
-class ContextPathCompositeHandlerTests {
+public class ContextPathCompositeHandlerTests {
 
 	@Test
-	void invalidContextPath() {
+	public void invalidContextPath() {
 		testInvalid("  ", "Context path must not be empty");
 		testInvalid("path", "Context path must begin with '/'");
 		testInvalid("/path/", "Context path must not end with '/'");
@@ -54,7 +53,7 @@ class ContextPathCompositeHandlerTests {
 	}
 
 	@Test
-	void match() {
+	public void match() {
 		TestHttpHandler handler1 = new TestHttpHandler();
 		TestHttpHandler handler2 = new TestHttpHandler();
 		TestHttpHandler handler3 = new TestHttpHandler();
@@ -71,7 +70,7 @@ class ContextPathCompositeHandlerTests {
 	}
 
 	@Test
-	void matchWithContextPathEqualToPath() {
+	public void matchWithContextPathEqualToPath() {
 		TestHttpHandler handler1 = new TestHttpHandler();
 		TestHttpHandler handler2 = new TestHttpHandler();
 		TestHttpHandler handler3 = new TestHttpHandler();
@@ -88,7 +87,7 @@ class ContextPathCompositeHandlerTests {
 	}
 
 	@Test
-	void matchWithNativeContextPath() {
+	public void matchWithNativeContextPath() {
 		MockServerHttpRequest request = MockServerHttpRequest
 				.get("/yet/another/path")
 				.contextPath("/yet")  // contextPath in underlying request
@@ -104,7 +103,7 @@ class ContextPathCompositeHandlerTests {
 	}
 
 	@Test
-	void notFound() {
+	public void notFound() {
 		TestHttpHandler handler1 = new TestHttpHandler();
 		TestHttpHandler handler2 = new TestHttpHandler();
 
@@ -121,7 +120,7 @@ class ContextPathCompositeHandlerTests {
 	@Test // SPR-17144
 	public void notFoundWithCommitAction() {
 
-		AtomicBoolean commitInvoked = new AtomicBoolean();
+		AtomicBoolean commitInvoked = new AtomicBoolean(false);
 
 		ServerHttpRequest request = MockServerHttpRequest.get("/unknown/path").build();
 		ServerHttpResponse response = new MockServerHttpResponse();

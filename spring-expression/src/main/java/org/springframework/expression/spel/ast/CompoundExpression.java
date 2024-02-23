@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,21 @@
 
 package org.springframework.expression.spel.ast;
 
-import java.util.function.Supplier;
-
 import org.springframework.asm.MethodVisitor;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.CodeFlow;
 import org.springframework.expression.spel.ExpressionState;
 import org.springframework.expression.spel.SpelEvaluationException;
-import org.springframework.expression.spel.SpelNode;
+import org.springframework.lang.Nullable;
+
+import java.util.StringJoiner;
 
 /**
  * Represents a DOT separated expression sequence, such as
- * {@code property1.property2.methodOne()} or
- * {@code property1?.property2?.methodOne()} when the null-safe navigation
- * operator is used.
- *
- * <p>May also contain array/collection/map indexers, such as
- * {@code property1[0].property2['key']}.
+ * {@code 'property1.property2.methodOne()'}.
  *
  * @author Andy Clement
- * @author Sam Brannen
  * @since 3.0
  */
 public class CompoundExpression extends SpelNodeImpl {
@@ -101,12 +95,8 @@ public class CompoundExpression extends SpelNodeImpl {
 	}
 
 	@Override
-	public TypedValue setValueInternal(ExpressionState state, Supplier<TypedValue> valueSupplier)
-			throws EvaluationException {
-
-		TypedValue typedValue = valueSupplier.get();
-		getValueRef(state).setValue(typedValue.getValue());
-		return typedValue;
+	public void setValue(ExpressionState state, @Nullable Object value) throws EvaluationException {
+		getValueRef(state).setValue(value);
 	}
 
 	@Override
@@ -116,23 +106,11 @@ public class CompoundExpression extends SpelNodeImpl {
 
 	@Override
 	public String toStringAST() {
-		StringBuilder sb = new StringBuilder();
+		StringJoiner sj = new StringJoiner(".");
 		for (int i = 0; i < getChildCount(); i++) {
-			sb.append(getChild(i).toStringAST());
-			if (i < getChildCount() - 1) {
-				SpelNode nextChild = getChild(i + 1);
-				// Don't append a '.' if the next child is an Indexer.
-				// For example, we want 'myVar[0]' instead of 'myVar.[0]'.
-				if (!(nextChild instanceof Indexer)) {
-					if ((nextChild instanceof MethodReference methodRef && methodRef.isNullSafe()) ||
-						(nextChild instanceof PropertyOrFieldReference pofRef && pofRef.isNullSafe())) {
-						sb.append('?');
-					}
-					sb.append('.');
-				}
-			}
+			sj.add(getChild(i).toStringAST());
 		}
-		return sb.toString();
+		return sj.toString();
 	}
 
 	@Override

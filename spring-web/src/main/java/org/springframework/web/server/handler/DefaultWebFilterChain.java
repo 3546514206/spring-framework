@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@
 
 package org.springframework.web.server.handler;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.ListIterator;
-
-import reactor.core.publisher.Mono;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.server.WebHandler;
+import reactor.core.publisher.Mono;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * Default implementation of {@link WebFilterChain}.
@@ -91,6 +91,18 @@ public class DefaultWebFilterChain implements WebFilterChain {
 		this.chain = chain;
 	}
 
+	/**
+	 * Public constructor with the list of filters and the target handler to use.
+	 * @param handler the target handler
+	 * @param filters the filters ahead of the handler
+	 * @deprecated as of 5.1 this constructor is deprecated in favor of
+	 * {@link #DefaultWebFilterChain(WebHandler, List)}.
+	 */
+	@Deprecated
+	public DefaultWebFilterChain(WebHandler handler, WebFilter... filters) {
+		this(handler, Arrays.asList(filters));
+	}
+
 
 	public List<WebFilter> getFilters() {
 		return this.allFilters;
@@ -110,8 +122,8 @@ public class DefaultWebFilterChain implements WebFilterChain {
 	}
 
 	private Mono<Void> invokeFilter(WebFilter current, DefaultWebFilterChain chain, ServerWebExchange exchange) {
-		String currentName = current.getClass().getName();
-		return current.filter(exchange, chain).checkpoint(currentName + " [DefaultWebFilterChain]");
+		return current.filter(exchange, chain)
+				.checkpoint(current.getClass().getName() + " [DefaultWebFilterChain]");
 	}
 
 }

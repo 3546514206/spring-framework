@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,76 +16,71 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
-import io.reactivex.rxjava3.core.Single;
+import io.reactivex.Single;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.codec.CharSequenceEncoder;
+import org.springframework.http.*;
+import org.springframework.http.codec.EncoderHttpMessageWriter;
+import org.springframework.http.codec.HttpMessageWriter;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.result.view.ViewResolver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.codec.CharSequenceEncoder;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.codec.EncoderHttpMessageWriter;
-import org.springframework.http.codec.HttpMessageWriter;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.reactive.result.view.ViewResolver;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Arjen Poutsma
  */
-class DefaultEntityResponseBuilderTests {
+public class DefaultEntityResponseBuilderTests {
 
 	@Test
-	void fromObject() {
+	public void fromObject() {
 		String body = "foo";
 		EntityResponse<String> response = EntityResponse.fromObject(body).build().block();
 		assertThat(response.entity()).isSameAs(body);
 	}
 
 	@Test
-	void fromPublisherClass() {
+	public void fromPublisherClass() {
 		Flux<String> body = Flux.just("foo", "bar");
 		EntityResponse<Flux<String>> response = EntityResponse.fromPublisher(body, String.class).build().block();
 		assertThat(response.entity()).isSameAs(body);
 	}
 
 	@Test
-	void fromPublisher() {
+	public void fromPublisher() {
 		Flux<String> body = Flux.just("foo", "bar");
-		ParameterizedTypeReference<String> typeReference = new ParameterizedTypeReference<>() {};
+		ParameterizedTypeReference<String> typeReference = new ParameterizedTypeReference<String>() {};
 		EntityResponse<Flux<String>> response = EntityResponse.fromPublisher(body, typeReference).build().block();
 		assertThat(response.entity()).isSameAs(body);
 	}
 
 	@Test
-	void fromProducer() {
+	public void fromProducer() {
 		Single<String> body = Single.just("foo");
-		ParameterizedTypeReference<String> typeReference = new ParameterizedTypeReference<>() {};
+		ParameterizedTypeReference<String> typeReference = new ParameterizedTypeReference<String>() {};
 		EntityResponse<Single<String>> response = EntityResponse.fromProducer(body, typeReference).build().block();
 		assertThat(response.entity()).isSameAs(body);
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
-	void status() {
+	public void status() {
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).status(HttpStatus.CREATED).build();
 		StepVerifier.create(result)
@@ -96,10 +91,10 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void allow() {
+	public void allow() {
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).allow(HttpMethod.GET).build();
-		Set<HttpMethod> expected = Set.of(HttpMethod.GET);
+		Set<HttpMethod> expected = EnumSet.of(HttpMethod.GET);
 		StepVerifier.create(result)
 				.expectNextMatches(response -> expected.equals(response.headers().getAllow()))
 				.expectComplete()
@@ -107,7 +102,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void contentLength() {
+	public void contentLength() {
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).contentLength(42).build();
 		StepVerifier.create(result)
@@ -117,7 +112,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void contentType() {
+	public void contentType() {
 		String body = "foo";
 		Mono<EntityResponse<String>>
 				result = EntityResponse.fromObject(body).contentType(MediaType.APPLICATION_JSON).build();
@@ -128,7 +123,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void etag() {
+	public void etag() {
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).eTag("foo").build();
 		StepVerifier.create(result)
@@ -138,7 +133,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void lastModified() {
+	public void lastModified() {
 		ZonedDateTime now = ZonedDateTime.now();
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).lastModified(now).build();
@@ -150,7 +145,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void cacheControlTag() {
+	public void cacheControlTag() {
 		String body = "foo";
 		Mono<EntityResponse<String>>
 				result = EntityResponse.fromObject(body).cacheControl(CacheControl.noCache()).build();
@@ -161,7 +156,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void varyBy() {
+	public void varyBy() {
 		String body = "foo";
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).varyBy("foo").build();
 		List<String> expected = Collections.singletonList("foo");
@@ -172,7 +167,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void headers() {
+	public void headers() {
 		String body = "foo";
 		HttpHeaders headers = new HttpHeaders();
 		Mono<EntityResponse<String>> result = EntityResponse.fromObject(body).headers(headers).build();
@@ -183,7 +178,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void cookies() {
+	public void cookies() {
 		MultiValueMap<String, ResponseCookie> newCookies = new LinkedMultiValueMap<>();
 		newCookies.add("name", ResponseCookie.from("name", "value").build());
 		Mono<EntityResponse<String>> result =
@@ -195,7 +190,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void bodyInserter() {
+	public void bodyInserter() {
 		String body = "foo";
 		Publisher<String> publisher = Mono.just(body);
 
@@ -229,7 +224,7 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void notModifiedEtag() {
+	public void notModifiedEtag() {
 		String etag = "\"foo\"";
 		EntityResponse<String> responseMono = EntityResponse.fromObject("bar")
 				.eTag(etag)
@@ -251,9 +246,9 @@ class DefaultEntityResponseBuilderTests {
 	}
 
 	@Test
-	void notModifiedLastModified() {
+	public void notModifiedLastModified() {
 		ZonedDateTime now = ZonedDateTime.now();
-		ZonedDateTime oneMinuteBeforeNow = now.minusMinutes(1);
+		ZonedDateTime oneMinuteBeforeNow = now.minus(1, ChronoUnit.MINUTES);
 
 		EntityResponse<String> responseMono = EntityResponse.fromObject("bar")
 				.lastModified(oneMinuteBeforeNow)

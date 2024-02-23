@@ -16,9 +16,9 @@
 
 package org.springframework.aop.support;
 
-import java.lang.reflect.Method;
-
 import org.springframework.aop.MethodMatcher;
+
+import java.lang.reflect.Method;
 
 /**
  * Convenient abstract superclass for static method matchers, which don't care
@@ -33,6 +33,8 @@ public abstract class StaticMethodMatcher implements MethodMatcher {
 		return false;
 	}
 
+	// 容易想到，想要研究清楚 AoP 的执行机制，比较简单的方法就是从 matches 方法作为起点。
+	// 因为他会对切面所调用的基本方法进行溯源
 	@Override
 	public final boolean matches(Method method, Class<?> targetClass, Object... args) {
 		// should never be invoked because isRuntime() returns false

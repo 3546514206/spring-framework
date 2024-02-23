@@ -37,8 +37,8 @@ package org.springframework.asm;
 public abstract class FieldVisitor {
 
   /**
-   * The ASM API version implemented by this visitor. The value of this field must be one of the
-   * {@code ASM}<i>x</i> values in {@link Opcodes}.
+   * The ASM API version implemented by this visitor. The value of this field must be one of {@link
+   * Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    */
   protected final int api;
 
@@ -48,43 +48,27 @@ public abstract class FieldVisitor {
   /**
    * Constructs a new {@link FieldVisitor}.
    *
-   * @param api the ASM API version implemented by this visitor. Must be one of the {@code
-   *     ASM}<i>x</i> values in {@link Opcodes}.
+   * @param api the ASM API version implemented by this visitor. Must be one of {@link
+   *     Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    */
-  protected FieldVisitor(final int api) {
+  public FieldVisitor(final int api) {
     this(api, null);
   }
 
   /**
    * Constructs a new {@link FieldVisitor}.
    *
-   * @param api the ASM API version implemented by this visitor. Must be one of the {@code
-   *     ASM}<i>x</i> values in {@link Opcodes}.
+   * @param api the ASM API version implemented by this visitor. Must be one of {@link
+   *     Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    * @param fieldVisitor the field visitor to which this visitor must delegate method calls. May be
    *     null.
    */
-  protected FieldVisitor(final int api, final FieldVisitor fieldVisitor) {
-    if (api != Opcodes.ASM9
-        && api != Opcodes.ASM8
-        && api != Opcodes.ASM7
-        && api != Opcodes.ASM6
-        && api != Opcodes.ASM5
-        && api != Opcodes.ASM4
-        && api != Opcodes.ASM10_EXPERIMENTAL) {
+  public FieldVisitor(final int api, final FieldVisitor fieldVisitor) {
+    if (api != Opcodes.ASM7 && api != Opcodes.ASM6 && api != Opcodes.ASM5 && api != Opcodes.ASM4) {
       throw new IllegalArgumentException("Unsupported api " + api);
     }
-    // SPRING PATCH: no preview mode check for ASM experimental
     this.api = api;
     this.fv = fieldVisitor;
-  }
-
-  /**
-   * The field visitor to which this visitor must delegate method calls. May be {@literal null}.
-   *
-   * @return the field visitor to which this visitor must delegate method calls, or {@literal null}.
-   */
-  public FieldVisitor getDelegate() {
-    return fv;
   }
 
   /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,15 @@
 
 package org.springframework.core.codec;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.ResolvableType;
+import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.Flux;
+
 import java.nio.charset.Charset;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-
-import org.springframework.core.ResolvableType;
-import org.springframework.core.testfixture.codec.AbstractEncoderTests;
-import org.springframework.util.MimeTypeUtils;
-
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_16;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.charset.StandardCharsets.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -48,7 +43,7 @@ class CharSequenceEncoderTests extends AbstractEncoderTests<CharSequenceEncoder>
 
 	@Override
 	@Test
-	protected void canEncode() {
+	public void canEncode() throws Exception {
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(String.class),
 				MimeTypeUtils.TEXT_PLAIN)).isTrue();
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(StringBuilder.class),
@@ -66,7 +61,7 @@ class CharSequenceEncoderTests extends AbstractEncoderTests<CharSequenceEncoder>
 
 	@Override
 	@Test
-	protected void encode() {
+	public void encode() {
 		Flux<CharSequence> input = Flux.just(this.foo, this.bar);
 
 		testEncodeAll(input, CharSequence.class, step -> step
@@ -82,8 +77,7 @@ class CharSequenceEncoderTests extends AbstractEncoderTests<CharSequenceEncoder>
 				.forEach(charset -> {
 					int capacity = this.encoder.calculateCapacity(sequence, charset);
 					int length = sequence.length();
-					assertThat(capacity).as(String.format("%s has capacity %d; length %d", charset, capacity, length))
-							.isGreaterThanOrEqualTo(length);
+					assertThat(capacity >= length).as(String.format("%s has capacity %d; length %d", charset, capacity, length)).isTrue();
 				});
 	}
 

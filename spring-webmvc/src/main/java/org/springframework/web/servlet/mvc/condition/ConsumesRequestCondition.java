@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,18 @@
 
 package org.springframework.web.servlet.mvc.condition;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.servlet.mvc.condition.HeadersRequestCondition.HeaderExpression;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
 
 /**
  * A logical disjunction (' || ') request condition to match a request's
@@ -73,36 +66,13 @@ public final class ConsumesRequestCondition extends AbstractRequestCondition<Con
 	 * "Header" expressions where the header name is not 'Content-Type' or have
 	 * no header value defined are ignored. If 0 expressions are provided in
 	 * total, the condition will match to every request
+	 *
 	 * @param consumes as described in {@link RequestMapping#consumes()}
-	 * @param headers as described in {@link RequestMapping#headers()}
+	 * @param headers  as described in {@link RequestMapping#headers()}
 	 */
 	public ConsumesRequestCondition(String[] consumes, @Nullable String[] headers) {
-		this.expressions = parseExpressions(consumes, headers);
-		if (this.expressions.size() > 1) {
-			Collections.sort(this.expressions);
-		}
-	}
-
-	private static List<ConsumeMediaTypeExpression> parseExpressions(String[] consumes, @Nullable String[] headers) {
-		Set<ConsumeMediaTypeExpression> result = null;
-		if (!ObjectUtils.isEmpty(headers)) {
-			for (String header : headers) {
-				HeaderExpression expr = new HeaderExpression(header);
-				if ("Content-Type".equalsIgnoreCase(expr.name) && expr.value != null) {
-					result = (result != null ? result : new LinkedHashSet<>());
-					for (MediaType mediaType : MediaType.parseMediaTypes(expr.value)) {
-						result.add(new ConsumeMediaTypeExpression(mediaType, expr.isNegated));
-					}
-				}
-			}
-		}
-		if (!ObjectUtils.isEmpty(consumes)) {
-			result = (result != null ? result : new LinkedHashSet<>());
-			for (String consume : consumes) {
-				result.add(new ConsumeMediaTypeExpression(consume));
-			}
-		}
-		return (result != null ? new ArrayList<>(result) : Collections.emptyList());
+		this.expressions = new ArrayList<>(parseExpressions(consumes, headers));
+		Collections.sort(this.expressions);
 	}
 
 	/**
@@ -111,6 +81,25 @@ public final class ConsumesRequestCondition extends AbstractRequestCondition<Con
 	 */
 	private ConsumesRequestCondition(List<ConsumeMediaTypeExpression> expressions) {
 		this.expressions = expressions;
+	}
+
+
+	private static Set<ConsumeMediaTypeExpression> parseExpressions(String[] consumes, @Nullable String[] headers) {
+		Set<ConsumeMediaTypeExpression> result = new LinkedHashSet<>();
+		if (headers != null) {
+			for (String header : headers) {
+				HeaderExpression expr = new HeaderExpression(header);
+				if ("Content-Type".equalsIgnoreCase(expr.name) && expr.value != null) {
+					for (MediaType mediaType : MediaType.parseMediaTypes(expr.value)) {
+						result.add(new ConsumeMediaTypeExpression(mediaType, expr.isNegated));
+					}
+				}
+			}
+		}
+		for (String consume : consumes) {
+			result.add(new ConsumeMediaTypeExpression(consume));
+		}
+		return result;
 	}
 
 
@@ -285,7 +274,7 @@ public final class ConsumesRequestCondition extends AbstractRequestCondition<Con
 		}
 
 		public final boolean match(MediaType contentType) {
-			boolean match = (getMediaType().includes(contentType) && matchParameters(contentType));
+			boolean match = getMediaType().includes(contentType);
 			return !isNegated() == match;
 		}
 	}

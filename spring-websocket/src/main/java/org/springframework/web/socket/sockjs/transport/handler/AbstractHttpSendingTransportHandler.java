@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  */
 
 package org.springframework.web.socket.sockjs.transport.handler;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
@@ -36,6 +32,10 @@ import org.springframework.web.socket.sockjs.transport.session.AbstractHttpSockJ
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
+
 /**
  * Base class for HTTP transport handlers that push messages to connected clients.
  *
@@ -48,7 +48,7 @@ public abstract class AbstractHttpSendingTransportHandler extends AbstractTransp
 	/**
 	 * Pattern for validating callback parameter values.
 	 */
-	private static final Pattern CALLBACK_PARAM_PATTERN = Pattern.compile("[0-9A-Za-z_.]*");
+	private static final Pattern CALLBACK_PARAM_PATTERN = Pattern.compile("[0-9A-Za-z_\\.]*");
 
 
 	@Override
@@ -79,7 +79,13 @@ public abstract class AbstractHttpSendingTransportHandler extends AbstractTransp
 			if (logger.isDebugEnabled()) {
 				logger.debug("Connection already closed (but not removed yet) for " + sockJsSession);
 			}
-			writeFrame(SockJsFrame.closeFrameGoAway(), request, response, sockJsSession);
+			SockJsFrame frame = SockJsFrame.closeFrameGoAway();
+			try {
+				response.getBody().write(frame.getContentBytes());
+			}
+			catch (IOException ex) {
+				throw new SockJsException("Failed to send " + frame, sockJsSession.getId(), ex);
+			}
 		}
 		else if (!sockJsSession.isActive()) {
 			if (logger.isTraceEnabled()) {
@@ -91,19 +97,13 @@ public abstract class AbstractHttpSendingTransportHandler extends AbstractTransp
 			if (logger.isDebugEnabled()) {
 				logger.debug("Another " + getTransportType() + " connection still open for " + sockJsSession);
 			}
-			writeFrame(SockJsFrame.closeFrameAnotherConnectionOpen(), request, response, sockJsSession);
-		}
-	}
-
-	private void writeFrame(SockJsFrame frame, ServerHttpRequest request, ServerHttpResponse response,
-			AbstractHttpSockJsSession sockJsSession) {
-
-		String formattedFrame = getFrameFormat(request).format(frame);
-		try {
-			response.getBody().write(formattedFrame.getBytes(SockJsFrame.CHARSET));
-		}
-		catch (IOException ex) {
-			throw new SockJsException("Failed to send " + formattedFrame, sockJsSession.getId(), ex);
+			String formattedFrame = getFrameFormat(request).format(SockJsFrame.closeFrameAnotherConnectionOpen());
+			try {
+				response.getBody().write(formattedFrame.getBytes(SockJsFrame.CHARSET));
+			}
+			catch (IOException ex) {
+				throw new SockJsException("Failed to send " + formattedFrame, sockJsSession.getId(), ex);
+			}
 		}
 	}
 

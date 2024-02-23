@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,16 +37,17 @@ import org.springframework.core.type.AnnotationMetadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 /**
  * Integration tests for {@link ImportBeanDefinitionRegistrar}.
  *
  * @author Oliver Gierke
  * @author Chris Beams
  */
-class ImportBeanDefinitionRegistrarTests {
+public class ImportBeanDefinitionRegistrarTests {
 
 	@Test
-	void shouldInvokeAwareMethodsInImportBeanDefinitionRegistrar() {
+	public void shouldInvokeAwareMethodsInImportBeanDefinitionRegistrar() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
 		context.getBean(MessageSource.class);
 
@@ -54,7 +55,6 @@ class ImportBeanDefinitionRegistrarTests {
 		assertThat(SampleRegistrar.classLoader).isEqualTo(context.getBeanFactory().getBeanClassLoader());
 		assertThat(SampleRegistrar.resourceLoader).isNotNull();
 		assertThat(SampleRegistrar.environment).isEqualTo(context.getEnvironment());
-		context.close();
 	}
 
 

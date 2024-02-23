@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,10 @@
 
 package org.springframework.web.servlet.view;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
-import java.net.URLEncoder;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
@@ -48,10 +32,20 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 import org.springframework.web.util.WebUtils;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
+import java.net.URLEncoder;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * View that redirects to an absolute, context relative, or current request
  * relative URL. The URL may be a URI template in which case the URI template
- * variables will be replaced with values available in the model. By default,
+ * variables will be replaced with values available in the model. By default
  * all primitive model attributes (or collections thereof) are exposed as HTTP
  * query parameters (assuming they've not been used as URI template variables),
  * but this behavior can be changed by overriding the
@@ -82,7 +76,7 @@ import org.springframework.web.util.WebUtils;
  * @see #setContextRelative
  * @see #setHttp10Compatible
  * @see #setExposeModelAttributes
- * @see jakarta.servlet.http.HttpServletResponse#sendRedirect
+ * @see javax.servlet.http.HttpServletResponse#sendRedirect
  */
 public class RedirectView extends AbstractUrlBasedView implements SmartView {
 
@@ -99,7 +93,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	private String encodingScheme;
 
 	@Nullable
-	private HttpStatusCode statusCode;
+	private HttpStatus statusCode;
 
 	private boolean expandUriTemplateVariables = true;
 
@@ -160,7 +154,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	 * @param contextRelative whether to interpret the given URL as
 	 * relative to the current ServletContext
 	 * @param http10Compatible whether to stay compatible with HTTP 1.0 clients
-	 * @param exposeModelAttributes whether model attributes should be
+	 * @param exposeModelAttributes whether or not model attributes should be
 	 * exposed as query parameters
 	 */
 	public RedirectView(String url, boolean contextRelative, boolean http10Compatible, boolean exposeModelAttributes) {
@@ -179,7 +173,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	 * <p>Default is "false": A URL that starts with a slash will be interpreted
 	 * as absolute, i.e. taken as-is. If "true", the context path will be
 	 * prepended to the URL in such a case.
-	 * @see jakarta.servlet.http.HttpServletRequest#getContextPath
+	 * @see javax.servlet.http.HttpServletRequest#getContextPath
 	 */
 	public void setContextRelative(boolean contextRelative) {
 		this.contextRelative = contextRelative;
@@ -194,7 +188,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	 * <p>Many HTTP 1.1 clients treat 302 just like 303, not making any
 	 * difference. However, some clients depend on 303 when redirecting
 	 * after a POST request; turn this flag off in such a scenario.
-	 * @see jakarta.servlet.http.HttpServletResponse#sendRedirect
+	 * @see javax.servlet.http.HttpServletResponse#sendRedirect
 	 */
 	public void setHttp10Compatible(boolean http10Compatible) {
 		this.http10Compatible = http10Compatible;
@@ -202,7 +196,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 
 	/**
 	 * Set the {@code exposeModelAttributes} flag which denotes whether
-	 * model attributes should be exposed as HTTP query parameters.
+	 * or not model attributes should be exposed as HTTP query parameters.
 	 * <p>Defaults to {@code true}.
 	 */
 	public void setExposeModelAttributes(final boolean exposeModelAttributes) {
@@ -223,7 +217,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	 * <p>Default is to send 302/303, depending on the value of the
 	 * {@link #setHttp10Compatible(boolean) http10Compatible} flag.
 	 */
-	public void setStatusCode(HttpStatusCode statusCode) {
+	public void setStatusCode(HttpStatus statusCode) {
 		this.statusCode = statusCode;
 	}
 
@@ -387,7 +381,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 			if (value == null) {
 				throw new IllegalArgumentException("Model has no value for key '" + name + "'");
 			}
-			result.append(targetUrl, endLastMatch, matcher.start());
+			result.append(targetUrl.substring(endLastMatch, matcher.start()));
 			result.append(UriUtils.encodePathSegment(value.toString(), encodingScheme));
 			endLastMatch = matcher.end();
 		}
@@ -399,7 +393,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	private Map<String, String> getCurrentRequestUriVariables(HttpServletRequest request) {
 		String name = HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE;
 		Map<String, String> uriVars = (Map<String, String>) request.getAttribute(name);
-		return (uriVars != null) ? uriVars : Collections.emptyMap();
+		return (uriVars != null) ? uriVars : Collections.<String, String> emptyMap();
 	}
 
 	/**
@@ -457,12 +451,12 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 		boolean first = (targetUrl.toString().indexOf('?') < 0);
 		for (Map.Entry<String, Object> entry : queryProperties(model).entrySet()) {
 			Object rawValue = entry.getValue();
-			Collection<?> values;
+			Collection<Object> values;
 			if (rawValue != null && rawValue.getClass().isArray()) {
-				values = CollectionUtils.arrayToList(rawValue);
+				values = Arrays.asList(ObjectUtils.toObjectArray(rawValue));
 			}
-			else if (rawValue instanceof Collection<?> collection) {
-				values = collection;
+			else if (rawValue instanceof Collection) {
+				values = ((Collection<Object>) rawValue);
 			}
 			else {
 				values = Collections.singleton(rawValue);
@@ -537,7 +531,8 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 			}
 			return true;
 		}
-		if (value instanceof Collection<?> coll) {
+		if (value instanceof Collection) {
+			Collection<?> coll = (Collection<?>) value;
 			if (coll.isEmpty()) {
 				return false;
 			}
@@ -613,7 +608,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 
 		String encodedURL = (isRemoteHost(targetUrl) ? targetUrl : response.encodeRedirectURL(targetUrl));
 		if (http10Compatible) {
-			HttpStatusCode attributeStatusCode = (HttpStatusCode) request.getAttribute(View.RESPONSE_STATUS_ATTRIBUTE);
+			HttpStatus attributeStatusCode = (HttpStatus) request.getAttribute(View.RESPONSE_STATUS_ATTRIBUTE);
 			if (this.statusCode != null) {
 				response.setStatus(this.statusCode.value());
 				response.setHeader("Location", encodedURL);
@@ -628,7 +623,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 			}
 		}
 		else {
-			HttpStatusCode statusCode = getHttp11StatusCode(request, response, targetUrl);
+			HttpStatus statusCode = getHttp11StatusCode(request, response, targetUrl);
 			response.setStatus(statusCode.value());
 			response.setHeader("Location", encodedURL);
 		}
@@ -637,11 +632,11 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	/**
 	 * Whether the given targetUrl has a host that is a "foreign" system in which
 	 * case {@link HttpServletResponse#encodeRedirectURL} will not be applied.
-	 * <p>This method returns {@code true} if the {@link #setHosts(String[])}
+	 * This method returns {@code true} if the {@link #setHosts(String[])}
 	 * property is configured and the target URL has a host that does not match.
 	 * @param targetUrl the target redirect URL
-	 * @return {@code true} if the target URL has a remote host, {@code false} if
-	 * the URL does not have a host or the "host" property is not configured
+	 * @return {@code true} the target URL has a remote host, {@code false} if it
+	 * the URL does not have a host or the "host" property is not configured.
 	 * @since 4.3
 	 */
 	protected boolean isRemoteHost(String targetUrl) {
@@ -662,7 +657,7 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 
 	/**
 	 * Determines the status code to use for HTTP 1.1 compatible requests.
-	 * <p>The default implementation returns the {@link #setStatusCode(HttpStatusCode) statusCode}
+	 * <p>The default implementation returns the {@link #setStatusCode(HttpStatus) statusCode}
 	 * property if set, or the value of the {@link #RESPONSE_STATUS_ATTRIBUTE} attribute.
 	 * If neither are set, it defaults to {@link HttpStatus#SEE_OTHER} (303).
 	 * @param request the request to inspect
@@ -670,13 +665,13 @@ public class RedirectView extends AbstractUrlBasedView implements SmartView {
 	 * @param targetUrl the target URL
 	 * @return the response status
 	 */
-	protected HttpStatusCode getHttp11StatusCode(
+	protected HttpStatus getHttp11StatusCode(
 			HttpServletRequest request, HttpServletResponse response, String targetUrl) {
 
 		if (this.statusCode != null) {
 			return this.statusCode;
 		}
-		HttpStatusCode attributeStatusCode = (HttpStatusCode) request.getAttribute(View.RESPONSE_STATUS_ATTRIBUTE);
+		HttpStatus attributeStatusCode = (HttpStatus) request.getAttribute(View.RESPONSE_STATUS_ATTRIBUTE);
 		if (attributeStatusCode != null) {
 			return attributeStatusCode;
 		}

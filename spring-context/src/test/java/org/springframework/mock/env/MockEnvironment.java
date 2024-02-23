@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.mock.env;
 
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.testfixture.env.MockPropertySource;
 
 /**
  * Simple {@link ConfigurableEnvironment} implementation exposing
@@ -26,8 +25,8 @@ import org.springframework.core.testfixture.env.MockPropertySource;
  *
  * @author Chris Beams
  * @author Sam Brannen
+ * @see org.springframework.mock.env.MockPropertySource
  * @since 3.2
- * @see org.springframework.core.testfixture.env.MockPropertySource
  */
 public class MockEnvironment extends AbstractEnvironment {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,18 @@
 
 package org.springframework.aop.target;
 
-import java.io.Serializable;
-import java.util.Objects;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.TargetSource;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
+import java.io.Serializable;
+
 /**
- * Base class for {@link org.springframework.aop.TargetSource} implementations
- * that are based on a Spring {@link org.springframework.beans.factory.BeanFactory},
+ * Base class for {@link TargetSource} implementations
+ * that are based on a Spring {@link BeanFactory},
  * delegating to Spring-managed bean instances.
  *
  * <p>Subclasses can create prototype instances or lazily access a
@@ -43,12 +39,12 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Juergen Hoeller
  * @author Rod Johnson
- * @since 1.1.4
- * @see org.springframework.beans.factory.BeanFactory#getBean
+ * @see BeanFactory#getBean
  * @see LazyInitTargetSource
  * @see PrototypeTargetSource
  * @see ThreadLocalTargetSource
  * @see CommonsPool2TargetSource
+ * @since 1.1.4
  */
 public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSource, BeanFactoryAware, Serializable {
 
@@ -57,21 +53,18 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 
 	/** Logger available to subclasses. */
-	protected final transient Log logger = LogFactory.getLog(getClass());
+	protected final Log logger = LogFactory.getLog(getClass());
 
 	/** Name of the target bean we will create on each invocation. */
-	@Nullable
 	private String targetBeanName;
 
 	/** Class of the target. */
-	@Nullable
 	private volatile Class<?> targetClass;
 
 	/**
 	 * BeanFactory that owns this TargetSource. We need to hold onto this
 	 * reference so that we can create new prototype instances as necessary.
 	 */
-	@Nullable
 	private BeanFactory beanFactory;
 
 
@@ -92,7 +85,6 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 	 * Return the name of the target bean in the factory.
 	 */
 	public String getTargetBeanName() {
-		Assert.state(this.targetBeanName != null, "Target bean name not set");
 		return this.targetBeanName;
 	}
 
@@ -122,13 +114,11 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 	 * Return the owning BeanFactory.
 	 */
 	public BeanFactory getBeanFactory() {
-		Assert.state(this.beanFactory != null, "BeanFactory not set");
 		return this.beanFactory;
 	}
 
 
 	@Override
-	@Nullable
 	public Class<?> getTargetClass() {
 		Class<?> targetClass = this.targetClass;
 		if (targetClass != null) {
@@ -137,7 +127,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 		synchronized (this) {
 			// Full check within synchronization, entering the BeanFactory interaction algorithm only once...
 			targetClass = this.targetClass;
-			if (targetClass == null && this.beanFactory != null && this.targetBeanName != null) {
+			if (targetClass == null && this.beanFactory != null) {
 				// Determine type of the target bean.
 				targetClass = this.beanFactory.getType(this.targetBeanName);
 				if (targetClass == null) {
@@ -151,6 +141,16 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 			}
 			return targetClass;
 		}
+	}
+
+	@Override
+	public boolean isStatic() {
+		return false;
+	}
+
+	@Override
+	public void releaseTarget(Object target) throws Exception {
+		// Nothing to do here.
 	}
 
 
@@ -167,7 +167,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -181,16 +181,18 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getClass(), this.targetBeanName);
+		int hashCode = getClass().hashCode();
+		hashCode = 13 * hashCode + ObjectUtils.nullSafeHashCode(this.beanFactory);
+		hashCode = 13 * hashCode + ObjectUtils.nullSafeHashCode(this.targetBeanName);
+		return hashCode;
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder(getClass().getSimpleName());
-		sb.append(" for target bean '").append(this.targetBeanName).append('\'');
-		Class<?> targetClass = this.targetClass;
-		if (targetClass != null) {
-			sb.append(" of type [").append(targetClass.getName()).append(']');
+		sb.append(" for target bean '").append(this.targetBeanName).append("'");
+		if (this.targetClass != null) {
+			sb.append(" of type [").append(this.targetClass.getName()).append("]");
 		}
 		return sb.toString();
 	}

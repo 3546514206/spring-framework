@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,72 +16,64 @@
 
 package org.springframework.jmx.support;
 
-import java.io.IOException;
+import org.junit.jupiter.api.Test;
+import org.springframework.jmx.AbstractMBeanServerTests;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServer;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
+import javax.management.*;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.testfixture.net.TestSocketUtils;
-import org.springframework.jmx.AbstractMBeanServerTests;
+import java.io.IOException;
+import java.net.MalformedURLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Integration tests for {@link ConnectorServerFactoryBean}.
- *
  * @author Rob Harrop
  * @author Chris Beams
  * @author Sam Brannen
  */
-class ConnectorServerFactoryBeanTests extends AbstractMBeanServerTests {
+public class ConnectorServerFactoryBeanTests extends AbstractMBeanServerTests {
 
 	private static final String OBJECT_NAME = "spring:type=connector,name=test";
 
-	private final String serviceUrl = "service:jmx:jmxmp://localhost:" + TestSocketUtils.findAvailableTcpPort();
-
 
 	@Test
-	void startupWithLocatedServer() throws Exception {
+	public void startupWithLocatedServer() throws Exception {
 		ConnectorServerFactoryBean bean = new ConnectorServerFactoryBean();
-		bean.setServiceUrl(this.serviceUrl);
 		bean.afterPropertiesSet();
 
 		try {
 			checkServerConnection(getServer());
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void startupWithSuppliedServer() throws Exception {
+	public void startupWithSuppliedServer() throws Exception {
+		//Added a brief snooze here - seems to fix occasional
+		//java.net.BindException: Address already in use errors
+		Thread.sleep(1);
+
 		ConnectorServerFactoryBean bean = new ConnectorServerFactoryBean();
-		bean.setServiceUrl(this.serviceUrl);
 		bean.setServer(getServer());
 		bean.afterPropertiesSet();
 
 		try {
 			checkServerConnection(getServer());
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void registerWithMBeanServer() throws Exception {
+	public void registerWithMBeanServer() throws Exception {
+		//Added a brief snooze here - seems to fix occasional
+		//java.net.BindException: Address already in use errors
+		Thread.sleep(1);
 		ConnectorServerFactoryBean bean = new ConnectorServerFactoryBean();
-		bean.setServiceUrl(this.serviceUrl);
 		bean.setObjectName(OBJECT_NAME);
 		bean.afterPropertiesSet();
 
@@ -89,30 +81,27 @@ class ConnectorServerFactoryBeanTests extends AbstractMBeanServerTests {
 			// Try to get the connector bean.
 			ObjectInstance instance = getServer().getObjectInstance(ObjectName.getInstance(OBJECT_NAME));
 			assertThat(instance).as("ObjectInstance should not be null").isNotNull();
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void noRegisterWithMBeanServer() throws Exception {
+	public void noRegisterWithMBeanServer() throws Exception {
 		ConnectorServerFactoryBean bean = new ConnectorServerFactoryBean();
-		bean.setServiceUrl(this.serviceUrl);
 		bean.afterPropertiesSet();
 		try {
 			// Try to get the connector bean.
 			assertThatExceptionOfType(InstanceNotFoundException.class).isThrownBy(() ->
-				getServer().getObjectInstance(ObjectName.getInstance(OBJECT_NAME)));
-		}
-		finally {
+					getServer().getObjectInstance(ObjectName.getInstance(OBJECT_NAME)));
+		} finally {
 			bean.destroy();
 		}
 	}
 
-	private void checkServerConnection(MBeanServer hostedServer) throws IOException {
+	private void checkServerConnection(MBeanServer hostedServer) throws IOException, MalformedURLException {
 		// Try to connect using client.
-		JMXServiceURL serviceURL = new JMXServiceURL(this.serviceUrl);
+		JMXServiceURL serviceURL = new JMXServiceURL(ConnectorServerFactoryBean.DEFAULT_SERVICE_URL);
 		JMXConnector connector = JMXConnectorFactory.connect(serviceURL);
 
 		assertThat(connector).as("Client Connector should not be null").isNotNull();

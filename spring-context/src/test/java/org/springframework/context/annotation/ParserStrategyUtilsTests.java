@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import static org.mockito.Mockito.reset;
  *
  * @author Phillip Webb
  */
-class ParserStrategyUtilsTests {
+public class ParserStrategyUtilsTests {
 
 	@Mock
 	private Environment environment;
@@ -61,12 +61,12 @@ class ParserStrategyUtilsTests {
 
 	@BeforeEach
 	void setup() {
-		MockitoAnnotations.openMocks(this);
+		MockitoAnnotations.initMocks(this);
 		given(this.resourceLoader.getClassLoader()).willReturn(this.beanClassLoader);
 	}
 
 	@Test
-	void instantiateClassWhenHasNoArgsConstructorCallsAware() {
+	public void instantiateClassWhenHasNoArgsConstructorCallsAware() {
 		NoArgsConstructor instance = instantiateClass(NoArgsConstructor.class);
 		assertThat(instance.setEnvironment).isSameAs(this.environment);
 		assertThat(instance.setBeanFactory).isSameAs(this.registry);
@@ -75,7 +75,7 @@ class ParserStrategyUtilsTests {
 	}
 
 	@Test
-	void instantiateClassWhenHasSingleConstructorInjectsParams() {
+	public void instantiateClassWhenHasSingleContructorInjectsParams() {
 		ArgsConstructor instance = instantiateClass(ArgsConstructor.class);
 		assertThat(instance.environment).isSameAs(this.environment);
 		assertThat(instance.beanFactory).isSameAs(this.registry);
@@ -84,7 +84,7 @@ class ParserStrategyUtilsTests {
 	}
 
 	@Test
-	void instantiateClassWhenHasSingleConstructorAndAwareInjectsParamsAndCallsAware() {
+	public void instantiateClassWhenHasSingleContructorAndAwareInjectsParamsAndCallsAware() {
 		ArgsConstructorAndAware instance = instantiateClass(ArgsConstructorAndAware.class);
 		assertThat(instance.environment).isSameAs(this.environment);
 		assertThat(instance.setEnvironment).isSameAs(this.environment);
@@ -97,20 +97,20 @@ class ParserStrategyUtilsTests {
 	}
 
 	@Test
-	void instantiateClassWhenHasMultipleConstructorsUsesNoArgsConstructor() {
-		// Remain back-compatible by using the default constructor if there's more than one
+	public void instantiateClassWhenHasMultipleConstructorsUsesNoArgsConstructor() {
+		// Remain back-compatible by using the default constructor if there's more then one
 		MultipleConstructors instance = instantiateClass(MultipleConstructors.class);
 		assertThat(instance.usedDefaultConstructor).isTrue();
 	}
 
 	@Test
-	void instantiateClassWhenHasMultipleConstructorsAndNotDefaultThrowsException() {
+	public void instantiateClassWhenHasMutlipleConstructorsAndNotDefaultThrowsException() {
 		assertThatExceptionOfType(BeanInstantiationException.class).isThrownBy(() ->
 				instantiateClass(MultipleConstructorsWithNoDefault.class));
 	}
 
 	@Test
-	void instantiateClassWhenHasUnsupportedParameterThrowsException() {
+	public void instantiateClassWhenHasUnsupportedParameterThrowsException() {
 		assertThatExceptionOfType(BeanInstantiationException.class).isThrownBy(() ->
 				instantiateClass(InvalidConstructorParameterType.class))
 			.withCauseInstanceOf(IllegalStateException.class)
@@ -118,7 +118,7 @@ class ParserStrategyUtilsTests {
 	}
 
 	@Test
-	void instantiateClassHasSubclassParameterThrowsException() {
+	public void instantiateClassHasSubclassParameterThrowsException() {
 		// To keep the algorithm simple we don't support subtypes
 		assertThatExceptionOfType(BeanInstantiationException.class).isThrownBy(() ->
 				instantiateClass(InvalidConstructorParameterSubType.class))
@@ -127,14 +127,14 @@ class ParserStrategyUtilsTests {
 	}
 
 	@Test
-	void instantiateClassWhenHasNoBeanClassLoaderInjectsNull() {
+	public void instantiateClassWhenHasNoBeanClassLoaderInjectsNull() {
 		reset(this.resourceLoader);
 		ArgsConstructor instance = instantiateClass(ArgsConstructor.class);
 		assertThat(instance.beanClassLoader).isNull();
 	}
 
 	@Test
-	void instantiateClassWhenHasNoBeanClassLoaderDoesNotCallAware() {
+	public void instantiateClassWhenHasNoBeanClassLoaderDoesNotCallAware() {
 		reset(this.resourceLoader);
 		NoArgsConstructor instance = instantiateClass(NoArgsConstructor.class);
 		assertThat(instance.setBeanClassLoader).isNull();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ package org.springframework.aop.aspectj.autoproxy;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.Advised;
-import org.springframework.beans.testfixture.beans.ITestBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.tests.sample.beans.ITestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,28 +29,28 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Ramnivas Laddad
  * @author Chris Beams
- * @author Sam Brannen
  */
-class AspectImplementingInterfaceTests {
+public class AspectImplementingInterfaceTests {
 
 	@Test
-	void proxyCreation() {
+	public void testProxyCreation() {
 		ClassPathXmlApplicationContext ctx =
 			new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
 
-		ITestBean testBean = ctx.getBean("testBean", ITestBean.class);
-		AnInterface interfaceExtendingAspect = ctx.getBean("interfaceExtendingAspect", AnInterface.class);
+		ITestBean testBean = (ITestBean) ctx.getBean("testBean");
+		AnInterface interfaceExtendingAspect = (AnInterface) ctx.getBean("interfaceExtendingAspect");
 
-		assertThat(testBean).isInstanceOf(Advised.class);
-		assertThat(interfaceExtendingAspect).isNotInstanceOf(Advised.class);
-		ctx.close();
+		boolean condition = testBean instanceof Advised;
+		assertThat(condition).isTrue();
+		boolean condition1 = interfaceExtendingAspect instanceof Advised;
+		assertThat(condition1).isFalse();
 	}
 
 }
 
 
 interface AnInterface {
-	void interfaceMethod();
+	public void interfaceMethod();
 }
 
 

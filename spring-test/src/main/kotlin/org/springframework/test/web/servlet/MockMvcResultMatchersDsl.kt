@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,34 +25,34 @@ import org.springframework.test.web.servlet.result.*
  * @author Sebastien Deleuze
  * @since 5.2
  */
-class MockMvcResultMatchersDsl internal constructor (private val actions: ResultActions) {
+class MockMvcResultMatchersDsl(private val actions: ResultActions) {
 
 	/**
 	 * @see MockMvcResultMatchers.request
 	 */
-	fun request(dsl: RequestResultMatchersDsl.() -> Unit) {
-		RequestResultMatchersDsl(actions).dsl()
+	fun request(matcher: RequestResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.request().matcher())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.view
 	 */
-	fun view(dsl: ViewResultMatchersDsl.() -> Unit) {
-		ViewResultMatchersDsl(actions).dsl()
+	fun view(matcher: ViewResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.view().matcher())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.model
 	 */
-	fun model(dsl: ModelResultMatchersDsl.() -> Unit) {
-		ModelResultMatchersDsl(actions).dsl()
+	fun model(matcher: ModelResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.model().matcher())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.flash
 	 */
-	fun flash(dsl: FlashAttributeResultMatchersDsl.() -> Unit) {
-		FlashAttributeResultMatchersDsl(actions).dsl()
+	fun flash(matcher: FlashAttributeResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.flash().matcher())
 	}
 
 	/**
@@ -93,22 +93,22 @@ class MockMvcResultMatchersDsl internal constructor (private val actions: Result
 	/**
 	 * @see MockMvcResultMatchers.status
 	 */
-	fun status(dsl: StatusResultMatchersDsl.() -> Unit) {
-		StatusResultMatchersDsl(actions).dsl()
+	fun status(matcher: StatusResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.status().matcher())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.header
 	 */
-	fun header(dsl: HeaderResultMatchersDsl.() -> Unit) {
-		HeaderResultMatchersDsl(actions).dsl()
+	fun header(matcher: HeaderResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.header().matcher())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.content
 	 */
-	fun content(dsl: ContentResultMatchersDsl.() -> Unit) {
-		ContentResultMatchersDsl(actions).dsl()
+	fun content(matcher: ContentResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.content().matcher())
 	}
 
 	/**
@@ -121,22 +121,23 @@ class MockMvcResultMatchersDsl internal constructor (private val actions: Result
 	/**
 	 * @see MockMvcResultMatchers.jsonPath
 	 */
-	fun jsonPath(expression: String, vararg args: Any?, dsl: JsonPathResultMatchersDsl.() -> Unit) {
-		JsonPathResultMatchersDsl(actions, expression, *args).dsl()
+	fun jsonPath(expression: String, vararg args: Any, block: JsonPathResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.jsonPath(expression, *args).block())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.xpath
 	 */
-	fun xpath(expression: String, vararg args: Any?, namespaces: Map<String, String>? = null, dsl: XpathResultMatchersDsl.() -> Unit) {
-		XpathResultMatchersDsl(actions, expression, namespaces, *args).dsl()
+	fun xpath(expression: String, vararg args: Any, namespaces: Map<String, String>? = null, xpathInit: XpathResultMatchers.() -> ResultMatcher) {
+		actions.andExpect(MockMvcResultMatchers.xpath(expression, namespaces, args).xpathInit())
 	}
 
 	/**
 	 * @see MockMvcResultMatchers.cookie
 	 */
-	fun cookie(dsl: CookieResultMatchersDsl.() -> Unit) {
-		CookieResultMatchersDsl(actions).dsl()
+	fun cookie(cookieInit: CookieResultMatchers.() -> ResultMatcher) {
+		val cookie = MockMvcResultMatchers.cookie().cookieInit()
+		actions.andExpect(cookie)
 	}
 
 	/**
@@ -144,13 +145,5 @@ class MockMvcResultMatchersDsl internal constructor (private val actions: Result
 	 */
 	fun match(matcher: ResultMatcher) {
 		actions.andExpect(matcher)
-	}
-
-	/**
-	 * @since 6.0.4
-	 * @see ResultActions.andExpectAll
-	 */
-	fun matchAll(vararg matchers: ResultMatcher) {
-		actions.andExpectAll(*matchers)
 	}
 }

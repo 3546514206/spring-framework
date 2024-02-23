@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,52 +16,37 @@
 
 package org.springframework.web.server.adapter;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-import io.micrometer.observation.tck.TestObservationRegistry;
-import io.micrometer.observation.tck.TestObservationRegistryAssert;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.HttpHandler;
-import org.springframework.http.server.reactive.HttpHandlerDecoratorFactory;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.observation.DefaultServerRequestObservationConvention;
-import org.springframework.http.server.reactive.observation.ServerRequestObservationConvention;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebExceptionHandler;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebHandler;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 import static java.time.Duration.ofMillis;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Tests for {@link WebHttpHandlerBuilder}.
- *
+ * Unit tests for {@link WebHttpHandlerBuilder}.
  * @author Rossen Stoyanchev
- * @author Brian Clozel
  */
-class WebHttpHandlerBuilderTests {
+public class WebHttpHandlerBuilderTests {
 
 	@Test  // SPR-15074
-	void orderedWebFilterBeans() {
+	public void orderedWebFilterBeans() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(OrderedWebFilterBeanConfig.class);
 		context.refresh();
@@ -79,9 +64,9 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Test
-	void forwardedHeaderTransformer() {
+	public void forwardedHeaderFilter() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		context.register(ForwardedHeaderTransformerConfig.class);
+		context.register(ForwardedHeaderFilterConfig.class);
 		context.refresh();
 
 		WebHttpHandlerBuilder builder = WebHttpHandlerBuilder.applicationContext(context);
@@ -90,7 +75,7 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Test  // SPR-15074
-	void orderedWebExceptionHandlerBeans() {
+	public void orderedWebExceptionHandlerBeans() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(OrderedExceptionHandlerBeanConfig.class);
 		context.refresh();
@@ -104,7 +89,7 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Test
-	void configWithoutFilters() {
+	public void configWithoutFilters() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(NoFilterConfig.class);
 		context.refresh();
@@ -118,7 +103,7 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Test  // SPR-16972
-	void cloneWithApplicationContext() {
+	public void cloneWithApplicationContext() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(NoFilterConfig.class);
 		context.refresh();
@@ -128,106 +113,16 @@ class WebHttpHandlerBuilderTests {
 		assertThat(((HttpWebHandlerAdapter) builder.clone().build()).getApplicationContext()).isSameAs(context);
 	}
 
-	@Test
-	void httpHandlerDecorator() {
-		BiFunction<ServerHttpRequest, String, ServerHttpRequest> mutator =
-				(req, value) -> req.mutate().headers(headers -> headers.add("My-Header", value)).build();
-
-		AtomicBoolean success = new AtomicBoolean();
-		HttpHandler httpHandler = WebHttpHandlerBuilder
-				.webHandler(exchange -> {
-					HttpHeaders headers = exchange.getRequest().getHeaders();
-					assertThat(headers.get("My-Header")).containsExactlyInAnyOrder("1", "2", "3");
-					success.set(true);
-					return Mono.empty();
-				})
-				.httpHandlerDecorator(handler -> (req, res) -> handler.handle(mutator.apply(req, "1"), res))
-				.httpHandlerDecorator(handler -> (req, res) -> handler.handle(mutator.apply(req, "2"), res))
-				.httpHandlerDecorator(handler -> (req, res) -> handler.handle(mutator.apply(req, "3"), res)).build();
-
-		httpHandler.handle(MockServerHttpRequest.get("/").build(), new MockServerHttpResponse()).block();
-		assertThat(success.get()).isTrue();
-	}
-
-	@Test
-	void httpHandlerDecoratorFactoryBeans() {
-		HttpHandler handler = WebHttpHandlerBuilder.applicationContext(
-				new AnnotationConfigApplicationContext(HttpHandlerDecoratorFactoryBeansConfig.class)).build();
-
-		MockServerHttpResponse response = new MockServerHttpResponse();
-		handler.handle(MockServerHttpRequest.get("/").build(), response).block();
-
-		Function<String, Long> headerValue = name -> Long.valueOf(response.getHeaders().getFirst(name));
-		assertThat(headerValue.apply("decoratorA")).isLessThan(headerValue.apply("decoratorB"));
-		assertThat(headerValue.apply("decoratorC")).isLessThan(headerValue.apply("decoratorB"));
-	}
-
-	@Test
-	void observationRegistry() {
-		AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(ObservationConfig.class);
-		HttpHandler handler = WebHttpHandlerBuilder.applicationContext(applicationContext).build();
-
-		MockServerHttpResponse response = new MockServerHttpResponse();
-		handler.handle(MockServerHttpRequest.get("/").build(), response).block();
-
-		TestObservationRegistry observationRegistry = applicationContext.getBean(TestObservationRegistry.class);
-		TestObservationRegistryAssert.assertThat(observationRegistry).hasObservationWithNameEqualTo("http.server.requests")
-				.that().hasLowCardinalityKeyValue("uri", "UNKNOWN");
-	}
-
-	@Test
-	void shouldRejectDuplicateObservationConvention() {
-		AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(ObservationConfig.class,
-				DuplicateConventionObservationConfig.class);
-		assertThatThrownBy(() -> WebHttpHandlerBuilder.applicationContext(applicationContext).build())
-				.isInstanceOf(NoUniqueBeanDefinitionException.class);
-	}
 
 	private static Mono<Void> writeToResponse(ServerWebExchange exchange, String value) {
 		byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-		DataBuffer buffer = DefaultDataBufferFactory.sharedInstance.wrap(bytes);
+		DataBuffer buffer = new DefaultDataBufferFactory().wrap(bytes);
 		return exchange.getResponse().writeWith(Flux.just(buffer));
 	}
 
 
 	@Configuration
-	static class HttpHandlerDecoratorFactoryBeansConfig {
-
-		@Bean
-		@Order(1)
-		public HttpHandlerDecoratorFactory decoratorFactoryA() {
-			return delegate -> (HttpHandler) (request, response) -> {
-				response.getHeaders().set("decoratorA", String.valueOf(System.nanoTime()));
-				return delegate.handle(request, response);
-			};
-		}
-
-		@Bean
-		@Order(3)
-		public HttpHandlerDecoratorFactory decoratorFactoryB() {
-			return delegate -> (HttpHandler) (request, response) -> {
-				response.getHeaders().set("decoratorB", String.valueOf(System.nanoTime()));
-				return delegate.handle(request, response);
-			};
-		}
-
-		@Bean
-		@Order(2)
-		public HttpHandlerDecoratorFactory decoratorFactoryC() {
-			return delegate -> (HttpHandler) (request, response) -> {
-				response.getHeaders().set("decoratorC", String.valueOf(System.nanoTime()));
-				return delegate.handle(request, response);
-			};
-		}
-
-		@Bean
-		public WebHandler webHandler() {
-			return exchange -> Mono.empty();
-		}
-	}
-
-
-	@Configuration
+	@SuppressWarnings("unused")
 	static class OrderedWebFilterBeanConfig {
 
 		private static final String ATTRIBUTE = "attr";
@@ -262,6 +157,7 @@ class WebHttpHandlerBuilderTests {
 
 
 	@Configuration
+	@SuppressWarnings("unused")
 	static class OrderedExceptionHandlerBeanConfig {
 
 		@Bean
@@ -283,11 +179,13 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Configuration
-	static class ForwardedHeaderTransformerConfig {
+	@SuppressWarnings("unused")
+	static class ForwardedHeaderFilterConfig {
 
 		@Bean
-		public ForwardedHeaderTransformer forwardedHeaderTransformer() {
-			return new ForwardedHeaderTransformer();
+		@SuppressWarnings("deprecation")
+		public WebFilter forwardedHeaderFilter() {
+			return new org.springframework.web.filter.reactive.ForwardedHeaderFilter();
 		}
 
 		@Bean
@@ -297,42 +195,13 @@ class WebHttpHandlerBuilderTests {
 	}
 
 	@Configuration
+	@SuppressWarnings("unused")
 	static class NoFilterConfig {
 
 		@Bean
 		public WebHandler webHandler() {
 			return exchange -> writeToResponse(exchange, "handled");
 		}
-	}
-
-	@Configuration
-	static class ObservationConfig {
-
-		@Bean
-		public TestObservationRegistry testObservationRegistry() {
-			return TestObservationRegistry.create();
-		}
-
-		@Bean
-		public ServerRequestObservationConvention requestObservationConvention() {
-			return new DefaultServerRequestObservationConvention();
-		}
-
-		@Bean
-		public WebHandler webHandler() {
-			return exchange -> exchange.getResponse().setComplete();
-		}
-
-	}
-
-	@Configuration
-	static class DuplicateConventionObservationConfig {
-
-		@Bean
-		public ServerRequestObservationConvention duplicateRequestObservationConvention() {
-			return new DefaultServerRequestObservationConvention();
-		}
-
 	}
 
 }

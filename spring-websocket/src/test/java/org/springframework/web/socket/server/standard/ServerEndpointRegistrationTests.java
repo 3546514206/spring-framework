@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package org.springframework.web.socket.server.standard;
 
-import jakarta.websocket.Endpoint;
-import jakarta.websocket.EndpointConfig;
-import jakarta.websocket.Session;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Session;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,12 +35,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ServerEndpointRegistrationTests {
+public class ServerEndpointRegistrationTests {
 
 
 	@Test
-	void endpointPerConnection() throws Exception {
+	public void endpointPerConnection() throws Exception {
 
+		@SuppressWarnings("resource")
 		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
 
 		ServerEndpointRegistration registration = new ServerEndpointRegistration("/path", EchoEndpoint.class);
@@ -51,7 +53,7 @@ class ServerEndpointRegistrationTests {
 	}
 
 	@Test
-	void endpointSingleton() throws Exception {
+	public void endpointSingleton() throws Exception {
 
 		EchoEndpoint endpoint = new EchoEndpoint(new EchoService());
 		ServerEndpointRegistration registration = new ServerEndpointRegistration("/path", endpoint);
@@ -66,7 +68,7 @@ class ServerEndpointRegistrationTests {
 	static class Config {
 
 		@Bean
-		EchoService echoService() {
+		public EchoService echoService() {
 			return new EchoService();
 		}
 	}
@@ -86,6 +88,6 @@ class ServerEndpointRegistrationTests {
 		}
 	}
 
-	private static class EchoService { }
+	private static class EchoService {	}
 
 }

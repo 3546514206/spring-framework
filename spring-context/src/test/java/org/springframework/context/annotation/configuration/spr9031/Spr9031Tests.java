@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.springframework.context.annotation.configuration.spr9031.scanpackage.
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+
 /**
  * Unit tests cornering bug SPR-9031.
  *
@@ -44,10 +45,11 @@ public class Spr9031Tests {
 	 * processing.
 	 */
 	@Test
-	void withAsmAnnotationProcessing() {
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(HighLevelConfig.class);
+	public void withAsmAnnotationProcessing() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(HighLevelConfig.class);
+		ctx.refresh();
 		assertThat(ctx.getBean(LowLevelConfig.class).scanned).isNotNull();
-		ctx.close();
 	}
 
 	/**
@@ -55,12 +57,12 @@ public class Spr9031Tests {
 	 * processing.
 	 */
 	@Test
-	void withoutAsmAnnotationProcessing() {
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(LowLevelConfig.class);
+	public void withoutAsmAnnotationProcessing() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(LowLevelConfig.class);
+		ctx.refresh();
 		assertThat(ctx.getBean(LowLevelConfig.class).scanned).isNotNull();
-		ctx.close();
 	}
-
 
 	@Configuration
 	@Import(LowLevelConfig.class)
@@ -78,5 +80,4 @@ public class Spr9031Tests {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	public @interface MarkerAnnotation {}
-
 }

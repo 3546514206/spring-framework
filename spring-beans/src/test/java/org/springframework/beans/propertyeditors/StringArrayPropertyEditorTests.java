@@ -23,30 +23,38 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Rick Evans
  * @author Juergen Hoeller
- * @author Sam Brannen
  */
-class StringArrayPropertyEditorTests {
+public class StringArrayPropertyEditorTests {
 
 	@Test
-	void withDefaultSeparator() {
+	public void withDefaultSeparator() throws Exception {
 		StringArrayPropertyEditor editor = new StringArrayPropertyEditor();
 		editor.setAsText("0,1,2");
 		Object value = editor.getValue();
-		assertTrimmedElements(value);
+		assertThat(value).isNotNull();
+		boolean condition = value instanceof String[];
+		assertThat(condition).isTrue();
+		String[] array = (String[]) value;
+		for (int i = 0; i < array.length; ++i) {
+			assertThat(array[i]).isEqualTo(("" + i));
+		}
 		assertThat(editor.getAsText()).isEqualTo("0,1,2");
 	}
 
 	@Test
-	void trimByDefault() {
+	public void trimByDefault() throws Exception {
 		StringArrayPropertyEditor editor = new StringArrayPropertyEditor();
 		editor.setAsText(" 0,1 , 2 ");
 		Object value = editor.getValue();
-		assertTrimmedElements(value);
+		String[] array = (String[]) value;
+		for (int i = 0; i < array.length; ++i) {
+			assertThat(array[i]).isEqualTo(("" + i));
+		}
 		assertThat(editor.getAsText()).isEqualTo("0,1,2");
 	}
 
 	@Test
-	void noTrim() {
+	public void noTrim() throws Exception {
 		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(",", false, false);
 		editor.setAsText("  0,1  , 2 ");
 		Object value = editor.getValue();
@@ -59,45 +67,48 @@ class StringArrayPropertyEditorTests {
 	}
 
 	@Test
-	void withCustomSeparator() {
+	public void withCustomSeparator() throws Exception {
 		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(":");
 		editor.setAsText("0:1:2");
 		Object value = editor.getValue();
-		assertTrimmedElements(value);
-		assertThat(editor.getAsText()).isEqualTo("0:1:2");
-	}
-
-	@Test
-	void withCharsToDelete() {
-		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(",", "\r\n", false);
-		editor.setAsText("0\r,1,\n2");
-		Object value = editor.getValue();
-		assertTrimmedElements(value);
-		assertThat(editor.getAsText()).isEqualTo("0,1,2");
-	}
-
-	@Test
-	void withEmptyArray() {
-		StringArrayPropertyEditor editor = new StringArrayPropertyEditor();
-		editor.setAsText("");
-		Object value = editor.getValue();
-		assertThat(value).isInstanceOf(String[].class);
-		assertThat((String[]) value).isEmpty();
-	}
-
-	@Test
-	void withEmptyArrayAsNull() {
-		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(",", true);
-		editor.setAsText("");
-		assertThat(editor.getValue()).isNull();
-	}
-
-	private static void assertTrimmedElements(Object value) {
-		assertThat(value).isInstanceOf(String[].class);
+		boolean condition = value instanceof String[];
+		assertThat(condition).isTrue();
 		String[] array = (String[]) value;
 		for (int i = 0; i < array.length; ++i) {
 			assertThat(array[i]).isEqualTo(("" + i));
 		}
+		assertThat(editor.getAsText()).isEqualTo("0:1:2");
+	}
+
+	@Test
+	public void withCharsToDelete() throws Exception {
+		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(",", "\r\n", false);
+		editor.setAsText("0\r,1,\n2");
+		Object value = editor.getValue();
+		boolean condition = value instanceof String[];
+		assertThat(condition).isTrue();
+		String[] array = (String[]) value;
+		for (int i = 0; i < array.length; ++i) {
+			assertThat(array[i]).isEqualTo(("" + i));
+		}
+		assertThat(editor.getAsText()).isEqualTo("0,1,2");
+	}
+
+	@Test
+	public void withEmptyArray() throws Exception {
+		StringArrayPropertyEditor editor = new StringArrayPropertyEditor();
+		editor.setAsText("");
+		Object value = editor.getValue();
+		boolean condition = value instanceof String[];
+		assertThat(condition).isTrue();
+		assertThat(((String[]) value).length).isEqualTo(0);
+	}
+
+	@Test
+	public void withEmptyArrayAsNull() throws Exception {
+		StringArrayPropertyEditor editor = new StringArrayPropertyEditor(",", true);
+		editor.setAsText("");
+		assertThat(editor.getValue()).isNull();
 	}
 
 }

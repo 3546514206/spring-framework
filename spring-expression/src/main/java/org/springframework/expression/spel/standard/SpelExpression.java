@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,19 @@
 
 package org.springframework.expression.spel.standard;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.common.ExpressionUtils;
-import org.springframework.expression.spel.CompiledExpression;
-import org.springframework.expression.spel.ExpressionState;
-import org.springframework.expression.spel.SpelCompilerMode;
-import org.springframework.expression.spel.SpelEvaluationException;
-import org.springframework.expression.spel.SpelMessage;
-import org.springframework.expression.spel.SpelNode;
-import org.springframework.expression.spel.SpelParserConfiguration;
+import org.springframework.expression.spel.*;
 import org.springframework.expression.spel.ast.SpelNodeImpl;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A {@code SpelExpression} represents a parsed (valid) expression that is ready to be
@@ -44,7 +38,6 @@ import org.springframework.util.Assert;
  *
  * @author Andy Clement
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0
  */
 public class SpelExpression implements Expression {
@@ -68,15 +61,15 @@ public class SpelExpression implements Expression {
 
 	// Holds the compiled form of the expression (if it has been compiled)
 	@Nullable
-	private volatile CompiledExpression compiledAst;
+	private CompiledExpression compiledAst;
 
 	// Count of many times as the expression been interpreted - can trigger compilation
 	// when certain limit reached
-	private final AtomicInteger interpretedCount = new AtomicInteger();
+	private final AtomicInteger interpretedCount = new AtomicInteger(0);
 
 	// The number of times compilation was attempted and failed - enables us to eventually
 	// give up trying to compile it when it just doesn't seem to be possible.
-	private final AtomicInteger failedAttempts = new AtomicInteger();
+	private volatile int failedAttempts = 0;
 
 
 	/**
@@ -119,19 +112,16 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public Object getValue() throws EvaluationException {
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
 				EvaluationContext context = getEvaluationContext();
-				return compiledAst.getValue(context.getRootObject().getValue(), context);
-			}
-			catch (Throwable ex) {
+				return this.compiledAst.getValue(context.getRootObject().getValue(), context);
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -148,15 +138,13 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public <T> T getValue(@Nullable Class<T> expectedResultType) throws EvaluationException {
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
 				EvaluationContext context = getEvaluationContext();
-				Object result = compiledAst.getValue(context.getRootObject().getValue(), context);
+				Object result = this.compiledAst.getValue(context.getRootObject().getValue(), context);
 				if (expectedResultType == null) {
 					return (T) result;
-				}
-				else {
+				} else {
 					return ExpressionUtils.convertTypedValue(
 							getEvaluationContext(), new TypedValue(result), expectedResultType);
 				}
@@ -164,8 +152,8 @@ public class SpelExpression implements Expression {
 			catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
+					this.compiledAst = null;
 				}
 				else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
@@ -184,18 +172,15 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public Object getValue(@Nullable Object rootObject) throws EvaluationException {
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				return compiledAst.getValue(rootObject, getEvaluationContext());
-			}
-			catch (Throwable ex) {
+				return this.compiledAst.getValue(rootObject, getEvaluationContext());
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -213,23 +198,20 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public <T> T getValue(@Nullable Object rootObject, @Nullable Class<T> expectedResultType) throws EvaluationException {
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				Object result = compiledAst.getValue(rootObject, getEvaluationContext());
+				Object result = this.compiledAst.getValue(rootObject, getEvaluationContext());
 				if (expectedResultType == null) {
-					return (T)result;
-				}
-				else {
+					return (T) result;
+				} else {
 					return ExpressionUtils.convertTypedValue(
 							getEvaluationContext(), new TypedValue(result), expectedResultType);
 				}
-			}
-			catch (Throwable ex) {
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
+					this.compiledAst = null;
 				}
 				else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
@@ -249,20 +231,17 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public Object getValue(EvaluationContext context) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				return compiledAst.getValue(context.getRootObject().getValue(), context);
-			}
-			catch (Throwable ex) {
+				return this.compiledAst.getValue(context.getRootObject().getValue(), context);
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -279,26 +258,22 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public <T> T getValue(EvaluationContext context, @Nullable Class<T> expectedResultType) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				Object result = compiledAst.getValue(context.getRootObject().getValue(), context);
+				Object result = this.compiledAst.getValue(context.getRootObject().getValue(), context);
 				if (expectedResultType != null) {
 					return ExpressionUtils.convertTypedValue(context, new TypedValue(result), expectedResultType);
-				}
-				else {
+				} else {
 					return (T) result;
 				}
-			}
-			catch (Throwable ex) {
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -314,20 +289,17 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public Object getValue(EvaluationContext context, @Nullable Object rootObject) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				return compiledAst.getValue(rootObject, context);
-			}
-			catch (Throwable ex) {
+				return this.compiledAst.getValue(rootObject, context);
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -346,26 +318,22 @@ public class SpelExpression implements Expression {
 	public <T> T getValue(EvaluationContext context, @Nullable Object rootObject, @Nullable Class<T> expectedResultType)
 			throws EvaluationException {
 
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
+		if (this.compiledAst != null) {
 			try {
-				Object result = compiledAst.getValue(rootObject, context);
+				Object result = this.compiledAst.getValue(rootObject, context);
 				if (expectedResultType != null) {
 					return ExpressionUtils.convertTypedValue(context, new TypedValue(result), expectedResultType);
-				}
-				else {
+				} else {
 					return (T) result;
 				}
-			}
-			catch (Throwable ex) {
+			} catch (Throwable ex) {
 				// If running in mixed mode, revert to interpreted
 				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
 					this.interpretedCount.set(0);
-				}
-				else {
+					this.compiledAst = null;
+				} else {
 					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
 					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_RUNNING_COMPILED_EXPRESSION);
 				}
@@ -393,7 +361,7 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public Class<?> getValueType(EvaluationContext context) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		ExpressionState expressionState = new ExpressionState(context, this.configuration);
 		TypeDescriptor typeDescriptor = this.ast.getValueInternal(expressionState).getTypeDescriptor();
 		return (typeDescriptor != null ? typeDescriptor.getType() : null);
@@ -424,7 +392,7 @@ public class SpelExpression implements Expression {
 	@Override
 	@Nullable
 	public TypeDescriptor getValueTypeDescriptor(EvaluationContext context) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		ExpressionState expressionState = new ExpressionState(context, this.configuration);
 		return this.ast.getValueInternal(expressionState).getTypeDescriptor();
 	}
@@ -434,7 +402,7 @@ public class SpelExpression implements Expression {
 	public TypeDescriptor getValueTypeDescriptor(EvaluationContext context, @Nullable Object rootObject)
 			throws EvaluationException {
 
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		ExpressionState expressionState = new ExpressionState(context, toTypedValue(rootObject), this.configuration);
 		return this.ast.getValueInternal(expressionState).getTypeDescriptor();
 	}
@@ -447,13 +415,13 @@ public class SpelExpression implements Expression {
 
 	@Override
 	public boolean isWritable(EvaluationContext context) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		return this.ast.isWritable(new ExpressionState(context, this.configuration));
 	}
 
 	@Override
 	public boolean isWritable(EvaluationContext context, @Nullable Object rootObject) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		return this.ast.isWritable(new ExpressionState(context, toTypedValue(rootObject), this.configuration));
 	}
 
@@ -465,7 +433,7 @@ public class SpelExpression implements Expression {
 
 	@Override
 	public void setValue(EvaluationContext context, @Nullable Object value) throws EvaluationException {
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		this.ast.setValue(new ExpressionState(context, this.configuration), value);
 	}
 
@@ -473,7 +441,7 @@ public class SpelExpression implements Expression {
 	public void setValue(EvaluationContext context, @Nullable Object rootObject, @Nullable Object value)
 			throws EvaluationException {
 
-		Assert.notNull(context, "EvaluationContext must not be null");
+		Assert.notNull(context, "EvaluationContext is required");
 		this.ast.setValue(new ExpressionState(context, toTypedValue(rootObject), this.configuration), value);
 	}
 
@@ -501,58 +469,31 @@ public class SpelExpression implements Expression {
 		}
 	}
 
+
 	/**
-	 * Perform expression compilation. This will only succeed once exit descriptors for
-	 * all nodes have been determined. If the compilation fails and has failed more than
-	 * 100 times the expression is no longer considered suitable for compilation.
-	 * @return whether this expression has been successfully compiled
+	 * Perform expression compilation. This will only succeed once exit descriptors for all nodes have
+	 * been determined. If the compilation fails and has failed more than 100 times the expression is
+	 * no longer considered suitable for compilation.
 	 */
 	public boolean compileExpression() {
-		CompiledExpression compiledAst = this.compiledAst;
-		if (compiledAst != null) {
-			// Previously compiled
-			return true;
-		}
-		if (this.failedAttempts.get() > FAILED_ATTEMPTS_THRESHOLD) {
+		if (this.failedAttempts > FAILED_ATTEMPTS_THRESHOLD) {
 			// Don't try again
 			return false;
 		}
-
-		synchronized (this) {
-			if (this.compiledAst != null) {
-				// Compiled by another thread before this thread got into the sync block
-				return true;
-			}
-			try {
-				SpelCompiler compiler = SpelCompiler.getCompiler(this.configuration.getCompilerClassLoader());
-				compiledAst = compiler.compile(this.ast);
-				if (compiledAst != null) {
-					// Successfully compiled
-					this.compiledAst = compiledAst;
+		if (this.compiledAst == null) {
+			synchronized (this.expression) {
+				// Possibly compiled by another thread before this thread got into the sync block
+				if (this.compiledAst != null) {
 					return true;
 				}
-				else {
-					// Failed to compile
-					this.failedAttempts.incrementAndGet();
-					return false;
-				}
-			}
-			catch (Exception ex) {
-				// Failed to compile
-				this.failedAttempts.incrementAndGet();
-
-				// If running in mixed mode, revert to interpreted
-				if (this.configuration.getCompilerMode() == SpelCompilerMode.MIXED) {
-					this.compiledAst = null;
-					this.interpretedCount.set(0);
-					return false;
-				}
-				else {
-					// Running in SpelCompilerMode.immediate mode - propagate exception to caller
-					throw new SpelEvaluationException(ex, SpelMessage.EXCEPTION_COMPILING_EXPRESSION);
+				SpelCompiler compiler = SpelCompiler.getCompiler(this.configuration.getCompilerClassLoader());
+				this.compiledAst = compiler.compile(this.ast);
+				if (this.compiledAst == null) {
+					this.failedAttempts++;
 				}
 			}
 		}
+		return (this.compiledAst != null);
 	}
 
 	/**
@@ -563,7 +504,7 @@ public class SpelExpression implements Expression {
 	public void revertToInterpreted() {
 		this.compiledAst = null;
 		this.interpretedCount.set(0);
-		this.failedAttempts.set(0);
+		this.failedAttempts = 0;
 	}
 
 	/**

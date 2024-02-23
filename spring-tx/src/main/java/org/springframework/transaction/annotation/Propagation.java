@@ -27,12 +27,22 @@ import org.springframework.transaction.TransactionDefinition;
  * @author Juergen Hoeller
  * @since 1.2
  */
+
+/**
+ * 事务的传播行为
+ * 枚举类Propagation是为了结合@Transactional注解使用而设计的，这个枚举里面定义的事务传播行为类型与TransactionDefinition中定义的事
+ * 务传播行为类型是对应的，所以在使用@Transactional注解时我们就要使用Propagation枚举类来指定传播行为类型，而不直接使
+ * 用TransactionDefinition接口里定义的属性。
+ */
 public enum Propagation {
 
 	/**
 	 * Support a current transaction, create a new one if none exists.
 	 * Analogous to EJB transaction attribute of the same name.
 	 * <p>This is the default setting of a transaction annotation.
+	 */
+	/**
+	 * 如果当前没有事务，则自己新建一个事务，如果当前存在事务，则加入这个事务
 	 */
 	REQUIRED(TransactionDefinition.PROPAGATION_REQUIRED),
 
@@ -45,13 +55,20 @@ public enum Propagation {
 	 * As a consequence, the same resources (JDBC Connection, Hibernate Session, etc)
 	 * will be shared for the entire specified scope. Note that this depends on
 	 * the actual synchronization configuration of the transaction manager.
+	 *
 	 * @see org.springframework.transaction.support.AbstractPlatformTransactionManager#setTransactionSynchronization
+	 */
+	/**
+	 * 当前存在事务，则加入当前事务，如果当前没有事务，就以非事务方法执行
 	 */
 	SUPPORTS(TransactionDefinition.PROPAGATION_SUPPORTS),
 
 	/**
 	 * Support a current transaction, throw an exception if none exists.
 	 * Analogous to EJB transaction attribute of the same name.
+	 */
+	/**
+	 * 当前存在事务，则加入当前事务，如果当前事务不存在，则抛出异常
 	 */
 	MANDATORY(TransactionDefinition.PROPAGATION_MANDATORY),
 
@@ -61,9 +78,13 @@ public enum Propagation {
 	 * <p><b>NOTE:</b> Actual transaction suspension will not work out-of-the-box
 	 * on all transaction managers. This in particular applies to
 	 * {@link org.springframework.transaction.jta.JtaTransactionManager},
-	 * which requires the {@code jakarta.transaction.TransactionManager} to be
-	 * made available to it (which is server-specific in standard Jakarta EE).
+	 * which requires the {@code javax.transaction.TransactionManager} to be
+	 * made available to it (which is server-specific in standard Java EE).
+	 *
 	 * @see org.springframework.transaction.jta.JtaTransactionManager#setTransactionManager
+	 */
+	/**
+	 * 创建一个新事务，如果存在当前事务，则挂起该事务
 	 */
 	REQUIRES_NEW(TransactionDefinition.PROPAGATION_REQUIRES_NEW),
 
@@ -73,15 +94,22 @@ public enum Propagation {
 	 * <p><b>NOTE:</b> Actual transaction suspension will not work out-of-the-box
 	 * on all transaction managers. This in particular applies to
 	 * {@link org.springframework.transaction.jta.JtaTransactionManager},
-	 * which requires the {@code jakarta.transaction.TransactionManager} to be
-	 * made available to it (which is server-specific in standard Jakarta EE).
+	 * which requires the {@code javax.transaction.TransactionManager} to be
+	 * made available to it (which is server-specific in standard Java EE).
+	 *
 	 * @see org.springframework.transaction.jta.JtaTransactionManager#setTransactionManager
+	 */
+	/**
+	 * 始终以非事务方式执行,如果当前存在事务，则挂起当前事务
 	 */
 	NOT_SUPPORTED(TransactionDefinition.PROPAGATION_NOT_SUPPORTED),
 
 	/**
 	 * Execute non-transactionally, throw an exception if a transaction exists.
 	 * Analogous to EJB transaction attribute of the same name.
+	 */
+	/**
+	 * 不使用事务，如果当前事务存在，则抛出异常
 	 */
 	NEVER(TransactionDefinition.PROPAGATION_NEVER),
 
@@ -92,7 +120,11 @@ public enum Propagation {
 	 * transaction managers. Out of the box, this only applies to the JDBC
 	 * DataSourceTransactionManager. Some JTA providers might support nested
 	 * transactions as well.
+	 *
 	 * @see org.springframework.jdbc.datasource.DataSourceTransactionManager
+	 */
+	/**
+	 * 如果当前事务存在，则在嵌套事务中执行，否则REQUIRED的操作一样（开启一个事务）
 	 */
 	NESTED(TransactionDefinition.PROPAGATION_NESTED);
 

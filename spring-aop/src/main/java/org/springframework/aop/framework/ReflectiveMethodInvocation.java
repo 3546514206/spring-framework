@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package org.springframework.aop.framework;
 
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.ProxyMethodInvocation;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.BridgeMethodResolver;
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-
-import org.springframework.aop.ProxyMethodInvocation;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.core.BridgeMethodResolver;
-import org.springframework.lang.Nullable;
 
 /**
  * Spring's implementation of the AOP Alliance
@@ -165,12 +164,14 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 
 		Object interceptorOrInterceptionAdvice =
 				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
-		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher dm) {
+		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
 			// Evaluate dynamic method matcher here: static part will already have
 			// been evaluated and found to match.
+			InterceptorAndDynamicMethodMatcher dm =
+					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
-			if (dm.matcher().matches(this.method, targetClass, this.arguments)) {
-				return dm.interceptor().invoke(this);
+			if (dm.methodMatcher.matches(this.method, targetClass, this.arguments)) {
+				return dm.interceptor.invoke(this);
 			}
 			else {
 				// Dynamic matching failed.
@@ -210,7 +211,8 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		Object[] cloneArguments = this.arguments;
 		if (this.arguments.length > 0) {
 			// Build an independent copy of the arguments array.
-			cloneArguments = this.arguments.clone();
+			cloneArguments = new Object[this.arguments.length];
+			System.arraycopy(this.arguments, 0, cloneArguments, 0, this.arguments.length);
 		}
 		return invocableClone(cloneArguments);
 	}

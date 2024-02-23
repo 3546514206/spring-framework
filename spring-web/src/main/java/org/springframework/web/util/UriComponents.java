@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,10 @@
 
 package org.springframework.web.util;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.MultiValueMap;
+
 import java.io.Serializable;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -27,10 +31,6 @@ import java.util.Map;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.MultiValueMap;
 
 /**
  * Represents an immutable collection of URI components, mapping component type to
@@ -201,11 +201,10 @@ public abstract class UriComponents implements Serializable {
 
 	/**
 	 * Concatenate all URI components to return the fully formed URI String.
-	 * <p>This method amounts to simple String concatenation of the current
-	 * URI component values and as such the result may contain illegal URI
-	 * characters, for example if URI variables have not been expanded or if
-	 * encoding has not been applied via {@link UriComponentsBuilder#encode()}
-	 * or {@link #encode()}.
+	 * <p>This method does nothing more than a simple concatenation based on
+	 * current values. That means it could produce different results if invoked
+	 * before vs after methods that can change individual values such as
+	 * {@code encode}, {@code expand}, or {@code normalize}.
 	 */
 	public abstract String toUriString();
 
@@ -256,7 +255,7 @@ public abstract class UriComponents implements Serializable {
 			source = sanitizeSource(source);
 		}
 		Matcher matcher = NAMES_PATTERN.matcher(source);
-		StringBuilder sb = new StringBuilder();
+		StringBuffer sb = new StringBuffer();
 		while (matcher.find()) {
 			String match = matcher.group(1);
 			String varName = getVariableName(match);
@@ -277,10 +276,8 @@ public abstract class UriComponents implements Serializable {
 	 */
 	private static String sanitizeSource(String source) {
 		int level = 0;
-		int lastCharIndex = 0;
-		char[] chars = new char[source.length()];
-		for (int i = 0; i < source.length(); i++) {
-			char c = source.charAt(i);
+		StringBuilder sb = new StringBuilder();
+		for (char c : source.toCharArray()) {
 			if (c == '{') {
 				level++;
 			}
@@ -290,9 +287,9 @@ public abstract class UriComponents implements Serializable {
 			if (level > 1 || (level == 1 && c == '}')) {
 				continue;
 			}
-			chars[lastCharIndex++] = c;
+			sb.append(c);
 		}
-		return new String(chars, 0, lastCharIndex);
+		return sb.toString();
 	}
 
 	private static String getVariableName(String match) {

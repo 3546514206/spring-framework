@@ -16,18 +16,18 @@
 
 package org.springframework.test.web.reactive.server;
 
-import java.util.function.Consumer;
-
 import reactor.core.publisher.Flux;
+
+import java.util.function.Consumer;
 
 /**
  * {@code ExchangeResult} variant with the response body decoded as
  * {@code Flux<T>} but not yet consumed.
  *
- * @author Rossen Stoyanchev
- * @since 5.0
  * @param <T> the type of elements in the response body
+ * @author Rossen Stoyanchev
  * @see EntityExchangeResult
+ * @since 5.0
  */
 public class FluxExchangeResult<T> extends ExchangeResult {
 
@@ -80,9 +80,9 @@ public class FluxExchangeResult<T> extends ExchangeResult {
 	 * 		.exchange()
 	 * 		.expectStatus().isOk()
 	 *	 	.returnResult()
-	 *	 	.consumeWith(result -&gt; assertThat(...);
+	 *	 	.consumeWith(result -> assertThat(...);
 	 * </pre>
-	 * @param consumer the consumer for {@code "this"} instance
+	 * @param consumer consumer for {@code "this"} instance
 	 */
 	public void consumeWith(Consumer<FluxExchangeResult<T>> consumer) {
 		assertWithDiagnostics(() -> consumer.accept(this));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
 import org.springframework.beans.factory.parsing.ComponentDefinition;
@@ -26,6 +23,9 @@ import org.springframework.beans.factory.parsing.CompositeComponentDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.lang.Nullable;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Context that gets passed along a bean definition parsing process,
@@ -64,24 +64,24 @@ public final class ParserContext {
 	}
 
 
-	public XmlReaderContext getReaderContext() {
+	public final XmlReaderContext getReaderContext() {
 		return this.readerContext;
 	}
 
-	public BeanDefinitionRegistry getRegistry() {
+	public final BeanDefinitionRegistry getRegistry() {
 		return this.readerContext.getRegistry();
 	}
 
-	public BeanDefinitionParserDelegate getDelegate() {
+	public final BeanDefinitionParserDelegate getDelegate() {
 		return this.delegate;
 	}
 
 	@Nullable
-	public BeanDefinition getContainingBeanDefinition() {
+	public final BeanDefinition getContainingBeanDefinition() {
 		return this.containingBeanDefinition;
 	}
 
-	public boolean isNested() {
+	public final boolean isNested() {
 		return (this.containingBeanDefinition != null);
 	}
 

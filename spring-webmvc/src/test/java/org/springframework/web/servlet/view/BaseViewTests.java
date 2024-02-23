@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 package org.springframework.web.servlet.view;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationContextException;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.servlet.View;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.context.ApplicationContextException;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.servlet.View;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -45,11 +46,11 @@ import static org.mockito.Mockito.mock;
  * @author Rod Johnson
  * @author Sam Brannen
  */
-class BaseViewTests {
+public class BaseViewTests {
 
 	@Test
-	void renderWithoutStaticAttributes() throws Exception {
-		WebApplicationContext wac = mock();
+	public void renderWithoutStaticAttributes() throws Exception {
+		WebApplicationContext wac = mock(WebApplicationContext.class);
 		given(wac.getServletContext()).willReturn(new MockServletContext());
 
 		HttpServletRequest request = new MockHttpServletRequest();
@@ -74,8 +75,8 @@ class BaseViewTests {
 	 * Test attribute passing, NOT CSV parsing.
 	 */
 	@Test
-	void renderWithStaticAttributesNoCollision() throws Exception {
-		WebApplicationContext wac = mock();
+	public void renderWithStaticAttributesNoCollision() throws Exception {
+		WebApplicationContext wac = mock(WebApplicationContext.class);
 		given(wac.getServletContext()).willReturn(new MockServletContext());
 
 		HttpServletRequest request = new MockHttpServletRequest();
@@ -100,8 +101,8 @@ class BaseViewTests {
 	}
 
 	@Test
-	void pathVarsOverrideStaticAttributes() throws Exception {
-		WebApplicationContext wac = mock();
+	public void pathVarsOverrideStaticAttributes() throws Exception {
+		WebApplicationContext wac = mock(WebApplicationContext.class);
 		given(wac.getServletContext()).willReturn(new MockServletContext());
 
 		HttpServletRequest request = new MockHttpServletRequest();
@@ -124,14 +125,14 @@ class BaseViewTests {
 
 		checkContainsAll(pathVars, tv.model);
 
-		assertThat(tv.model).hasSize(3);
+		assertThat(tv.model.size()).isEqualTo(3);
 		assertThat(tv.model.get("something")).isEqualTo("else");
 		assertThat(tv.initialized).isTrue();
 	}
 
 	@Test
-	void dynamicModelOverridesStaticAttributesIfCollision() throws Exception {
-		WebApplicationContext wac = mock();
+	public void dynamicModelOverridesStaticAttributesIfCollision() throws Exception {
+		WebApplicationContext wac = mock(WebApplicationContext.class);
 		given(wac.getServletContext()).willReturn(new MockServletContext());
 
 		HttpServletRequest request = new MockHttpServletRequest();
@@ -152,14 +153,14 @@ class BaseViewTests {
 		// Check it contains all
 		checkContainsAll(model, tv.model);
 
-		assertThat(tv.model).hasSize(3);
+		assertThat(tv.model.size()).isEqualTo(3);
 		assertThat(tv.model.get("something")).isEqualTo("else");
 		assertThat(tv.initialized).isTrue();
 	}
 
 	@Test
-	void dynamicModelOverridesPathVariables() throws Exception {
-		WebApplicationContext wac = mock();
+	public void dynamicModelOverridesPathVariables() throws Exception {
+		WebApplicationContext wac = mock(WebApplicationContext.class);
 		given(wac.getServletContext()).willReturn(new MockServletContext());
 
 		TestView tv = new TestView(wac);
@@ -180,61 +181,61 @@ class BaseViewTests {
 		tv.render(model, request, response);
 
 		checkContainsAll(model, tv.model);
-		assertThat(tv.model).hasSize(3);
+		assertThat(tv.model.size()).isEqualTo(3);
 		assertThat(tv.model.get("something")).isEqualTo("else");
 		assertThat(tv.initialized).isTrue();
 	}
 
 	@Test
-	void ignoresNullAttributes() {
+	public void ignoresNullAttributes() {
 		AbstractView v = new ConcreteView();
 		v.setAttributes(null);
-		assertThat(v.getStaticAttributes()).isEmpty();
+		assertThat(v.getStaticAttributes().size()).isEqualTo(0);
 	}
 
 	/**
 	 * Test only the CSV parsing implementation.
 	 */
 	@Test
-	void attributeCSVParsingIgnoresNull() {
+	public void attributeCSVParsingIgnoresNull() {
 		AbstractView v = new ConcreteView();
 		v.setAttributesCSV(null);
-		assertThat(v.getStaticAttributes()).isEmpty();
+		assertThat(v.getStaticAttributes().size()).isEqualTo(0);
 	}
 
 	@Test
-	void attributeCSVParsingIgnoresEmptyString() {
+	public void attributeCSVParsingIgnoresEmptyString() {
 		AbstractView v = new ConcreteView();
 		v.setAttributesCSV("");
-		assertThat(v.getStaticAttributes()).isEmpty();
+		assertThat(v.getStaticAttributes().size()).isEqualTo(0);
 	}
 
 	/**
 	 * Format is attname0={value1},attname1={value1}
 	 */
 	@Test
-	void attributeCSVParsingValid() {
+	public void attributeCSVParsingValid() {
 		AbstractView v = new ConcreteView();
 		v.setAttributesCSV("foo=[bar],king=[kong]");
-		assertThat(v.getStaticAttributes()).hasSize(2);
+		assertThat(v.getStaticAttributes().size() == 2).isTrue();
 		assertThat(v.getStaticAttributes().get("foo").equals("bar")).isTrue();
 		assertThat(v.getStaticAttributes().get("king").equals("kong")).isTrue();
 	}
 
 	@Test
-	void attributeCSVParsingValidWithWeirdCharacters() {
+	public void attributeCSVParsingValidWithWeirdCharacters() {
 		AbstractView v = new ConcreteView();
 		String fooval = "owfie   fue&3[][[[2 \n\n \r  \t 8\ufffd3";
 		// Also tests empty value
 		String kingval = "";
 		v.setAttributesCSV("foo=(" + fooval + "),king={" + kingval + "},f1=[we]");
-		assertThat(v.getStaticAttributes()).hasSize(3);
-		assertThat(v.getStaticAttributes().get("foo")).isEqualTo(fooval);
-		assertThat(v.getStaticAttributes().get("king")).isEqualTo(kingval);
+		assertThat(v.getStaticAttributes().size() == 3).isTrue();
+		assertThat(v.getStaticAttributes().get("foo").equals(fooval)).isTrue();
+		assertThat(v.getStaticAttributes().get("king").equals(kingval)).isTrue();
 	}
 
 	@Test
-	void attributeCSVParsingInvalid() {
+	public void attributeCSVParsingInvalid() {
 		AbstractView v = new ConcreteView();
 		// No equals
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -254,10 +255,10 @@ class BaseViewTests {
 	}
 
 	@Test
-	void attributeCSVParsingIgnoresTrailingComma() {
+	public void attributeCSVParsingIgnoresTrailingComma() {
 		AbstractView v = new ConcreteView();
 		v.setAttributesCSV("foo=[de],");
-		assertThat(v.getStaticAttributes()).hasSize(1);
+		assertThat(v.getStaticAttributes().size()).isEqualTo(1);
 	}
 
 	/**
@@ -265,7 +266,8 @@ class BaseViewTests {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void checkContainsAll(Map expected, Map<String, Object> actual) {
-		assertThat(actual).containsAllEntriesOf(expected);
+		expected.forEach((k, v) -> assertThat(actual.get(k)).as("Values for model key '" + k
+						+ "' must match").isEqualTo(expected.get(k)));
 	}
 
 
@@ -277,7 +279,9 @@ class BaseViewTests {
 		// Do-nothing concrete subclass
 		@Override
 		protected void renderMergedOutputModel(Map<String, Object> model,
-				HttpServletRequest request, HttpServletResponse response) {
+				HttpServletRequest request, HttpServletResponse response)
+
+			throws ServletException, IOException {
 			throw new UnsupportedOperationException();
 		}
 	}
@@ -301,7 +305,7 @@ class BaseViewTests {
 
 		@Override
 		protected void renderMergedOutputModel(Map<String, Object> model, HttpServletRequest request,
-				HttpServletResponse response) {
+				HttpServletResponse response) throws ServletException, IOException {
 			this.model = model;
 		}
 
@@ -314,7 +318,7 @@ class BaseViewTests {
 				throw new RuntimeException("Already initialized");
 			}
 			this.initialized = true;
-			assertThat(getApplicationContext()).isSameAs(wac);
+			assertThat(getApplicationContext() == wac).isTrue();
 		}
 	}
 

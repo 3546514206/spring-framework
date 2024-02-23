@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.orm.jpa.hibernate;
 
-import jakarta.persistence.EntityManager;
+import javax.persistence.EntityManager;
+
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -36,7 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @author Rod Johnson
  */
-class HibernateEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
+@SuppressWarnings("deprecation")
+public class HibernateEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
 
 	@Override
 	protected String[] getConfigLocations() {
@@ -46,21 +48,34 @@ class HibernateEntityManagerFactoryIntegrationTests extends AbstractContainerEnt
 
 
 	@Test
-	void testCanCastNativeEntityManagerFactoryToHibernateEntityManagerFactoryImpl() {
+	public void testCanCastNativeEntityManagerFactoryToHibernateEntityManagerFactoryImpl() {
 		EntityManagerFactoryInfo emfi = (EntityManagerFactoryInfo) entityManagerFactory;
-		assertThat(emfi.getNativeEntityManagerFactory()).isInstanceOf(SessionFactory.class);
+		boolean condition1 = emfi.getNativeEntityManagerFactory() instanceof org.hibernate.jpa.HibernateEntityManagerFactory;
+		assertThat(condition1).isTrue();
+		// as of Hibernate 5.2
+		boolean condition = emfi.getNativeEntityManagerFactory() instanceof SessionFactory;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
-	void testCanCastSharedEntityManagerProxyToHibernateEntityManager() {
-		assertThat(((EntityManagerProxy) sharedEntityManager).getTargetEntityManager()).isInstanceOf(Session.class);
+	public void testCanCastSharedEntityManagerProxyToHibernateEntityManager() {
+		boolean condition1 = sharedEntityManager instanceof org.hibernate.jpa.HibernateEntityManager;
+		assertThat(condition1).isTrue();
+		// as of Hibernate 5.2
+		boolean condition = ((EntityManagerProxy) sharedEntityManager).getTargetEntityManager() instanceof Session;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
-	void testCanUnwrapAopProxy() {
+	public void testCanUnwrapAopProxy() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		EntityManager proxy = ProxyFactory.getProxy(EntityManager.class, new SingletonTargetSource(em));
-		assertThat(proxy.unwrap(Session.class)).isSameAs(em);
+		boolean condition = em instanceof org.hibernate.jpa.HibernateEntityManager;
+		assertThat(condition).isTrue();
+		boolean condition1 = proxy instanceof org.hibernate.jpa.HibernateEntityManager;
+		assertThat(condition1).isFalse();
+		assertThat(proxy.unwrap(org.hibernate.jpa.HibernateEntityManager.class) != null).isTrue();
+		assertThat(proxy.unwrap(org.hibernate.jpa.HibernateEntityManager.class)).isSameAs(em);
 		assertThat(proxy.getDelegate()).isSameAs(em.getDelegate());
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,29 @@
 
 package org.springframework.beans.factory.config;
 
-import java.util.Properties;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.io.Resource;
 
+import java.util.Properties;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.core.testfixture.io.ResourceTestUtils.qualifiedResource;
+import static org.springframework.tests.TestResourceUtils.qualifiedResource;
 
 /**
- * Tests for {@link PropertiesFactoryBean}.
+ * Unit tests for {@link PropertiesFactoryBean}.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
  * @since 01.11.2003
  */
-class PropertiesFactoryBeanTests {
+public class PropertiesFactoryBeanTests {
 
 	private static final Class<?> CLASS = PropertiesFactoryBeanTests.class;
 	private static final Resource TEST_PROPS = qualifiedResource(CLASS, "test.properties");
 	private static final Resource TEST_PROPS_XML = qualifiedResource(CLASS, "test.properties.xml");
 
 	@Test
-	void testWithPropertiesFile() throws Exception {
+	public void testWithPropertiesFile() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setLocation(TEST_PROPS);
 		pfb.afterPropertiesSet();
@@ -48,7 +47,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithPropertiesXmlFile() throws Exception {
+	public void testWithPropertiesXmlFile() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setLocation(TEST_PROPS_XML);
 		pfb.afterPropertiesSet();
@@ -57,7 +56,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithLocalProperties() throws Exception {
+	public void testWithLocalProperties() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		Properties localProps = new Properties();
 		localProps.setProperty("key2", "value2");
@@ -68,7 +67,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithPropertiesFileAndLocalProperties() throws Exception {
+	public void testWithPropertiesFileAndLocalProperties() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setLocation(TEST_PROPS);
 		Properties localProps = new Properties();
@@ -82,7 +81,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithPropertiesFileAndMultipleLocalProperties() throws Exception {
+	public void testWithPropertiesFileAndMultipleLocalProperties() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setLocation(TEST_PROPS);
 
@@ -111,7 +110,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithPropertiesFileAndLocalPropertiesAndLocalOverride() throws Exception {
+	public void testWithPropertiesFileAndLocalPropertiesAndLocalOverride() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setLocation(TEST_PROPS);
 		Properties localProps = new Properties();
@@ -126,7 +125,7 @@ class PropertiesFactoryBeanTests {
 	}
 
 	@Test
-	void testWithPrototype() throws Exception {
+	public void testWithPrototype() throws Exception {
 		PropertiesFactoryBean pfb = new PropertiesFactoryBean();
 		pfb.setSingleton(false);
 		pfb.setLocation(TEST_PROPS);
@@ -138,7 +137,7 @@ class PropertiesFactoryBeanTests {
 		assertThat(props.getProperty("tb.array[0].age")).isEqualTo("99");
 		assertThat(props.getProperty("key2")).isEqualTo("value2");
 		Properties newProps = pfb.getObject();
-		assertThat(props).isNotSameAs(newProps);
+		assertThat(props != newProps).isTrue();
 		assertThat(newProps.getProperty("tb.array[0].age")).isEqualTo("99");
 		assertThat(newProps.getProperty("key2")).isEqualTo("value2");
 	}

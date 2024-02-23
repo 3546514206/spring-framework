@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ public abstract class DigestUtils {
 
 	/**
 	 * Calculate the MD5 digest of the given stream.
-	 * <p>This method does <strong>not</strong> close the input stream.
 	 * @param inputStream the InputStream to calculate the digest over
 	 * @return the digest
 	 * @since 4.2
@@ -72,7 +71,6 @@ public abstract class DigestUtils {
 
 	/**
 	 * Return a hexadecimal string representation of the MD5 digest of the given stream.
-	 * <p>This method does <strong>not</strong> close the input stream.
 	 * @param inputStream the InputStream to calculate the digest over
 	 * @return a hexadecimal digest string
 	 * @since 4.2
@@ -95,7 +93,6 @@ public abstract class DigestUtils {
 	/**
 	 * Append a hexadecimal string representation of the MD5 digest of the given
 	 * inputStream to the given {@link StringBuilder}.
-	 * <p>This method does <strong>not</strong> close the input stream.
 	 * @param inputStream the inputStream to calculate the digest over
 	 * @param builder the string builder to append the digest to
 	 * @return the given string builder
@@ -108,7 +105,7 @@ public abstract class DigestUtils {
 
 	/**
 	 * Create a new {@link MessageDigest} with the given algorithm.
-	 * <p>Necessary because {@code MessageDigest} is not thread-safe.
+	 * Necessary because {@code MessageDigest} is not thread-safe.
 	 */
 	private static MessageDigest getDigest(String algorithm) {
 		try {
@@ -125,13 +122,13 @@ public abstract class DigestUtils {
 
 	private static byte[] digest(String algorithm, InputStream inputStream) throws IOException {
 		MessageDigest messageDigest = getDigest(algorithm);
-		if (inputStream instanceof UpdateMessageDigestInputStream digestInputStream){
-			digestInputStream.updateMessageDigest(messageDigest);
+		if (inputStream instanceof UpdateMessageDigestInputStream){
+			((UpdateMessageDigestInputStream) inputStream).updateMessageDigest(messageDigest);
 			return messageDigest.digest();
 		}
 		else {
 			final byte[] buffer = new byte[StreamUtils.BUFFER_SIZE];
-			int bytesRead;
+			int bytesRead = -1;
 			while ((bytesRead = inputStream.read(buffer)) != -1) {
 				messageDigest.update(buffer, 0, bytesRead);
 			}

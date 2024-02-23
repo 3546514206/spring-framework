@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,20 @@
 package org.springframework.web.servlet.mvc.method.annotation
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.springframework.mock.web.test.MockHttpServletRequest
+import org.springframework.mock.web.test.MockHttpServletResponse
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.context.request.async.WebAsyncUtils
-import org.springframework.web.servlet.handler.PathPatternsParameterizedTest
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse
-import java.util.stream.Stream
 
 /**
  * @author Sebastien Deleuze
  */
 class ServletAnnotationControllerHandlerMethodKotlinTests : AbstractServletHandlerMethodTests() {
 
-	companion object {
-		@JvmStatic
-		fun pathPatternsArguments(): Stream<Boolean> {
-			return Stream.of(true, false)
-		}
-	}
-
-	@PathPatternsParameterizedTest
-	fun dataClassBinding(usePathPatterns: Boolean) {
-		initDispatcherServlet(DataClassController::class.java, usePathPatterns)
+	@Test
+	fun dataClassBinding() {
+		initServletWithControllers(DataClassController::class.java)
 
 		val request = MockHttpServletRequest("GET", "/bind")
 		request.addParameter("param1", "value1")
@@ -50,9 +40,9 @@ class ServletAnnotationControllerHandlerMethodKotlinTests : AbstractServletHandl
 		assertThat(response.contentAsString).isEqualTo("value1-2")
 	}
 
-	@PathPatternsParameterizedTest
-	fun dataClassBindingWithOptionalParameterAndAllParameters(usePathPatterns: Boolean) {
-		initDispatcherServlet(DataClassController::class.java, usePathPatterns)
+	@Test
+	fun dataClassBindingWithOptionalParameterAndAllParameters() {
+		initServletWithControllers(DataClassController::class.java)
 
 		val request = MockHttpServletRequest("GET", "/bind-optional-parameter")
 		request.addParameter("param1", "value1")
@@ -62,91 +52,15 @@ class ServletAnnotationControllerHandlerMethodKotlinTests : AbstractServletHandl
 		assertThat(response.contentAsString).isEqualTo("value1-2")
 	}
 
-	@PathPatternsParameterizedTest
-	fun dataClassBindingWithOptionalParameterAndOnlyMissingParameters(usePathPatterns: Boolean) {
-		initDispatcherServlet(DataClassController::class.java, usePathPatterns)
+	@Test
+	fun dataClassBindingWithOptionalParameterAndOnlyMissingParameters() {
+		initServletWithControllers(DataClassController::class.java)
 
 		val request = MockHttpServletRequest("GET", "/bind-optional-parameter")
 		request.addParameter("param1", "value1")
 		val response = MockHttpServletResponse()
 		servlet.service(request, response)
 		assertThat(response.contentAsString).isEqualTo("value1-12")
-	}
-
-	@PathPatternsParameterizedTest
-	fun suspendingMethod(usePathPatterns: Boolean) {
-		initDispatcherServlet(CoroutinesController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/suspending")
-		request.isAsyncSupported = true
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(WebAsyncUtils.getAsyncManager(request).concurrentResult).isEqualTo("foo")
-	}
-
-	@PathPatternsParameterizedTest
-	fun defaultValue(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/default-value")
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(response.contentAsString).isEqualTo("default")
-	}
-
-	@PathPatternsParameterizedTest
-	fun defaultValueOverridden(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/default-value")
-		request.addParameter("value", "override")
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(response.contentAsString).isEqualTo("override")
-	}
-
-	@PathPatternsParameterizedTest
-	fun defaultValues(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/default-values")
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(response.contentAsString).isEqualTo("10-20")
-	}
-
-	@PathPatternsParameterizedTest
-	fun defaultValuesOverridden(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/default-values")
-		request.addParameter("limit2", "40")
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(response.contentAsString).isEqualTo("10-40")
-	}
-
-	@PathPatternsParameterizedTest
-	fun suspendingDefaultValue(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/suspending-default-value")
-		request.isAsyncSupported = true
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(WebAsyncUtils.getAsyncManager(request).concurrentResult).isEqualTo("default")
-	}
-
-	@PathPatternsParameterizedTest
-	fun suspendingDefaultValueOverridden(usePathPatterns: Boolean) {
-		initDispatcherServlet(DefaultValueController::class.java, usePathPatterns)
-
-		val request = MockHttpServletRequest("GET", "/suspending-default-value")
-		request.isAsyncSupported = true
-		request.addParameter("value", "override")
-		val response = MockHttpServletResponse()
-		servlet.service(request, response)
-		assertThat(WebAsyncUtils.getAsyncManager(request).concurrentResult).isEqualTo("override")
 	}
 
 
@@ -162,31 +76,6 @@ class ServletAnnotationControllerHandlerMethodKotlinTests : AbstractServletHandl
 
 		@RequestMapping("/bind-optional-parameter")
 		fun handle(data: DataClassWithOptionalParameter) = "${data.param1}-${data.param2}"
-	}
-
-	@RestController
-	class CoroutinesController {
-
-		@Suppress("RedundantSuspendModifier")
-		@RequestMapping("/suspending")
-		suspend fun handle(): String {
-			return "foo"
-		}
-	}
-
-	@RestController
-	class DefaultValueController {
-
-		@RequestMapping("/default-value")
-		fun handle(@RequestParam value: String = "default") = value
-
-		@RequestMapping("/default-values")
-		fun handleMultiple(@RequestParam(defaultValue = "10") limit1: Int, @RequestParam limit2: Int = 20) = "${limit1}-${limit2}"
-
-		@Suppress("RedundantSuspendModifier")
-		@RequestMapping("/suspending-default-value")
-		suspend fun handleSuspending(@RequestParam value: String = "default") = value
-
 	}
 
 }

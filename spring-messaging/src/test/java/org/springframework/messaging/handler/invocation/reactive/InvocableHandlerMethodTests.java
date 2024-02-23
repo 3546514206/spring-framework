@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,46 +39,46 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link InvocableHandlerMethod}.
+ * Unit tests for {@link InvocableHandlerMethod}.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  */
-class InvocableHandlerMethodTests {
+public class InvocableHandlerMethodTests {
 
-	private final Message<?> message = mock();
+	private final Message<?> message = mock(Message.class);
 
 	private final List<HandlerMethodArgumentResolver> resolvers = new ArrayList<>();
 
 
 	@Test
-	void resolveArg() {
+	public void resolveArg() {
 		this.resolvers.add(new StubArgumentResolver(99));
 		this.resolvers.add(new StubArgumentResolver("value"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invokeAndBlock(new Handler(), method);
 
-		assertThat(getStubResolver(0).getResolvedParameters()).hasSize(1);
-		assertThat(getStubResolver(1).getResolvedParameters()).hasSize(1);
+		assertThat(getStubResolver(0).getResolvedParameters().size()).isEqualTo(1);
+		assertThat(getStubResolver(1).getResolvedParameters().size()).isEqualTo(1);
 		assertThat(value).isEqualTo("99-value");
 		assertThat(getStubResolver(0).getResolvedParameters().get(0).getParameterName()).isEqualTo("intArg");
 		assertThat(getStubResolver(1).getResolvedParameters().get(0).getParameterName()).isEqualTo("stringArg");
 	}
 
 	@Test
-	void resolveNoArgValue() {
+	public void resolveNoArgValue() {
 		this.resolvers.add(new StubArgumentResolver(Integer.class));
 		this.resolvers.add(new StubArgumentResolver(String.class));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invokeAndBlock(new Handler(), method);
 
-		assertThat(getStubResolver(0).getResolvedParameters()).hasSize(1);
-		assertThat(getStubResolver(1).getResolvedParameters()).hasSize(1);
+		assertThat(getStubResolver(0).getResolvedParameters().size()).isEqualTo(1);
+		assertThat(getStubResolver(1).getResolvedParameters().size()).isEqualTo(1);
 		assertThat(value).isEqualTo("null-null");
 	}
 
 	@Test
-	void cannotResolveArg() {
+	public void cannotResolveArg() {
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		assertThatExceptionOfType(MethodArgumentResolutionException.class).isThrownBy(() ->
 				invokeAndBlock(new Handler(), method))
@@ -86,7 +86,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveProvidedArg() {
+	public void resolveProvidedArg() {
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invokeAndBlock(new Handler(), method, 99, "value");
 
@@ -96,7 +96,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveProvidedArgFirst() {
+	public void resolveProvidedArgFirst() {
 		this.resolvers.add(new StubArgumentResolver(1));
 		this.resolvers.add(new StubArgumentResolver("value1"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
@@ -106,7 +106,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void exceptionInResolvingArg() {
+	public void exceptionInResolvingArg() {
 		this.resolvers.add(new InvocableHandlerMethodTests.ExceptionRaisingArgumentResolver());
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -114,7 +114,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void illegalArgumentException() {
+	public void illegalArgumentException() {
 		this.resolvers.add(new StubArgumentResolver(Integer.class, "__not_an_int__"));
 		this.resolvers.add(new StubArgumentResolver("value"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
@@ -129,7 +129,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void invocationTargetException() {
+	public void invocationTargetException() {
 		Method method = ResolvableMethod.on(Handler.class).argTypes(Throwable.class).resolveMethod();
 
 		Throwable expected = new Throwable("error");
@@ -138,20 +138,20 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void voidMethod() {
+	public void voidMethod() {
 		this.resolvers.add(new StubArgumentResolver(double.class, 5.25));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0.0d)).method();
 		Handler handler = new Handler();
 		Object value = invokeAndBlock(handler, method);
 
 		assertThat(value).isNull();
-		assertThat(getStubResolver(0).getResolvedParameters()).hasSize(1);
+		assertThat(getStubResolver(0).getResolvedParameters().size()).isEqualTo(1);
 		assertThat(handler.getResult()).isEqualTo("5.25");
 		assertThat(getStubResolver(0).getResolvedParameters().get(0).getParameterName()).isEqualTo("amount");
 	}
 
 	@Test
-	void voidMonoMethod() {
+	public void voidMonoMethod() {
 		Method method = ResolvableMethod.on(Handler.class).mockCall(Handler::handleAsync).method();
 		Handler handler = new Handler();
 		Object value = invokeAndBlock(handler, method);
@@ -183,8 +183,6 @@ class InvocableHandlerMethodTests {
 
 		private AtomicReference<String> result = new AtomicReference<>();
 
-		public Handler() {
-		}
 
 		public String getResult() {
 			return this.result.get();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.web.accept;
 
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
-
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
@@ -28,17 +24,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.context.request.NativeWebRequest;
 
+import javax.servlet.ServletContext;
+import java.util.Map;
+
 /**
  * Extends {@code PathExtensionContentNegotiationStrategy} that also uses
  * {@link ServletContext#getMimeType(String)} to resolve file extensions.
  *
  * @author Rossen Stoyanchev
  * @since 3.2
- * @deprecated as of 5.2.4. See class-level note in
- * {@link ContentNegotiationManagerFactoryBean} on the deprecation of path
- * extension config options.
  */
-@Deprecated
 public class ServletPathExtensionContentNegotiationStrategy extends PathExtensionContentNegotiationStrategy {
 
 	private final ServletContext servletContext;

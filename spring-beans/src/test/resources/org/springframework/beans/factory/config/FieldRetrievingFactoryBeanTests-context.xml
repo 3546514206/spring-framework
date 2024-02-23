@@ -3,11 +3,13 @@
 
 <beans>
 
-	<bean id="testBean" class="org.springframework.beans.testfixture.beans.TestBean">
+	<bean id="testBean" class="org.springframework.tests.sample.beans.TestBean">
 		<property name="someIntegerArray">
 			<list>
-				<bean name="java.sql.Connection.TRANSACTION_SERIALIZABLE" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean"/>
-				<bean name="java.sql.Connection.TRANSACTION_SERIALIZABLE" class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean"/>
+				<bean name="java.sql.Connection.TRANSACTION_SERIALIZABLE"
+					  class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean"/>
+				<bean name="java.sql.Connection.TRANSACTION_SERIALIZABLE"
+					  class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean"/>
 			</list>
 		</property>
 	</bean>

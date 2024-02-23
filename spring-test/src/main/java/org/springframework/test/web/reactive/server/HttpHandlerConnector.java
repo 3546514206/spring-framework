@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,13 @@
 
 package org.springframework.test.web.reactive.server;
 
-import java.net.URI;
-import java.util.function.Function;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ClientHttpRequest;
 import org.springframework.http.client.reactive.ClientHttpResponse;
@@ -46,6 +36,12 @@ import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.http.server.reactive.MockServerHttpResponse;
 import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+
+import java.net.URI;
+import java.util.function.Function;
 
 /**
  * Connector that handles requests by invoking an {@link HttpHandler} rather
@@ -60,7 +56,7 @@ import org.springframework.util.MultiValueMap;
  */
 public class HttpHandlerConnector implements ClientHttpConnector {
 
-	private static final Log logger = LogFactory.getLog(HttpHandlerConnector.class);
+	private static Log logger = LogFactory.getLog(HttpHandlerConnector.class);
 
 	private final HttpHandler handler;
 
@@ -78,17 +74,7 @@ public class HttpHandlerConnector implements ClientHttpConnector {
 	public Mono<ClientHttpResponse> connect(HttpMethod httpMethod, URI uri,
 			Function<? super ClientHttpRequest, Mono<Void>> requestCallback) {
 
-		return Mono.defer(() -> doConnect(httpMethod, uri, requestCallback))
-				.subscribeOn(Schedulers.parallel());
-	}
-
-	private Mono<ClientHttpResponse> doConnect(
-			HttpMethod httpMethod, URI uri, Function<? super ClientHttpRequest, Mono<Void>> requestCallback) {
-
-		// unsafe(): we're intercepting, already serialized Publisher signals
-		Sinks.Empty<Void> requestWriteSink = Sinks.unsafe().empty();
-		Sinks.Empty<Void> handlerSink = Sinks.unsafe().empty();
-		ClientHttpResponse[] savedResponse = new ClientHttpResponse[1];
+		MonoProcessor<ClientHttpResponse> result = MonoProcessor.create();
 
 		MockClientHttpRequest mockClientRequest = new MockClientHttpRequest(httpMethod, uri);
 		MockServerHttpResponse mockServerResponse = new MockServerHttpResponse();
@@ -97,32 +83,22 @@ public class HttpHandlerConnector implements ClientHttpConnector {
 			log("Invoking HttpHandler for ", httpMethod, uri);
 			ServerHttpRequest mockServerRequest = adaptRequest(mockClientRequest, requestBody);
 			ServerHttpResponse responseToUse = prepareResponse(mockServerResponse, mockServerRequest);
-			this.handler.handle(mockServerRequest, responseToUse).subscribe(
-					aVoid -> {},
-					handlerSink::tryEmitError,  // Ignore result: signals cannot compete
-					handlerSink::tryEmitEmpty);
+			this.handler.handle(mockServerRequest, responseToUse).subscribe(aVoid -> {
+			}, result::onError);
 			return Mono.empty();
 		});
 
 		mockServerResponse.setWriteHandler(responseBody ->
 				Mono.fromRunnable(() -> {
 					log("Creating client response for ", httpMethod, uri);
-					savedResponse[0] = adaptResponse(mockServerResponse, responseBody);
+					result.onNext(adaptResponse(mockServerResponse, responseBody));
 				}));
 
 		log("Writing client request for ", httpMethod, uri);
-		requestCallback.apply(mockClientRequest).subscribe(
-				aVoid -> {},
-				requestWriteSink::tryEmitError,  // Ignore result: signals cannot compete
-				requestWriteSink::tryEmitEmpty);
+		requestCallback.apply(mockClientRequest).subscribe(aVoid -> {
+		}, result::onError);
 
-		return Mono.when(requestWriteSink.asMono(), handlerSink.asMono())
-				.onErrorMap(ex -> {
-					ClientHttpResponse response = savedResponse[0];
-					return response != null ? new FailureAfterResponseCompletedException(response, ex) : ex;
-				})
-				.then(Mono.fromCallable(() -> savedResponse[0] != null ?
-						savedResponse[0] : adaptResponse(mockServerResponse, Flux.empty())));
+		return result;
 	}
 
 	private void log(String message, HttpMethod httpMethod, URI uri) {
@@ -144,41 +120,12 @@ public class HttpHandlerConnector implements ClientHttpConnector {
 	}
 
 	private ClientHttpResponse adaptResponse(MockServerHttpResponse response, Flux<DataBuffer> body) {
-		HttpStatusCode status = response.getStatusCode();
-		MockClientHttpResponse clientResponse = new MockClientHttpResponse((status != null) ? status : HttpStatus.OK);
+		Integer status = response.getStatusCodeValue();
+		MockClientHttpResponse clientResponse = new MockClientHttpResponse((status != null) ? status : 200);
 		clientResponse.getHeaders().putAll(response.getHeaders());
 		clientResponse.getCookies().putAll(response.getCookies());
 		clientResponse.setBody(body);
 		return clientResponse;
-	}
-
-
-	/**
-	 * Indicates that an error occurred after the server response was completed,
-	 * via {@link ServerHttpResponse#writeWith} or {@link ServerHttpResponse#setComplete()},
-	 * and can no longer be changed. This exception wraps the error and also
-	 * provides {@link #getCompletedResponse() access} to the response.
-	 * <p>What happens on an actual running server depends on when the server
-	 * commits the response and the error may or may not change the response.
-	 * Therefore in tests without a server the exception is wrapped and allowed
-	 * to propagate so the application is alerted.
-	 * @since 5.2.2
-	 */
-	@SuppressWarnings("serial")
-	public static final class FailureAfterResponseCompletedException extends RuntimeException {
-
-		private final ClientHttpResponse completedResponse;
-
-
-		private FailureAfterResponseCompletedException(ClientHttpResponse response, Throwable cause) {
-			super("Error occurred after response was completed: " + response, cause);
-			this.completedResponse = response;
-		}
-
-
-		public ClientHttpResponse getCompletedResponse() {
-			return this.completedResponse;
-		}
 	}
 
 }

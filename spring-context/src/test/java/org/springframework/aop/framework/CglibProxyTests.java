@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,26 @@
 
 package org.springframework.aop.framework;
 
-import java.io.Serializable;
-
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
-import org.springframework.aop.support.annotation.AnnotationMatchingPointcut;
-import org.springframework.aop.testfixture.advice.CountingBeforeAdvice;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.aop.testfixture.mixin.LockMixinAdvisor;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextException;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+import org.springframework.tests.aop.advice.CountingBeforeAdvice;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import test.mixin.LockMixinAdvisor;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import java.io.Serializable;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * Additional and overridden tests for CGLIB proxies.
@@ -51,7 +46,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Ramnivas Laddad
  * @author Chris Beams
  */
-class CglibProxyTests extends AbstractAopProxyTests {
+@SuppressWarnings("serial")
+public class CglibProxyTests extends AbstractAopProxyTests implements Serializable {
 
 	private static final String DEPENDENCY_CHECK_CONTEXT =
 			CglibProxyTests.class.getSimpleName() + "-with-dependency-checking.xml";
@@ -78,21 +74,22 @@ class CglibProxyTests extends AbstractAopProxyTests {
 
 
 	@Test
-	void nullConfig() {
+	public void testNullConfig() {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new CglibAopProxy(null));
 	}
 
 	@Test
-	void noTarget() {
+	public void testNoTarget() {
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		pc.addAdvice(new NopInterceptor());
 		AopProxy aop = createAopProxy(pc);
-		assertThatExceptionOfType(AopConfigException.class).isThrownBy(aop::getProxy);
+		assertThatExceptionOfType(AopConfigException.class).isThrownBy(
+				aop::getProxy);
 	}
 
 	@Test
-	void protectedMethodInvocation() {
+	public void testProtectedMethodInvocation() {
 		ProtectedMethodTestBean bean = new ProtectedMethodTestBean();
 		bean.value = "foo";
 		mockTargetSource.setTarget(bean);
@@ -109,7 +106,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void packageMethodInvocation() {
+	public void testPackageMethodInvocation() {
 		PackageMethodTestBean bean = new PackageMethodTestBean();
 		bean.value = "foo";
 		mockTargetSource.setTarget(bean);
@@ -126,7 +123,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyCanBeClassNotInterface() {
+	public void testProxyCanBeClassNotInterface() {
 		TestBean raw = new TestBean();
 		raw.setAge(32);
 		mockTargetSource.setTarget(raw);
@@ -136,15 +133,15 @@ class CglibProxyTests extends AbstractAopProxyTests {
 
 		Object proxy = aop.getProxy();
 		assertThat(AopUtils.isCglibProxy(proxy)).isTrue();
-		assertThat(proxy).isInstanceOf(ITestBean.class);
-		assertThat(proxy).isInstanceOf(TestBean.class);
+		assertThat(proxy instanceof ITestBean).isTrue();
+		assertThat(proxy instanceof TestBean).isTrue();
 
 		TestBean tb = (TestBean) proxy;
 		assertThat(tb.getAge()).isEqualTo(32);
 	}
 
 	@Test
-	void methodInvocationDuringConstructor() {
+	public void testMethodInvocationDuringConstructor() {
 		CglibTestBean bean = new CglibTestBean();
 		bean.setName("Rob Harrop");
 
@@ -158,7 +155,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void toStringInvocation() {
+	public void testToStringInvocation() {
 		PrivateCglibTestBean bean = new PrivateCglibTestBean();
 		bean.setName("Rob Harrop");
 
@@ -172,7 +169,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void unadvisedProxyCreationWithCallDuringConstructor() {
+	public void testUnadvisedProxyCreationWithCallDuringConstructor() {
 		CglibTestBean target = new CglibTestBean();
 		target.setName("Rob Harrop");
 
@@ -187,7 +184,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void multipleProxies() {
+	public void testMultipleProxies() {
 		TestBean target = new TestBean();
 		target.setAge(20);
 		TestBean target2 = new TestBean();
@@ -215,7 +212,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 				return MethodMatcher.TRUE;
 			}
 			@Override
-			public boolean equals(@Nullable Object obj) {
+			public boolean equals(Object obj) {
 				return true;
 			}
 			@Override
@@ -233,7 +230,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void multipleProxiesForIntroductionAdvisor() {
+	public void testMultipleProxiesForIntroductionAdvisor() {
 		TestBean target1 = new TestBean();
 		target1.setAge(20);
 		TestBean target2 = new TestBean();
@@ -257,7 +254,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void withNoArgConstructor() {
+	public void testWithNoArgConstructor() {
 		NoArgCtorTestBean target = new NoArgCtorTestBean("b", 1);
 		target.reset();
 
@@ -272,7 +269,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyAProxy() {
+	public void testProxyAProxy() {
 		ITestBean target = new TestBean();
 
 		mockTargetSource.setTarget(target);
@@ -293,7 +290,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyAProxyWithAdditionalInterface() {
+	public void testProxyAProxyWithAdditionalInterface() {
 		ITestBean target = new TestBean();
 		mockTargetSource.setTarget(target);
 
@@ -304,8 +301,6 @@ class CglibProxyTests extends AbstractAopProxyTests {
 		CglibAopProxy cglib = new CglibAopProxy(as);
 
 		ITestBean proxy1 = (ITestBean) cglib.getProxy();
-		ITestBean proxy1a = (ITestBean) cglib.getProxy();
-		assertThat(proxy1a.getClass()).isSameAs(proxy1.getClass());
 
 		mockTargetSource.setTarget(proxy1);
 		as = new AdvisedSupport(new Class<?>[]{});
@@ -314,44 +309,11 @@ class CglibProxyTests extends AbstractAopProxyTests {
 		cglib = new CglibAopProxy(as);
 
 		ITestBean proxy2 = (ITestBean) cglib.getProxy();
-		assertThat(proxy2).isInstanceOf(Serializable.class);
-		assertThat(proxy2.getClass()).isNotSameAs(proxy1.getClass());
-
-		ITestBean proxy2a = (ITestBean) cglib.getProxy();
-		assertThat(proxy2a).isInstanceOf(Serializable.class);
-		assertThat(proxy2a.getClass()).isSameAs(proxy2.getClass());
-
-		mockTargetSource.setTarget(proxy1);
-		as = new AdvisedSupport(new Class<?>[]{});
-		as.setTargetSource(mockTargetSource);
-		as.addAdvisor(new DefaultPointcutAdvisor(new AnnotationMatchingPointcut(Nullable.class), new NopInterceptor()));
-		cglib = new CglibAopProxy(as);
-
-		ITestBean proxy3 = (ITestBean) cglib.getProxy();
-		assertThat(proxy3).isInstanceOf(Serializable.class);
-		assertThat(proxy3.getClass()).isNotSameAs(proxy2.getClass());
-
-		ITestBean proxy3a = (ITestBean) cglib.getProxy();
-		assertThat(proxy3a).isInstanceOf(Serializable.class);
-		assertThat(proxy3a.getClass()).isSameAs(proxy3.getClass());
-
-		mockTargetSource.setTarget(proxy1);
-		as = new AdvisedSupport(new Class<?>[]{});
-		as.setTargetSource(mockTargetSource);
-		as.addAdvisor(new DefaultPointcutAdvisor(new AnnotationMatchingPointcut(NonNull.class), new NopInterceptor()));
-		cglib = new CglibAopProxy(as);
-
-		ITestBean proxy4 = (ITestBean) cglib.getProxy();
-		assertThat(proxy4).isInstanceOf(Serializable.class);
-		assertThat(proxy4.getClass()).isNotSameAs(proxy3.getClass());
-
-		ITestBean proxy4a = (ITestBean) cglib.getProxy();
-		assertThat(proxy4a).isInstanceOf(Serializable.class);
-		assertThat(proxy4a.getClass()).isSameAs(proxy4.getClass());
+		assertThat(proxy2 instanceof Serializable).isTrue();
 	}
 
 	@Test
-	void exceptionHandling() {
+	public void testExceptionHandling() {
 		ExceptionThrower bean = new ExceptionThrower();
 		mockTargetSource.setTarget(bean);
 
@@ -366,7 +328,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 			proxy.doTest();
 		}
 		catch (Exception ex) {
-			assertThat(ex).as("Invalid exception class").isInstanceOf(ApplicationContextException.class);
+			assertThat(ex instanceof ApplicationContextException).as("Invalid exception class").isTrue();
 		}
 
 		assertThat(proxy.isCatchInvoked()).as("Catch was not invoked").isTrue();
@@ -374,14 +336,14 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void withDependencyChecking() {
-		try (ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(DEPENDENCY_CHECK_CONTEXT, getClass())) {
-			ctx.getBean("testBean");
-		}
+	@SuppressWarnings("resource")
+	public void testWithDependencyChecking() {
+		ApplicationContext ctx = new ClassPathXmlApplicationContext(DEPENDENCY_CHECK_CONTEXT, getClass());
+		ctx.getBean("testBean");
 	}
 
 	@Test
-	void addAdviceAtRuntime() {
+	public void testAddAdviceAtRuntime() {
 		TestBean bean = new TestBean();
 		CountingBeforeAdvice cba = new CountingBeforeAdvice();
 
@@ -403,7 +365,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyProtectedMethod() {
+	public void testProxyProtectedMethod() {
 		CountingBeforeAdvice advice = new CountingBeforeAdvice();
 		ProxyFactory proxyFactory = new ProxyFactory(new MyBean());
 		proxyFactory.addAdvice(advice);
@@ -415,14 +377,14 @@ class CglibProxyTests extends AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyTargetClassInCaseOfNoInterfaces() {
+	public void testProxyTargetClassInCaseOfNoInterfaces() {
 		ProxyFactory proxyFactory = new ProxyFactory(new MyBean());
 		MyBean proxy = (MyBean) proxyFactory.getProxy();
 		assertThat(proxy.add(1, 3)).isEqualTo(4);
 	}
 
 	@Test  // SPR-13328
-	void varargsWithEnumArray() {
+	public void testVarargsWithEnumArray() {
 		ProxyFactory proxyFactory = new ProxyFactory(new MyBean());
 		MyBean proxy = (MyBean) proxyFactory.getProxy();
 		assertThat(proxy.doWithVarargs(MyEnum.A, MyOtherEnum.C)).isTrue();
@@ -458,13 +420,13 @@ class CglibProxyTests extends AbstractAopProxyTests {
 
 	public enum MyEnum implements MyInterface {
 
-		A, B
+		A, B;
 	}
 
 
 	public enum MyOtherEnum implements MyInterface {
 
-		C, D
+		C, D;
 	}
 
 
@@ -482,7 +444,7 @@ class CglibProxyTests extends AbstractAopProxyTests {
 			return finallyInvoked;
 		}
 
-		public void doTest() {
+		public void doTest() throws Exception {
 			try {
 				throw new ApplicationContextException("foo");
 			}
@@ -547,7 +509,6 @@ class CglibProxyTests extends AbstractAopProxyTests {
 			this.name = name;
 		}
 
-		@SuppressWarnings("unused")
 		public String getName() {
 			return this.name;
 		}
@@ -586,7 +547,7 @@ class CglibTestBean {
 class UnsupportedInterceptor implements MethodInterceptor {
 
 	@Override
-	public Object invoke(MethodInvocation mi) {
+	public Object invoke(MethodInvocation mi) throws Throwable {
 		throw new UnsupportedOperationException(mi.getMethod().getName());
 	}
 }

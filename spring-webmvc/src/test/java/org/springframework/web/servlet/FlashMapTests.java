@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class FlashMapTests {
+public class FlashMapTests {
 
 	@Test
-	void isExpired() throws InterruptedException {
+	public void isExpired() throws InterruptedException {
 		assertThat(new FlashMap().isExpired()).isFalse();
 
 		FlashMap flashMap = new FlashMap();
@@ -42,7 +42,7 @@ class FlashMapTests {
 	}
 
 	@Test
-	void notExpired() throws InterruptedException {
+	public void notExpired() throws InterruptedException {
 		FlashMap flashMap = new FlashMap();
 		flashMap.startExpirationPeriod(10);
 		Thread.sleep(100);
@@ -51,7 +51,7 @@ class FlashMapTests {
 	}
 
 	@Test
-	void compareTo() {
+	public void compareTo() {
 		FlashMap flashMap1 = new FlashMap();
 		FlashMap flashMap2 = new FlashMap();
 		assertThat(flashMap1.compareTo(flashMap2)).isEqualTo(0);
@@ -72,18 +72,18 @@ class FlashMapTests {
 	}
 
 	@Test
-	void addTargetRequestParamNullValue() {
+	public void addTargetRequestParamNullValue() {
 		FlashMap flashMap = new FlashMap();
 		flashMap.addTargetRequestParam("text", "abc");
 		flashMap.addTargetRequestParam("empty", " ");
 		flashMap.addTargetRequestParam("null", null);
 
-		assertThat(flashMap.getTargetRequestParams()).hasSize(1);
+		assertThat(flashMap.getTargetRequestParams().size()).isEqualTo(1);
 		assertThat(flashMap.getTargetRequestParams().getFirst("text")).isEqualTo("abc");
 	}
 
 	@Test
-	void addTargetRequestParamsNullValue() {
+	public void addTargetRequestParamsNullValue() {
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add("key", "abc");
 		params.add("key", " ");
@@ -92,22 +92,22 @@ class FlashMapTests {
 		FlashMap flashMap = new FlashMap();
 		flashMap.addTargetRequestParams(params);
 
-		assertThat(flashMap.getTargetRequestParams()).hasSize(1);
-		assertThat(flashMap.getTargetRequestParams().get("key")).hasSize(1);
+		assertThat(flashMap.getTargetRequestParams().size()).isEqualTo(1);
+		assertThat(flashMap.getTargetRequestParams().get("key").size()).isEqualTo(1);
 		assertThat(flashMap.getTargetRequestParams().getFirst("key")).isEqualTo("abc");
 	}
 
 	@Test
-	void addTargetRequestParamNullKey() {
+	public void addTargetRequestParamNullKey() {
 		FlashMap flashMap = new FlashMap();
 		flashMap.addTargetRequestParam(" ", "abc");
 		flashMap.addTargetRequestParam(null, "abc");
 
-		assertThat(flashMap.getTargetRequestParams()).isEmpty();
+		assertThat(flashMap.getTargetRequestParams().isEmpty()).isTrue();
 	}
 
 	@Test
-	void addTargetRequestParamsNullKey() {
+	public void addTargetRequestParamsNullKey() {
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add(" ", "abc");
 		params.add(null, " ");
@@ -115,7 +115,7 @@ class FlashMapTests {
 		FlashMap flashMap = new FlashMap();
 		flashMap.addTargetRequestParams(params);
 
-		assertThat(flashMap.getTargetRequestParams()).isEmpty();
+		assertThat(flashMap.getTargetRequestParams().isEmpty()).isTrue();
 	}
 
 }

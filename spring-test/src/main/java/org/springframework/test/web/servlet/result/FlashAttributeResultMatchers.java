@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package org.springframework.test.web.servlet.result;
 
 import org.hamcrest.Matcher;
-
-import org.springframework.lang.Nullable;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -48,21 +46,21 @@ public class FlashAttributeResultMatchers {
 	 * Assert a flash attribute's value with the given Hamcrest {@link Matcher}.
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> ResultMatcher attribute(String name, Matcher<? super T> matcher) {
+	public <T> ResultMatcher attribute(String name, Matcher<T> matcher) {
 		return result -> assertThat("Flash attribute '" + name + "'", (T) result.getFlashMap().get(name), matcher);
 	}
 
 	/**
 	 * Assert a flash attribute's value.
 	 */
-	public ResultMatcher attribute(String name, @Nullable Object value) {
+	public <T> ResultMatcher attribute(String name, Object value) {
 		return result -> assertEquals("Flash attribute '" + name + "'", value, result.getFlashMap().get(name));
 	}
 
 	/**
 	 * Assert the existence of the given flash attributes.
 	 */
-	public ResultMatcher attributeExists(String... names) {
+	public <T> ResultMatcher attributeExists(String... names) {
 		return result -> {
 			for (String name : names) {
 				assertNotNull("Flash attribute '" + name + "' does not exist", result.getFlashMap().get(name));
@@ -73,8 +71,8 @@ public class FlashAttributeResultMatchers {
 	/**
 	 * Assert the number of flash attributes.
 	 */
-	public ResultMatcher attributeCount(int count) {
-		return result -> assertEquals("FlashMap size", count, result.getFlashMap().size());
+	public <T> ResultMatcher attributeCount(int count) {
+		return result -> assertEquals("FlashMap size must be " + count, count, result.getFlashMap().size());
 	}
 
 }

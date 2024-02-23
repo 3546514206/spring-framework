@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,67 +49,67 @@ public abstract class AbstractJmxAssemblerTests extends AbstractJmxTests {
 	protected abstract String getObjectName();
 
 	@Test
-	void testMBeanRegistration() throws Exception {
+	public void testMBeanRegistration() throws Exception {
 		// beans are registered at this point - just grab them from the server
 		ObjectInstance instance = getObjectInstance();
 		assertThat(instance).as("Bean should not be null").isNotNull();
 	}
 
 	@Test
-	void testRegisterOperations() throws Exception {
+	public void testRegisterOperations() throws Exception {
 		IJmxTestBean bean = getBean();
 		assertThat(bean).isNotNull();
 		MBeanInfo inf = getMBeanInfo();
-		assertThat(inf.getOperations()).as("Incorrect number of operations registered").hasSize(getExpectedOperationCount());
+		assertThat(inf.getOperations().length).as("Incorrect number of operations registered").isEqualTo(getExpectedOperationCount());
 	}
 
 	@Test
-	void testRegisterAttributes() throws Exception {
+	public void testRegisterAttributes() throws Exception {
 		IJmxTestBean bean = getBean();
 		assertThat(bean).isNotNull();
 		MBeanInfo inf = getMBeanInfo();
-		assertThat(inf.getAttributes()).as("Incorrect number of attributes registered").hasSize(getExpectedAttributeCount());
+		assertThat(inf.getAttributes().length).as("Incorrect number of attributes registered").isEqualTo(getExpectedAttributeCount());
 	}
 
 	@Test
-	void testGetMBeanInfo() throws Exception {
+	public void testGetMBeanInfo() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 		assertThat(info).as("MBeanInfo should not be null").isNotNull();
 	}
 
 	@Test
-	void testGetMBeanAttributeInfo() throws Exception {
+	public void testGetMBeanAttributeInfo() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 		MBeanAttributeInfo[] inf = info.getAttributes();
-		assertThat(inf).as("Invalid number of Attributes returned").hasSize(getExpectedAttributeCount());
+		assertThat(inf.length).as("Invalid number of Attributes returned").isEqualTo(getExpectedAttributeCount());
 
-		for (MBeanAttributeInfo element : inf) {
-			assertThat(element).as("MBeanAttributeInfo should not be null").isNotNull();
-			assertThat(element.getDescription()).as("Description for MBeanAttributeInfo should not be null").isNotNull();
+		for (int x = 0; x < inf.length; x++) {
+			assertThat(inf[x]).as("MBeanAttributeInfo should not be null").isNotNull();
+			assertThat(inf[x].getDescription()).as("Description for MBeanAttributeInfo should not be null").isNotNull();
 		}
 	}
 
 	@Test
-	void testGetMBeanOperationInfo() throws Exception {
+	public void testGetMBeanOperationInfo() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 		MBeanOperationInfo[] inf = info.getOperations();
-		assertThat(inf).as("Invalid number of Operations returned").hasSize(getExpectedOperationCount());
+		assertThat(inf.length).as("Invalid number of Operations returned").isEqualTo(getExpectedOperationCount());
 
-		for (MBeanOperationInfo element : inf) {
-			assertThat(element).as("MBeanOperationInfo should not be null").isNotNull();
-			assertThat(element.getDescription()).as("Description for MBeanOperationInfo should not be null").isNotNull();
+		for (int x = 0; x < inf.length; x++) {
+			assertThat(inf[x]).as("MBeanOperationInfo should not be null").isNotNull();
+			assertThat(inf[x].getDescription()).as("Description for MBeanOperationInfo should not be null").isNotNull();
 		}
 	}
 
 	@Test
-	void testDescriptionNotNull() throws Exception {
+	public void testDescriptionNotNull() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 
 		assertThat(info.getDescription()).as("The MBean description should not be null").isNotNull();
 	}
 
 	@Test
-	void testSetAttribute() throws Exception {
+	public void testSetAttribute() throws Exception {
 		ObjectName objectName = ObjectNameManager.getInstance(getObjectName());
 		getServer().setAttribute(objectName, new Attribute(NAME_ATTRIBUTE, "Rob Harrop"));
 		IJmxTestBean bean = (IJmxTestBean) getContext().getBean("testBean");
@@ -117,7 +117,7 @@ public abstract class AbstractJmxAssemblerTests extends AbstractJmxTests {
 	}
 
 	@Test
-	void testGetAttribute() throws Exception {
+	public void testGetAttribute() throws Exception {
 		ObjectName objectName = ObjectNameManager.getInstance(getObjectName());
 		getBean().setName("John Smith");
 		Object val = getServer().getAttribute(objectName, NAME_ATTRIBUTE);
@@ -125,15 +125,15 @@ public abstract class AbstractJmxAssemblerTests extends AbstractJmxTests {
 	}
 
 	@Test
-	void testOperationInvocation() throws Exception{
+	public void testOperationInvocation() throws Exception{
 		ObjectName objectName = ObjectNameManager.getInstance(getObjectName());
 		Object result = getServer().invoke(objectName, "add",
-				new Object[] {20, 30}, new String[] {"int", "int"});
-		assertThat(result).as("Incorrect result").isEqualTo(50);
+				new Object[] {new Integer(20), new Integer(30)}, new String[] {"int", "int"});
+		assertThat(result).as("Incorrect result").isEqualTo(new Integer(50));
 	}
 
 	@Test
-	void testAttributeInfoHasDescriptors() throws Exception {
+	public void testAttributeInfoHasDescriptors() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 
 		ModelMBeanAttributeInfo attr = info.getAttribute(NAME_ATTRIBUTE);
@@ -145,37 +145,38 @@ public abstract class AbstractJmxAssemblerTests extends AbstractJmxTests {
 	}
 
 	@Test
-	void testAttributeHasCorrespondingOperations() throws Exception {
+	public void testAttributeHasCorrespondingOperations() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 
 		ModelMBeanOperationInfo get = info.getOperation("getName");
 		assertThat(get).as("get operation should not be null").isNotNull();
-		assertThat(Integer.valueOf(4)).as("get operation should have visibility of four").isEqualTo(get.getDescriptor().getFieldValue("visibility"));
+		assertThat(new Integer(4)).as("get operation should have visibility of four").isEqualTo(get.getDescriptor().getFieldValue("visibility"));
 		assertThat(get.getDescriptor().getFieldValue("role")).as("get operation should have role \"getter\"").isEqualTo("getter");
 
 		ModelMBeanOperationInfo set = info.getOperation("setName");
 		assertThat(set).as("set operation should not be null").isNotNull();
-		assertThat(Integer.valueOf(4)).as("set operation should have visibility of four").isEqualTo(set.getDescriptor().getFieldValue("visibility"));
+		assertThat(new Integer(4)).as("set operation should have visibility of four").isEqualTo(set.getDescriptor().getFieldValue("visibility"));
 		assertThat(set.getDescriptor().getFieldValue("role")).as("set operation should have role \"setter\"").isEqualTo("setter");
 	}
 
 	@Test
-	void testNotificationMetadata() throws Exception {
+	public void testNotificationMetadata() throws Exception {
 		ModelMBeanInfo info = (ModelMBeanInfo) getMBeanInfo();
 		MBeanNotificationInfo[] notifications = info.getNotifications();
-		assertThat(notifications).as("Incorrect number of notifications").hasSize(1);
+		assertThat(notifications.length).as("Incorrect number of notifications").isEqualTo(1);
 		assertThat(notifications[0].getName()).as("Incorrect notification name").isEqualTo("My Notification");
 
 		String[] notifTypes = notifications[0].getNotifTypes();
 
-		assertThat(notifTypes).as("Incorrect number of notification types").hasSize(2);
+		assertThat(notifTypes.length).as("Incorrect number of notification types").isEqualTo(2);
 		assertThat(notifTypes[0]).as("Notification type.foo not found").isEqualTo("type.foo");
 		assertThat(notifTypes[1]).as("Notification type.bar not found").isEqualTo("type.bar");
 	}
 
 	protected ModelMBeanInfo getMBeanInfoFromAssembler() throws Exception {
 		IJmxTestBean bean = getBean();
-		return getAssembler().getMBeanInfo(bean, getObjectName());
+		ModelMBeanInfo info = getAssembler().getMBeanInfo(bean, getObjectName());
+		return info;
 	}
 
 	protected IJmxTestBean getBean() {
@@ -195,6 +196,6 @@ public abstract class AbstractJmxAssemblerTests extends AbstractJmxTests {
 
 	protected abstract int getExpectedAttributeCount();
 
-	protected abstract MBeanInfoAssembler getAssembler();
+	protected abstract MBeanInfoAssembler getAssembler() throws Exception;
 
 }

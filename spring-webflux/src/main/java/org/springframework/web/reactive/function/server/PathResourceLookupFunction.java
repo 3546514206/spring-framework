@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,6 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.util.function.Function;
-
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -32,6 +25,12 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.pattern.PathPattern;
 import org.springframework.web.util.pattern.PathPatternParser;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 /**
  * Lookup function used by {@link RouterFunctions#resources(String, Resource)}.
@@ -41,6 +40,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
  */
 class PathResourceLookupFunction implements Function<ServerRequest, Mono<Resource>> {
 
+	private static final PathPatternParser PATTERN_PARSER = new PathPatternParser();
+
 	private final PathPattern pattern;
 
 	private final Resource location;
@@ -49,14 +50,14 @@ class PathResourceLookupFunction implements Function<ServerRequest, Mono<Resourc
 	public PathResourceLookupFunction(String pattern, Resource location) {
 		Assert.hasLength(pattern, "'pattern' must not be empty");
 		Assert.notNull(location, "'location' must not be null");
-		this.pattern = PathPatternParser.defaultInstance.parse(pattern);
+		this.pattern = PATTERN_PARSER.parse(pattern);
 		this.location = location;
 	}
 
 
 	@Override
 	public Mono<Resource> apply(ServerRequest request) {
-		PathContainer pathContainer = request.requestPath().pathWithinApplication();
+		PathContainer pathContainer = request.pathContainer();
 		if (!this.pattern.matches(pathContainer)) {
 			return Mono.empty();
 		}
@@ -72,10 +73,9 @@ class PathResourceLookupFunction implements Function<ServerRequest, Mono<Resourc
 
 		try {
 			Resource resource = this.location.createRelative(path);
-			if (resource.isReadable() && isResourceUnderLocation(resource)) {
+			if (resource.exists() && resource.isReadable() && isResourceUnderLocation(resource)) {
 				return Mono.just(resource);
-			}
-			else {
+			} else {
 				return Mono.empty();
 			}
 		}
@@ -129,8 +129,8 @@ class PathResourceLookupFunction implements Function<ServerRequest, Mono<Resourc
 			resourcePath = resource.getURL().toExternalForm();
 			locationPath = StringUtils.cleanPath(this.location.getURL().toString());
 		}
-		else if (resource instanceof ClassPathResource classPathResource) {
-			resourcePath = classPathResource.getPath();
+		else if (resource instanceof ClassPathResource) {
+			resourcePath = ((ClassPathResource) resource).getPath();
 			locationPath = StringUtils.cleanPath(((ClassPathResource) this.location).getPath());
 		}
 		else {

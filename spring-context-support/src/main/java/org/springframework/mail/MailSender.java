@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,7 @@ public interface MailSender {
 	 * @throws MailAuthenticationException in case of authentication failure
 	 * @throws MailSendException in case of failure when sending the message
 	 */
-	default void send(SimpleMailMessage simpleMessage) throws MailException {
-		send(new SimpleMailMessage[] {simpleMessage});
-	}
+	void send(SimpleMailMessage simpleMessage) throws MailException;
 
 	/**
 	 * Send the given array of simple mail messages in batch.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,62 +20,56 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Juergen Hoeller
  */
-class Spr15275Tests {
+public class Spr15275Tests {
 
 	@Test
-	void withFactoryBean() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFactoryBean.class);
+	public void testWithFactoryBean() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFactoryBean.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		assertThat(context.getBean(Bar.class).foo).isSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 	@Test
-	void withAbstractFactoryBean() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBean.class);
+	public void testWithAbstractFactoryBean() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBean.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		assertThat(context.getBean(Bar.class).foo).isSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 	@Test
-	void withAbstractFactoryBeanForInterface() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBeanForInterface.class);
+	public void testWithAbstractFactoryBeanForInterface() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBeanForInterface.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		assertThat(context.getBean(Bar.class).foo).isSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 	@Test
-	void withAbstractFactoryBeanAsReturnType() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBeanAsReturnType.class);
+	public void testWithAbstractFactoryBeanAsReturnType() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAbstractFactoryBeanAsReturnType.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		assertThat(context.getBean(Bar.class).foo).isSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 	@Test
-	void withFinalFactoryBean() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFinalFactoryBean.class);
+	public void testWithFinalFactoryBean() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFinalFactoryBean.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		assertThat(context.getBean(Bar.class).foo).isSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 	@Test
-	void withFinalFactoryBeanAsReturnType() {
-		ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFinalFactoryBeanAsReturnType.class);
+	public void testWithFinalFactoryBeanAsReturnType() {
+		ApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithFinalFactoryBeanAsReturnType.class);
 		assertThat(context.getBean(Bar.class).foo.toString()).isEqualTo("x");
 		// not same due to fallback to raw FinalFactoryBean instance with repeated getObject() invocations
 		assertThat(context.getBean(Bar.class).foo).isNotSameAs(context.getBean(FooInterface.class));
-		context.close();
 	}
 
 
@@ -84,7 +78,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<Foo> foo() {
-			return new FactoryBean<>() {
+			return new FactoryBean<Foo>() {
 				@Override
 				public Foo getObject() {
 					return new Foo("x");
@@ -109,7 +103,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<Foo> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<Foo>() {
 				@Override
 				public Foo createInstance() {
 					return new Foo("x");
@@ -134,7 +128,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<FooInterface> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<FooInterface>() {
 				@Override
 				public FooInterface createInstance() {
 					return new Foo("x");
@@ -159,7 +153,7 @@ class Spr15275Tests {
 
 		@Bean
 		public AbstractFactoryBean<FooInterface> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<FooInterface>() {
 				@Override
 				public FooInterface createInstance() {
 					return new Foo("x");
@@ -204,7 +198,7 @@ class Spr15275Tests {
 		}
 
 		@Bean
-		public Bar bar() {
+		public Bar bar() throws Exception {
 			assertThat(foo().isSingleton()).isTrue();
 			return new Bar(foo().getObject());
 		}

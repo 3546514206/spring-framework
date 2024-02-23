@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
 package org.springframework.orm.jpa.persistenceunit;
 
 import org.junit.jupiter.api.Test;
-
-import org.springframework.context.testfixture.index.CandidateComponentsTestClassLoader;
+import org.springframework.context.index.CandidateComponentsTestClassLoader;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.orm.jpa.domain.Person;
@@ -32,12 +31,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Stephane Nicoll
  */
-class DefaultPersistenceUnitManagerTests {
+public class DefaultPersistenceUnitManagerTests {
 
 	private final DefaultPersistenceUnitManager manager = new DefaultPersistenceUnitManager();
 
 	@Test
-	void defaultDomainWithScan() {
+	public void defaultDomainWithScan() {
 		this.manager.setPackagesToScan("org.springframework.orm.jpa.domain");
 		this.manager.setResourceLoader(new DefaultResourceLoader(
 				CandidateComponentsTestClassLoader.disableIndex(getClass().getClassLoader())));
@@ -45,7 +44,7 @@ class DefaultPersistenceUnitManagerTests {
 	}
 
 	@Test
-	void defaultDomainWithIndex() {
+	public void defaultDomainWithIndex() {
 		this.manager.setPackagesToScan("org.springframework.orm.jpa.domain");
 		this.manager.setResourceLoader(new DefaultResourceLoader(
 				CandidateComponentsTestClassLoader.index(getClass().getClassLoader(),

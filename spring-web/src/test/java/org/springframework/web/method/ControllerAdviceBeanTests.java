@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
-import jakarta.annotation.Priority;
+import javax.annotation.Priority;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.BeanUtils;
@@ -46,16 +47,16 @@ import static org.mockito.Mockito.verify;
  * @author Brian Clozel
  * @author Sam Brannen
  */
-class ControllerAdviceBeanTests {
+public class ControllerAdviceBeanTests {
 
 	@Test
-	void constructorPreconditions() {
+	public void constructorPreconditions() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new ControllerAdviceBean(null))
 			.withMessage("Bean must not be null");
 
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ControllerAdviceBean(null, null))
+			.isThrownBy(() -> new ControllerAdviceBean((String) null, null))
 			.withMessage("Bean name must contain text");
 
 		assertThatIllegalArgumentException()
@@ -72,9 +73,9 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void equalsHashCodeAndToStringForBeanName() {
+	public void equalsHashCodeAndToStringForBeanName() {
 		String beanName = "myBean";
-		BeanFactory beanFactory = mock();
+		BeanFactory beanFactory = mock(BeanFactory.class);
 		given(beanFactory.containsBean(beanName)).willReturn(true);
 
 		ControllerAdviceBean bean1 = new ControllerAdviceBean(beanName, beanFactory);
@@ -83,7 +84,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void equalsHashCodeAndToStringForBeanInstance() {
+	public void equalsHashCodeAndToStringForBeanInstance() {
 		String toString = "beanInstance";
 		Object beanInstance = new Object() {
 			@Override
@@ -97,39 +98,39 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void orderedWithLowestPrecedenceByDefaultForBeanName() {
+	public void orderedWithLowestPrecedenceByDefaultForBeanName() {
 		assertOrder(SimpleControllerAdvice.class, Ordered.LOWEST_PRECEDENCE);
 	}
 
 	@Test
-	void orderedWithLowestPrecedenceByDefaultForBeanInstance() {
+	public void orderedWithLowestPrecedenceByDefaultForBeanInstance() {
 		assertOrder(new SimpleControllerAdvice(), Ordered.LOWEST_PRECEDENCE);
 	}
 
 	@Test
-	void orderedViaOrderedInterfaceForBeanName() {
+	public void orderedViaOrderedInterfaceForBeanName() {
 		assertOrder(OrderedControllerAdvice.class, 42);
 	}
 
 	@Test
-	void orderedViaOrderedInterfaceForBeanInstance() {
+	public void orderedViaOrderedInterfaceForBeanInstance() {
 		assertOrder(new OrderedControllerAdvice(), 42);
 	}
 
 	@Test
-	void orderedViaAnnotationForBeanName() {
+	public void orderedViaAnnotationForBeanName() {
 		assertOrder(OrderAnnotationControllerAdvice.class, 100);
 		assertOrder(PriorityAnnotationControllerAdvice.class, 200);
 	}
 
 	@Test
-	void orderedViaAnnotationForBeanInstance() {
+	public void orderedViaAnnotationForBeanInstance() {
 		assertOrder(new OrderAnnotationControllerAdvice(), 100);
 		assertOrder(new PriorityAnnotationControllerAdvice(), 200);
 	}
 
 	@Test
-	void shouldMatchAll() {
+	public void shouldMatchAll() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new SimpleControllerAdvice());
 		assertApplicable("should match all", bean, AnnotatedController.class);
 		assertApplicable("should match all", bean, ImplementationController.class);
@@ -138,7 +139,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void basePackageSupport() {
+	public void basePackageSupport() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new BasePackageSupport());
 		assertApplicable("base package support", bean, AnnotatedController.class);
 		assertApplicable("base package support", bean, ImplementationController.class);
@@ -147,7 +148,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void basePackageValueSupport() {
+	public void basePackageValueSupport() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new BasePackageValueSupport());
 		assertApplicable("base package support", bean, AnnotatedController.class);
 		assertApplicable("base package support", bean, ImplementationController.class);
@@ -156,14 +157,14 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void annotationSupport() {
+	public void annotationSupport() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new AnnotationSupport());
 		assertApplicable("annotation support", bean, AnnotatedController.class);
 		assertNotApplicable("this bean is not annotated", bean, InheritanceController.class);
 	}
 
 	@Test
-	void markerClassSupport() {
+	public void markerClassSupport() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new MarkerClassSupport());
 		assertApplicable("base package class support", bean, AnnotatedController.class);
 		assertApplicable("base package class support", bean, ImplementationController.class);
@@ -172,7 +173,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void shouldNotMatch() {
+	public void shouldNotMatch() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new ShouldNotMatch());
 		assertNotApplicable("should not match", bean, AnnotatedController.class);
 		assertNotApplicable("should not match", bean, ImplementationController.class);
@@ -181,7 +182,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void assignableTypesSupport() {
+	public void assignableTypesSupport() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new AssignableTypesSupport());
 		assertApplicable("controller implements assignable", bean, ImplementationController.class);
 		assertApplicable("controller inherits assignable", bean, InheritanceController.class);
@@ -190,7 +191,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	void multipleMatch() {
+	public void multipleMatch() {
 		ControllerAdviceBean bean = new ControllerAdviceBean(new MultipleSelectorsSupport());
 		assertApplicable("controller implements assignable", bean, ImplementationController.class);
 		assertApplicable("controller is annotated", bean, AnnotatedController.class);
@@ -198,7 +199,7 @@ class ControllerAdviceBeanTests {
 	}
 
 	@Test
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void findAnnotatedBeansSortsBeans() {
 		Class[] expectedTypes = {
 			// Since ControllerAdviceBean currently treats PriorityOrdered the same as Ordered,
@@ -207,7 +208,6 @@ class ControllerAdviceBeanTests {
 			PriorityOrderedControllerAdvice.class,
 			OrderAnnotationControllerAdvice.class,
 			PriorityAnnotationControllerAdvice.class,
-			SimpleControllerAdviceWithBeanOrder.class,
 			SimpleControllerAdvice.class,
 		};
 
@@ -229,10 +229,10 @@ class ControllerAdviceBeanTests {
 		assertThat(new ControllerAdviceBean(bean).getOrder()).isEqualTo(expectedOrder);
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void assertOrder(Class beanType, int expectedOrder) {
 		String beanName = "myBean";
-		BeanFactory beanFactory = mock();
+		BeanFactory beanFactory = mock(BeanFactory.class);
 		given(beanFactory.containsBean(beanName)).willReturn(true);
 		given(beanFactory.getType(beanName)).willReturn(beanType);
 		given(beanFactory.getBean(beanName)).willReturn(BeanUtils.instantiateClass(beanType));
@@ -260,9 +260,6 @@ class ControllerAdviceBeanTests {
 
 	@ControllerAdvice
 	static class SimpleControllerAdvice {}
-
-	@ControllerAdvice
-	static class SimpleControllerAdviceWithBeanOrder {}
 
 	@ControllerAdvice
 	@Order(100)
@@ -324,16 +321,16 @@ class ControllerAdviceBeanTests {
 	static class MarkerClass {}
 
 	@Retention(RetentionPolicy.RUNTIME)
-	@interface ControllerAnnotation {}
+	static @interface ControllerAnnotation {}
 
 	@ControllerAnnotation
 	public static class AnnotatedController {}
 
-	interface ControllerInterface {}
+	static interface ControllerInterface {}
 
 	static class ImplementationController implements ControllerInterface {}
 
-	abstract static class AbstractController {}
+	static abstract class AbstractController {}
 
 	static class InheritanceController extends AbstractController {}
 
@@ -343,12 +340,6 @@ class ControllerAdviceBeanTests {
 		@Bean
 		SimpleControllerAdvice simpleControllerAdvice() {
 			return new SimpleControllerAdvice();
-		}
-
-		@Bean
-		@Order(300)
-		SimpleControllerAdviceWithBeanOrder simpleControllerAdviceWithBeanOrder() {
-			return new SimpleControllerAdviceWithBeanOrder();
 		}
 
 		@Bean

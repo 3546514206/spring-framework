@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.web.util.pattern;
 
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.PathContainer.Element;
 import org.springframework.http.server.PathContainer.PathSegment;
 import org.springframework.web.util.pattern.PathPattern.MatchingContext;
@@ -25,22 +26,30 @@ import org.springframework.web.util.pattern.PathPattern.MatchingContext;
  * literal path elements 'foo', 'bar' and 'goo'.
  *
  * @author Andy Clement
- * @since 5.0
  */
 class LiteralPathElement extends PathElement {
 
-	private final String text;
+	private char[] text;
 
-	private final int len;
+	private int len;
 
-	private final boolean caseSensitive;
+	private boolean caseSensitive;
 
 
 	public LiteralPathElement(int pos, char[] literalText, boolean caseSensitive, char separator) {
 		super(pos, separator);
 		this.len = literalText.length;
 		this.caseSensitive = caseSensitive;
-		this.text = new String(literalText);
+		if (caseSensitive) {
+			this.text = literalText;
+		}
+		else {
+			// Force all the text lower case to make matching faster
+			this.text = new char[literalText.length];
+			for (int i = 0; i < this.len; i++) {
+				this.text[i] = Character.toLowerCase(literalText[i]);
+			}
+		}
 	}
 
 
@@ -51,23 +60,29 @@ class LiteralPathElement extends PathElement {
 			return false;
 		}
 		Element element = matchingContext.pathElements.get(pathIndex);
-		if (!(element instanceof PathSegment pathSegment)) {
+		if (!(element instanceof PathContainer.PathSegment)) {
 			return false;
 		}
-		String value = pathSegment.valueToMatch();
+		String value = ((PathSegment)element).valueToMatch();
 		if (value.length() != this.len) {
 			// Not enough data to match this path element
 			return false;
 		}
 
+		char[] data = ((PathContainer.PathSegment) element).valueToMatchAsChars();
 		if (this.caseSensitive) {
-			if (!this.text.equals(value)) {
-				return false;
+			for (int i = 0; i < this.len; i++) {
+				if (data[i] != this.text[i]) {
+					return false;
+				}
 			}
 		}
 		else {
-			if (!this.text.equalsIgnoreCase(value)) {
-				return false;
+			for (int i = 0; i < this.len; i++) {
+				// TODO revisit performance if doing a lot of case insensitive matching
+				if (Character.toLowerCase(data[i]) != this.text[i]) {
+					return false;
+				}
 			}
 		}
 
@@ -100,17 +115,13 @@ class LiteralPathElement extends PathElement {
 
 	@Override
 	public char[] getChars() {
-		return this.text.toCharArray();
+		return this.text;
 	}
 
-	@Override
-	public boolean isLiteral() {
-		return true;
-	}
 
 	@Override
 	public String toString() {
-		return "Literal(" + this.text + ")";
+		return "Literal(" + String.valueOf(this.text) + ")";
 	}
 
 }

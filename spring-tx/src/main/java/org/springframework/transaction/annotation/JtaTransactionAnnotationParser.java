@@ -16,11 +16,6 @@
 
 package org.springframework.transaction.annotation;
 
-import java.io.Serializable;
-import java.lang.reflect.AnnotatedElement;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -30,8 +25,13 @@ import org.springframework.transaction.interceptor.RollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttribute;
 
+import java.io.Serializable;
+import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Strategy implementation for parsing JTA 1.2's {@link jakarta.transaction.Transactional} annotation.
+ * Strategy implementation for parsing JTA 1.2's {@link javax.transaction.Transactional} annotation.
  *
  * @author Juergen Hoeller
  * @since 4.0
@@ -41,23 +41,22 @@ public class JtaTransactionAnnotationParser implements TransactionAnnotationPars
 
 	@Override
 	public boolean isCandidateClass(Class<?> targetClass) {
-		return AnnotationUtils.isCandidateClass(targetClass, jakarta.transaction.Transactional.class);
+		return AnnotationUtils.isCandidateClass(targetClass, javax.transaction.Transactional.class);
 	}
 
 	@Override
 	@Nullable
 	public TransactionAttribute parseTransactionAnnotation(AnnotatedElement element) {
 		AnnotationAttributes attributes = AnnotatedElementUtils.getMergedAnnotationAttributes(
-				element, jakarta.transaction.Transactional.class);
+				element, javax.transaction.Transactional.class);
 		if (attributes != null) {
 			return parseTransactionAnnotation(attributes);
-		}
-		else {
+		} else {
 			return null;
 		}
 	}
 
-	public TransactionAttribute parseTransactionAnnotation(jakarta.transaction.Transactional ann) {
+	public TransactionAttribute parseTransactionAnnotation(javax.transaction.Transactional ann) {
 		return parseTransactionAnnotation(AnnotationUtils.getAnnotationAttributes(ann, false, false));
 	}
 
@@ -82,7 +81,7 @@ public class JtaTransactionAnnotationParser implements TransactionAnnotationPars
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (other instanceof JtaTransactionAnnotationParser);
+		return (this == other || other instanceof JtaTransactionAnnotationParser);
 	}
 
 	@Override

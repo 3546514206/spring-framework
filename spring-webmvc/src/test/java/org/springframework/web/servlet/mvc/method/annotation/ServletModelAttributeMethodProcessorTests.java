@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,12 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.support.DefaultConversionService;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.support.ConfigurableWebBindingInitializer;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -34,7 +29,11 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ServletModelAttributeMethodProcessorTests {
+public class ServletModelAttributeMethodProcessorTests {
 
 	private ServletModelAttributeMethodProcessor processor;
 
@@ -62,7 +61,7 @@ class ServletModelAttributeMethodProcessorTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		processor = new ServletModelAttributeMethodProcessor(false);
 
 		ConfigurableWebBindingInitializer initializer = new ConfigurableWebBindingInitializer();
@@ -82,7 +81,7 @@ class ServletModelAttributeMethodProcessorTests {
 
 
 	@Test
-	void createAttributeUriTemplateVar() throws Exception {
+	public void createAttributeUriTemplateVar() throws Exception {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("testBean1", "Patty");
 		request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriTemplateVars);
@@ -95,7 +94,7 @@ class ServletModelAttributeMethodProcessorTests {
 	}
 
 	@Test
-	void createAttributeUriTemplateVarCannotConvert() throws Exception {
+	public void createAttributeUriTemplateVarCannotConvert() throws Exception {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("testBean2", "Patty");
 		request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriTemplateVars);
@@ -121,7 +120,7 @@ class ServletModelAttributeMethodProcessorTests {
 	}
 
 	@Test
-	void createAttributeRequestParameter() throws Exception {
+	public void createAttributeRequestParameter() throws Exception {
 		request.addParameter("testBean1", "Patty");
 
 		// Type conversion from "Patty" to TestBean via TestBean(String) constructor
@@ -132,7 +131,7 @@ class ServletModelAttributeMethodProcessorTests {
 	}
 
 	@Test
-	void createAttributeRequestParameterCannotConvert() throws Exception {
+	public void createAttributeRequestParameterCannotConvert() throws Exception {
 		request.addParameter("testBean2", "Patty");
 
 		TestBeanWithoutStringConstructor testBean = (TestBeanWithoutStringConstructor) processor.resolveArgument(
@@ -169,7 +168,7 @@ class ServletModelAttributeMethodProcessorTests {
 
 		Optional<TestBean> testBean = (Optional<TestBean>) processor.resolveArgument(
 				testBeanWithOptionalModelAttr, mavContainer, webRequest, binderFactory);
-		assertThat(testBean).isNotPresent();
+		assertThat(testBean.isPresent()).isFalse();
 	}
 
 	@Test
@@ -189,7 +188,7 @@ class ServletModelAttributeMethodProcessorTests {
 
 		Optional<TestBean> testBean =(Optional<TestBean>) processor.resolveArgument(
 				testBeanWithOptionalModelAttr, mavContainer, webRequest, binderFactory);
-		assertThat(testBean).isNotPresent();
+		assertThat(testBean.isPresent()).isFalse();
 	}
 
 

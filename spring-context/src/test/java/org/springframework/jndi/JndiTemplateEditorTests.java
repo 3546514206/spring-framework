@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,34 +25,33 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Rod Johnson
  * @author Chris Beams
  */
-class JndiTemplateEditorTests {
+public class JndiTemplateEditorTests {
 
 	@Test
-	void testNullIsIllegalArgument() {
+	public void testNullIsIllegalArgument() {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new JndiTemplateEditor().setAsText(null));
 	}
 
 	@Test
-	void testEmptyStringMeansNullEnvironment() {
+	public void testEmptyStringMeansNullEnvironment() {
 		JndiTemplateEditor je = new JndiTemplateEditor();
 		je.setAsText("");
 		JndiTemplate jt = (JndiTemplate) je.getValue();
-		assertThat(jt.getEnvironment()).isNull();
+		assertThat(jt.getEnvironment() == null).isTrue();
 	}
 
 	@Test
-	void testCustomEnvironment() {
+	public void testCustomEnvironment() {
 		JndiTemplateEditor je = new JndiTemplateEditor();
 		// These properties are meaningless for JNDI, but we don't worry about that:
 		// the underlying JNDI implementation will throw exceptions when the user tries
 		// to look anything up
 		je.setAsText("jndiInitialSomethingOrOther=org.springframework.myjndi.CompleteRubbish\nfoo=bar");
 		JndiTemplate jt = (JndiTemplate) je.getValue();
-		assertThat(jt.getEnvironment()).hasSize(2);
-		assertThat(jt.getEnvironment().getProperty("jndiInitialSomethingOrOther")).isEqualTo(
-				"org.springframework.myjndi.CompleteRubbish");
-		assertThat(jt.getEnvironment().getProperty("foo")).isEqualTo("bar");
+		assertThat(jt.getEnvironment().size() == 2).isTrue();
+		assertThat(jt.getEnvironment().getProperty("jndiInitialSomethingOrOther").equals("org.springframework.myjndi.CompleteRubbish")).isTrue();
+		assertThat(jt.getEnvironment().getProperty("foo").equals("bar")).isTrue();
 	}
 
 }

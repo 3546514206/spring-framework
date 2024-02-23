@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ package org.springframework.transaction.reactive;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.lang.Nullable;
+import org.springframework.util.StringUtils;
 
 /**
  * Mutable transaction context that encapsulates transactional synchronizations and
@@ -36,21 +38,20 @@ import org.springframework.lang.Nullable;
  */
 public class TransactionContext {
 
-	@Nullable
-	private final TransactionContext parent;
+	private final @Nullable TransactionContext parent;
+
+	private final UUID contextId = UUID.randomUUID();
 
 	private final Map<Object, Object> resources = new LinkedHashMap<>();
 
 	@Nullable
 	private Set<TransactionSynchronization> synchronizations;
 
-	@Nullable
-	private volatile String currentTransactionName;
+	private volatile @Nullable String currentTransactionName;
 
 	private volatile boolean currentTransactionReadOnly;
 
-	@Nullable
-	private volatile Integer currentTransactionIsolationLevel;
+	private volatile @Nullable Integer currentTransactionIsolationLevel;
 
 	private volatile boolean actualTransactionActive;
 
@@ -67,6 +68,17 @@ public class TransactionContext {
 	@Nullable
 	public TransactionContext getParent() {
 		return this.parent;
+	}
+
+	public String getName() {
+		if (StringUtils.hasText(this.currentTransactionName)) {
+			return this.contextId + ": " + this.currentTransactionName;
+		}
+		return this.contextId.toString();
+	}
+
+	public UUID getContextId() {
+		return this.contextId;
 	}
 
 	public Map<Object, Object> getResources() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.web.servlet;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.lang.Nullable;
 import org.springframework.web.method.HandlerMethod;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Workflow interface that allows for customized handler execution chains.
@@ -66,18 +66,18 @@ import org.springframework.web.method.HandlerMethod;
  * @author Juergen Hoeller
  * @since 20.06.2003
  * @see HandlerExecutionChain#getInterceptors
+ * @see org.springframework.web.servlet.handler.HandlerInterceptorAdapter
  * @see org.springframework.web.servlet.handler.AbstractHandlerMapping#setInterceptors
  * @see org.springframework.web.servlet.handler.UserRoleAuthorizationInterceptor
  * @see org.springframework.web.servlet.i18n.LocaleChangeInterceptor
  * @see org.springframework.web.servlet.theme.ThemeChangeInterceptor
- * @see jakarta.servlet.Filter
+ * @see javax.servlet.Filter
  */
 public interface HandlerInterceptor {
 
 	/**
-	 * Interception point before the execution of a handler. Called after
-	 * HandlerMapping determined an appropriate handler object, but before
-	 * HandlerAdapter invokes the handler.
+	 * Intercept the execution of a handler. Called after HandlerMapping determined
+	 * an appropriate handler object, but before HandlerAdapter invokes the handler.
 	 * <p>DispatcherServlet processes a handler in an execution chain, consisting
 	 * of any number of interceptors, with the handler itself at the end.
 	 * With this method, each interceptor can decide to abort the execution chain,
@@ -101,10 +101,9 @@ public interface HandlerInterceptor {
 	}
 
 	/**
-	 * Interception point after successful execution of a handler.
-	 * Called after HandlerAdapter actually invoked the handler, but before the
-	 * DispatcherServlet renders the view. Can expose additional model objects
-	 * to the view via the given ModelAndView.
+	 * Intercept the execution of a handler. Called after HandlerAdapter actually
+	 * invoked the handler, but before the DispatcherServlet renders the view.
+	 * Can expose additional model objects to the view via the given ModelAndView.
 	 * <p>DispatcherServlet processes a handler in an execution chain, consisting
 	 * of any number of interceptors, with the handler itself at the end.
 	 * With this method, each interceptor can post-process an execution,
@@ -115,7 +114,7 @@ public interface HandlerInterceptor {
 	 * <p>The default implementation is empty.
 	 * @param request current HTTP request
 	 * @param response current HTTP response
-	 * @param handler the handler (or {@link HandlerMethod}) that started asynchronous
+	 * @param handler handler (or {@link HandlerMethod}) that started asynchronous
 	 * execution, for type and/or instance examination
 	 * @param modelAndView the {@code ModelAndView} that the handler returned
 	 * (can also be {@code null})
@@ -140,7 +139,7 @@ public interface HandlerInterceptor {
 	 * <p>The default implementation is empty.
 	 * @param request current HTTP request
 	 * @param response current HTTP response
-	 * @param handler the handler (or {@link HandlerMethod}) that started asynchronous
+	 * @param handler handler (or {@link HandlerMethod}) that started asynchronous
 	 * execution, for type and/or instance examination
 	 * @param ex any exception thrown on handler execution, if any; this does not
 	 * include exceptions that have been handled through an exception resolver

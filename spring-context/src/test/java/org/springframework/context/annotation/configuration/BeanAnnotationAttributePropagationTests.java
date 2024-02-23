@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.context.annotation.configuration;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -43,10 +44,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @author Juergen Hoeller
  */
-class BeanAnnotationAttributePropagationTests {
+public class BeanAnnotationAttributePropagationTests {
 
 	@Test
-	void autowireCandidateMetadataIsPropagated() {
+	public void autowireMetadataIsPropagated() {
+		@Configuration class Config {
+			@Bean(autowire=Autowire.BY_TYPE) Object foo() { return null; }
+		}
+
+		assertThat(beanDef(Config.class).getAutowireMode()).as("autowire mode was not propagated").isEqualTo(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+	}
+
+	@Test
+	public void autowireCandidateMetadataIsPropagated() {
 		@Configuration class Config {
 			@Bean(autowireCandidate=false) Object foo() { return null; }
 		}
@@ -55,7 +65,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void initMethodMetadataIsPropagated() {
+	public void initMethodMetadataIsPropagated() {
 		@Configuration class Config {
 			@Bean(initMethod="start") Object foo() { return null; }
 		}
@@ -64,7 +74,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void destroyMethodMetadataIsPropagated() {
+	public void destroyMethodMetadataIsPropagated() {
 		@Configuration class Config {
 			@Bean(destroyMethod="destroy") Object foo() { return null; }
 		}
@@ -73,7 +83,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void dependsOnMetadataIsPropagated() {
+	public void dependsOnMetadataIsPropagated() {
 		@Configuration class Config {
 			@Bean() @DependsOn({"bar", "baz"}) Object foo() { return null; }
 		}
@@ -82,7 +92,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void primaryMetadataIsPropagated() {
+	public void primaryMetadataIsPropagated() {
 		@Configuration class Config {
 			@Primary @Bean
 			Object foo() { return null; }
@@ -92,7 +102,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void primaryMetadataIsFalseByDefault() {
+	public void primaryMetadataIsFalseByDefault() {
 		@Configuration class Config {
 			@Bean Object foo() { return null; }
 		}
@@ -101,7 +111,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void lazyMetadataIsPropagated() {
+	public void lazyMetadataIsPropagated() {
 		@Configuration class Config {
 			@Lazy @Bean
 			Object foo() { return null; }
@@ -111,7 +121,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void lazyMetadataIsFalseByDefault() {
+	public void lazyMetadataIsFalseByDefault() {
 		@Configuration class Config {
 			@Bean Object foo() { return null; }
 		}
@@ -120,7 +130,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void defaultLazyConfigurationPropagatesToIndividualBeans() {
+	public void defaultLazyConfigurationPropagatesToIndividualBeans() {
 		@Lazy @Configuration class Config {
 			@Bean Object foo() { return null; }
 		}
@@ -129,7 +139,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void eagerBeanOverridesDefaultLazyConfiguration() {
+	public void eagerBeanOverridesDefaultLazyConfiguration() {
 		@Lazy @Configuration class Config {
 			@Lazy(false) @Bean Object foo() { return null; }
 		}
@@ -138,7 +148,7 @@ class BeanAnnotationAttributePropagationTests {
 	}
 
 	@Test
-	void eagerConfigurationProducesEagerBeanDefinitions() {
+	public void eagerConfigurationProducesEagerBeanDefinitions() {
 		@Lazy(false) @Configuration class Config {  // will probably never happen, doesn't make much sense
 			@Bean Object foo() { return null; }
 		}

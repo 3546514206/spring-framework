@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,9 @@
 
 package org.springframework.web.bind.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.springframework.aot.hint.annotation.Reflective;
 import org.springframework.core.annotation.AliasFor;
+
+import java.lang.annotation.*;
 
 /**
  * Annotation for mapping web requests onto methods in request-handling classes
@@ -31,7 +26,7 @@ import org.springframework.core.annotation.AliasFor;
  *
  * <p>Both Spring MVC and Spring WebFlux support this annotation through a
  * {@code RequestMappingHandlerMapping} and {@code RequestMappingHandlerAdapter}
- * in their respective modules and package structures. For the exact list of
+ * in their respective modules and package structure. For the exact list of
  * supported handler method arguments and return types in each, please use the
  * reference documentation links below:
  * <ul>
@@ -47,23 +42,16 @@ import org.springframework.core.annotation.AliasFor;
  * </li>
  * </ul>
  *
- * <p><strong>NOTE:</strong> This annotation can be used both at the class and
+ * <p><strong>Note:</strong> This annotation can be used both at the class and
  * at the method level. In most cases, at the method level applications will
  * prefer to use one of the HTTP method specific variants
  * {@link GetMapping @GetMapping}, {@link PostMapping @PostMapping},
  * {@link PutMapping @PutMapping}, {@link DeleteMapping @DeleteMapping}, or
- * {@link PatchMapping @PatchMapping}.
- *
- * <p><strong>NOTE:</strong> This annotation cannot be used in conjunction with
- * other {@code @RequestMapping} annotations that are declared on the same element
- * (class, interface, or method). If multiple {@code @RequestMapping} annotations
- * are detected on the same element, a warning will be logged, and only the first
- * mapping will be used. This also applies to composed {@code @RequestMapping}
- * annotations such as {@code @GetMapping}, {@code @PostMapping}, etc.
+ * {@link PatchMapping @PatchMapping}.</p>
  *
  * <p><b>NOTE:</b> When using controller interfaces (e.g. for AOP proxying),
- * make sure to consistently put <i>all</i> your mapping annotations &mdash; such
- * as {@code @RequestMapping} and {@code @SessionAttributes} &mdash; on
+ * make sure to consistently put <i>all</i> your mapping annotations - such as
+ * {@code @RequestMapping} and {@code @SessionAttributes} - on
  * the controller <i>interface</i> rather than on the implementation class.
  *
  * @author Juergen Hoeller
@@ -75,12 +63,13 @@ import org.springframework.core.annotation.AliasFor;
  * @see PutMapping
  * @see DeleteMapping
  * @see PatchMapping
+ * @see org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
+ * @see org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerAdapter
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Mapping
-@Reflective(ControllerMappingReflectiveProcessor.class)
 public @interface RequestMapping {
 
 	/**
@@ -94,17 +83,21 @@ public @interface RequestMapping {
 	String name() default "";
 
 	/**
-	 * The path mapping URIs &mdash; for example, {@code "/profile"}.
+	 * The primary mapping expressed by this annotation.
 	 * <p>This is an alias for {@link #path}. For example,
-	 * {@code @RequestMapping("/profile")} is equivalent to
-	 * {@code @RequestMapping(path="/profile")}.
-	 * <p>See {@link #path} for further details.
+	 * {@code @RequestMapping("/foo")} is equivalent to
+	 * {@code @RequestMapping(path="/foo")}.
+	 * <p><b>Supported at the type level as well as at the method level!</b>
+	 * When used at the type level, all method-level mappings inherit
+	 * this primary mapping, narrowing it for a specific handler method.
+	 * <p><strong>NOTE</strong>: A handler method that is not mapped to any path
+	 * explicitly is effectively mapped to an empty path.
 	 */
 	@AliasFor("path")
 	String[] value() default {};
 
 	/**
-	 * The path mapping URIs &mdash; for example, {@code "/profile"}.
+	 * The path mapping URIs (e.g. {@code "/profile"}).
 	 * <p>Ant-style path patterns are also supported (e.g. {@code "/profile/**"}).
 	 * At the method level, relative paths (e.g. {@code "edit"}) are supported
 	 * within the primary mapping expressed at the type level.
@@ -123,8 +116,9 @@ public @interface RequestMapping {
 	 * The HTTP request methods to map to, narrowing the primary mapping:
 	 * GET, POST, HEAD, OPTIONS, PUT, PATCH, DELETE, TRACE.
 	 * <p><b>Supported at the type level as well as at the method level!</b>
-	 * When used at the type level, all method-level mappings inherit this
-	 * HTTP method restriction.
+	 * When used at the type level, all method-level mappings inherit
+	 * this HTTP method restriction (i.e. the type-level restriction
+	 * gets checked before the handler method is even resolved).
 	 */
 	RequestMethod[] method() default {};
 
@@ -138,8 +132,13 @@ public @interface RequestMapping {
 	 * any value). Finally, "!myParam" style expressions indicate that the
 	 * specified parameter is <i>not</i> supposed to be present in the request.
 	 * <p><b>Supported at the type level as well as at the method level!</b>
-	 * When used at the type level, all method-level mappings inherit this
-	 * parameter restriction.
+	 * When used at the type level, all method-level mappings inherit
+	 * this parameter restriction (i.e. the type-level restriction
+	 * gets checked before the handler method is even resolved).
+	 * <p>Parameter mappings are considered as restrictions that are enforced at
+	 * the type level. The primary path mapping (i.e. the specified URI value)
+	 * still has to uniquely identify the target handler, with parameter mappings
+	 * simply expressing preconditions for invoking the handler.
 	 */
 	String[] params() default {};
 
@@ -159,8 +158,9 @@ public @interface RequestMapping {
 	 * </pre>
 	 * will match requests with a Content-Type of "text/html", "text/plain", etc.
 	 * <p><b>Supported at the type level as well as at the method level!</b>
-	 * When used at the type level, all method-level mappings inherit this
-	 * header restriction.
+	 * When used at the type level, all method-level mappings inherit
+	 * this header restriction (i.e. the type-level restriction
+	 * gets checked before the handler method is even resolved).
 	 * @see org.springframework.http.MediaType
 	 */
 	String[] headers() default {};
@@ -174,19 +174,14 @@ public @interface RequestMapping {
 	 * consumes = {"text/plain", "application/*"}
 	 * consumes = MediaType.TEXT_PLAIN_VALUE
 	 * </pre>
-	 * <p>If a declared media type contains a parameter, and if the
-	 * {@code "content-type"} from the request also has that parameter, then
-	 * the parameter values must match. Otherwise, if the media type from the
-	 * request {@code "content-type"} does not contain the parameter, then the
-	 * parameter is ignored for matching purposes.
-	 * <p>Expressions can be negated by using the "!" operator, as in
+	 * Expressions can be negated by using the "!" operator, as in
 	 * "!text/plain", which matches all requests with a {@code Content-Type}
 	 * other than "text/plain".
 	 * <p><b>Supported at the type level as well as at the method level!</b>
 	 * If specified at both levels, the method level consumes condition overrides
 	 * the type level condition.
 	 * @see org.springframework.http.MediaType
-	 * @see jakarta.servlet.http.HttpServletRequest#getContentType()
+	 * @see javax.servlet.http.HttpServletRequest#getContentType()
 	 */
 	String[] consumes() default {};
 
@@ -203,8 +198,8 @@ public @interface RequestMapping {
 	 * produces = "text/plain;charset=UTF-8"
 	 * </pre>
 	 * <p>If a declared media type contains a parameter (e.g. "charset=UTF-8",
-	 * "type=feed", "type=entry") and if a compatible media type from the request
-	 * has that parameter too, then the parameter values must match. Otherwise,
+	 * "type=feed", type="entry") and if a compatible media type from the request
+	 * has that parameter too, then the parameter values must match. Otherwise
 	 * if the media type from the request does not contain the parameter, it is
 	 * assumed the client accepts any value.
 	 * <p>Expressions can be negated by using the "!" operator, as in "!text/plain",
@@ -212,6 +207,7 @@ public @interface RequestMapping {
 	 * <p><b>Supported at the type level as well as at the method level!</b>
 	 * If specified at both levels, the method level produces condition overrides
 	 * the type level condition.
+	 * @see org.springframework.http.MediaType
 	 * @see org.springframework.http.MediaType
 	 */
 	String[] produces() default {};

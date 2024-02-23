@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,19 @@
 
 package org.springframework.web.util.pattern;
 
-import java.util.ArrayList;
+import org.springframework.http.server.PathContainer.PathSegment;
+import org.springframework.web.util.pattern.PathPattern.MatchingContext;
+
+import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.http.server.PathContainer.PathSegment;
-import org.springframework.web.util.pattern.PathPattern.MatchingContext;
-
 /**
  * A regex path element. Used to represent any complicated element of the path.
- *
- * <p>For example in '<code>/foo/&#42;_&#42;/&#42;_{foobar}</code>' both {@code *_*}
- * and <code>*_{foobar}</code> are {@link RegexPathElement regex path elements}.
- *
- * <p>Derived from the general {@link org.springframework.util.AntPathMatcher} approach.
+ * For example in '<tt>/foo/&ast;_&ast;/&ast;_{foobar}</tt>' both <tt>*_*</tt> and <tt>*_{foobar}</tt>
+ * are {@link RegexPathElement} path elements. Derived from the general
+ * {@link org.springframework.util.AntPathMatcher} approach.
  *
  * @author Andy Clement
  * @since 5.0
@@ -42,15 +40,14 @@ class RegexPathElement extends PathElement {
 	private static final String DEFAULT_VARIABLE_PATTERN = "(.*)";
 
 
-	private final char[] regex;
+	private final List<String> variableNames = new LinkedList<>();
 
 	private final boolean caseSensitive;
 
 	private final Pattern pattern;
 
 	private int wildcardCount;
-
-	private final List<String> variableNames = new ArrayList<>();
+	private char[] regex;
 
 
 	RegexPathElement(int pos, char[] regex, boolean caseSensitive, char[] completePattern, char separator) {
@@ -110,8 +107,12 @@ class RegexPathElement extends PathElement {
 		}
 
 		patternBuilder.append(quote(text, end, text.length()));
-		return Pattern.compile(patternBuilder.toString(),
-				Pattern.DOTALL | (this.caseSensitive ? 0 : Pattern.CASE_INSENSITIVE));
+		if (this.caseSensitive) {
+			return Pattern.compile(patternBuilder.toString());
+		}
+		else {
+			return Pattern.compile(patternBuilder.toString(), Pattern.CASE_INSENSITIVE);
+		}
 	}
 
 	public List<String> getVariableNames() {
@@ -134,19 +135,19 @@ class RegexPathElement extends PathElement {
 		if (matches) {
 			if (isNoMorePattern()) {
 				if (matchingContext.determineRemainingPath &&
-						(this.variableNames.isEmpty() || textToMatch.length() > 0)) {
+						(this.variableNames.isEmpty() ? true : textToMatch.length() > 0)) {
 					matchingContext.remainingPathIndex = pathIndex + 1;
 					matches = true;
-				}
-				else {
+				} else {
 					// No more pattern, is there more data?
 					// If pattern is capturing variables there must be some actual data to bind to them
-					matches = (pathIndex + 1 >= matchingContext.pathLength) &&
-							(this.variableNames.isEmpty() || textToMatch.length() > 0);
+					matches = (pathIndex + 1) >= matchingContext.pathLength
+							&& (this.variableNames.isEmpty() || textToMatch.length() > 0);
 					if (!matches && matchingContext.isMatchOptionalTrailingSeparator()) {
-						matches = (this.variableNames.isEmpty() || textToMatch.length() > 0) &&
-								(pathIndex + 2 >= matchingContext.pathLength) &&
-								matchingContext.isSeparator(pathIndex + 1);
+						matches = (this.variableNames.isEmpty()
+								|| textToMatch.length() > 0)
+								&& (pathIndex + 2) >= matchingContext.pathLength
+								&& matchingContext.isSeparator(pathIndex + 1);
 					}
 				}
 			}
@@ -157,18 +158,18 @@ class RegexPathElement extends PathElement {
 
 		if (matches && matchingContext.extractingVariables) {
 			// Process captures
-			if (this.variableNames.size() != matcher.groupCount()) {  // SPR-8455
-				throw new IllegalArgumentException("The number of capturing groups in the pattern segment " +
-						this.pattern + " does not match the number of URI template variables it defines, " +
-						"which can occur if capturing groups are used in a URI template regex. " +
-						"Use non-capturing groups instead.");
+			if (this.variableNames.size() != matcher.groupCount()) { // SPR-8455
+				throw new IllegalArgumentException("The number of capturing groups in the pattern segment "
+						+ this.pattern + " does not match the number of URI template variables it defines, "
+						+ "which can occur if capturing groups are used in a URI template regex. "
+						+ "Use non-capturing groups instead.");
 			}
 			for (int i = 1; i <= matcher.groupCount(); i++) {
 				String name = this.variableNames.get(i - 1);
 				String value = matcher.group(i);
 				matchingContext.set(name, value,
-						(i == this.variableNames.size())?
-								((PathSegment)matchingContext.pathElements.get(pathIndex)).parameters():
+						(i == this.variableNames.size()) ?
+								((PathSegment) matchingContext.pathElements.get(pathIndex)).parameters() :
 								NO_PARAMETERS);
 			}
 		}
@@ -182,11 +183,6 @@ class RegexPathElement extends PathElement {
 			varsLength += variableName.length();
 		}
 		return (this.regex.length - varsLength - this.variableNames.size());
-	}
-
-	@Override
-	public char[] getChars() {
-		return this.regex;
 	}
 
 	@Override
@@ -210,4 +206,8 @@ class RegexPathElement extends PathElement {
 		return "Regex(" + String.valueOf(this.regex) + ")";
 	}
 
+	@Override
+	public char[] getChars() {
+		return this.regex;
+	}
 }

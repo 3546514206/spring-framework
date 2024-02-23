@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,20 +32,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link SockJsWebSocketHandler}.
+ * Unit tests for {@link SockJsWebSocketHandler}.
  *
  * @author Rossen Stoyanchev
  */
-class SockJsWebSocketHandlerTests {
+public class SockJsWebSocketHandlerTests {
 
 	@Test
-	void getSubProtocols() {
-		SubscribableChannel channel = mock();
+	public void getSubProtocols() throws Exception {
+		SubscribableChannel channel = mock(SubscribableChannel.class);
 		SubProtocolWebSocketHandler handler = new SubProtocolWebSocketHandler(channel, channel);
 		StompSubProtocolHandler stompHandler = new StompSubProtocolHandler();
 		handler.addProtocolHandler(stompHandler);
 
-		TaskScheduler scheduler = mock();
+		TaskScheduler scheduler = mock(TaskScheduler.class);
 		DefaultSockJsService service = new DefaultSockJsService(scheduler);
 		WebSocketServerSockJsSession session = new WebSocketServerSockJsSession("1", service, handler, null);
 		SockJsWebSocketHandler sockJsHandler = new SockJsWebSocketHandler(service, handler, session);
@@ -54,9 +54,9 @@ class SockJsWebSocketHandlerTests {
 	}
 
 	@Test
-	void getSubProtocolsNone() {
+	public void getSubProtocolsNone() throws Exception {
 		WebSocketHandler handler = new TextWebSocketHandler();
-		TaskScheduler scheduler = mock();
+		TaskScheduler scheduler = mock(TaskScheduler.class);
 		DefaultSockJsService service = new DefaultSockJsService(scheduler);
 		WebSocketServerSockJsSession session = new WebSocketServerSockJsSession("1", service, handler, null);
 		SockJsWebSocketHandler sockJsHandler = new SockJsWebSocketHandler(service, handler, session);

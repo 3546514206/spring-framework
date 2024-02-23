@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 
+import org.springframework.core.NestedIOException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ResourceUtils;
 
 /**
  * JBoss VFS based {@link Resource} implementation.
@@ -38,6 +38,7 @@ import org.springframework.util.ResourceUtils;
  * @author Costin Leau
  * @author Sam Brannen
  * @since 3.0
+ * @see org.jboss.vfs.VirtualFile
  */
 public class VfsResource extends AbstractResource {
 
@@ -76,7 +77,7 @@ public class VfsResource extends AbstractResource {
 			return VfsUtils.getURL(this.resource);
 		}
 		catch (Exception ex) {
-			throw new IOException("Failed to obtain URL for file " + this.resource, ex);
+			throw new NestedIOException("Failed to obtain URL for file " + this.resource, ex);
 		}
 	}
 
@@ -86,7 +87,7 @@ public class VfsResource extends AbstractResource {
 			return VfsUtils.getURI(this.resource);
 		}
 		catch (Exception ex) {
-			throw new IOException("Failed to obtain URI for " + this.resource, ex);
+			throw new NestedIOException("Failed to obtain URI for " + this.resource, ex);
 		}
 	}
 
@@ -116,7 +117,7 @@ public class VfsResource extends AbstractResource {
 			}
 		}
 
-		return new VfsResource(VfsUtils.getRelative(ResourceUtils.toRelativeURL(getURL(), relativePath)));
+		return new VfsResource(VfsUtils.getRelative(new URL(getURL(), relativePath)));
 	}
 
 	@Override
@@ -131,7 +132,8 @@ public class VfsResource extends AbstractResource {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof VfsResource that && this.resource.equals(that.resource)));
+		return (this == other || (other instanceof VfsResource &&
+				this.resource.equals(((VfsResource) other).resource)));
 	}
 
 	@Override

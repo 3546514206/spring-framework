@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.cache.jcache;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-
-import javax.cache.CacheManager;
-import javax.cache.Caching;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.transaction.AbstractTransactionSupportingCacheManager;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 
 /**
  * {@link org.springframework.cache.CacheManager} implementation
@@ -36,7 +35,6 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @author Stephane Nicoll
  * @since 3.2
- * @see JCacheCache
  */
 public class JCacheCacheManager extends AbstractTransactionSupportingCacheManager {
 

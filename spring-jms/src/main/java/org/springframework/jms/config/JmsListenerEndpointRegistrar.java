@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.List;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.handler.annotation.support.DefaultMessageHandlerMethodFactory;
 import org.springframework.messaging.handler.annotation.support.MessageHandlerMethodFactory;
@@ -55,6 +56,8 @@ public class JmsListenerEndpointRegistrar implements BeanFactoryAware, Initializ
 	private final List<JmsListenerEndpointDescriptor> endpointDescriptors = new ArrayList<>();
 
 	private boolean startImmediately;
+
+	private Object mutex = this.endpointDescriptors;
 
 
 	/**
@@ -121,6 +124,9 @@ public class JmsListenerEndpointRegistrar implements BeanFactoryAware, Initializ
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
+		if (beanFactory instanceof ConfigurableBeanFactory) {
+			this.mutex = ((ConfigurableBeanFactory) beanFactory).getSingletonMutex();
+		}
 	}
 
 
@@ -131,11 +137,13 @@ public class JmsListenerEndpointRegistrar implements BeanFactoryAware, Initializ
 
 	protected void registerAllEndpoints() {
 		Assert.state(this.endpointRegistry != null, "No JmsListenerEndpointRegistry set");
-		for (JmsListenerEndpointDescriptor descriptor : this.endpointDescriptors) {
-			this.endpointRegistry.registerListenerContainer(
-					descriptor.endpoint, resolveContainerFactory(descriptor));
+		synchronized (this.mutex) {
+			for (JmsListenerEndpointDescriptor descriptor : this.endpointDescriptors) {
+				this.endpointRegistry.registerListenerContainer(
+						descriptor.endpoint, resolveContainerFactory(descriptor));
+			}
+			this.startImmediately = true;  // trigger immediate startup
 		}
-		this.startImmediately = true;  // trigger immediate startup
 	}
 
 	private JmsListenerContainerFactory<?> resolveContainerFactory(JmsListenerEndpointDescriptor descriptor) {
@@ -162,8 +170,8 @@ public class JmsListenerEndpointRegistrar implements BeanFactoryAware, Initializ
 	/**
 	 * Register a new {@link JmsListenerEndpoint} alongside the
 	 * {@link JmsListenerContainerFactory} to use to create the underlying container.
-	 * <p>The {@code factory} may be {@code null} if the default factory should be
-	 * used for the supplied endpoint.
+	 * <p>The {@code factory} may be {@code null} if the default factory has to be
+	 * used for that endpoint.
 	 */
 	public void registerEndpoint(JmsListenerEndpoint endpoint, @Nullable JmsListenerContainerFactory<?> factory) {
 		Assert.notNull(endpoint, "Endpoint must not be null");
@@ -172,13 +180,15 @@ public class JmsListenerEndpointRegistrar implements BeanFactoryAware, Initializ
 		// Factory may be null, we defer the resolution right before actually creating the container
 		JmsListenerEndpointDescriptor descriptor = new JmsListenerEndpointDescriptor(endpoint, factory);
 
-		if (this.startImmediately) {  // register and start immediately
-			Assert.state(this.endpointRegistry != null, "No JmsListenerEndpointRegistry set");
-			this.endpointRegistry.registerListenerContainer(descriptor.endpoint,
-					resolveContainerFactory(descriptor), true);
-		}
-		else {
-			this.endpointDescriptors.add(descriptor);
+		synchronized (this.mutex) {
+			if (this.startImmediately) {  // register and start immediately
+				Assert.state(this.endpointRegistry != null, "No JmsListenerEndpointRegistry set");
+				this.endpointRegistry.registerListenerContainer(descriptor.endpoint,
+						resolveContainerFactory(descriptor), true);
+			}
+			else {
+				this.endpointDescriptors.add(descriptor);
+			}
 		}
 	}
 

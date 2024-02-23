@@ -30,7 +30,10 @@ import org.springframework.aop.Pointcut;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
-public abstract class StaticMethodMatcherPointcut extends StaticMethodMatcher implements Pointcut {
+public abstract class StaticMethodMatcherPointcut extends
+		// 可以不看到静态方法的切点定义，本身就具备 MethodMatcher 的功能
+		// 所以 Pointcut#getMethodMatcher 方法的实现直接返回了 this
+		StaticMethodMatcher implements Pointcut {
 
 	private ClassFilter classFilter = ClassFilter.TRUE;
 

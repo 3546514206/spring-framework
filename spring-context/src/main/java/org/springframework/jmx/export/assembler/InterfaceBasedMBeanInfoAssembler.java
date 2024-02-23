@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@
 
 package org.springframework.jmx.export.assembler;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.Properties;
-
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 /**
  * Subclass of {@code AbstractReflectiveMBeanInfoAssembler} that allows for
@@ -126,7 +122,7 @@ public class InterfaceBasedMBeanInfoAssembler extends AbstractConfigurableMBeanI
 	 * @return the resolved interface mappings (with Class objects as values)
 	 */
 	private Map<String, Class<?>[]> resolveInterfaceMappings(Properties mappings) {
-		Map<String, Class<?>[]> resolvedMappings = CollectionUtils.newHashMap(mappings.size());
+		Map<String, Class<?>[]> resolvedMappings = new HashMap<>(mappings.size());
 		for (Enumeration<?> en = mappings.propertyNames(); en.hasMoreElements();) {
 			String beanKey = (String) en.nextElement();
 			String[] classNames = StringUtils.commaDelimitedListToStringArray(mappings.getProperty(beanKey));
@@ -207,7 +203,7 @@ public class InterfaceBasedMBeanInfoAssembler extends AbstractConfigurableMBeanI
 	 * configured interfaces and is public, otherwise {@code false}.
 	 */
 	private boolean isPublicInInterface(Method method, String beanKey) {
-		return Modifier.isPublic(method.getModifiers()) && isDeclaredInInterface(method, beanKey);
+		return ((method.getModifiers() & Modifier.PUBLIC) > 0) && isDeclaredInInterface(method, beanKey);
 	}
 
 	/**
@@ -231,7 +227,6 @@ public class InterfaceBasedMBeanInfoAssembler extends AbstractConfigurableMBeanI
 		for (Class<?> ifc : ifaces) {
 			for (Method ifcMethod : ifc.getMethods()) {
 				if (ifcMethod.getName().equals(method.getName()) &&
-						ifcMethod.getParameterCount() == method.getParameterCount() &&
 						Arrays.equals(ifcMethod.getParameterTypes(), method.getParameterTypes())) {
 					return true;
 				}

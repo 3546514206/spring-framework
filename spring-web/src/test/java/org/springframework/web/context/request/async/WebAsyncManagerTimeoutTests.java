@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,22 @@
 
 package org.springframework.web.context.request.async;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-
-import jakarta.servlet.AsyncEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.mock.web.test.MockAsyncContext;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.web.context.request.NativeWebRequest;
-import org.springframework.web.testfixture.servlet.MockAsyncContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import javax.servlet.AsyncEvent;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 import static org.springframework.web.context.request.async.CallableProcessingInterceptor.RESULT_NONE;
 
 /**
@@ -43,7 +40,7 @@ import static org.springframework.web.context.request.async.CallableProcessingIn
  *
  * @author Rossen Stoyanchev
  */
-class WebAsyncManagerTimeoutTests {
+public class WebAsyncManagerTimeoutTests {
 
 	private static final AsyncEvent ASYNC_EVENT = null;
 
@@ -57,13 +54,13 @@ class WebAsyncManagerTimeoutTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.servletRequest = new MockHttpServletRequest("GET", "/test");
 		this.servletRequest.setAsyncSupported(true);
 		this.servletResponse = new MockHttpServletResponse();
 		this.asyncWebRequest = new StandardServletAsyncWebRequest(servletRequest, servletResponse);
 
-		AsyncTaskExecutor executor = mock();
+		AsyncTaskExecutor executor = mock(AsyncTaskExecutor.class);
 
 		this.asyncManager = WebAsyncUtils.getAsyncManager(servletRequest);
 		this.asyncManager.setTaskExecutor(executor);
@@ -72,10 +69,10 @@ class WebAsyncManagerTimeoutTests {
 
 
 	@Test
-	void startCallableProcessingTimeoutAndComplete() throws Exception {
+	public void startCallableProcessingTimeoutAndComplete() throws Exception {
 		StubCallable callable = new StubCallable();
 
-		CallableProcessingInterceptor interceptor = mock();
+		CallableProcessingInterceptor interceptor = mock(CallableProcessingInterceptor.class);
 		given(interceptor.handleTimeout(this.asyncWebRequest, callable)).willReturn(RESULT_NONE);
 
 		this.asyncManager.registerCallableInterceptor("interceptor", interceptor);
@@ -92,11 +89,16 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startCallableProcessingTimeoutAndResumeThroughCallback() throws Exception {
+	public void startCallableProcessingTimeoutAndResumeThroughCallback() throws Exception {
 
 		StubCallable callable = new StubCallable();
 		WebAsyncTask<Object> webAsyncTask = new WebAsyncTask<>(callable);
-		webAsyncTask.onTimeout(() -> 7);
+		webAsyncTask.onTimeout(new Callable<Object>() {
+			@Override
+			public Object call() throws Exception {
+				return 7;
+			}
+		});
 
 		this.asyncManager.startCallableProcessing(webAsyncTask);
 
@@ -108,11 +110,11 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startCallableProcessingTimeoutAndResumeThroughInterceptor() throws Exception {
+	public void startCallableProcessingTimeoutAndResumeThroughInterceptor() throws Exception {
 
 		StubCallable callable = new StubCallable();
 
-		CallableProcessingInterceptor interceptor = mock();
+		CallableProcessingInterceptor interceptor = mock(CallableProcessingInterceptor.class);
 		given(interceptor.handleTimeout(this.asyncWebRequest, callable)).willReturn(22);
 
 		this.asyncManager.registerCallableInterceptor("timeoutInterceptor", interceptor);
@@ -128,12 +130,12 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startCallableProcessingAfterTimeoutException() throws Exception {
+	public void startCallableProcessingAfterTimeoutException() throws Exception {
 
 		StubCallable callable = new StubCallable();
 		Exception exception = new Exception();
 
-		CallableProcessingInterceptor interceptor = mock();
+		CallableProcessingInterceptor interceptor = mock(CallableProcessingInterceptor.class);
 		given(interceptor.handleTimeout(this.asyncWebRequest, callable)).willThrow(exception);
 
 		this.asyncManager.registerCallableInterceptor("timeoutInterceptor", interceptor);
@@ -153,9 +155,9 @@ class WebAsyncManagerTimeoutTests {
 	public void startCallableProcessingTimeoutAndCheckThreadInterrupted() throws Exception {
 
 		StubCallable callable = new StubCallable();
-		Future future = mock();
+		Future future = mock(Future.class);
 
-		AsyncTaskExecutor executor = mock();
+		AsyncTaskExecutor executor = mock(AsyncTaskExecutor.class);
 		given(executor.submit(any(Runnable.class))).willReturn(future);
 
 		this.asyncManager.setTaskExecutor(executor);
@@ -170,11 +172,11 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startDeferredResultProcessingTimeoutAndComplete() throws Exception {
+	public void startDeferredResultProcessingTimeoutAndComplete() throws Exception {
 
 		DeferredResult<Integer> deferredResult = new DeferredResult<>();
 
-		DeferredResultProcessingInterceptor interceptor = mock();
+		DeferredResultProcessingInterceptor interceptor = mock(DeferredResultProcessingInterceptor.class);
 		given(interceptor.handleTimeout(this.asyncWebRequest, deferredResult)).willReturn(true);
 
 		this.asyncManager.registerDeferredResultInterceptor("interceptor", interceptor);
@@ -192,7 +194,7 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startDeferredResultProcessingTimeoutAndResumeWithDefaultResult() throws Exception {
+	public void startDeferredResultProcessingTimeoutAndResumeWithDefaultResult() throws Exception {
 
 		DeferredResult<Integer> deferredResult = new DeferredResult<>(null, 23);
 		this.asyncManager.startDeferredResultProcessing(deferredResult);
@@ -206,10 +208,15 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startDeferredResultProcessingTimeoutAndResumeThroughCallback() throws Exception {
+	public void startDeferredResultProcessingTimeoutAndResumeThroughCallback() throws Exception {
 
 		final DeferredResult<Integer> deferredResult = new DeferredResult<>();
-		deferredResult.onTimeout(() -> deferredResult.setResult(23));
+		deferredResult.onTimeout(new Runnable() {
+			@Override
+			public void run() {
+				deferredResult.setResult(23);
+			}
+		});
 
 		this.asyncManager.startDeferredResultProcessing(deferredResult);
 
@@ -222,7 +229,7 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startDeferredResultProcessingTimeoutAndResumeThroughInterceptor() throws Exception {
+	public void startDeferredResultProcessingTimeoutAndResumeThroughInterceptor() throws Exception {
 
 		DeferredResult<Integer> deferredResult = new DeferredResult<>();
 
@@ -246,7 +253,7 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 	@Test
-	void startDeferredResultProcessingAfterTimeoutException() throws Exception {
+	public void startDeferredResultProcessingAfterTimeoutException() throws Exception {
 
 		DeferredResult<Integer> deferredResult = new DeferredResult<>();
 		final Exception exception = new Exception();
@@ -270,9 +277,9 @@ class WebAsyncManagerTimeoutTests {
 	}
 
 
-	private static final class StubCallable implements Callable<Object> {
+	private final class StubCallable implements Callable<Object> {
 		@Override
-		public Object call() {
+		public Object call() throws Exception {
 			return 21;
 		}
 	}

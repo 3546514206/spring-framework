@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpCookie;
 import org.springframework.http.ResponseCookie;
@@ -42,11 +43,11 @@ public class CookieWebSessionIdResolver implements WebSessionIdResolver {
 	private Duration cookieMaxAge = Duration.ofSeconds(-1);
 
 	@Nullable
-	private Consumer<ResponseCookie.ResponseCookieBuilder> initializer = null;
+	private Consumer<ResponseCookie.ResponseCookieBuilder> cookieInitializer = null;
 
 
 	/**
-	 * Set the name for the session id cookie.
+	 * Set the name of the cookie to use for the session id.
 	 * <p>By default set to "SESSION".
 	 * @param cookieName the cookie name
 	 */
@@ -56,39 +57,38 @@ public class CookieWebSessionIdResolver implements WebSessionIdResolver {
 	}
 
 	/**
-	 * Get the configured cookie name.
+	 * Return the configured cookie name.
 	 */
 	public String getCookieName() {
 		return this.cookieName;
 	}
 
 	/**
-	 * Set the "Max-Age" attribute for the session id cookie.
-	 * <p>By default set to -1 in which case the cookie is removed when the
-	 * browser is closed.
+	 * Set the value for the "Max-Age" attribute of the cookie that holds the
+	 * session id. For the range of values see {@link ResponseCookie#getMaxAge()}.
+	 * <p>By default set to -1.
 	 * @param maxAge the maxAge duration value
-	 * @see ResponseCookie#getMaxAge()
 	 */
 	public void setCookieMaxAge(Duration maxAge) {
 		this.cookieMaxAge = maxAge;
 	}
 
 	/**
-	 * Get the configured "Max-Age" for the session id cookie.
+	 * Return the configured "Max-Age" attribute value for the session cookie.
 	 */
 	public Duration getCookieMaxAge() {
 		return this.cookieMaxAge;
 	}
 
 	/**
-	 * Add a {@link Consumer} to further initialize the session id cookie
-	 * after {@link #getCookieName()} and {@link #getCookieMaxAge()} are applied.
-	 * @param initializer consumer to initialize the cookie with
+	 * Add a {@link Consumer} for a {@code ResponseCookieBuilder} that will be invoked
+	 * for each cookie being built, just before the call to {@code build()}.
+	 * @param initializer consumer for a cookie builder
 	 * @since 5.1
 	 */
 	public void addCookieInitializer(Consumer<ResponseCookie.ResponseCookieBuilder> initializer) {
-		this.initializer = this.initializer != null ?
-				this.initializer.andThen(initializer) : initializer;
+		this.cookieInitializer = this.cookieInitializer != null ?
+				this.cookieInitializer.andThen(initializer) : initializer;
 	}
 
 
@@ -99,35 +99,37 @@ public class CookieWebSessionIdResolver implements WebSessionIdResolver {
 		if (cookies == null) {
 			return Collections.emptyList();
 		}
-		return cookies.stream().map(HttpCookie::getValue).toList();
+		return cookies.stream().map(HttpCookie::getValue).collect(Collectors.toList());
 	}
 
 	@Override
 	public void setSessionId(ServerWebExchange exchange, String id) {
 		Assert.notNull(id, "'id' is required");
-		ResponseCookie cookie = initCookie(exchange, id).build();
+		ResponseCookie cookie = initSessionCookie(exchange, id, getCookieMaxAge());
 		exchange.getResponse().getCookies().set(this.cookieName, cookie);
 	}
 
 	@Override
 	public void expireSession(ServerWebExchange exchange) {
-		ResponseCookie cookie = initCookie(exchange, "").maxAge(0).build();
+		ResponseCookie cookie = initSessionCookie(exchange, "", Duration.ZERO);
 		exchange.getResponse().getCookies().set(this.cookieName, cookie);
 	}
 
-	private ResponseCookie.ResponseCookieBuilder initCookie(ServerWebExchange exchange, String id) {
-		ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(this.cookieName, id)
+	private ResponseCookie initSessionCookie(
+			ServerWebExchange exchange, String id, Duration maxAge) {
+
+		ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(this.cookieName, id)
 				.path(exchange.getRequest().getPath().contextPath().value() + "/")
-				.maxAge(getCookieMaxAge())
+				.maxAge(maxAge)
 				.httpOnly(true)
 				.secure("https".equalsIgnoreCase(exchange.getRequest().getURI().getScheme()))
 				.sameSite("Lax");
 
-		if (this.initializer != null) {
-			this.initializer.accept(builder);
+		if (this.cookieInitializer != null) {
+			this.cookieInitializer.accept(cookieBuilder);
 		}
 
-		return builder;
+		return cookieBuilder.build();
 	}
 
 }

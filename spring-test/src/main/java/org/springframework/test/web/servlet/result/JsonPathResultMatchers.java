@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.test.util.JsonPathExpectationsHelper;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
@@ -61,8 +60,7 @@ public class JsonPathResultMatchers {
 	 * using formatting specifiers defined in {@link String#format(String, Object...)}
 	 */
 	protected JsonPathResultMatchers(String expression, Object... args) {
-		Assert.hasText(expression, "expression must not be null or empty");
-		this.jsonPathHelper = new JsonPathExpectationsHelper(expression.formatted(args));
+		this.jsonPathHelper = new JsonPathExpectationsHelper(expression, args);
 	}
 
 	/**
@@ -85,7 +83,7 @@ public class JsonPathResultMatchers {
 	 * @see #value(Matcher, Class)
 	 * @see #value(Object)
 	 */
-	public <T> ResultMatcher value(Matcher<? super T> matcher) {
+	public <T> ResultMatcher value(Matcher<T> matcher) {
 		return result -> this.jsonPathHelper.assertValue(getContent(result), matcher);
 	}
 
@@ -99,7 +97,7 @@ public class JsonPathResultMatchers {
 	 * @see #value(Matcher)
 	 * @see #value(Object)
 	 */
-	public <T> ResultMatcher value(Matcher<? super T> matcher, Class<T> targetType) {
+	public <T> ResultMatcher value(Matcher<T> matcher, Class<T> targetType) {
 		return result -> this.jsonPathHelper.assertValue(getContent(result), matcher, targetType);
 	}
 
@@ -109,7 +107,7 @@ public class JsonPathResultMatchers {
 	 * @see #value(Matcher)
 	 * @see #value(Matcher, Class)
 	 */
-	public ResultMatcher value(@Nullable Object expectedValue) {
+	public ResultMatcher value(Object expectedValue) {
 		return result -> this.jsonPathHelper.assertValue(getContent(result), expectedValue);
 	}
 

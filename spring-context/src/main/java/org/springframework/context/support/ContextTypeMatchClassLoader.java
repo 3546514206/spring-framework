@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,8 @@
 package org.springframework.context.support;
 
 import java.lang.reflect.Method;
-import java.security.ProtectionDomain;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.DecoratingClassLoader;
 import org.springframework.core.OverridingClassLoader;
@@ -47,27 +44,15 @@ class ContextTypeMatchClassLoader extends DecoratingClassLoader implements Smart
 	}
 
 
-	@Nullable
-	private static final Method findLoadedClassMethod;
+	private static Method findLoadedClassMethod;
 
 	static {
-		// Try to enable findLoadedClass optimization which allows us to selectively
-		// override classes that have not been loaded yet. If not accessible, we will
-		// always override requested classes, even when the classes have been loaded
-		// by the parent ClassLoader already and cannot be transformed anymore anyway.
-		Method method;
 		try {
-			method = ClassLoader.class.getDeclaredMethod("findLoadedClass", String.class);
-			ReflectionUtils.makeAccessible(method);
+			findLoadedClassMethod = ClassLoader.class.getDeclaredMethod("findLoadedClass", String.class);
 		}
-		catch (Throwable ex) {
-			// Typically a JDK 9+ InaccessibleObjectException...
-			// Avoid through JVM startup with --add-opens=java.base/java.lang=ALL-UNNAMED
-			method = null;
-			LogFactory.getLog(ContextTypeMatchClassLoader.class).debug(
-					"ClassLoader.findLoadedClass not accessible -> will always override requested class", ex);
+		catch (NoSuchMethodException ex) {
+			throw new IllegalStateException("Invalid [java.lang.ClassLoader] class: no 'findLoadedClass' method defined!");
 		}
-		findLoadedClassMethod = method;
 	}
 
 
@@ -89,11 +74,6 @@ class ContextTypeMatchClassLoader extends DecoratingClassLoader implements Smart
 		return (clazz.getClassLoader() instanceof ContextOverridingClassLoader);
 	}
 
-	@Override
-	public Class<?> publicDefineClass(String name, byte[] b, @Nullable ProtectionDomain protectionDomain) {
-		return defineClass(name, b, 0, b.length, protectionDomain);
-	}
-
 
 	/**
 	 * ClassLoader to be created for each loaded class.
@@ -110,14 +90,13 @@ class ContextTypeMatchClassLoader extends DecoratingClassLoader implements Smart
 			if (isExcluded(className) || ContextTypeMatchClassLoader.this.isExcluded(className)) {
 				return false;
 			}
-			if (findLoadedClassMethod != null) {
-				ClassLoader parent = getParent();
-				while (parent != null) {
-					if (ReflectionUtils.invokeMethod(findLoadedClassMethod, parent, className) != null) {
-						return false;
-					}
-					parent = parent.getParent();
+			ReflectionUtils.makeAccessible(findLoadedClassMethod);
+			ClassLoader parent = getParent();
+			while (parent != null) {
+				if (ReflectionUtils.invokeMethod(findLoadedClassMethod, parent, className) != null) {
+					return false;
 				}
+				parent = parent.getParent();
 			}
 			return true;
 		}

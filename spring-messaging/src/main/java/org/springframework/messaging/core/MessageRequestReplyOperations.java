@@ -16,20 +16,20 @@
 
 package org.springframework.messaging.core;
 
-import java.util.Map;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessagingException;
 
+import java.util.Map;
+
 /**
  * Operations for sending messages to and receiving the reply from a destination.
  *
+ * @param <D> the type of destination
  * @author Mark Fisher
  * @author Rossen Stoyanchev
- * @since 4.0
- * @param <D> the type of destination
  * @see GenericMessagingTemplate
+ * @since 4.0
  */
 public interface MessageRequestReplyOperations<D> {
 
@@ -84,9 +84,10 @@ public interface MessageRequestReplyOperations<D> {
 	 * {@link org.springframework.messaging.converter.MessageConverter}, send
 	 * it as a {@link Message} with the given headers, to the specified destination,
 	 * receive the reply and convert its body of the specified target class.
+	 *
 	 * @param destination the target destination
-	 * @param request payload for the request message to send
-	 * @param headers the headers for the request message to send
+	 * @param request     payload for the request message to send
+	 * @param headers     headers for the request message to send
 	 * @param targetClass the target type to convert the payload of the reply to
 	 * @return the payload of the reply message, possibly {@code null} if the message
 	 * could not be received, for example due to a timeout

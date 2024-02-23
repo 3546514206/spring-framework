@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for request and reply operations in {@link AbstractMessagingTemplate}.
+ * Unit tests for request and reply operations in {@link AbstractMessagingTemplate}.
  *
  * @author Rossen Stoyanchev
+ *
  * @see MessageReceivingTemplateTests
  */
-class MessageRequestReplyTemplateTests {
+public class MessageRequestReplyTemplateTests {
 
 	private TestMessagingTemplate template;
 
@@ -44,15 +45,15 @@ class MessageRequestReplyTemplateTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.template = new TestMessagingTemplate();
 		this.postProcessor = new TestMessagePostProcessor();
-		this.headers = Collections.singletonMap("key", "value");
+		this.headers = Collections.<String, Object>singletonMap("key", "value");
 	}
 
 
 	@Test
-	void sendAndReceive() {
+	public void sendAndReceive() {
 		Message<?> requestMessage = new GenericMessage<Object>("request");
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setDefaultDestination("home");
@@ -65,13 +66,13 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void sendAndReceiveMissingDestination() {
+	public void sendAndReceiveMissingDestination() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.template.sendAndReceive(new GenericMessage<Object>("request")));
 	}
 
 	@Test
-	void sendAndReceiveToDestination() {
+	public void sendAndReceiveToDestination() {
 		Message<?> requestMessage = new GenericMessage<Object>("request");
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
@@ -83,7 +84,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSend() {
+	public void convertAndSend() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setDefaultDestination("home");
 		this.template.setReceiveMessage(responseMessage);
@@ -95,7 +96,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSendToDestination() {
+	public void convertAndSendToDestination() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String response = this.template.convertSendAndReceive("somewhere", "request", String.class);
@@ -106,7 +107,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSendToDestinationWithHeaders() {
+	public void convertAndSendToDestinationWithHeaders() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String response = this.template.convertSendAndReceive("somewhere", "request", this.headers, String.class);
@@ -118,7 +119,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSendWithPostProcessor() {
+	public void convertAndSendWithPostProcessor() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setDefaultDestination("home");
 		this.template.setReceiveMessage(responseMessage);
@@ -131,7 +132,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSendToDestinationWithPostProcessor() {
+	public void convertAndSendToDestinationWithPostProcessor() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String response = this.template.convertSendAndReceive("somewhere", "request", String.class, this.postProcessor);
@@ -143,7 +144,7 @@ class MessageRequestReplyTemplateTests {
 	}
 
 	@Test
-	void convertAndSendToDestinationWithHeadersAndPostProcessor() {
+	public void convertAndSendToDestinationWithHeadersAndPostProcessor() {
 		Message<?> responseMessage = new GenericMessage<Object>("response");
 		this.template.setReceiveMessage(responseMessage);
 		String response = this.template.convertSendAndReceive("somewhere", "request", this.headers,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ package org.springframework.aop.aspectj;
 import java.lang.reflect.Method;
 
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.aop.aspectj.AspectJAdviceParameterNameDiscoverer.AmbiguousBindingException;
@@ -29,264 +27,200 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Tests for {@link AspectJAdviceParameterNameDiscoverer}.
+ * Unit tests for the {@link AspectJAdviceParameterNameDiscoverer} class.
+ *
+ * <p>See also {@link TigerAspectJAdviceParameterNameDiscovererTests} for tests relating to annotations.
  *
  * @author Adrian Colyer
  * @author Chris Beams
- * @author Sam Brannen
  */
-class AspectJAdviceParameterNameDiscovererTests {
+public class AspectJAdviceParameterNameDiscovererTests {
 
-	@Nested
-	class StandardTests {
-
-		@Test
-		void noArgs() {
-			assertParameterNames(getMethod("noArgs"), "execution(* *(..))");
-		}
-
-		@Test
-		void joinPointOnly() {
-			assertParameterNames(getMethod("tjp"), "execution(* *(..))", "thisJoinPoint");
-		}
-
-		@Test
-		void joinPointStaticPartOnly() {
-			assertParameterNames(getMethod("tjpsp"), "execution(* *(..))", "thisJoinPointStaticPart");
-		}
-
-		@Test
-		void twoJoinPoints() {
-			assertException(getMethod("twoJoinPoints"), "foo()", IllegalStateException.class,
-					"Failed to bind all argument names: 1 argument(s) could not be bound");
-		}
-
-		@Test
-		void oneThrowable() {
-			assertParameterNamesExtended(getMethod("oneThrowable"), "foo()", null, "ex", "ex");
-		}
-
-		@Test
-		void oneJPAndOneThrowable() {
-			assertParameterNamesExtended(getMethod("jpAndOneThrowable"), "foo()", null, "ex", "thisJoinPoint", "ex");
-		}
-
-		@Test
-		void oneJPAndTwoThrowables() {
-			assertException(getMethod("jpAndTwoThrowables"), "foo()", null, "ex", AmbiguousBindingException.class,
-					"Binding of throwing parameter 'ex' is ambiguous: could be bound to argument 1 or 2");
-		}
-
-		@Test
-		void throwableNoCandidates() {
-			assertException(getMethod("noArgs"), "foo()", null, "ex", IllegalStateException.class,
-					"Not enough arguments in method to satisfy binding of returning and throwing variables");
-		}
-
-		@Test
-		void returning() {
-			assertParameterNamesExtended(getMethod("oneObject"), "foo()", "obj", null, "obj");
-		}
-
-		@Test
-		void ambiguousReturning() {
-			assertException(getMethod("twoObjects"), "foo()", "obj", null, AmbiguousBindingException.class,
-					"Binding of returning parameter 'obj' is ambiguous: there are 2 candidates.");
-		}
-
-		@Test
-		void returningNoCandidates() {
-			assertException(getMethod("noArgs"), "foo()", "obj", null, IllegalStateException.class,
-					"Not enough arguments in method to satisfy binding of returning and throwing variables");
-		}
-
-		@Test
-		void thisBindingOneCandidate() {
-			assertParameterNames(getMethod("oneObject"), "this(x)", "x");
-		}
-
-		@Test
-		void thisBindingWithAlternateTokenizations() {
-			assertParameterNames(getMethod("oneObject"), "this( x )", "x");
-			assertParameterNames(getMethod("oneObject"), "this( x)", "x");
-			assertParameterNames(getMethod("oneObject"), "this (x )", "x");
-			assertParameterNames(getMethod("oneObject"), "this(x )", "x");
-			assertParameterNames(getMethod("oneObject"), "foo() && this(x)", "x");
-		}
-
-		@Test
-		void thisBindingTwoCandidates() {
-			assertException(getMethod("oneObject"), "this(x) || this(y)", AmbiguousBindingException.class,
-					"Found 2 candidate this(), target(), or args() variables but only one unbound argument slot");
-		}
-
-		@Test
-		void thisBindingWithBadPointcutExpressions() {
-			assertException(getMethod("oneObject"), "this(", IllegalStateException.class,
-					"Failed to bind all argument names: 1 argument(s) could not be bound");
-			assertException(getMethod("oneObject"), "this(x && foo()", IllegalStateException.class,
-					"Failed to bind all argument names: 1 argument(s) could not be bound");
-		}
-
-		@Test
-		void targetBindingOneCandidate() {
-			assertParameterNames(getMethod("oneObject"), "target(x)", "x");
-		}
-
-		@Test
-		void targetBindingWithAlternateTokenizations() {
-			assertParameterNames(getMethod("oneObject"), "target( x )", "x");
-			assertParameterNames(getMethod("oneObject"), "target( x)", "x");
-			assertParameterNames(getMethod("oneObject"), "target (x )", "x");
-			assertParameterNames(getMethod("oneObject"), "target(x )", "x");
-			assertParameterNames(getMethod("oneObject"), "foo() && target(x)", "x");
-		}
-
-		@Test
-		void targetBindingTwoCandidates() {
-			assertException(getMethod("oneObject"), "target(x) || target(y)", AmbiguousBindingException.class,
-					"Found 2 candidate this(), target(), or args() variables but only one unbound argument slot");
-		}
-
-		@Test
-		void targetBindingWithBadPointcutExpressions() {
-			assertException(getMethod("oneObject"), "target(", IllegalStateException.class,
-					"Failed to bind all argument names: 1 argument(s) could not be bound");
-			assertException(getMethod("oneObject"), "target(x && foo()", IllegalStateException.class,
-					"Failed to bind all argument names: 1 argument(s) could not be bound");
-		}
-
-		@Test
-		void argsBindingOneObject() {
-			assertParameterNames(getMethod("oneObject"), "args(x)", "x");
-		}
-
-		@Test
-		void argsBindingOneObjectTwoCandidates() {
-			assertException(getMethod("oneObject"), "args(x,y)", AmbiguousBindingException.class,
-					"Found 2 candidate this(), target(), or args() variables but only one unbound argument slot");
-		}
-
-		@Test
-		void ambiguousArgsBinding() {
-			assertException(getMethod("twoObjects"), "args(x,y)", AmbiguousBindingException.class,
-					"Still 2 unbound args at this()/target()/args() binding stage, with no way to determine between them");
-		}
-
-		@Test
-		void argsOnePrimitive() {
-			assertParameterNames(getMethod("onePrimitive"), "args(count)", "count");
-		}
-
-		@Test
-		void argsOnePrimitiveOneObject() {
-			assertException(getMethod("oneObjectOnePrimitive"), "args(count,obj)", AmbiguousBindingException.class,
-					"Found 2 candidate variable names but only one candidate binding slot when matching primitive args");
-		}
-
-		@Test
-		void thisAndPrimitive() {
-			assertParameterNames(getMethod("oneObjectOnePrimitive"), "args(count) && this(obj)",
-					"obj", "count");
-		}
-
-		@Test
-		void targetAndPrimitive() {
-			assertParameterNames(getMethod("oneObjectOnePrimitive"), "args(count) && target(obj)",
-					"obj", "count");
-		}
-
-		@Test
-		void throwingAndPrimitive() {
-			assertParameterNamesExtended(getMethod("oneThrowableOnePrimitive"), "args(count)", null, "ex",
-					"ex", "count");
-		}
-
-		@Test
-		void allTogetherNow() {
-			assertParameterNamesExtended(getMethod("theBigOne"), "this(foo) && args(x)", null, "ex",
-					"thisJoinPoint", "ex", "x", "foo");
-		}
-
-		@Test
-		void referenceBinding() {
-			assertParameterNames(getMethod("onePrimitive"),"somepc(foo)", "foo");
-		}
-
-		@Test
-		void referenceBindingWithAlternateTokenizations() {
-			assertParameterNames(getMethod("onePrimitive"),"call(bar *) && somepc(foo)", "foo");
-			assertParameterNames(getMethod("onePrimitive"),"somepc ( foo )", "foo");
-			assertParameterNames(getMethod("onePrimitive"),"somepc( foo)", "foo");
-		}
+	@Test
+	public void testNoArgs() {
+		assertParameterNames(getMethod("noArgs"), "execution(* *(..))", new String[0]);
 	}
 
-	/**
-	 * Tests just the annotation binding part of {@link AspectJAdviceParameterNameDiscoverer}.
-	 */
-	@Nested
-	class AnnotationTests {
+	@Test
+	public void testJoinPointOnly() {
+		assertParameterNames(getMethod("tjp"), "execution(* *(..))", new String[] {"thisJoinPoint"});
+	}
 
-		@Test
-		void atThis() {
-			assertParameterNames(getMethod("oneAnnotation"),"@this(a)", "a");
-		}
+	@Test
+	public void testJoinPointStaticPartOnly() {
+		assertParameterNames(getMethod("tjpsp"), "execution(* *(..))", new String[] {"thisJoinPointStaticPart"});
+	}
 
-		@Test
-		void atTarget() {
-			assertParameterNames(getMethod("oneAnnotation"),"@target(a)", "a");
-		}
+	@Test
+	public void testTwoJoinPoints() {
+		assertException(getMethod("twoJoinPoints"), "foo()", IllegalStateException.class,
+				"Failed to bind all argument names: 1 argument(s) could not be bound");
+	}
 
-		@Test
-		void atArgs() {
-			assertParameterNames(getMethod("oneAnnotation"),"@args(a)", "a");
-		}
+	@Test
+	public void testOneThrowable() {
+		assertParameterNames(getMethod("oneThrowable"), "foo()", null, "ex", new String[] {"ex"});
+	}
 
-		@Test
-		void atWithin() {
-			assertParameterNames(getMethod("oneAnnotation"),"@within(a)", "a");
-		}
+	@Test
+	public void testOneJPAndOneThrowable() {
+		assertParameterNames(getMethod("jpAndOneThrowable"), "foo()", null, "ex", new String[] {"thisJoinPoint", "ex"});
+	}
 
-		@Test
-		void atWithincode() {
-			assertParameterNames(getMethod("oneAnnotation"),"@withincode(a)", "a");
-		}
+	@Test
+	public void testOneJPAndTwoThrowables() {
+		assertException(getMethod("jpAndTwoThrowables"), "foo()", null, "ex", AmbiguousBindingException.class,
+				"Binding of throwing parameter 'ex' is ambiguous: could be bound to argument 1 or argument 2");
+	}
 
-		@Test
-		void atAnnotation() {
-			assertParameterNames(getMethod("oneAnnotation"),"@annotation(a)", "a");
-		}
+	@Test
+	public void testThrowableNoCandidates() {
+		assertException(getMethod("noArgs"), "foo()", null, "ex", IllegalStateException.class,
+				"Not enough arguments in method to satisfy binding of returning and throwing variables");
+	}
 
-		@Test
-		void ambiguousAnnotationTwoVars() {
-			assertException(getMethod("twoAnnotations"),"@annotation(a) && @this(x)", AmbiguousBindingException.class,
-					"Found 2 potential annotation variable(s) and 2 potential argument slots");
-		}
+	@Test
+	public void testReturning() {
+		assertParameterNames(getMethod("oneObject"), "foo()", "obj", null, new String[] {"obj"});
+	}
 
-		@Test
-		void ambiguousAnnotationOneVar() {
-			assertException(getMethod("oneAnnotation"),"@annotation(a) && @this(x)",IllegalArgumentException.class,
-					"Found 2 candidate annotation binding variables but only one potential argument binding slot");
-		}
+	@Test
+	public void testAmbiguousReturning() {
+		assertException(getMethod("twoObjects"), "foo()", "obj", null, AmbiguousBindingException.class,
+				"Binding of returning parameter 'obj' is ambiguous, there are 2 candidates.");
+	}
 
-		@Test
-		void annotationMedley() {
-			assertParameterNamesExtended(getMethod("annotationMedley"),"@annotation(a) && args(count) && this(foo)",
-					null, "ex", "ex", "foo", "count", "a");
-		}
+	@Test
+	public void testReturningNoCandidates() {
+		assertException(getMethod("noArgs"), "foo()", "obj", null, IllegalStateException.class,
+				"Not enough arguments in method to satisfy binding of returning and throwing variables");
+	}
 
-		@Test
-		void annotationBinding() {
-			assertParameterNames(getMethod("pjpAndAnAnnotation"),
-					"execution(* *(..)) && @annotation(ann)", "thisJoinPoint", "ann");
-		}
+	@Test
+	public void testThisBindingOneCandidate() {
+		assertParameterNames(getMethod("oneObject"), "this(x)", new String[] {"x"});
+	}
 
+	@Test
+	public void testThisBindingWithAlternateTokenizations() {
+		assertParameterNames(getMethod("oneObject"), "this( x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "this( x)", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "this (x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "this(x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "foo() && this(x)", new String[] {"x"});
+	}
+
+	@Test
+	public void testThisBindingTwoCandidates() {
+		assertException(getMethod("oneObject"), "this(x) || this(y)", AmbiguousBindingException.class,
+				"Found 2 candidate this(), target() or args() variables but only one unbound argument slot");
+	}
+
+	@Test
+	public void testThisBindingWithBadPointcutExpressions() {
+		assertException(getMethod("oneObject"), "this(", IllegalStateException.class,
+				"Failed to bind all argument names: 1 argument(s) could not be bound");
+		assertException(getMethod("oneObject"), "this(x && foo()", IllegalStateException.class,
+				"Failed to bind all argument names: 1 argument(s) could not be bound");
+	}
+
+	@Test
+	public void testTargetBindingOneCandidate() {
+		assertParameterNames(getMethod("oneObject"), "target(x)", new String[] {"x"});
+	}
+
+	@Test
+	public void testTargetBindingWithAlternateTokenizations() {
+		assertParameterNames(getMethod("oneObject"), "target( x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "target( x)", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "target (x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "target(x )", new String[] {"x"});
+		assertParameterNames(getMethod("oneObject"), "foo() && target(x)", new String[] {"x"});
+	}
+
+	@Test
+	public void testTargetBindingTwoCandidates() {
+		assertException(getMethod("oneObject"), "target(x) || target(y)", AmbiguousBindingException.class,
+				"Found 2 candidate this(), target() or args() variables but only one unbound argument slot");
+	}
+
+	@Test
+	public void testTargetBindingWithBadPointcutExpressions() {
+		assertException(getMethod("oneObject"), "target(", IllegalStateException.class,
+				"Failed to bind all argument names: 1 argument(s) could not be bound");
+		assertException(getMethod("oneObject"), "target(x && foo()", IllegalStateException.class,
+				"Failed to bind all argument names: 1 argument(s) could not be bound");
+	}
+
+	@Test
+	public void testArgsBindingOneObject() {
+		assertParameterNames(getMethod("oneObject"), "args(x)", new String[] {"x"});
+	}
+
+	@Test
+	public void testArgsBindingOneObjectTwoCandidates() {
+		assertException(getMethod("oneObject"), "args(x,y)", AmbiguousBindingException.class,
+				"Found 2 candidate this(), target() or args() variables but only one unbound argument slot");
+	}
+
+	@Test
+	public void testAmbiguousArgsBinding() {
+		assertException(getMethod("twoObjects"), "args(x,y)", AmbiguousBindingException.class,
+				"Still 2 unbound args at this(),target(),args() binding stage, with no way to determine between them");
+	}
+
+	@Test
+	public void testArgsOnePrimitive() {
+		assertParameterNames(getMethod("onePrimitive"), "args(count)", new String[] {"count"});
+	}
+
+	@Test
+	public void testArgsOnePrimitiveOneObject() {
+		assertException(getMethod("oneObjectOnePrimitive"), "args(count,obj)", AmbiguousBindingException.class,
+				"Found 2 candidate variable names but only one candidate binding slot when matching primitive args");
+	}
+
+	@Test
+	public void testThisAndPrimitive() {
+		assertParameterNames(getMethod("oneObjectOnePrimitive"), "args(count) && this(obj)",
+				new String[] {"obj", "count"});
+	}
+
+	@Test
+	public void testTargetAndPrimitive() {
+		assertParameterNames(getMethod("oneObjectOnePrimitive"), "args(count) && target(obj)",
+				new String[] {"obj", "count"});
+	}
+
+	@Test
+	public void testThrowingAndPrimitive() {
+		assertParameterNames(getMethod("oneThrowableOnePrimitive"), "args(count)", null, "ex",
+				new String[] {"ex", "count"});
+	}
+
+	@Test
+	public void testAllTogetherNow() {
+		assertParameterNames(getMethod("theBigOne"), "this(foo) && args(x)", null, "ex",
+				new String[] {"thisJoinPoint", "ex", "x", "foo"});
+	}
+
+	@Test
+	public void testReferenceBinding() {
+		assertParameterNames(getMethod("onePrimitive"),"somepc(foo)", new String[] {"foo"});
+	}
+
+	@Test
+	public void testReferenceBindingWithAlternateTokenizations() {
+		assertParameterNames(getMethod("onePrimitive"),"call(bar *) && somepc(foo)", new String[] {"foo"});
+		assertParameterNames(getMethod("onePrimitive"),"somepc ( foo )", new String[] {"foo"});
+		assertParameterNames(getMethod("onePrimitive"),"somepc( foo)", new String[] {"foo"});
 	}
 
 
-	private Method getMethod(String name) {
+	protected Method getMethod(String name) {
 		// Assumes no overloading of test methods...
-		for (Method candidate : getClass().getMethods()) {
+		Method[] candidates = getClass().getMethods();
+		for (Method candidate : candidates) {
 			if (candidate.getName().equals(name)) {
 				return candidate;
 			}
@@ -294,39 +228,63 @@ class AspectJAdviceParameterNameDiscovererTests {
 		throw new AssertionError("Bad test specification, no method '" + name + "' found in test class");
 	}
 
-	private void assertParameterNames(Method method, String pointcut, String... parameterNames) {
-		assertParameterNamesExtended(method, pointcut, null, null, parameterNames);
+	protected void assertParameterNames(Method method, String pointcut, String[] parameterNames) {
+		assertParameterNames(method, pointcut, null, null, parameterNames);
 	}
 
-	private void assertParameterNamesExtended(
-			Method method, String pointcut, String returning, String throwing, String... parameterNames) {
+	protected void assertParameterNames(
+			Method method, String pointcut, String returning, String throwing, String[] parameterNames) {
 
-		assertThat(parameterNames)
-			.as("bad test specification, must have same number of parameter names as method arguments")
-			.hasSize(method.getParameterCount());
+		assertThat(parameterNames.length).as("bad test specification, must have same number of parameter names as method arguments").isEqualTo(method.getParameterCount());
 
 		AspectJAdviceParameterNameDiscoverer discoverer = new AspectJAdviceParameterNameDiscoverer(pointcut);
 		discoverer.setRaiseExceptions(true);
 		discoverer.setReturningName(returning);
 		discoverer.setThrowingName(throwing);
+		String[] discoveredNames = discoverer.getParameterNames(method);
 
-		assertThat(discoverer.getParameterNames(method)).isEqualTo(parameterNames);
+		String formattedExpectedNames = format(parameterNames);
+		String formattedActualNames = format(discoveredNames);
+
+		assertThat(discoveredNames.length).as("Expecting " + parameterNames.length + " parameter names in return set '" +
+				formattedExpectedNames + "', but found " + discoveredNames.length +
+				" '" + formattedActualNames + "'").isEqualTo(parameterNames.length);
+
+		for (int i = 0; i < discoveredNames.length; i++) {
+			assertThat(discoveredNames[i]).as("Parameter names must never be null").isNotNull();
+			assertThat(discoveredNames[i]).as("Expecting parameter " + i + " to be named '" +
+						parameterNames[i] + "' but was '" + discoveredNames[i] + "'").isEqualTo(parameterNames[i]);
+		}
 	}
 
-	private void assertException(Method method, String pointcut, Class<? extends Throwable> exceptionType, String message) {
+	protected void assertException(Method method, String pointcut, Class<? extends Throwable> exceptionType, String message) {
 		assertException(method, pointcut, null, null, exceptionType, message);
 	}
 
-	private void assertException(Method method, String pointcut, String returning,
+	protected void assertException(Method method, String pointcut, String returning,
 			String throwing, Class<? extends Throwable> exceptionType, String message) {
 
 		AspectJAdviceParameterNameDiscoverer discoverer = new AspectJAdviceParameterNameDiscoverer(pointcut);
 		discoverer.setRaiseExceptions(true);
 		discoverer.setReturningName(returning);
 		discoverer.setThrowingName(throwing);
-		assertThatExceptionOfType(exceptionType)
-			.isThrownBy(() -> discoverer.getParameterNames(method))
+		assertThatExceptionOfType(exceptionType).isThrownBy(() ->
+				discoverer.getParameterNames(method))
 			.withMessageContaining(message);
+	}
+
+
+	private static String format(String[] names) {
+		StringBuffer sb = new StringBuffer();
+		sb.append("(");
+		for (int i = 0; i < names.length; i++) {
+			sb.append(names[i]);
+			if ((i + 1) < names.length) {
+				sb.append(",");
+			}
+		}
+		sb.append(")");
+		return sb.toString();
 	}
 
 
@@ -370,15 +328,5 @@ class AspectJAdviceParameterNameDiscovererTests {
 
 	public void theBigOne(JoinPoint jp, Throwable x, int y, Object foo) {
 	}
-
-	public void oneAnnotation(MyAnnotation ann) {}
-
-	public void twoAnnotations(MyAnnotation ann, MyAnnotation anotherAnn) {}
-
-	public void annotationMedley(Throwable t, Object foo, int x, MyAnnotation ma) {}
-
-	public void pjpAndAnAnnotation(ProceedingJoinPoint pjp, MyAnnotation ann) {}
-
-	@interface MyAnnotation {}
 
 }

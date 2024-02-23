@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,24 +29,23 @@ import org.springframework.util.FileCopyUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ContentVersionStrategy}.
- *
+ * Unit tests for {@link ContentVersionStrategy}.
  * @author Rossen Stoyanchev
  * @author Brian Clozel
  */
-class ContentBasedVersionStrategyTests {
+public class ContentBasedVersionStrategyTests {
 
 	private ContentVersionStrategy strategy = new ContentVersionStrategy();
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		VersionResourceResolver versionResourceResolver = new VersionResourceResolver();
 		versionResourceResolver.setStrategyMap(Collections.singletonMap("/**", this.strategy));
 	}
 
 	@Test
-	void extractVersion() {
+	public void extractVersion() {
 		String hash = "7fbe76cdac6093784895bb4989203e5a";
 		String path = "font-awesome/css/font-awesome.min-" + hash + ".css";
 
@@ -55,7 +54,7 @@ class ContentBasedVersionStrategyTests {
 	}
 
 	@Test
-	void removeVersion() {
+	public void removeVersion() {
 		String hash = "7fbe76cdac6093784895bb4989203e5a";
 		String path = "font-awesome/css/font-awesome.min%s%s.css";
 
@@ -63,7 +62,7 @@ class ContentBasedVersionStrategyTests {
 	}
 
 	@Test
-	void getResourceVersion() throws Exception {
+	public void getResourceVersion() throws Exception {
 		Resource expected = new ClassPathResource("test/bar.css", getClass());
 		String hash = DigestUtils.md5DigestAsHex(FileCopyUtils.copyToByteArray(expected.getInputStream()));
 
@@ -71,7 +70,7 @@ class ContentBasedVersionStrategyTests {
 	}
 
 	@Test
-	void addVersionToUrl() {
+	public void addVersionToUrl() {
 		assertThat(this.strategy.addVersion("test/bar.css", "123")).isEqualTo("test/bar-123.css");
 	}
 

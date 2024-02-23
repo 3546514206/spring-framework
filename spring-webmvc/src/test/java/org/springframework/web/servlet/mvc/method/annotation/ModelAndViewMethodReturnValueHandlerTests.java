@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ModelAndViewMethodReturnValueHandlerTests {
+public class ModelAndViewMethodReturnValueHandlerTests {
 
 	private ModelAndViewMethodReturnValueHandler handler;
 
@@ -49,7 +48,7 @@ class ModelAndViewMethodReturnValueHandlerTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		this.handler = new ModelAndViewMethodReturnValueHandler();
 		this.mavContainer = new ModelAndViewContainer();
 		this.webRequest = new ServletWebRequest(new MockHttpServletRequest());
@@ -58,13 +57,13 @@ class ModelAndViewMethodReturnValueHandlerTests {
 
 
 	@Test
-	void supportsReturnType() throws Exception {
+	public void supportsReturnType() throws Exception {
 		assertThat(handler.supportsReturnType(returnParamModelAndView)).isTrue();
 		assertThat(handler.supportsReturnType(getReturnValueParam("viewName"))).isFalse();
 	}
 
 	@Test
-	void handleViewReference() throws Exception {
+	public void handleViewReference() throws Exception {
 		ModelAndView mav = new ModelAndView("viewName", "attrName", "attrValue");
 		handler.handleReturnValue(mav, returnParamModelAndView, mavContainer, webRequest);
 
@@ -73,7 +72,7 @@ class ModelAndViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void handleViewInstance() throws Exception {
+	public void handleViewInstance() throws Exception {
 		ModelAndView mav = new ModelAndView(new RedirectView(), "attrName", "attrValue");
 		handler.handleReturnValue(mav, returnParamModelAndView, mavContainer, webRequest);
 
@@ -82,15 +81,15 @@ class ModelAndViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void handleNull() throws Exception {
+	public void handleNull() throws Exception {
 		handler.handleReturnValue(null, returnParamModelAndView, mavContainer, webRequest);
 
 		assertThat(mavContainer.isRequestHandled()).isTrue();
 	}
 
 	@Test
-	void handleRedirectAttributesWithViewReference() throws Exception {
-		RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+	public void handleRedirectAttributesWithViewReference() throws Exception {
+		RedirectAttributesModelMap redirectAttributes  = new RedirectAttributesModelMap();
 		mavContainer.setRedirectModel(redirectAttributes);
 
 		ModelAndView mav = new ModelAndView(new RedirectView(), "attrName", "attrValue");
@@ -102,8 +101,8 @@ class ModelAndViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void handleRedirectAttributesWithViewName() throws Exception {
-		RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+	public void handleRedirectAttributesWithViewName() throws Exception {
+		RedirectAttributesModelMap redirectAttributes  = new RedirectAttributesModelMap();
 		mavContainer.setRedirectModel(redirectAttributes);
 
 		ModelAndView mav = new ModelAndView("redirect:viewName", "attrName", "attrValue");
@@ -116,8 +115,8 @@ class ModelAndViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void handleRedirectAttributesWithCustomPrefix() throws Exception {
-		RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+	public void handleRedirectAttributesWithCustomPrefix() throws Exception {
+		RedirectAttributesModelMap redirectAttributes  = new RedirectAttributesModelMap();
 		mavContainer.setRedirectModel(redirectAttributes);
 
 		ModelAndView mav = new ModelAndView("myRedirect:viewName", "attrName", "attrValue");
@@ -131,28 +130,30 @@ class ModelAndViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void handleRedirectAttributesWithoutRedirect() throws Exception {
-		RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
+	public void handleRedirectAttributesWithoutRedirect() throws Exception {
+		RedirectAttributesModelMap redirectAttributes  = new RedirectAttributesModelMap();
 		mavContainer.setRedirectModel(redirectAttributes);
 
 		ModelAndView mav = new ModelAndView();
 		handler.handleReturnValue(mav, returnParamModelAndView, mavContainer, webRequest);
 
 		ModelMap model = mavContainer.getModel();
-		assertThat(mavContainer.getView()).isNull();
-		assertThat(mavContainer.getModel()).isEmpty();
+		assertThat(mavContainer.getView()).isEqualTo(null);
+		assertThat(mavContainer.getModel().isEmpty()).isTrue();
 		assertThat(model).as("RedirectAttributes should not be used if controller doesn't redirect").isNotSameAs(redirectAttributes);
 	}
 
 	@Test  // SPR-14045
 	public void handleRedirectWithIgnoreDefaultModel() throws Exception {
+		mavContainer.setIgnoreDefaultModelOnRedirect(true);
+
 		RedirectView redirectView = new RedirectView();
 		ModelAndView mav = new ModelAndView(redirectView, "name", "value");
 		handler.handleReturnValue(mav, returnParamModelAndView, mavContainer, webRequest);
 
 		ModelMap model = mavContainer.getModel();
 		assertThat(mavContainer.getView()).isSameAs(redirectView);
-		assertThat(model).hasSize(1);
+		assertThat(model.size()).isEqualTo(1);
 		assertThat(model.get("name")).isEqualTo("value");
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 
 package org.springframework.aop.aspectj;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.aspectj.AfterThrowingAdviceBindingTestAspect.AfterThrowingAdviceBindingCollaborator;
-import org.springframework.beans.testfixture.beans.ITestBean;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.tests.sample.beans.ITestBean;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
@@ -34,42 +32,37 @@ import static org.mockito.Mockito.verify;
  * @author Adrian Colyer
  * @author Chris Beams
  */
-class AfterThrowingAdviceBindingTests {
-
-	private ClassPathXmlApplicationContext ctx;
+public class AfterThrowingAdviceBindingTests {
 
 	private ITestBean testBean;
 
 	private AfterThrowingAdviceBindingTestAspect afterThrowingAdviceAspect;
 
-	private AfterThrowingAdviceBindingCollaborator mockCollaborator = mock();
+	private AfterThrowingAdviceBindingCollaborator mockCollaborator;
 
 
 	@BeforeEach
-	void setup() {
-		this.ctx = new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
+	public void setup() {
+		ClassPathXmlApplicationContext ctx =
+				new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
 
 		testBean = (ITestBean) ctx.getBean("testBean");
 		afterThrowingAdviceAspect = (AfterThrowingAdviceBindingTestAspect) ctx.getBean("testAspect");
 
+		mockCollaborator = mock(AfterThrowingAdviceBindingCollaborator.class);
 		afterThrowingAdviceAspect.setCollaborator(mockCollaborator);
-	}
-
-	@AfterEach
-	void tearDown() {
-		this.ctx.close();
 	}
 
 
 	@Test
-	void simpleAfterThrowing() {
+	public void testSimpleAfterThrowing() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(new Throwable()));
 		verify(mockCollaborator).noArgs();
 	}
 
 	@Test
-	void afterThrowingWithBinding() {
+	public void testAfterThrowingWithBinding() throws Throwable {
 		Throwable t = new Throwable();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(t));
@@ -77,7 +70,7 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithNamedTypeRestriction() {
+	public void testAfterThrowingWithNamedTypeRestriction() throws Throwable {
 		Throwable t = new Throwable();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(t));
@@ -87,7 +80,7 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithRuntimeExceptionBinding() {
+	public void testAfterThrowingWithRuntimeExceptionBinding() throws Throwable {
 		RuntimeException ex = new RuntimeException();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(ex));
@@ -95,14 +88,14 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithTypeSpecified() {
+	public void testAfterThrowingWithTypeSpecified() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 					this.testBean.exceptional(new Throwable()));
 		verify(mockCollaborator).noArgsOnThrowableMatch();
 	}
 
 	@Test
-	void afterThrowingWithRuntimeTypeSpecified() {
+	public void testAfterThrowingWithRuntimeTypeSpecified() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(new RuntimeException()));
 		verify(mockCollaborator).noArgsOnRuntimeExceptionMatch();
@@ -123,7 +116,7 @@ final class AfterThrowingAdviceBindingTestAspect {
 		void noArgsOnRuntimeExceptionMatch();
 	}
 
-	AfterThrowingAdviceBindingCollaborator collaborator = null;
+	protected AfterThrowingAdviceBindingCollaborator collaborator = null;
 
 	public void setCollaborator(AfterThrowingAdviceBindingCollaborator aCollaborator) {
 		this.collaborator = aCollaborator;

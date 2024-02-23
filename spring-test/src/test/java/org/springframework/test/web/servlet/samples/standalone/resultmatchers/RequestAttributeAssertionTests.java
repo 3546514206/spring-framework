@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
 
 package org.springframework.test.web.servlet.samples.standalone.resultmatchers;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.HandlerMapping;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -38,35 +36,38 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
  */
 public class RequestAttributeAssertionTests {
 
-	private final MockMvc mockMvc = standaloneSetup(new SimpleController()).build();
+	private MockMvc mockMvc;
 
-
-	@Test
-	void requestAttributeEqualTo() throws Exception {
-		this.mockMvc.perform(get("/main/1").servletPath("/main"))
-			.andExpect(request().attribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/{id}"))
-			.andExpect(request().attribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, "/1"));
+	@BeforeEach
+	public void setup() {
+		this.mockMvc = standaloneSetup(new SimpleController()).build();
 	}
 
 	@Test
-	void requestAttributeMatcher() throws Exception {
+	public void testRequestAttributeEqualTo() throws Exception {
+		this.mockMvc.perform(get("/main/1").servletPath("/main"))
+				.andExpect(request().attribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/{id}"))
+				.andExpect(request().attribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, "/1"))
+				.andExpect(request().attribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, equalTo("/{id}")))
+				.andExpect(request().attribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, equalTo("/1")));
+	}
+
+	@Test
+	public void testRequestAttributeMatcher() throws Exception {
+
 		String producibleMediaTypes = HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE;
 
 		this.mockMvc.perform(get("/1"))
-			.andExpect(request().attribute(producibleMediaTypes, hasItem(MediaType.APPLICATION_JSON)))
-			.andExpect(request().attribute(producibleMediaTypes, not(hasItem(MediaType.APPLICATION_XML))));
-
-		this.mockMvc.perform(get("/main/1").servletPath("/main"))
-			.andExpect(request().attribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, equalTo("/{id}")))
-			.andExpect(request().attribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, equalTo("/1")));
+				.andExpect(request().attribute(producibleMediaTypes, hasItem(MediaType.APPLICATION_JSON)))
+				.andExpect(request().attribute(producibleMediaTypes, not(hasItem(MediaType.APPLICATION_XML))));
 	}
 
 
 	@Controller
 	private static class SimpleController {
 
-		@RequestMapping(path="/{id}", produces="application/json")
-		String show() {
+		@RequestMapping(value = "/{id}", produces = "application/json")
+		public String show() {
 			return "view";
 		}
 	}

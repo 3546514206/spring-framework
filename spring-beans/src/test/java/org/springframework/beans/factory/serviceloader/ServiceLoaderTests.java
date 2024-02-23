@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,8 @@ class ServiceLoaderTests {
 		bd.getPropertyValues().add("serviceType", DocumentBuilderFactory.class.getName());
 		bf.registerBeanDefinition("service", bd);
 		ServiceLoader<?> serviceLoader = (ServiceLoader<?>) bf.getBean("service");
-		assertThat(serviceLoader).element(0).isInstanceOf(DocumentBuilderFactory.class);
+		boolean condition = serviceLoader.iterator().next() instanceof DocumentBuilderFactory;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
@@ -57,7 +58,8 @@ class ServiceLoaderTests {
 		RootBeanDefinition bd = new RootBeanDefinition(ServiceFactoryBean.class);
 		bd.getPropertyValues().add("serviceType", DocumentBuilderFactory.class.getName());
 		bf.registerBeanDefinition("service", bd);
-		assertThat(bf.getBean("service")).isInstanceOf(DocumentBuilderFactory.class);
+		boolean condition = bf.getBean("service") instanceof DocumentBuilderFactory;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
@@ -67,7 +69,8 @@ class ServiceLoaderTests {
 		bd.getPropertyValues().add("serviceType", DocumentBuilderFactory.class.getName());
 		bf.registerBeanDefinition("service", bd);
 		List<?> serviceList = (List<?>) bf.getBean("service");
-		assertThat(serviceList).element(0).isInstanceOf(DocumentBuilderFactory.class);
+		boolean condition = serviceList.get(0) instanceof DocumentBuilderFactory;
+		assertThat(condition).isTrue();
 	}
 
 }

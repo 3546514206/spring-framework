@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@
 
 package org.springframework.cache.config;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
- * Copy of the shared {@code AbstractCacheAnnotationTests}: necessary
- * due to issues with Gradle test fixtures and AspectJ configuration
- * in the Gradle build.
- *
  * @author Costin Leau
  * @author Phillip Webb
  * @author Stephane Nicoll
@@ -209,7 +205,7 @@ public class AnnotatedClassCacheableService implements CacheableService<Object> 
 	}
 
 	@Override
-	@Caching(evict = { @CacheEvict("primary"), @CacheEvict(cacheNames = "secondary", key = "#a0"), @CacheEvict(cacheNames = "primary", key = "#p0 + 'A'") })
+	@Caching(evict = { @CacheEvict("primary"), @CacheEvict(cacheNames = "secondary", key = "#a0"),  @CacheEvict(cacheNames = "primary", key = "#p0 + 'A'") })
 	public Object multiEvict(Object arg1) {
 		return this.counter.getAndIncrement();
 	}

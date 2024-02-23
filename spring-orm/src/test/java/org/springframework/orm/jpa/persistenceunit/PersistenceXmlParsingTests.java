@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,8 @@
 
 package org.springframework.orm.jpa.persistenceunit;
 
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
-import jakarta.persistence.spi.PersistenceUnitInfo;
-import jakarta.persistence.spi.PersistenceUnitTransactionType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.context.testfixture.jndi.SimpleNamingContextBuilder;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -35,10 +25,18 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.lookup.JndiDataSourceLookup;
 import org.springframework.jdbc.datasource.lookup.MapDataSourceLookup;
+import org.springframework.tests.mock.jndi.SimpleNamingContextBuilder;
 
-import static java.util.Map.entry;
+import javax.persistence.spi.PersistenceUnitInfo;
+import javax.persistence.spi.PersistenceUnitTransactionType;
+import javax.sql.DataSource;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatRuntimeException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Unit and integration tests for the JPA XML resource parsing support.
@@ -47,73 +45,75 @@ import static org.assertj.core.api.Assertions.assertThatRuntimeException;
  * @author Juergen Hoeller
  * @author Nicholas Williams
  */
-class PersistenceXmlParsingTests {
+public class PersistenceXmlParsingTests {
 
 	@Test
-	void testMetaInfCase() throws Exception {
+	public void testMetaInfCase() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/META-INF/persistence.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement");
 
-		assertThat(info[0].getJarFileUrls()).containsExactly(
-				new ClassPathResource("order.jar").getURL(),
-				new ClassPathResource("order-supplemental.jar").getURL());
+		assertThat(info[0].getJarFileUrls().size()).isEqualTo(2);
+		assertThat(info[0].getJarFileUrls().get(0)).isEqualTo(new ClassPathResource("order.jar").getURL());
+		assertThat(info[0].getJarFileUrls().get(1)).isEqualTo(new ClassPathResource("order-supplemental.jar").getURL());
+
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should default false in 1.0.").isFalse();
 	}
 
 	@Test
-	void testExample1() {
+	public void testExample1() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-example1.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement");
 
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should default false in 1.0.").isFalse();
 	}
 
 	@Test
-	void testExample2() {
+	public void testExample2() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-example2.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement2");
 
-		assertThat(info[0].getMappingFileNames()).containsExactly("mappings.xml");
-		assertThat(info[0].getProperties()).isEmpty();
+		assertThat(info[0].getMappingFileNames().size()).isEqualTo(1);
+		assertThat(info[0].getMappingFileNames().get(0)).isEqualTo("mappings.xml");
+		assertThat(info[0].getProperties().keySet().size()).isEqualTo(0);
 
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should default false in 1.0.").isFalse();
 	}
 
 	@Test
-	void testExample3() throws Exception {
+	public void testExample3() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-example3.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement3");
 
-		assertThat(info[0].getJarFileUrls()).containsExactly(
-				new ClassPathResource("order.jar").getURL(),
-				new ClassPathResource("order-supplemental.jar").getURL());
+		assertThat(info[0].getJarFileUrls().size()).isEqualTo(2);
+		assertThat(info[0].getJarFileUrls().get(0)).isEqualTo(new ClassPathResource("order.jar").getURL());
+		assertThat(info[0].getJarFileUrls().get(1)).isEqualTo(new ClassPathResource("order-supplemental.jar").getURL());
 
-		assertThat(info[0].getProperties()).isEmpty();
+		assertThat(info[0].getProperties().keySet().size()).isEqualTo(0);
 		assertThat(info[0].getJtaDataSource()).isNull();
 		assertThat(info[0].getNonJtaDataSource()).isNull();
 
@@ -121,7 +121,7 @@ class PersistenceXmlParsingTests {
 	}
 
 	@Test
-	void testExample4() throws Exception {
+	public void testExample4() throws Exception {
 		SimpleNamingContextBuilder builder = SimpleNamingContextBuilder.emptyActivatedContextBuilder();
 		DataSource ds = new DriverManagerDataSource();
 		builder.bind("java:comp/env/jdbc/MyDB", ds);
@@ -132,47 +132,52 @@ class PersistenceXmlParsingTests {
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement4");
 
-		assertThat(info[0].getMappingFileNames()).containsExactly("order-mappings.xml");
+		assertThat(info[0].getMappingFileNames().size()).isEqualTo(1);
+		assertThat(info[0].getMappingFileNames().get(0)).isEqualTo("order-mappings.xml");
 
-		assertThat(info[0].getManagedClassNames()).containsExactly(
-				"com.acme.Order", "com.acme.Customer", "com.acme.Item");
+		assertThat(info[0].getManagedClassNames().size()).isEqualTo(3);
+		assertThat(info[0].getManagedClassNames().get(0)).isEqualTo("com.acme.Order");
+		assertThat(info[0].getManagedClassNames().get(1)).isEqualTo("com.acme.Customer");
+		assertThat(info[0].getManagedClassNames().get(2)).isEqualTo("com.acme.Item");
 
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should be true when no value.").isTrue();
 
 		assertThat(info[0].getTransactionType()).isSameAs(PersistenceUnitTransactionType.RESOURCE_LOCAL);
-		assertThat(info[0].getProperties()).isEmpty();
+		assertThat(info[0].getProperties().keySet().size()).isEqualTo(0);
 
 		builder.clear();
 	}
 
 	@Test
-	void testExample5() throws Exception {
+	public void testExample5() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-example5.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
 		assertThat(info).isNotNull();
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("OrderManagement5");
 
-		assertThat(info[0].getMappingFileNames()).containsExactly("order1.xml", "order2.xml");
+		assertThat(info[0].getMappingFileNames().size()).isEqualTo(2);
+		assertThat(info[0].getMappingFileNames().get(0)).isEqualTo("order1.xml");
+		assertThat(info[0].getMappingFileNames().get(1)).isEqualTo("order2.xml");
 
-		assertThat(info[0].getJarFileUrls()).containsExactly(
-				new ClassPathResource("order.jar").getURL(),
-				new ClassPathResource("order-supplemental.jar").getURL());
+		assertThat(info[0].getJarFileUrls().size()).isEqualTo(2);
+		assertThat(info[0].getJarFileUrls().get(0)).isEqualTo(new ClassPathResource("order.jar").getURL());
+		assertThat(info[0].getJarFileUrls().get(1)).isEqualTo(new ClassPathResource("order-supplemental.jar").getURL());
 
 		assertThat(info[0].getPersistenceProviderClassName()).isEqualTo("com.acme.AcmePersistence");
-		assertThat(info[0].getProperties()).isEmpty();
+		assertThat(info[0].getProperties().keySet().size()).isEqualTo(0);
 
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should default false in 1.0.").isFalse();
 	}
 
 	@Test
-	void testExampleComplex() throws Exception {
+	public void testExampleComplex() throws Exception {
 		DataSource ds = new DriverManagerDataSource();
 
 		String resource = "/org/springframework/orm/jpa/persistence-complex.xml";
@@ -185,7 +190,7 @@ class PersistenceXmlParsingTests {
 				new PathMatchingResourcePatternResolver(), dataSourceLookup);
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
 
-		assertThat(info).hasSize(2);
+		assertThat(info.length).isEqualTo(2);
 
 		PersistenceUnitInfo pu1 = info[0];
 
@@ -193,16 +198,20 @@ class PersistenceXmlParsingTests {
 
 		assertThat(pu1.getPersistenceProviderClassName()).isEqualTo("com.acme.AcmePersistence");
 
-		assertThat(pu1.getMappingFileNames()).containsExactly("ormap2.xml");
+		assertThat(pu1.getMappingFileNames().size()).isEqualTo(1);
+		assertThat(pu1.getMappingFileNames().get(0)).isEqualTo("ormap2.xml");
 
-		assertThat(pu1.getJarFileUrls()).containsExactly(new ClassPathResource("order.jar").getURL());
+		assertThat(pu1.getJarFileUrls().size()).isEqualTo(1);
+		assertThat(pu1.getJarFileUrls().get(0)).isEqualTo(new ClassPathResource("order.jar").getURL());
 
 		assertThat(pu1.excludeUnlistedClasses()).isFalse();
 
 		assertThat(pu1.getTransactionType()).isSameAs(PersistenceUnitTransactionType.RESOURCE_LOCAL);
 
-		assertThat(pu1.getProperties()).containsOnly(
-				entry("com.acme.persistence.sql-logging", "on"), entry("foo", "bar"));
+		Properties props = pu1.getProperties();
+		assertThat(props.keySet().size()).isEqualTo(2);
+		assertThat(props.getProperty("com.acme.persistence.sql-logging")).isEqualTo("on");
+		assertThat(props.getProperty("foo")).isEqualTo("bar");
 
 		assertThat(pu1.getNonJtaDataSource()).isNull();
 
@@ -215,7 +224,8 @@ class PersistenceXmlParsingTests {
 		assertThat(pu2.getTransactionType()).isSameAs(PersistenceUnitTransactionType.JTA);
 		assertThat(pu2.getPersistenceProviderClassName()).isEqualTo("com.acme.AcmePersistence");
 
-		assertThat(pu2.getMappingFileNames()).containsExactly("order2.xml");
+		assertThat(pu2.getMappingFileNames().size()).isEqualTo(1);
+		assertThat(pu2.getMappingFileNames().get(0)).isEqualTo("order2.xml");
 
 		// the following assertions fail only during coverage runs
 		// assertEquals(1, pu2.getJarFileUrls().size());
@@ -230,48 +240,49 @@ class PersistenceXmlParsingTests {
 	}
 
 	@Test
-	void testExample6() {
+	public void testExample6() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-example6.xml";
 		PersistenceUnitInfo[] info = reader.readPersistenceUnitInfos(resource);
-		assertThat(info).hasSize(1);
+		assertThat(info.length).isEqualTo(1);
 		assertThat(info[0].getPersistenceUnitName()).isEqualTo("pu");
-		assertThat(info[0].getProperties()).isEmpty();
+		assertThat(info[0].getProperties().keySet().size()).isEqualTo(0);
 
 		assertThat(info[0].excludeUnlistedClasses()).as("Exclude unlisted should default false in 1.0.").isFalse();
 	}
 
 	@Disabled("not doing schema parsing anymore for JPA 2.0 compatibility")
 	@Test
-	void testInvalidPersistence() {
+	public void testInvalidPersistence() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-invalid.xml";
-		assertThatRuntimeException().isThrownBy(() -> reader.readPersistenceUnitInfos(resource));
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() ->
+				reader.readPersistenceUnitInfos(resource));
 	}
 
 	@Disabled("not doing schema parsing anymore for JPA 2.0 compatibility")
 	@Test
-	void testNoSchemaPersistence() {
+	public void testNoSchemaPersistence() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-no-schema.xml";
-		assertThatRuntimeException().isThrownBy(() -> reader.readPersistenceUnitInfos(resource));
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() ->
+				reader.readPersistenceUnitInfos(resource));
 	}
 
 	@Test
-	void testPersistenceUnitRootUrl() throws Exception {
+	public void testPersistenceUnitRootUrl() throws Exception {
 		URL url = PersistenceUnitReader.determinePersistenceUnitRootUrl(new ClassPathResource("/org/springframework/orm/jpa/persistence-no-schema.xml"));
 		assertThat(url).isNull();
 
 		url = PersistenceUnitReader.determinePersistenceUnitRootUrl(new ClassPathResource("/org/springframework/orm/jpa/META-INF/persistence.xml"));
-		assertThat(url.toString()).as("the containing folder should have been returned")
-				.endsWith("/org/springframework/orm/jpa");
+		assertThat(url.toString().endsWith("/org/springframework/orm/jpa")).as("the containing folder should have been returned").isTrue();
 	}
 
 	@Test
-	void testPersistenceUnitRootUrlWithJar() throws Exception {
+	public void testPersistenceUnitRootUrlWithJar() throws Exception {
 		ClassPathResource archive = new ClassPathResource("/org/springframework/orm/jpa/jpa-archive.jar");
 		String newRoot = "jar:" + archive.getURL().toExternalForm() + "!/META-INF/persist.xml";
 		Resource insideArchive = new UrlResource(newRoot);
@@ -282,7 +293,7 @@ class PersistenceXmlParsingTests {
 	}
 
 	@Test
-	void testJpa1ExcludeUnlisted() {
+	public void testJpa1ExcludeUnlisted() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-exclude-1.0.xml";
@@ -313,7 +324,7 @@ class PersistenceXmlParsingTests {
 	}
 
 	@Test
-	void testJpa2ExcludeUnlisted() {
+	public void testJpa2ExcludeUnlisted() throws Exception {
 		PersistenceUnitReader reader = new PersistenceUnitReader(
 				new PathMatchingResourcePatternResolver(), new JndiDataSourceLookup());
 		String resource = "/org/springframework/orm/jpa/persistence-exclude-2.0.xml";

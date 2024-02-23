@@ -40,8 +40,12 @@ public interface Pointcut {
 
 	/**
 	 * Return the MethodMatcher for this pointcut.
+	 *
 	 * @return the MethodMatcher (never {@code null})
 	 */
+	// Pointcut（切点），决定了 Advice 通知应该作用于哪个连接点，也就是说通过 Pointcut 切点来定义需要增强的方法的集合
+	// 这些集合的选取可以根据一定的规则来完成。例如：正则。
+	// 从 Pointcut 的定义可知，需要返回一个 MethodMatcher，对于 切点的匹配判断，应该是由这个具体的 MethodMatcher 来完成的
 	MethodMatcher getMethodMatcher();
 
 

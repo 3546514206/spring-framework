@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.lang.Nullable;
@@ -73,18 +72,6 @@ public interface AutowireCandidateResolver {
 	}
 
 	/**
-	 * Determine whether a target bean name is suggested for the given dependency
-	 * (typically - but not necessarily - declared with a single-value qualifier).
-	 * @param descriptor the descriptor for the target method parameter or field
-	 * @return the qualifier value, if any
-	 * @since 6.2
-	 */
-	@Nullable
-	default String getSuggestedName(DependencyDescriptor descriptor) {
-		return null;
-	}
-
-	/**
 	 * Determine whether a default value is suggested for the given dependency.
 	 * <p>The default implementation simply returns {@code null}.
 	 * @param descriptor the descriptor for the target method parameter or field
@@ -110,38 +97,6 @@ public interface AutowireCandidateResolver {
 	@Nullable
 	default Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, @Nullable String beanName) {
 		return null;
-	}
-
-	/**
-	 * Determine the proxy class for lazy resolution of the dependency target,
-	 * if demanded by the injection point.
-	 * <p>The default implementation simply returns {@code null}.
-	 * @param descriptor the descriptor for the target method parameter or field
-	 * @param beanName the name of the bean that contains the injection point
-	 * @return the lazy resolution proxy class for the dependency target, if any
-	 * @since 6.0
-	 */
-	@Nullable
-	default Class<?> getLazyResolutionProxyClass(DependencyDescriptor descriptor, @Nullable String beanName) {
-		return null;
-	}
-
-	/**
-	 * Return a clone of this resolver instance if necessary, retaining its local
-	 * configuration and allowing for the cloned instance to get associated with
-	 * a new bean factory, or this original instance if there is no such state.
-	 * <p>The default implementation creates a separate instance via the default
-	 * class constructor, assuming no specific configuration state to copy.
-	 * Subclasses may override this with custom configuration state handling
-	 * or with standard {@link Cloneable} support (as implemented by Spring's
-	 * own configurable {@code AutowireCandidateResolver} variants), or simply
-	 * return {@code this} (as in {@link SimpleAutowireCandidateResolver}).
-	 * @since 5.2.7
-	 * @see GenericTypeAwareAutowireCandidateResolver#cloneIfNecessary()
-	 * @see DefaultListableBeanFactory#copyConfigurationFrom
-	 */
-	default AutowireCandidateResolver cloneIfNecessary() {
-		return BeanUtils.instantiateClass(getClass());
 	}
 
 }

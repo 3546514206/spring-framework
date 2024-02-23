@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,49 +16,46 @@
 
 package org.springframework.web.servlet.view.script;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import javax.servlet.ServletContext;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.condition.JRE.JAVA_21;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for Kotlin script templates running on Kotlin JSR-223 support.
+ * Unit tests for Kotlin script templates running on Kotlin JSR-223 support.
  *
  * @author Sebastien Deleuze
- * @author Sam Brannen
  */
-@DisabledForJreRange(min = JAVA_21, disabledReason = "Kotlin doesn't support Java 21+ yet")
-class KotlinScriptTemplateTests {
+public class KotlinScriptTemplateTests {
 
-	private WebApplicationContext webAppContext = mock();
+	private WebApplicationContext webAppContext;
 
-	private ServletContext servletContext = new MockServletContext();
+	private ServletContext servletContext;
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
+		this.webAppContext = mock(WebApplicationContext.class);
+		this.servletContext = new MockServletContext();
 		this.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.webAppContext);
 	}
 
 	@Test
-	void renderTemplateWithFrenchLocale() throws Exception {
+	public void renderTemplateWithFrenchLocale() throws Exception {
 		Map<String, Object> model = new HashMap<>();
 		model.put("foo", "Foo");
 		String url = "org/springframework/web/servlet/view/script/kotlin/template.kts";
@@ -67,7 +64,7 @@ class KotlinScriptTemplateTests {
 	}
 
 	@Test
-	void renderTemplateWithEnglishLocale() throws Exception {
+	public void renderTemplateWithEnglishLocale() throws Exception {
 		Map<String, Object> model = new HashMap<>();
 		model.put("foo", "Foo");
 		String url = "org/springframework/web/servlet/view/script/kotlin/template.kts";
@@ -76,7 +73,7 @@ class KotlinScriptTemplateTests {
 	}
 
 	@Test
-	void renderTemplateWithoutRenderFunction() throws Exception {
+	public void renderTemplateWithoutRenderFunction() throws Exception {
 		Map<String, Object> model = new HashMap<>();
 		model.put("header", "<html><body>");
 		model.put("hello", "Hello");
@@ -88,7 +85,7 @@ class KotlinScriptTemplateTests {
 	}
 
 
-	private static MockHttpServletResponse render(String viewUrl, Map<String, Object> model,
+	private MockHttpServletResponse render(String viewUrl, Map<String, Object> model,
 			Locale locale, Class<?> configuration) throws Exception {
 
 		ScriptTemplateView view = createViewWithUrl(viewUrl, configuration);
@@ -99,8 +96,10 @@ class KotlinScriptTemplateTests {
 		return response;
 	}
 
-	private static ScriptTemplateView createViewWithUrl(String viewUrl, Class<?> configuration) throws Exception {
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(configuration);
+	private ScriptTemplateView createViewWithUrl(String viewUrl, Class<?> configuration) throws Exception {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(configuration);
+		ctx.refresh();
 
 		ScriptTemplateView view = new ScriptTemplateView();
 		view.setApplicationContext(ctx);
@@ -114,7 +113,7 @@ class KotlinScriptTemplateTests {
 	static class ScriptTemplatingConfiguration {
 
 		@Bean
-		ScriptTemplateConfigurer kotlinScriptConfigurer() {
+		public ScriptTemplateConfigurer kotlinScriptConfigurer() {
 			ScriptTemplateConfigurer configurer = new ScriptTemplateConfigurer();
 			configurer.setEngineName("kotlin");
 			configurer.setScripts("org/springframework/web/servlet/view/script/kotlin/render.kts");
@@ -123,7 +122,7 @@ class KotlinScriptTemplateTests {
 		}
 
 		@Bean
-		ResourceBundleMessageSource messageSource() {
+		public ResourceBundleMessageSource messageSource() {
 			ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
 			messageSource.setBasename("org/springframework/web/servlet/view/script/messages");
 			return messageSource;
@@ -134,7 +133,7 @@ class KotlinScriptTemplateTests {
 	static class ScriptTemplatingConfigurationWithoutRenderFunction {
 
 		@Bean
-		ScriptTemplateConfigurer kotlinScriptConfigurer() {
+		public ScriptTemplateConfigurer kotlinScriptConfigurer() {
 			return new ScriptTemplateConfigurer("kotlin");
 		}
 	}

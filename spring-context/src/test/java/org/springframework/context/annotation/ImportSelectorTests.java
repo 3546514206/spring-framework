@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,9 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanFactory;
@@ -50,8 +35,15 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -70,7 +62,7 @@ public class ImportSelectorTests {
 
 
 	@BeforeEach
-	void cleanup() {
+	public void cleanup() {
 		ImportSelectorTests.importFrom.clear();
 		SampleImportSelector.cleanup();
 		TestImportGroup.cleanup();
@@ -78,7 +70,7 @@ public class ImportSelectorTests {
 
 
 	@Test
-	void importSelectors() {
+	public void importSelectors() {
 		DefaultListableBeanFactory beanFactory = spy(new DefaultListableBeanFactory());
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(beanFactory);
 		context.register(Config.class);
@@ -92,7 +84,7 @@ public class ImportSelectorTests {
 	}
 
 	@Test
-	void invokeAwareMethodsInImportSelector() {
+	public void invokeAwareMethodsInImportSelector() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AwareConfig.class);
 		assertThat(SampleImportSelector.beanFactory).isEqualTo(context.getBeanFactory());
 		assertThat(SampleImportSelector.classLoader).isEqualTo(context.getBeanFactory().getBeanClassLoader());
@@ -101,21 +93,17 @@ public class ImportSelectorTests {
 	}
 
 	@Test
-	void correctMetadataOnIndirectImports() {
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(IndirectConfig.class);
+	public void correctMetaDataOnIndirectImports() {
+		new AnnotationConfigApplicationContext(IndirectConfig.class);
 		String indirectImport = IndirectImport.class.getName();
 		assertThat(importFrom.get(ImportSelector1.class)).isEqualTo(indirectImport);
 		assertThat(importFrom.get(ImportSelector2.class)).isEqualTo(indirectImport);
 		assertThat(importFrom.get(DeferredImportSelector1.class)).isEqualTo(indirectImport);
 		assertThat(importFrom.get(DeferredImportSelector2.class)).isEqualTo(indirectImport);
-		assertThat(context.containsBean("a")).isFalse();  // since ImportedSelector1 got filtered
-		assertThat(context.containsBean("b")).isTrue();
-		assertThat(context.containsBean("c")).isTrue();
-		assertThat(context.containsBean("d")).isTrue();
 	}
 
 	@Test
-	void importSelectorsWithGroup() {
+	public void importSelectorsWithGroup() {
 		DefaultListableBeanFactory beanFactory = spy(new DefaultListableBeanFactory());
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(beanFactory);
 		context.register(GroupedConfig.class);
@@ -126,11 +114,12 @@ public class ImportSelectorTests {
 		ordered.verify(beanFactory).registerBeanDefinition(eq("c"), any());
 		ordered.verify(beanFactory).registerBeanDefinition(eq("d"), any());
 		assertThat(TestImportGroup.instancesCount.get()).isEqualTo(1);
-		assertThat(TestImportGroup.imports.values()).singleElement().asInstanceOf(LIST).hasSize(2);
+		assertThat(TestImportGroup.imports.size()).isEqualTo(1);
+		assertThat(TestImportGroup.imports.values().iterator().next().size()).isEqualTo(2);
 	}
 
 	@Test
-	void importSelectorsSeparateWithGroup() {
+	public void importSelectorsSeparateWithGroup() {
 		DefaultListableBeanFactory beanFactory = spy(new DefaultListableBeanFactory());
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(beanFactory);
 		context.register(GroupedConfig1.class);
@@ -140,12 +129,14 @@ public class ImportSelectorTests {
 		ordered.verify(beanFactory).registerBeanDefinition(eq("c"), any());
 		ordered.verify(beanFactory).registerBeanDefinition(eq("d"), any());
 		assertThat(TestImportGroup.instancesCount.get()).isEqualTo(1);
-		assertThat(TestImportGroup.imports.keySet().stream().map(AnnotationMetadata::getClassName))
-				.containsExactly(GroupedConfig2.class.getName(),GroupedConfig1.class.getName());
+		assertThat(TestImportGroup.imports.size()).isEqualTo(2);
+		Iterator<AnnotationMetadata> iterator = TestImportGroup.imports.keySet().iterator();
+		assertThat(iterator.next().getClassName()).isEqualTo(GroupedConfig2.class.getName());
+		assertThat(iterator.next().getClassName()).isEqualTo(GroupedConfig1.class.getName());
 	}
 
 	@Test
-	void importSelectorsWithNestedGroup() {
+	public void importSelectorsWithNestedGroup() {
 		DefaultListableBeanFactory beanFactory = spy(new DefaultListableBeanFactory());
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(beanFactory);
 		context.register(ParentConfiguration1.class);
@@ -155,7 +146,7 @@ public class ImportSelectorTests {
 		ordered.verify(beanFactory).registerBeanDefinition(eq("e"), any());
 		ordered.verify(beanFactory).registerBeanDefinition(eq("c"), any());
 		assertThat(TestImportGroup.instancesCount.get()).isEqualTo(2);
-		assertThat(TestImportGroup.imports).hasSize(2);
+		assertThat(TestImportGroup.imports.size()).isEqualTo(2);
 		assertThat(TestImportGroup.allImports())
 			.containsOnlyKeys(ParentConfiguration1.class.getName(), ChildConfiguration1.class.getName());
 		assertThat(TestImportGroup.allImports().get(ParentConfiguration1.class.getName()))
@@ -165,7 +156,7 @@ public class ImportSelectorTests {
 	}
 
 	@Test
-	void importSelectorsWithNestedGroupSameDeferredImport() {
+	public void importSelectorsWithNestedGroupSameDeferredImport() {
 		DefaultListableBeanFactory beanFactory = spy(new DefaultListableBeanFactory());
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(beanFactory);
 		context.register(ParentConfiguration2.class);
@@ -174,7 +165,7 @@ public class ImportSelectorTests {
 		ordered.verify(beanFactory).registerBeanDefinition(eq("b"), any());
 		ordered.verify(beanFactory).registerBeanDefinition(eq("d"), any());
 		assertThat(TestImportGroup.instancesCount.get()).isEqualTo(2);
-		assertThat(TestImportGroup.allImports()).hasSize(2);
+		assertThat(TestImportGroup.allImports().size()).isEqualTo(2);
 		assertThat(TestImportGroup.allImports())
 			.containsOnlyKeys(ParentConfiguration2.class.getName(), ChildConfiguration2.class.getName());
 		assertThat(TestImportGroup.allImports().get(ParentConfiguration2.class.getName()))
@@ -184,7 +175,7 @@ public class ImportSelectorTests {
 	}
 
 	@Test
-	void invokeAwareMethodsInImportGroup() {
+	public void invokeAwareMethodsInImportGroup() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(GroupedConfig1.class);
 		assertThat(TestImportGroup.beanFactory).isEqualTo(context.getBeanFactory());
 		assertThat(TestImportGroup.classLoader).isEqualTo(context.getBeanFactory().getBeanClassLoader());
@@ -362,12 +353,6 @@ public class ImportSelectorTests {
 		public String[] selectImports(AnnotationMetadata importingClassMetadata) {
 			return new String[] {IndirectImport.class.getName()};
 		}
-
-		@Override
-		@Nullable
-		public Predicate<String> getExclusionFilter() {
-			return className -> className.endsWith("ImportedSelector1");
-		}
 	}
 
 
@@ -537,7 +522,6 @@ public class ImportSelectorTests {
 					.collect(Collectors.toMap(entry -> entry.getKey().getClassName(),
 							Map.Entry::getValue));
 		}
-
 		private final List<Entry> instanceImports = new ArrayList<>();
 
 		@Override
@@ -551,7 +535,7 @@ public class ImportSelectorTests {
 
 		@Override
 		public Iterable<Entry> selectImports() {
-			ArrayList<Entry> content = new ArrayList<>(this.instanceImports);
+			LinkedList<Entry> content = new LinkedList<>(this.instanceImports);
 			Collections.reverse(content);
 			return content;
 		}

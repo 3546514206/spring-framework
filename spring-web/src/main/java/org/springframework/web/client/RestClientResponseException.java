@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,12 @@
 
 package org.springframework.web.client;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.lang.Nullable;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
-import java.util.function.Function;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.ResolvableType;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.LinkedCaseInsensitiveMap;
-import org.springframework.util.MultiValueMap;
 
 /**
  * Common base class for exceptions that contain actual HTTP response data.
@@ -42,10 +33,10 @@ public class RestClientResponseException extends RestClientException {
 
 	private static final long serialVersionUID = -8803556342728481792L;
 
-	private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+	private static final Charset DEFAULT_CHARSET = StandardCharsets.ISO_8859_1;
 
 
-	private final HttpStatusCode statusCode;
+	private final int rawStatusCode;
 
 	private final String statusText;
 
@@ -57,79 +48,32 @@ public class RestClientResponseException extends RestClientException {
 	@Nullable
 	private final String responseCharset;
 
-	@Nullable
-	private transient Function<ResolvableType, ?> bodyConvertFunction;
-
 
 	/**
 	 * Construct a new instance of with the given response data.
 	 * @param statusCode the raw status code value
 	 * @param statusText the status text
-	 * @param headers the response headers (may be {@code null})
+	 * @param responseHeaders the response headers (may be {@code null})
 	 * @param responseBody the response body content (may be {@code null})
 	 * @param responseCharset the response body charset (may be {@code null})
 	 */
-	public RestClientResponseException(
-			String message, int statusCode, String statusText, @Nullable HttpHeaders headers,
-			@Nullable byte[] responseBody, @Nullable Charset responseCharset) {
-
-		this(message, HttpStatusCode.valueOf(statusCode), statusText, headers, responseBody, responseCharset);
-	}
-
-	/**
-	 * Construct a new instance of with the given response data.
-	 * @param statusCode the raw status code value
-	 * @param statusText the status text
-	 * @param headers the response headers (may be {@code null})
-	 * @param responseBody the response body content (may be {@code null})
-	 * @param responseCharset the response body charset (may be {@code null})
-	 * @since 6.0
-	 */
-	public RestClientResponseException(
-			String message, HttpStatusCode statusCode, String statusText, @Nullable HttpHeaders headers,
-			@Nullable byte[] responseBody, @Nullable Charset responseCharset) {
+	public RestClientResponseException(String message, int statusCode, String statusText,
+			@Nullable HttpHeaders responseHeaders, @Nullable byte[] responseBody, @Nullable Charset responseCharset) {
 
 		super(message);
-		this.statusCode = statusCode;
+		this.rawStatusCode = statusCode;
 		this.statusText = statusText;
-		this.responseHeaders = copyHeaders(headers);
+		this.responseHeaders = responseHeaders;
 		this.responseBody = (responseBody != null ? responseBody : new byte[0]);
 		this.responseCharset = (responseCharset != null ? responseCharset.name() : null);
 	}
 
-	/**
-	 * Copies the given headers, because the backing map might not be
-	 * serializable.
-	 */
-	@Nullable
-	private static HttpHeaders copyHeaders(@Nullable HttpHeaders headers) {
-		if (headers != null) {
-			MultiValueMap<String, String> result =
-					CollectionUtils.toMultiValueMap(new LinkedCaseInsensitiveMap<>(headers.size(), Locale.ENGLISH));
-			headers.forEach((name, values) -> values.forEach(value -> result.add(name, value)));
-			return HttpHeaders.readOnlyHttpHeaders(result);
-		}
-		else {
-			return null;
-		}
-	}
-
-
-	/**
-	 * Return the HTTP status code.
-	 * @since 6.0
-	 */
-	public HttpStatusCode getStatusCode() {
-		return this.statusCode;
-	}
 
 	/**
 	 * Return the raw HTTP status code value.
-	 * @deprecated as of 6.0, in favor of {@link #getStatusCode()}
 	 */
-	@Deprecated(since = "6.0")
 	public int getRawStatusCode() {
-		return this.statusCode.value();
+		return this.rawStatusCode;
 	}
 
 	/**
@@ -155,22 +99,11 @@ public class RestClientResponseException extends RestClientException {
 	}
 
 	/**
-	 * Return the response body converted to String. The charset used is that
-	 * of the response "Content-Type" or otherwise {@code "UTF-8"}.
+	 * Return the response body as a string.
 	 */
 	public String getResponseBodyAsString() {
-		return getResponseBodyAsString(DEFAULT_CHARSET);
-	}
-
-	/**
-	 * Return the response body converted to String. The charset used is that
-	 * of the response "Content-Type" or otherwise the one given.
-	 * @param fallbackCharset the charset to use on if the response doesn't specify.
-	 * @since 5.1.11
-	 */
-	public String getResponseBodyAsString(Charset fallbackCharset) {
 		if (this.responseCharset == null) {
-			return new String(this.responseBody, fallbackCharset);
+			return new String(this.responseBody, DEFAULT_CHARSET);
 		}
 		try {
 			return new String(this.responseBody, this.responseCharset);
@@ -179,45 +112,6 @@ public class RestClientResponseException extends RestClientException {
 			// should not occur
 			throw new IllegalStateException(ex);
 		}
-	}
-
-	/**
-	 * Convert the error response content to the specified type.
-	 * @param targetType the type to convert to
-	 * @param <E> the expected target type
-	 * @return the converted object, or {@code null} if there is no content
-	 * @since 6.0
-	 */
-	@Nullable
-	public <E> E getResponseBodyAs(Class<E> targetType) {
-		return getResponseBodyAs(ResolvableType.forClass(targetType));
-	}
-
-	/**
-	 * Variant of {@link #getResponseBodyAs(Class)} with
-	 * {@link ParameterizedTypeReference}.
-	 * @since 6.0
-	 */
-	@Nullable
-	public <E> E getResponseBodyAs(ParameterizedTypeReference<E> targetType) {
-		return getResponseBodyAs(ResolvableType.forType(targetType.getType()));
-	}
-
-	@SuppressWarnings("unchecked")
-	@Nullable
-	private <E> E getResponseBodyAs(ResolvableType targetType) {
-		Assert.state(this.bodyConvertFunction != null, "Function to convert body not set");
-		return (E) this.bodyConvertFunction.apply(targetType);
-	}
-
-	/**
-	 * Provide a function to use to decode the response error content
-	 * via {@link #getResponseBodyAs(Class)}.
-	 * @param bodyConvertFunction the function to use
-	 * @since 6.0
-	 */
-	public void setBodyConvertFunction(Function<ResolvableType, ?> bodyConvertFunction) {
-		this.bodyConvertFunction = bodyConvertFunction;
 	}
 
 }

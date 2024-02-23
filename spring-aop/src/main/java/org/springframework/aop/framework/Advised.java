@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.aop.framework;
 
 import org.aopalliance.aop.Advice;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.aop.TargetSource;
@@ -115,15 +114,6 @@ public interface Advised extends TargetClassAware {
 	Advisor[] getAdvisors();
 
 	/**
-	 * Return the number of advisors applying to this proxy.
-	 * <p>The default implementation delegates to {@code getAdvisors().length}.
-	 * @since 5.3.1
-	 */
-	default int getAdvisorCount() {
-		return getAdvisors().length;
-	}
-
-	/**
 	 * Add an advisor at the end of the advisor chain.
 	 * <p>The Advisor may be an {@link org.springframework.aop.IntroductionAdvisor},
 	 * in which new interfaces will be available when a proxy is next obtained
@@ -151,7 +141,8 @@ public interface Advised extends TargetClassAware {
 
 	/**
 	 * Remove the advisor at the given index.
-	 * @param index the index of advisor to remove
+	 *
+	 * @param index index of advisor to remove
 	 * @throws AopConfigException if the index is invalid
 	 */
 	void removeAdvisor(int index) throws AopConfigException;
@@ -186,7 +177,7 @@ public interface Advised extends TargetClassAware {
 	 * <p>Note that the given advice will apply to all invocations on the proxy,
 	 * even to the {@code toString()} method! Use appropriate advice implementations
 	 * or specify appropriate pointcuts to apply to a narrower set of methods.
-	 * @param advice the advice to add to the tail of the chain
+	 * @param advice advice to add to the tail of the chain
 	 * @throws AopConfigException in case of invalid advice
 	 * @see #addAdvice(int, Advice)
 	 * @see org.springframework.aop.support.DefaultPointcutAdvisor
@@ -202,7 +193,7 @@ public interface Advised extends TargetClassAware {
 	 * even to the {@code toString()} method! Use appropriate advice implementations
 	 * or specify appropriate pointcuts to apply to a narrower set of methods.
 	 * @param pos index from 0 (head)
-	 * @param advice the advice to add at the specified position in the advice chain
+	 * @param advice advice to add at the specified position in the advice chain
 	 * @throws AopConfigException in case of invalid advice
 	 */
 	void addAdvice(int pos, Advice advice) throws AopConfigException;

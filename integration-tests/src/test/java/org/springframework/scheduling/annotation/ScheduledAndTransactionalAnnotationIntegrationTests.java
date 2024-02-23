@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,8 @@
 
 package org.springframework.scheduling.annotation;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.aspectj.lang.annotation.Aspect;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanCreationException;
@@ -28,19 +25,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.testfixture.EnabledForTestGroups;
 import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.stereotype.Repository;
+import org.springframework.tests.EnabledForTestGroups;
+import org.springframework.tests.transaction.CallCountingTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.testfixture.CallCountingTransactionManager;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
-import static org.springframework.core.testfixture.TestGroup.LONG_RUNNING;
+import static org.springframework.tests.TestGroup.PERFORMANCE;
 
 /**
  * Integration tests cornering bug SPR-8651, which revealed that @Scheduled methods may
@@ -51,7 +50,8 @@ import static org.springframework.core.testfixture.TestGroup.LONG_RUNNING;
  * @author Juergen Hoeller
  * @since 3.1
  */
-@EnabledForTestGroups(LONG_RUNNING)
+@SuppressWarnings("resource")
+@EnabledForTestGroups(PERFORMANCE)
 class ScheduledAndTransactionalAnnotationIntegrationTests {
 
 	@Test
@@ -59,8 +59,8 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config.class, JdkProxyTxConfig.class, RepoConfigA.class);
 		assertThatExceptionOfType(BeanCreationException.class)
-				.isThrownBy(ctx::refresh)
-				.withCauseInstanceOf(IllegalStateException.class);
+			.isThrownBy(ctx::refresh)
+			.satisfies(ex -> assertThat(ex.getRootCause()).isInstanceOf(IllegalStateException.class));
 	}
 
 	@Test
@@ -69,11 +69,11 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 		ctx.register(Config.class, SubclassProxyTxConfig.class, RepoConfigA.class);
 		ctx.refresh();
 
-		Thread.sleep(200);  // allow @Scheduled method to be called several times
+		Thread.sleep(100);  // allow @Scheduled method to be called several times
 
 		MyRepository repository = ctx.getBean(MyRepository.class);
 		CallCountingTransactionManager txManager = ctx.getBean(CallCountingTransactionManager.class);
-		assertThat(AopUtils.isCglibProxy(repository)).isTrue();
+		assertThat(AopUtils.isCglibProxy(repository)).isEqualTo(true);
 		assertThat(repository.getInvocationCount()).isGreaterThan(0);
 		assertThat(txManager.commits).isGreaterThan(0);
 	}
@@ -84,7 +84,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 		ctx.register(Config.class, JdkProxyTxConfig.class, RepoConfigB.class);
 		ctx.refresh();
 
-		Thread.sleep(200);  // allow @Scheduled method to be called several times
+		Thread.sleep(100);  // allow @Scheduled method to be called several times
 
 		MyRepositoryWithScheduledMethod repository = ctx.getBean(MyRepositoryWithScheduledMethod.class);
 		CallCountingTransactionManager txManager = ctx.getBean(CallCountingTransactionManager.class);
@@ -99,7 +99,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 		ctx.register(AspectConfig.class, MyRepositoryWithScheduledMethodImpl.class);
 		ctx.refresh();
 
-		Thread.sleep(200);  // allow @Scheduled method to be called several times
+		Thread.sleep(100);  // allow @Scheduled method to be called several times
 
 		MyRepositoryWithScheduledMethod repository = ctx.getBean(MyRepositoryWithScheduledMethod.class);
 		assertThat(AopUtils.isCglibProxy(repository)).isTrue();
@@ -150,7 +150,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 
 		@Bean
 		PersistenceExceptionTranslator peTranslator() {
-			return mock();
+			return mock(PersistenceExceptionTranslator.class);
 		}
 
 		@Bean
@@ -181,7 +181,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 	@Aspect
 	public static class MyAspect {
 
-		private final AtomicInteger count = new AtomicInteger();
+		private final AtomicInteger count = new AtomicInteger(0);
 
 		@org.aspectj.lang.annotation.Before("execution(* scheduled())")
 		public void checkTransaction() {
@@ -199,7 +199,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 	@Repository
 	static class MyRepositoryImpl implements MyRepository {
 
-		private final AtomicInteger count = new AtomicInteger();
+		private final AtomicInteger count = new AtomicInteger(0);
 
 		@Transactional
 		@Scheduled(fixedDelay = 5)
@@ -225,7 +225,7 @@ class ScheduledAndTransactionalAnnotationIntegrationTests {
 	@Repository
 	static class MyRepositoryWithScheduledMethodImpl implements MyRepositoryWithScheduledMethod {
 
-		private final AtomicInteger count = new AtomicInteger();
+		private final AtomicInteger count = new AtomicInteger(0);
 
 		@Autowired(required = false)
 		private MyAspect myAspect;

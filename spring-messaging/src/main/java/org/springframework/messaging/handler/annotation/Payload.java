@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,11 +51,7 @@ public @interface Payload {
 	 * <p>This attribute may or may not be supported depending on whether the message being
 	 * handled contains a non-primitive Object as its payload or is in serialized form and
 	 * requires message conversion.
-	 * <p>This attribute is not supported for:
-	 * <ul>
-	 * <li>STOMP over WebSocket messages</li>
-	 * <li>RSocket interface client</li>
-	 * </ul>
+	 * <p>When processing STOMP over WebSocket messages this attribute is not supported.
 	 * @since 4.2
 	 */
 	@AliasFor("value")

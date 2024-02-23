@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.context.support;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * Simple implementation of {@link org.springframework.context.MessageSource}
@@ -36,35 +36,35 @@ import org.springframework.util.Assert;
  */
 public class StaticMessageSource extends AbstractMessageSource {
 
-	private final Map<String, Map<Locale, MessageHolder>> messageMap = new HashMap<>();
+	/**
+	 * Map from 'code + locale' keys to message Strings.
+	 */
+	private final Map<String, String> messages = new HashMap<>();
+
+	private final Map<String, MessageFormat> cachedMessageFormats = new HashMap<>();
 
 
 	@Override
-	@Nullable
 	protected String resolveCodeWithoutArguments(String code, Locale locale) {
-		Map<Locale, MessageHolder> localeMap = this.messageMap.get(code);
-		if (localeMap == null) {
-			return null;
-		}
-		MessageHolder holder = localeMap.get(locale);
-		if (holder == null) {
-			return null;
-		}
-		return holder.getMessage();
+		return this.messages.get(code + '_' + locale.toString());
 	}
 
 	@Override
 	@Nullable
 	protected MessageFormat resolveCode(String code, Locale locale) {
-		Map<Locale, MessageHolder> localeMap = this.messageMap.get(code);
-		if (localeMap == null) {
+		String key = code + '_' + locale.toString();
+		String msg = this.messages.get(key);
+		if (msg == null) {
 			return null;
 		}
-		MessageHolder holder = localeMap.get(locale);
-		if (holder == null) {
-			return null;
+		synchronized (this.cachedMessageFormats) {
+			MessageFormat messageFormat = this.cachedMessageFormats.get(key);
+			if (messageFormat == null) {
+				messageFormat = createMessageFormat(msg, locale);
+				this.cachedMessageFormats.put(key, messageFormat);
+			}
+			return messageFormat;
 		}
-		return holder.getMessageFormat();
 	}
 
 	/**
@@ -77,7 +77,7 @@ public class StaticMessageSource extends AbstractMessageSource {
 		Assert.notNull(code, "Code must not be null");
 		Assert.notNull(locale, "Locale must not be null");
 		Assert.notNull(msg, "Message must not be null");
-		this.messageMap.computeIfAbsent(code, key -> new HashMap<>(4)).put(locale, new MessageHolder(msg, locale));
+		this.messages.put(code + '_' + locale.toString(), msg);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Added message [" + msg + "] for code [" + code + "] and Locale [" + locale + "]");
 		}
@@ -97,41 +97,7 @@ public class StaticMessageSource extends AbstractMessageSource {
 
 	@Override
 	public String toString() {
-		return getClass().getName() + ": " + this.messageMap;
-	}
-
-
-	private class MessageHolder {
-
-		private final String message;
-
-		private final Locale locale;
-
-		@Nullable
-		private volatile MessageFormat cachedFormat;
-
-		public MessageHolder(String message, Locale locale) {
-			this.message = message;
-			this.locale = locale;
-		}
-
-		public String getMessage() {
-			return this.message;
-		}
-
-		public MessageFormat getMessageFormat() {
-			MessageFormat messageFormat = this.cachedFormat;
-			if (messageFormat == null) {
-				messageFormat = createMessageFormat(this.message, this.locale);
-				this.cachedFormat = messageFormat;
-			}
-			return messageFormat;
-		}
-
-		@Override
-		public String toString() {
-			return this.message;
-		}
+		return getClass().getName() + ": " + this.messages;
 	}
 
 }

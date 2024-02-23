@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.core.annotation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class OrderSourceProviderTests {
 		C c2 = new C(-5);
 		items.add(c);
 		items.add(c2);
-		items.sort(comparator);
+		Collections.sort(items, comparator);
 		assertOrder(items, c2, c);
 	}
 
@@ -53,7 +54,7 @@ class OrderSourceProviderTests {
 		B b = new B();
 
 		List<?> items = Arrays.asList(a, c, b);
-		items.sort(comparator.withSourceProvider(obj -> null));
+		Collections.sort(items, comparator.withSourceProvider(obj -> null));
 		assertOrder(items, c, a, b);
 	}
 
@@ -64,7 +65,7 @@ class OrderSourceProviderTests {
 		B b = new B();
 
 		List<?> items = Arrays.asList(a, c, b);
-		items.sort(comparator.withSourceProvider(obj -> {
+		Collections.sort(items, comparator.withSourceProvider(obj -> {
 			if (obj == a) {
 				return new C(4);
 			}
@@ -83,7 +84,7 @@ class OrderSourceProviderTests {
 		C c2 = new C(-5);
 
 		List<?> items = Arrays.asList(a, c, c2);
-		items.sort(comparator.withSourceProvider(obj -> {
+		Collections.sort(items, comparator.withSourceProvider(obj -> {
 			if (obj == a) {
 				return 4;
 			}

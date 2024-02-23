@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,29 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.reactive.BindingContext;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link ExpressionValueMethodArgumentResolver}.
+ * Unit tests for {@link ExpressionValueMethodArgumentResolver}.
  *
  * @author Rossen Stoyanchev
  */
-class ExpressionValueMethodArgumentResolverTests {
+public class ExpressionValueMethodArgumentResolverTests {
 
 	private ExpressionValueMethodArgumentResolver resolver;
 
@@ -51,7 +50,8 @@ class ExpressionValueMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	@SuppressWarnings("resource")
+	public void setup() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.refresh();
 		ReactiveAdapterRegistry adapterRegistry = ReactiveAdapterRegistry.getSharedInstance();
@@ -65,12 +65,12 @@ class ExpressionValueMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		assertThat(this.resolver.supportsParameter(this.paramSystemProperty)).isTrue();
 	}
 
 	@Test
-	void doesNotSupport() {
+	public void doesNotSupport() {
 		assertThat(this.resolver.supportsParameter(this.paramNotSupported)).isFalse();
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.resolver.supportsParameter(this.paramAlsoNotSupported))
@@ -78,11 +78,11 @@ class ExpressionValueMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveSystemProperty() {
+	public void resolveSystemProperty() {
 		System.setProperty("systemProperty", "22");
 		try {
 			Mono<Object> mono = this.resolver.resolveArgument(
-					this.paramSystemProperty, new BindingContext(), this.exchange);
+					this.paramSystemProperty,  new BindingContext(), this.exchange);
 
 			Object value = mono.block();
 			assertThat(value).isEqualTo(22);

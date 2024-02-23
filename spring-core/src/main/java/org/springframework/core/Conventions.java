@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,10 +67,11 @@ public final class Conventions {
 		boolean pluralize = false;
 
 		if (value.getClass().isArray()) {
-			valueClass = value.getClass().componentType();
+			valueClass = value.getClass().getComponentType();
 			pluralize = true;
 		}
-		else if (value instanceof Collection<?> collection) {
+		else if (value instanceof Collection) {
+			Collection<?> collection = (Collection<?>) value;
 			if (collection.isEmpty()) {
 				throw new IllegalArgumentException(
 						"Cannot generate variable name for an empty Collection");
@@ -104,7 +105,7 @@ public final class Conventions {
 		String reactiveSuffix = "";
 
 		if (parameter.getParameterType().isArray()) {
-			valueClass = parameter.getParameterType().componentType();
+			valueClass = parameter.getParameterType().getComponentType();
 			pluralize = true;
 		}
 		else if (Collection.class.isAssignableFrom(parameter.getParameterType())) {
@@ -169,7 +170,10 @@ public final class Conventions {
 		Assert.notNull(method, "Method must not be null");
 
 		if (Object.class == resolvedType) {
-			Assert.notNull(value, "Cannot generate variable name for an Object return type with null value");
+			if (value == null) {
+				throw new IllegalArgumentException(
+						"Cannot generate variable name for an Object return type with null value");
+			}
 			return getVariableName(value);
 		}
 
@@ -178,16 +182,17 @@ public final class Conventions {
 		String reactiveSuffix = "";
 
 		if (resolvedType.isArray()) {
-			valueClass = resolvedType.componentType();
+			valueClass = resolvedType.getComponentType();
 			pluralize = true;
 		}
 		else if (Collection.class.isAssignableFrom(resolvedType)) {
 			valueClass = ResolvableType.forMethodReturnType(method).asCollection().resolveGeneric();
 			if (valueClass == null) {
-				if (!(value instanceof Collection<?> collection)) {
+				if (!(value instanceof Collection)) {
 					throw new IllegalArgumentException("Cannot generate variable name " +
 							"for non-typed Collection return type and a non-Collection value");
 				}
+				Collection<?> collection = (Collection<?>) value;
 				if (collection.isEmpty()) {
 					throw new IllegalArgumentException("Cannot generate variable name " +
 							"for non-typed Collection return type and an empty Collection value");
@@ -220,11 +225,11 @@ public final class Conventions {
 		if (!attributeName.contains("-")) {
 			return attributeName;
 		}
-		char[] result = new char[attributeName.length() -1]; // not completely accurate but good guess
+		char[] chars = attributeName.toCharArray();
+		char[] result = new char[chars.length -1]; // not completely accurate but good guess
 		int currPos = 0;
 		boolean upperCaseNext = false;
-		for (int i = 0; i < attributeName.length(); i++ ) {
-			char c = attributeName.charAt(i);
+		for (char c : chars) {
 			if (c == '-') {
 				upperCaseNext = true;
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ProfileValueUtils}.
+ * Unit tests for {@link ProfileValueUtils}.
  *
  * @author Sam Brannen
  * @since 3.0
@@ -46,11 +46,11 @@ class ProfileValueUtilsTests {
 		System.setProperty(NAME, VALUE);
 	}
 
-	private void assertClassIsEnabled(Class<?> testClass) {
+	private void assertClassIsEnabled(Class<?> testClass) throws Exception {
 		assertThat(ProfileValueUtils.isTestEnabledInThisEnvironment(testClass)).as("Test class [" + testClass + "] should be enabled.").isTrue();
 	}
 
-	private void assertClassIsDisabled(Class<?> testClass) {
+	private void assertClassIsDisabled(Class<?> testClass) throws Exception {
 		assertThat(ProfileValueUtils.isTestEnabledInThisEnvironment(testClass)).as("Test class [" + testClass + "] should be disabled.").isFalse();
 	}
 
@@ -81,7 +81,7 @@ class ProfileValueUtilsTests {
 	// -------------------------------------------------------------------
 
 	@Test
-	void isTestEnabledInThisEnvironmentForProvidedClass() {
+	void isTestEnabledInThisEnvironmentForProvidedClass() throws Exception {
 		assertClassIsEnabled(NonAnnotated.class);
 		assertClassIsEnabled(EnabledAnnotatedSingleValue.class);
 		assertClassIsEnabled(EnabledAnnotatedMultiValue.class);
@@ -239,12 +239,12 @@ class ProfileValueUtilsTests {
 
 	@IfProfileValue(name = NAME, value = VALUE)
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface MetaEnabled {
+	private static @interface MetaEnabled {
 	}
 
 	@IfProfileValue(name = NAME, value = VALUE + "X")
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface MetaDisabled {
+	private static @interface MetaDisabled {
 	}
 
 	@MetaEnabled
@@ -298,13 +298,13 @@ class ProfileValueUtilsTests {
 	@ProfileValueSourceConfiguration(HardCodedProfileValueSource.class)
 	@IfProfileValue(name = NAME, value = "42")
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface MetaEnabledWithCustomProfileValueSource {
+	private static @interface MetaEnabledWithCustomProfileValueSource {
 	}
 
 	@ProfileValueSourceConfiguration(HardCodedProfileValueSource.class)
 	@IfProfileValue(name = NAME, value = "13")
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface MetaDisabledWithCustomProfileValueSource {
+	private static @interface MetaDisabledWithCustomProfileValueSource {
 	}
 
 	@MetaEnabledWithCustomProfileValueSource

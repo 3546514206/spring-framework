@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,47 +19,39 @@ package org.springframework.expression.spel.standard;
 import org.springframework.lang.Nullable;
 
 /**
- * Holder for a kind of token, the associated data, and its position in the input
- * data stream (start/end).
+ * Holder for a kind of token, the associated data and its position in the input data
+ * stream (start/end).
  *
  * @author Andy Clement
  * @since 3.0
  */
 class Token {
 
-	final TokenKind kind;
+	TokenKind kind;
 
 	@Nullable
-	final String data;
+	String data;
 
-	final int startPos;
+	int startPos;  // index of first character
 
-	final int endPos;
+	int endPos;  // index of char after the last character
 
 
 	/**
 	 * Constructor for use when there is no particular data for the token
-	 * (e.g. TRUE or '+').
-	 * @param tokenKind the kind of token
-	 * @param startPos the exact start position
-	 * @param endPos the index of the last character
+	 * (e.g. TRUE or '+')
+	 * @param startPos the exact start
+	 * @param endPos the index to the last character
 	 */
 	Token(TokenKind tokenKind, int startPos, int endPos) {
-		this(tokenKind, null, startPos, endPos);
-	}
-
-	/**
-	 * Constructor for use when there is data for the token.
-	 * @param tokenKind the kind of token
-	 * @param tokenData the data for the token
-	 * @param startPos the exact start position
-	 * @param endPos the index of the last character
-	 */
-	Token(TokenKind tokenKind, char[] tokenData, int startPos, int endPos) {
 		this.kind = tokenKind;
-		this.data = (tokenData != null ? new String(tokenData) : null);
 		this.startPos = startPos;
 		this.endPos = endPos;
+	}
+
+	Token(TokenKind tokenKind, char[] tokenData, int startPos, int endPos) {
+		this(tokenKind, startPos, endPos);
+		this.data = new String(tokenData);
 	}
 
 
@@ -73,7 +65,7 @@ class Token {
 
 	public boolean isNumericRelationalOperator() {
 		return (this.kind == TokenKind.GT || this.kind == TokenKind.GE || this.kind == TokenKind.LT ||
-				this.kind == TokenKind.LE || this.kind == TokenKind.EQ || this.kind == TokenKind.NE);
+				this.kind == TokenKind.LE || this.kind==TokenKind.EQ || this.kind==TokenKind.NE);
 	}
 
 	public String stringValue() {
@@ -95,14 +87,14 @@ class Token {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append('[').append(this.kind);
+		StringBuilder s = new StringBuilder();
+		s.append("[").append(this.kind.toString());
 		if (this.kind.hasPayload()) {
-			sb.append(':').append(this.data);
+			s.append(":").append(this.data);
 		}
-		sb.append(']');
-		sb.append('(').append(this.startPos).append(',').append(this.endPos).append(')');
-		return sb.toString();
+		s.append("]");
+		s.append("(").append(this.startPos).append(",").append(this.endPos).append(")");
+		return s.toString();
 	}
 
 }

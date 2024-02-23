@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,13 @@
 
 package org.springframework.http.converter.json;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-
 import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.cfg.DeserializerFactoryConfig;
 import com.fasterxml.jackson.databind.cfg.SerializerFactoryConfig;
 import com.fasterxml.jackson.databind.deser.BasicDeserializerFactory;
@@ -57,12 +38,18 @@ import com.fasterxml.jackson.databind.ser.std.NumberSerializer;
 import com.fasterxml.jackson.databind.type.SimpleType;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.FatalBeanException;
 
-import org.springframework.http.ProblemDetail;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Test cases for {@link Jackson2ObjectMapperFactoryBean}.
@@ -83,13 +70,14 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 
 
 	@Test
-	void unknownFeature() {
+	public void unknownFeature() {
 		this.factory.setFeaturesToEnable(Boolean.TRUE);
-		assertThatIllegalArgumentException().isThrownBy(this.factory::afterPropertiesSet);
+		assertThatExceptionOfType(FatalBeanException.class).isThrownBy(
+				this.factory::afterPropertiesSet);
 	}
 
 	@Test
-	void booleanSetters() {
+	public void booleanSetters() {
 		this.factory.setAutoDetectFields(false);
 		this.factory.setAutoDetectGettersSetters(false);
 		this.factory.setDefaultViewInclusion(false);
@@ -110,34 +98,34 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void defaultSerializationInclusion() {
+	public void defaultSerializationInclusion() {
 		this.factory.afterPropertiesSet();
 		assertThat(this.factory.getObject().getSerializationConfig().getSerializationInclusion()).isSameAs(Include.ALWAYS);
 	}
 
 	@Test
-	void nonNullSerializationInclusion() {
+	public void nonNullSerializationInclusion() {
 		this.factory.setSerializationInclusion(Include.NON_NULL);
 		this.factory.afterPropertiesSet();
 		assertThat(this.factory.getObject().getSerializationConfig().getSerializationInclusion()).isSameAs(Include.NON_NULL);
 	}
 
 	@Test
-	void nonDefaultSerializationInclusion() {
+	public void nonDefaultSerializationInclusion() {
 		this.factory.setSerializationInclusion(Include.NON_DEFAULT);
 		this.factory.afterPropertiesSet();
 		assertThat(this.factory.getObject().getSerializationConfig().getSerializationInclusion()).isSameAs(Include.NON_DEFAULT);
 	}
 
 	@Test
-	void nonEmptySerializationInclusion() {
+	public void nonEmptySerializationInclusion() {
 		this.factory.setSerializationInclusion(Include.NON_EMPTY);
 		this.factory.afterPropertiesSet();
 		assertThat(this.factory.getObject().getSerializationConfig().getSerializationInclusion()).isSameAs(Include.NON_EMPTY);
 	}
 
 	@Test
-	void setDateFormat() {
+	public void setDateFormat() {
 		this.factory.setDateFormat(this.dateFormat);
 		this.factory.afterPropertiesSet();
 
@@ -146,7 +134,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setSimpleDateFormat() {
+	public void setSimpleDateFormat() {
 		this.factory.setSimpleDateFormat(DATE_FORMAT);
 		this.factory.afterPropertiesSet();
 
@@ -155,7 +143,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setLocale() {
+	public void setLocale() {
 		this.factory.setLocale(Locale.FRENCH);
 		this.factory.afterPropertiesSet();
 
@@ -164,7 +152,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setTimeZone() {
+	public void setTimeZone() {
 		TimeZone timeZone = TimeZone.getTimeZone("Europe/Paris");
 
 		this.factory.setTimeZone(timeZone);
@@ -175,7 +163,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setTimeZoneWithInvalidZoneId() {
+	public void setTimeZoneWithInvalidZoneId() {
 		this.factory.setTimeZone(TimeZone.getTimeZone("bogusZoneId"));
 		this.factory.afterPropertiesSet();
 
@@ -185,7 +173,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setModules() {
+	public void setModules() {
 		NumberSerializer serializer = new NumberSerializer(Integer.class);
 		SimpleModule module = new SimpleModule();
 		module.addSerializer(Integer.class, serializer);
@@ -199,7 +187,43 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void simpleSetup() {
+	public void defaultModules() throws JsonProcessingException, UnsupportedEncodingException {
+		this.factory.afterPropertiesSet();
+		ObjectMapper objectMapper = this.factory.getObject();
+
+		Long timestamp = 1322903730000L;
+		DateTime dateTime = new DateTime(timestamp, DateTimeZone.UTC);
+		assertThat(new String(objectMapper.writeValueAsBytes(dateTime), "UTF-8")).isEqualTo(timestamp.toString());
+	}
+
+	@Test // SPR-12634
+	@SuppressWarnings("unchecked")
+	public void customizeDefaultModulesWithModuleClass() throws JsonProcessingException, UnsupportedEncodingException {
+		this.factory.setModulesToInstall(CustomIntegerModule.class);
+		this.factory.afterPropertiesSet();
+		ObjectMapper objectMapper = this.factory.getObject();
+
+		DateTime dateTime = new DateTime(1322903730000L, DateTimeZone.UTC);
+		assertThat(new String(objectMapper.writeValueAsBytes(dateTime), "UTF-8")).isEqualTo("1322903730000");
+		assertThat(new String(objectMapper.writeValueAsBytes(new Integer(4)), "UTF-8")).contains("customid");
+	}
+
+	@Test // SPR-12634
+	public void customizeDefaultModulesWithSerializer() throws JsonProcessingException, UnsupportedEncodingException {
+		Map<Class<?>, JsonSerializer<?>> serializers = new HashMap<>();
+		serializers.put(Integer.class, new CustomIntegerSerializer());
+
+		this.factory.setSerializersByType(serializers);
+		this.factory.afterPropertiesSet();
+		ObjectMapper objectMapper = this.factory.getObject();
+
+		DateTime dateTime = new DateTime(1322903730000L, DateTimeZone.UTC);
+		assertThat(new String(objectMapper.writeValueAsBytes(dateTime), "UTF-8")).isEqualTo("1322903730000");
+		assertThat(new String(objectMapper.writeValueAsBytes(new Integer(4)), "UTF-8")).contains("customid");
+	}
+
+	@Test
+	public void simpleSetup() {
 		this.factory.afterPropertiesSet();
 
 		assertThat(this.factory.getObject()).isNotNull();
@@ -208,8 +232,8 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void undefinedObjectType() {
-		assertThat(this.factory.getObjectType()).isNull();
+	public void undefinedObjectType() {
+		assertThat((Object) this.factory.getObjectType()).isNull();
 	}
 
 	private static SerializerFactoryConfig getSerializerFactoryConfig(ObjectMapper objectMapper) {
@@ -221,8 +245,8 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void propertyNamingStrategy() {
-		PropertyNamingStrategy strategy = new PropertyNamingStrategy.SnakeCaseStrategy();
+	public void propertyNamingStrategy() {
+		PropertyNamingStrategy strategy = new PropertyNamingStrategy.LowerCaseWithUnderscoresStrategy();
 		this.factory.setPropertyNamingStrategy(strategy);
 		this.factory.afterPropertiesSet();
 
@@ -231,7 +255,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setMixIns() {
+	public void setMixIns() {
 		Class<?> target = String.class;
 		Class<?> mixinSource = Object.class;
 		Map<Class<?>, Class<?>> mixIns = new HashMap<>();
@@ -240,15 +264,14 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 		this.factory.setModules(Collections.emptyList());
 		this.factory.setMixIns(mixIns);
 		this.factory.afterPropertiesSet();
-		ObjectMapper mapper = this.factory.getObject();
+		ObjectMapper objectMapper = this.factory.getObject();
 
-		assertThat(mapper.mixInCount()).isEqualTo(2);
-		assertThat(mapper.findMixInClassFor(ProblemDetail.class)).isAssignableFrom(ProblemDetailJacksonXmlMixin.class);
-		assertThat(mapper.findMixInClassFor(target)).isSameAs(mixinSource);
+		assertThat(objectMapper.mixInCount()).isEqualTo(1);
+		assertThat(objectMapper.findMixInClassFor(target)).isSameAs(mixinSource);
 	}
 
 	@Test
-	void setFilters() throws JsonProcessingException {
+	public void setFilters() throws JsonProcessingException {
 		this.factory.setFilters(new SimpleFilterProvider().setFailOnUnknownId(false));
 		this.factory.afterPropertiesSet();
 		ObjectMapper objectMapper = this.factory.getObject();
@@ -260,7 +283,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void completeSetup() {
+	public void completeSetup() {
 		NopAnnotationIntrospector annotationIntrospector = NopAnnotationIntrospector.instance;
 		ObjectMapper objectMapper = new ObjectMapper();
 
@@ -324,7 +347,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setObjectMapper() {
+	public void setObjectMapper() {
 		this.factory.setObjectMapper(new XmlMapper());
 		this.factory.afterPropertiesSet();
 
@@ -334,7 +357,7 @@ public class Jackson2ObjectMapperFactoryBeanTests {
 	}
 
 	@Test
-	void setCreateXmlMapper() {
+	public void setCreateXmlMapper() {
 		this.factory.setCreateXmlMapper(true);
 		this.factory.afterPropertiesSet();
 

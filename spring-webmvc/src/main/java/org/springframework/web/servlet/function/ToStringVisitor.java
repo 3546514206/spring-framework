@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 package org.springframework.web.servlet.function;
 
-import java.util.Map;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
+
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpMethod;
 
 /**
  * Implementation of {@link RouterFunctions.Visitor} that creates a formatted
@@ -39,7 +38,6 @@ class ToStringVisitor implements RouterFunctions.Visitor, RequestPredicates.Visi
 
 
 	// RouterFunctions.Visitor
-
 	@Override
 	public void startNested(RequestPredicate predicate) {
 		indent();
@@ -70,19 +68,16 @@ class ToStringVisitor implements RouterFunctions.Visitor, RequestPredicates.Visi
 	}
 
 	@Override
-	public void attributes(Map<String, Object> attributes) {
-	}
-
-	@Override
 	public void unknown(RouterFunction<?> routerFunction) {
 		indent();
 		this.builder.append(routerFunction);
 	}
 
 	private void indent() {
-		this.builder.append(" ".repeat(Math.max(0, this.indent)));
+		for (int i = 0; i < this.indent; i++) {
+			this.builder.append(' ');
+		}
 	}
-
 
 	// RequestPredicates.Visitor
 
@@ -161,7 +156,6 @@ class ToStringVisitor implements RouterFunctions.Visitor, RequestPredicates.Visi
 	public void unknown(RequestPredicate predicate) {
 		this.builder.append(predicate);
 	}
-
 	@Override
 	public String toString() {
 		String result = this.builder.toString();
@@ -170,5 +164,4 @@ class ToStringVisitor implements RouterFunctions.Visitor, RequestPredicates.Visi
 		}
 		return result;
 	}
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link StreamUtils}.
@@ -55,52 +57,58 @@ class StreamUtilsTests {
 
 	@Test
 	void copyToByteArray() throws Exception {
-		InputStream inputStream = new ByteArrayInputStream(bytes);
+		InputStream inputStream = spy(new ByteArrayInputStream(bytes));
 		byte[] actual = StreamUtils.copyToByteArray(inputStream);
 		assertThat(actual).isEqualTo(bytes);
+		verify(inputStream, never()).close();
 	}
 
 	@Test
 	void copyToString() throws Exception {
 		Charset charset = Charset.defaultCharset();
-		InputStream inputStream = new ByteArrayInputStream(string.getBytes(charset));
+		InputStream inputStream = spy(new ByteArrayInputStream(string.getBytes(charset)));
 		String actual = StreamUtils.copyToString(inputStream, charset);
 		assertThat(actual).isEqualTo(string);
+		verify(inputStream, never()).close();
 	}
 
 	@Test
 	void copyBytes() throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ByteArrayOutputStream out = spy(new ByteArrayOutputStream());
 		StreamUtils.copy(bytes, out);
 		assertThat(out.toByteArray()).isEqualTo(bytes);
+		verify(out, never()).close();
 	}
 
 	@Test
 	void copyString() throws Exception {
 		Charset charset = Charset.defaultCharset();
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ByteArrayOutputStream out = spy(new ByteArrayOutputStream());
 		StreamUtils.copy(string, charset, out);
 		assertThat(out.toByteArray()).isEqualTo(string.getBytes(charset));
+		verify(out, never()).close();
 	}
 
 	@Test
 	void copyStream() throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ByteArrayOutputStream out = spy(new ByteArrayOutputStream());
 		StreamUtils.copy(new ByteArrayInputStream(bytes), out);
 		assertThat(out.toByteArray()).isEqualTo(bytes);
+		verify(out, never()).close();
 	}
 
 	@Test
 	void copyRange() throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ByteArrayOutputStream out = spy(new ByteArrayOutputStream());
 		StreamUtils.copyRange(new ByteArrayInputStream(bytes), out, 0, 100);
 		byte[] range = Arrays.copyOfRange(bytes, 0, 101);
 		assertThat(out.toByteArray()).isEqualTo(range);
+		verify(out, never()).close();
 	}
 
 	@Test
 	void nonClosingInputStream() throws Exception {
-		InputStream source = mock();
+		InputStream source = mock(InputStream.class);
 		InputStream nonClosing = StreamUtils.nonClosing(source);
 		nonClosing.read();
 		nonClosing.read(bytes);
@@ -115,7 +123,7 @@ class StreamUtilsTests {
 
 	@Test
 	void nonClosingOutputStream() throws Exception {
-		OutputStream source = mock();
+		OutputStream source = mock(OutputStream.class);
 		OutputStream nonClosing = StreamUtils.nonClosing(source);
 		nonClosing.write(1);
 		nonClosing.write(bytes);

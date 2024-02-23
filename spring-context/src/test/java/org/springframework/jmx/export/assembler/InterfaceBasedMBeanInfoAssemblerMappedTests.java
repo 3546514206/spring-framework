@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,12 +31,12 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Rob Harrop
  * @author Chris Beams
  */
-class InterfaceBasedMBeanInfoAssemblerMappedTests extends AbstractJmxAssemblerTests {
+public class InterfaceBasedMBeanInfoAssemblerMappedTests extends AbstractJmxAssemblerTests {
 
 	protected static final String OBJECT_NAME = "bean:name=testBean4";
 
 	@Test
-	void testGetAgeIsReadOnly() throws Exception {
+	public void testGetAgeIsReadOnly() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 		ModelMBeanAttributeInfo attr = info.getAttribute(AGE_ATTRIBUTE);
 
@@ -45,19 +45,19 @@ class InterfaceBasedMBeanInfoAssemblerMappedTests extends AbstractJmxAssemblerTe
 	}
 
 	@Test
-	void testWithUnknownClass() {
+	public void testWithUnknownClass() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				getWithMapping("com.foo.bar.Unknown"));
 	}
 
 	@Test
-	void testWithNonInterface() {
+	public void testWithNonInterface() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				getWithMapping("JmxTestBean"));
 	}
 
 	@Test
-	void testWithFallThrough() throws Exception {
+	public void testWithFallThrough() throws Exception {
 		InterfaceBasedMBeanInfoAssembler assembler =
 				getWithMapping("foobar", "org.springframework.jmx.export.assembler.ICustomJmxBean");
 		assembler.setManagedInterfaces(new Class<?>[] {IAdditionalTestMethods.class});
@@ -69,7 +69,7 @@ class InterfaceBasedMBeanInfoAssemblerMappedTests extends AbstractJmxAssemblerTe
 	}
 
 	@Test
-	void testNickNameIsExposed() throws Exception {
+	public void testNickNameIsExposed() throws Exception {
 		ModelMBeanInfo inf = (ModelMBeanInfo) getMBeanInfo();
 		MBeanAttributeInfo attr = inf.getAttribute("NickName");
 
@@ -92,7 +92,7 @@ class InterfaceBasedMBeanInfoAssemblerMappedTests extends AbstractJmxAssemblerTe
 	}
 
 	@Override
-	protected MBeanInfoAssembler getAssembler() {
+	protected MBeanInfoAssembler getAssembler() throws Exception {
 		return getWithMapping(
 				"org.springframework.jmx.export.assembler.IAdditionalTestMethods, " +
 				"org.springframework.jmx.export.assembler.ICustomJmxBean");

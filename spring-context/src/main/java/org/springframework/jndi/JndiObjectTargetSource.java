@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.springframework.lang.Nullable;
  * &lt;/bean&gt;
  *
  * &lt;bean id="queueConnectionFactory" class="org.springframework.aop.framework.ProxyFactoryBean"&gt;
- *   &lt;property name="proxyInterfaces" value="jakarta.jms.QueueConnectionFactory"/&gt;
+ *   &lt;property name="proxyInterfaces" value="javax.jms.QueueConnectionFactory"/&gt;
  *   &lt;property name="targetSource" ref="queueConnectionFactoryTarget"/&gt;
  * &lt;/bean&gt;</pre>
  *
@@ -146,6 +146,10 @@ public class JndiObjectTargetSource extends JndiObjectLocator implements TargetS
 		catch (NamingException ex) {
 			throw new JndiLookupFailureException("JndiObjectTargetSource failed to obtain new target object", ex);
 		}
+	}
+
+	@Override
+	public void releaseTarget(Object target) {
 	}
 
 }

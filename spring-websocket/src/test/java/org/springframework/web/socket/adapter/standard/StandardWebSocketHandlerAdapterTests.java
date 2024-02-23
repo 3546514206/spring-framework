@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@ package org.springframework.web.socket.adapter.standard;
 
 import java.net.URI;
 
-import jakarta.websocket.CloseReason;
-import jakarta.websocket.CloseReason.CloseCodes;
-import jakarta.websocket.MessageHandler;
-import jakarta.websocket.Session;
+import javax.websocket.CloseReason;
+import javax.websocket.CloseReason.CloseCodes;
+import javax.websocket.MessageHandler;
+import javax.websocket.Session;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.socket.CloseStatus;
@@ -35,23 +37,31 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link StandardWebSocketHandlerAdapter}.
+ * Test fixture for {@link org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter}.
  *
  * @author Rossen Stoyanchev
  */
-class StandardWebSocketHandlerAdapterTests {
+public class StandardWebSocketHandlerAdapterTests {
 
-	private WebSocketHandler webSocketHandler = mock();
+	private StandardWebSocketHandlerAdapter adapter;
 
-	private Session session = mock();
+	private WebSocketHandler webSocketHandler;
 
-	private StandardWebSocketSession webSocketSession = new StandardWebSocketSession(null, null, null, null);
+	private StandardWebSocketSession webSocketSession;
 
-	private StandardWebSocketHandlerAdapter adapter = new StandardWebSocketHandlerAdapter(this.webSocketHandler, this.webSocketSession);
+	private Session session;
 
+
+	@BeforeEach
+	public void setup() {
+		this.session = mock(Session.class);
+		this.webSocketHandler = mock(WebSocketHandler.class);
+		this.webSocketSession = new StandardWebSocketSession(null, null, null, null);
+		this.adapter = new StandardWebSocketHandlerAdapter(this.webSocketHandler, this.webSocketSession);
+	}
 
 	@Test
-	void onOpen() throws Throwable {
+	public void onOpen() throws Throwable {
 		URI uri = URI.create("https://example.org");
 		given(this.session.getRequestURI()).willReturn(uri);
 		this.adapter.onOpen(this.session, null);
@@ -64,13 +74,13 @@ class StandardWebSocketHandlerAdapterTests {
 	}
 
 	@Test
-	void onClose() throws Throwable {
+	public void onClose() throws Throwable {
 		this.adapter.onClose(this.session, new CloseReason(CloseCodes.NORMAL_CLOSURE, "reason"));
 		verify(this.webSocketHandler).afterConnectionClosed(this.webSocketSession, CloseStatus.NORMAL.withReason("reason"));
 	}
 
 	@Test
-	void onError() throws Throwable {
+	public void onError() throws Throwable {
 		Exception exception = new Exception();
 		this.adapter.onError(this.session, exception);
 		verify(this.webSocketHandler).handleTransportError(this.webSocketSession, exception);

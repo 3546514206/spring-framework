@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ abstract class AbstractMockWebServerTests {
 	private MockResponse postRequest(RecordedRequest request, String expectedRequestContent,
 			String location, String contentType, byte[] responseBody) {
 
-		assertThat(request.getHeaders().values(CONTENT_LENGTH)).hasSize(1);
+		assertThat(request.getHeaders().values(CONTENT_LENGTH).size()).isEqualTo(1);
 		assertThat(Integer.parseInt(request.getHeader(CONTENT_LENGTH))).as("Invalid request content-length").isGreaterThan(0);
 		String requestContentType = request.getHeader(CONTENT_TYPE);
 		assertThat(requestContentType).as("No content-type").isNotNull();
@@ -113,10 +113,7 @@ abstract class AbstractMockWebServerTests {
 
 	private MockResponse jsonPostRequest(RecordedRequest request, String location, String contentType) {
 		if (request.getBodySize() > 0) {
-			String contentLength = request.getHeader(CONTENT_LENGTH);
-			if (contentLength != null) {
-				assertThat(Integer.parseInt(contentLength)).as("Invalid request content-length").isGreaterThan(0);
-			}
+			assertThat(Integer.parseInt(request.getHeader(CONTENT_LENGTH))).as("Invalid request content-length").isGreaterThan(0);
 			assertThat(request.getHeader(CONTENT_TYPE)).as("No content-type").isNotNull();
 		}
 		return new MockResponse()
@@ -173,7 +170,7 @@ abstract class AbstractMockWebServerTests {
 		assertThat(line).contains("name=\"" + name + "\"");
 		assertThat(buffer.readUtf8Line()).startsWith("Content-Type: " + contentType);
 		assertThat(buffer.readUtf8Line()).isEqualTo("Content-Length: " + value.length());
-		assertThat(buffer.readUtf8Line()).isEmpty();
+		assertThat(buffer.readUtf8Line()).isEqualTo("");
 		assertThat(buffer.readUtf8Line()).isEqualTo(value);
 	}
 
@@ -187,12 +184,12 @@ abstract class AbstractMockWebServerTests {
 		assertThat(line).contains("filename=\"" + filename + "\"");
 		assertThat(buffer.readUtf8Line()).startsWith("Content-Type: " + contentType);
 		assertThat(buffer.readUtf8Line()).startsWith("Content-Length: ");
-		assertThat(buffer.readUtf8Line()).isEmpty();
+		assertThat(buffer.readUtf8Line()).isEqualTo("");
 		assertThat(buffer.readUtf8Line()).isNotNull();
 	}
 
 	private MockResponse formRequest(RecordedRequest request) {
-		assertThat(request.getHeader(CONTENT_TYPE)).isEqualTo("application/x-www-form-urlencoded");
+		assertThat(request.getHeader(CONTENT_TYPE)).isEqualTo("application/x-www-form-urlencoded;charset=UTF-8");
 		assertThat(request.getBody().readUtf8()).contains("name+1=value+1", "name+2=value+2%2B1", "name+2=value+2%2B2");
 		return new MockResponse().setResponseCode(200);
 	}
@@ -235,7 +232,7 @@ abstract class AbstractMockWebServerTests {
 	protected class TestDispatcher extends Dispatcher {
 
 		@Override
-		public MockResponse dispatch(RecordedRequest request) {
+		public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
 			try {
 				byte[] helloWorldBytes = helloWorld.getBytes(StandardCharsets.UTF_8);
 

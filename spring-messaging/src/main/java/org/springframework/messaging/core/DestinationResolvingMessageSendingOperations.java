@@ -16,11 +16,11 @@
 
 package org.springframework.messaging.core;
 
-import java.util.Map;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessagingException;
+
+import java.util.Map;
 
 /**
  * Extends {@link MessageSendingOperations} and adds operations for sending messages
@@ -57,9 +57,10 @@ public interface DestinationResolvingMessageSendingOperations<D> extends Message
 	 * {@link org.springframework.messaging.converter.MessageConverter},
 	 * wrap it as a message with the given headers and send it to the resolved
 	 * destination.
+	 *
 	 * @param destinationName the destination name to resolve
-	 * @param payload the Object to use as payload
- 	 * @param headers the headers for the message to send
+	 * @param payload         the Object to use as payload
+	 * @param headers         headers for the message to send
 	 */
 	<T> void convertAndSend(String destinationName, T payload, @Nullable Map<String, Object> headers)
 			throws MessagingException;
@@ -85,7 +86,7 @@ public interface DestinationResolvingMessageSendingOperations<D> extends Message
 	 * and send the resulting message to the resolved destination.
 	 * @param destinationName the destination name to resolve
 	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 * @param headers headers for the message to send
 	 * @param postProcessor the post processor to apply to the message
 	 */
 	<T> void convertAndSend(String destinationName, T payload, @Nullable Map<String, Object> headers,

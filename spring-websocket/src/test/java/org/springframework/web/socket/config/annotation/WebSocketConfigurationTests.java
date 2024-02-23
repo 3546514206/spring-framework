@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,12 +49,10 @@ class WebSocketConfigurationTests extends AbstractWebSocketIntegrationTests {
 
 
 	@ParameterizedWebSocketTest
-	void registerWebSocketHandler(
-			WebSocketTestServer server, WebSocketClient webSocketClient, TestInfo testInfo) throws Exception {
-
+	void registerWebSocketHandler(WebSocketTestServer server, WebSocketClient webSocketClient, TestInfo testInfo) throws Exception {
 		super.setup(server, webSocketClient, testInfo);
 
-		WebSocketSession session = this.webSocketClient.execute(
+		WebSocketSession session = this.webSocketClient.doHandshake(
 				new AbstractWebSocketHandler() {}, getWsBaseUrl() + "/ws").get();
 
 		TestHandler serverHandler = this.wac.getBean(TestHandler.class);
@@ -64,12 +62,10 @@ class WebSocketConfigurationTests extends AbstractWebSocketIntegrationTests {
 	}
 
 	@ParameterizedWebSocketTest
-	void registerWebSocketHandlerWithSockJS(
-			WebSocketTestServer server, WebSocketClient webSocketClient, TestInfo testInfo) throws Exception {
-
+	void registerWebSocketHandlerWithSockJS(WebSocketTestServer server, WebSocketClient webSocketClient, TestInfo testInfo) throws Exception {
 		super.setup(server, webSocketClient, testInfo);
 
-		WebSocketSession session = this.webSocketClient.execute(
+		WebSocketSession session = this.webSocketClient.doHandshake(
 				new AbstractWebSocketHandler() {}, getWsBaseUrl() + "/sockjs/websocket").get();
 
 		TestHandler serverHandler = this.wac.getBean(TestHandler.class);
@@ -95,7 +91,7 @@ class WebSocketConfigurationTests extends AbstractWebSocketIntegrationTests {
 		}
 
 		@Bean
-		TestHandler serverHandler() {
+		public TestHandler serverHandler() {
 			return new TestHandler();
 		}
 	}
@@ -103,10 +99,10 @@ class WebSocketConfigurationTests extends AbstractWebSocketIntegrationTests {
 
 	private static class TestHandler extends AbstractWebSocketHandler {
 
-		private final CountDownLatch connectLatch = new CountDownLatch(1);
+		private CountDownLatch connectLatch = new CountDownLatch(1);
 
 		@Override
-		public void afterConnectionEstablished(WebSocketSession session) {
+		public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 			this.connectLatch.countDown();
 		}
 	}

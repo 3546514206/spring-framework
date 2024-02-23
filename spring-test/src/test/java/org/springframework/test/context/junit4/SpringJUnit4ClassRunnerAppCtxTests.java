@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,25 @@
 
 package org.springframework.test.context.junit4;
 
-import jakarta.annotation.Resource;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.testfixture.beans.Employee;
-import org.springframework.beans.testfixture.beans.Pet;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 import org.springframework.test.context.support.GenericXmlContextLoader;
+import org.springframework.tests.sample.beans.Employee;
+import org.springframework.tests.sample.beans.Pet;
+
+import javax.annotation.Resource;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -78,7 +78,7 @@ public class SpringJUnit4ClassRunnerAppCtxTests implements ApplicationContextAwa
 
 	/**
 	 * Default resource path for the application context configuration for
-	 * {@link SpringJUnit4ClassRunnerAppCtxTests}: {@value}
+	 * {@link SpringJUnit4ClassRunnerAppCtxTests}: {@value #DEFAULT_CONTEXT_RESOURCE_PATH}
 	 */
 	public static final String DEFAULT_CONTEXT_RESOURCE_PATH =
 			"/org/springframework/test/context/junit4/SpringJUnit4ClassRunnerAppCtxTests-context.xml";
@@ -163,8 +163,7 @@ public class SpringJUnit4ClassRunnerAppCtxTests implements ApplicationContextAwa
 
 	@Test
 	public void verifyBeanNameSet() {
-		assertThat(this.beanName).as("The bean name of this test instance should have been set due to BeanNameAware semantics.")
-				.startsWith(getClass().getName());
+		assertThat(this.beanName.startsWith(getClass().getName())).as("The bean name of this test instance should have been set due to BeanNameAware semantics.").isTrue();
 	}
 
 	@Test
@@ -202,7 +201,7 @@ public class SpringJUnit4ClassRunnerAppCtxTests implements ApplicationContextAwa
 		assertThat(this.literalFieldValue).as("Literal @Value field should have been autowired").isNotNull();
 		assertThat(this.spelFieldValue).as("SpEL @Value field should have been autowired.").isNotNull();
 		assertThat(this.literalFieldValue).isEqualTo("enigma");
-		assertThat(this.spelFieldValue).isTrue();
+		assertThat(this.spelFieldValue).isEqualTo(Boolean.TRUE);
 	}
 
 	@Test
@@ -210,7 +209,7 @@ public class SpringJUnit4ClassRunnerAppCtxTests implements ApplicationContextAwa
 		assertThat(this.literalParameterValue).as("Literal @Value method parameter should have been autowired.").isNotNull();
 		assertThat(this.spelParameterValue).as("SpEL @Value method parameter should have been autowired.").isNotNull();
 		assertThat(this.literalParameterValue).isEqualTo("enigma");
-		assertThat(this.spelParameterValue).isTrue();
+		assertThat(this.spelParameterValue).isEqualTo(Boolean.TRUE);
 	}
 
 	@Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
@@ -29,7 +27,8 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.InternalResourceView;
 import org.springframework.web.servlet.view.RedirectView;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ViewMethodReturnValueHandlerTests {
+public class ViewMethodReturnValueHandlerTests {
 
 	private ViewMethodReturnValueHandler handler;
 
@@ -48,7 +47,7 @@ class ViewMethodReturnValueHandlerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.handler = new ViewMethodReturnValueHandler();
 		this.mavContainer = new ModelAndViewContainer();
 		this.webRequest = new ServletWebRequest(new MockHttpServletRequest());
@@ -56,12 +55,12 @@ class ViewMethodReturnValueHandlerTests {
 
 
 	@Test
-	void supportsReturnType() throws Exception {
+	public void supportsReturnType() throws Exception {
 		assertThat(this.handler.supportsReturnType(createReturnValueParam("view"))).isTrue();
 	}
 
 	@Test
-	void returnView() throws Exception {
+	public void returnView() throws Exception {
 		InternalResourceView view = new InternalResourceView("testView");
 		this.handler.handleReturnValue(view, createReturnValueParam("view"), this.mavContainer, this.webRequest);
 
@@ -69,7 +68,7 @@ class ViewMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void returnViewRedirect() throws Exception {
+	public void returnViewRedirect() throws Exception {
 		RedirectView redirectView = new RedirectView("testView");
 		ModelMap redirectModel = new RedirectAttributesModelMap();
 		this.mavContainer.setRedirectModel(redirectModel);

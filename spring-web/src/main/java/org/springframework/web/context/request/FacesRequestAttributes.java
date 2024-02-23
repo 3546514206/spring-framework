@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ package org.springframework.web.context.request;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import jakarta.faces.context.ExternalContext;
-import jakarta.faces.context.FacesContext;
+import javax.faces.context.ExternalContext;
+import javax.faces.context.FacesContext;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -30,7 +31,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.util.WebUtils;
 
 /**
- * {@link RequestAttributes} adapter for a JSF {@link jakarta.faces.context.FacesContext}.
+ * {@link RequestAttributes} adapter for a JSF {@link javax.faces.context.FacesContext}.
  * Used as default in a JSF environment, wrapping the current FacesContext.
  *
  * <p><b>NOTE:</b> In contrast to {@link ServletRequestAttributes}, this variant does
@@ -43,9 +44,9 @@ import org.springframework.web.util.WebUtils;
  *
  * @author Juergen Hoeller
  * @since 2.5.2
- * @see jakarta.faces.context.FacesContext#getExternalContext()
- * @see jakarta.faces.context.ExternalContext#getRequestMap()
- * @see jakarta.faces.context.ExternalContext#getSessionMap()
+ * @see javax.faces.context.FacesContext#getExternalContext()
+ * @see javax.faces.context.ExternalContext#getRequestMap()
+ * @see javax.faces.context.ExternalContext#getSessionMap()
  * @see RequestContextHolder#currentRequestAttributes()
  */
 public class FacesRequestAttributes implements RequestAttributes {
@@ -61,7 +62,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 	/**
 	 * Create a new FacesRequestAttributes adapter for the given FacesContext.
 	 * @param facesContext the current FacesContext
-	 * @see jakarta.faces.context.FacesContext#getCurrentInstance()
+	 * @see javax.faces.context.FacesContext#getCurrentInstance()
 	 */
 	public FacesRequestAttributes(FacesContext facesContext) {
 		Assert.notNull(facesContext, "FacesContext must not be null");
@@ -78,7 +79,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 
 	/**
 	 * Return the JSF ExternalContext that this adapter operates on.
-	 * @see jakarta.faces.context.FacesContext#getExternalContext()
+	 * @see javax.faces.context.FacesContext#getExternalContext()
 	 */
 	protected final ExternalContext getExternalContext() {
 		return getFacesContext().getExternalContext();
@@ -131,26 +132,60 @@ public class FacesRequestAttributes implements RequestAttributes {
 
 	@Override
 	public Object resolveReference(String key) {
-		return switch (key) {
-			case REFERENCE_REQUEST -> getExternalContext().getRequest();
-			case REFERENCE_SESSION -> getExternalContext().getSession(true);
-			case "application" -> getExternalContext().getContext();
-			case "requestScope" -> getExternalContext().getRequestMap();
-			case "sessionScope" -> getExternalContext().getSessionMap();
-			case "applicationScope" -> getExternalContext().getApplicationMap();
-			case "facesContext" -> getFacesContext();
-			case "cookie" -> getExternalContext().getRequestCookieMap();
-			case "header" -> getExternalContext().getRequestHeaderMap();
-			case "headerValues" -> getExternalContext().getRequestHeaderValuesMap();
-			case "param" -> getExternalContext().getRequestParameterMap();
-			case "paramValues" -> getExternalContext().getRequestParameterValuesMap();
-			case "initParam" -> getExternalContext().getInitParameterMap();
-			case "view" -> getFacesContext().getViewRoot();
-			case "viewScope" -> getFacesContext().getViewRoot().getViewMap();
-			case "flash" -> getExternalContext().getFlash();
-			case "resource" -> getFacesContext().getApplication().getResourceHandler();
-			default -> null;
-		};
+		if (REFERENCE_REQUEST.equals(key)) {
+			return getExternalContext().getRequest();
+		}
+		else if (REFERENCE_SESSION.equals(key)) {
+			return getExternalContext().getSession(true);
+		}
+		else if ("application".equals(key)) {
+			return getExternalContext().getContext();
+		}
+		else if ("requestScope".equals(key)) {
+			return getExternalContext().getRequestMap();
+		}
+		else if ("sessionScope".equals(key)) {
+			return getExternalContext().getSessionMap();
+		}
+		else if ("applicationScope".equals(key)) {
+			return getExternalContext().getApplicationMap();
+		}
+		else if ("facesContext".equals(key)) {
+			return getFacesContext();
+		}
+		else if ("cookie".equals(key)) {
+			return getExternalContext().getRequestCookieMap();
+		}
+		else if ("header".equals(key)) {
+			return getExternalContext().getRequestHeaderMap();
+		}
+		else if ("headerValues".equals(key)) {
+			return getExternalContext().getRequestHeaderValuesMap();
+		}
+		else if ("param".equals(key)) {
+			return getExternalContext().getRequestParameterMap();
+		}
+		else if ("paramValues".equals(key)) {
+			return getExternalContext().getRequestParameterValuesMap();
+		}
+		else if ("initParam".equals(key)) {
+			return getExternalContext().getInitParameterMap();
+		}
+		else if ("view".equals(key)) {
+			return getFacesContext().getViewRoot();
+		}
+		else if ("viewScope".equals(key)) {
+			return getFacesContext().getViewRoot().getViewMap();
+		}
+		else if ("flash".equals(key)) {
+			return getExternalContext().getFlash();
+		}
+		else if ("resource".equals(key)) {
+			return getFacesContext().getApplication().getResourceHandler();
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override

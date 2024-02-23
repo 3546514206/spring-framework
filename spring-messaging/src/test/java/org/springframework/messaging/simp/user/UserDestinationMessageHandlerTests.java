@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,48 +16,54 @@
 
 package org.springframework.messaging.simp.user;
 
-import java.nio.charset.StandardCharsets;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-
-import org.springframework.core.testfixture.security.TestPrincipal;
-import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.StubMessageChannel;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
+import org.springframework.messaging.simp.TestPrincipal;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.messaging.simp.SimpMessageHeaderAccessor.ORIGINAL_DESTINATION;
 
 /**
- * Tests for {@link UserDestinationMessageHandler}.
+ * Unit tests for
+ * {@link org.springframework.messaging.simp.user.UserDestinationMessageHandler}.
  */
-class UserDestinationMessageHandlerTests {
+public class UserDestinationMessageHandlerTests {
 
 	private static final String SESSION_ID = "123";
 
-	private final SimpUserRegistry registry = mock();
+	private UserDestinationMessageHandler handler;
 
-	private final SubscribableChannel brokerChannel = mock();
+	private SimpUserRegistry registry;
 
-	private final UserDestinationMessageHandler handler = new UserDestinationMessageHandler(
-			new StubMessageChannel(), this.brokerChannel, new DefaultUserDestinationResolver(this.registry));
+	private SubscribableChannel brokerChannel;
+
+
+	@BeforeEach
+	public void setup() {
+		this.registry = mock(SimpUserRegistry.class);
+		this.brokerChannel = mock(SubscribableChannel.class);
+		UserDestinationResolver resolver = new DefaultUserDestinationResolver(this.registry);
+		this.handler = new UserDestinationMessageHandler(new StubMessageChannel(), this.brokerChannel, resolver);
+	}
 
 
 	@Test
-	@SuppressWarnings("rawtypes")
-	void handleSubscribe() {
+	public void handleSubscribe() {
 		given(this.brokerChannel.send(Mockito.any(Message.class))).willReturn(true);
 		this.handler.handleMessage(createWith(SimpMessageType.SUBSCRIBE, "joe", SESSION_ID, "/user/queue/foo"));
 
@@ -69,8 +75,7 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	@SuppressWarnings("rawtypes")
-	void handleUnsubscribe() {
+	public void handleUnsubscribe() {
 		given(this.brokerChannel.send(Mockito.any(Message.class))).willReturn(true);
 		this.handler.handleMessage(createWith(SimpMessageType.UNSUBSCRIBE, "joe", "123", "/user/queue/foo"));
 
@@ -82,8 +87,7 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	@SuppressWarnings("rawtypes")
-	void handleMessage() {
+	public void handleMessage() {
 		TestSimpUser simpUser = new TestSimpUser("joe");
 		simpUser.addSessions(new TestSimpSession("123"));
 		given(this.registry.getUser("joe")).willReturn(simpUser);
@@ -99,8 +103,7 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	@SuppressWarnings("rawtypes")
-	void handleMessageWithoutActiveSession() {
+	public void handleMessageWithoutActiveSession() {
 		this.handler.setBroadcastDestination("/topic/unresolved");
 		given(this.brokerChannel.send(Mockito.any(Message.class))).willReturn(true);
 		this.handler.handleMessage(createWith(SimpMessageType.MESSAGE, "joe", "123", "/user/joe/queue/foo"));
@@ -120,8 +123,7 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	@SuppressWarnings("rawtypes")
-	void handleMessageFromBrokerWithActiveSession() {
+	public void handleMessageFromBrokerWithActiveSession() {
 		TestSimpUser simpUser = new TestSimpUser("joe");
 		simpUser.addSessions(new TestSimpSession("123"));
 		given(this.registry.getUser("joe")).willReturn(simpUser);
@@ -149,7 +151,7 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	void handleMessageFromBrokerWithoutActiveSession() {
+	public void handleMessageFromBrokerWithoutActiveSession() {
 		this.handler.setBroadcastDestination("/topic/unresolved");
 		given(this.brokerChannel.send(Mockito.any(Message.class))).willReturn(true);
 
@@ -166,29 +168,27 @@ class UserDestinationMessageHandlerTests {
 	}
 
 	@Test
-	void ignoreMessage() {
+	public void ignoreMessage() {
 
 		// no destination
 		this.handler.handleMessage(createWith(SimpMessageType.MESSAGE, "joe", "123", null));
-		verifyNoInteractions(this.brokerChannel);
+		Mockito.verifyZeroInteractions(this.brokerChannel);
 
 		// not a user destination
 		this.handler.handleMessage(createWith(SimpMessageType.MESSAGE, "joe", "123", "/queue/foo"));
-		verifyNoInteractions(this.brokerChannel);
+		Mockito.verifyZeroInteractions(this.brokerChannel);
 
 		// subscribe + not a user destination
 		this.handler.handleMessage(createWith(SimpMessageType.SUBSCRIBE, "joe", "123", "/queue/foo"));
-		verifyNoInteractions(this.brokerChannel);
+		Mockito.verifyZeroInteractions(this.brokerChannel);
 
 		// no match on message type
 		this.handler.handleMessage(createWith(SimpMessageType.CONNECT, "joe", "123", "user/joe/queue/foo"));
-		verifyNoInteractions(this.brokerChannel);
+		Mockito.verifyZeroInteractions(this.brokerChannel);
 	}
 
 
-	private Message<?> createWith(
-			SimpMessageType type, @Nullable String user, @Nullable String sessionId, @Nullable String destination) {
-
+	private Message<?> createWith(SimpMessageType type, String user, String sessionId, String destination) {
 		SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.create(type);
 		if (destination != null) {
 			headers.setDestination(destination);

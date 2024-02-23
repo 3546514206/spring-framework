@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,13 @@
 
 package org.springframework.http;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.*;
+
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.InvalidMimeTypeException;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.util.StringUtils;
+import java.util.*;
 
 /**
  * A subclass of {@link MimeType} that adds support for quality parameters
@@ -49,6 +38,7 @@ import org.springframework.util.StringUtils;
  * @see <a href="https://tools.ietf.org/html/rfc7231#section-3.1.1.1">
  *     HTTP 1.1: Semantics and Content, section 3.1.1.1</a>
  */
+@SuppressWarnings("deprecation")
 public class MediaType extends MimeType implements Serializable {
 
 	private static final long serialVersionUID = 2069937152339670231L;
@@ -96,37 +86,6 @@ public class MediaType extends MimeType implements Serializable {
 	public static final String APPLICATION_FORM_URLENCODED_VALUE = "application/x-www-form-urlencoded";
 
 	/**
-	 * Public constant media type for {@code application/graphql+json}.
-	 * @since 5.3.19
-	 * @see <a href="https://github.com/graphql/graphql-over-http/pull/215">GraphQL over HTTP spec change</a>
-	 * @deprecated as of 6.0.3, in favor of {@link MediaType#APPLICATION_GRAPHQL_RESPONSE}
-	 */
-	@Deprecated(since = "6.0.3", forRemoval = true)
-	public static final MediaType APPLICATION_GRAPHQL;
-
-	/**
-	 * A String equivalent of {@link MediaType#APPLICATION_GRAPHQL}.
-	 * @since 5.3.19
-	 * @deprecated as of 6.0.3, in favor of {@link MediaType#APPLICATION_GRAPHQL_RESPONSE_VALUE}
-	 */
-	@Deprecated(since = "6.0.3", forRemoval = true)
-	public static final String APPLICATION_GRAPHQL_VALUE = "application/graphql+json";
-
-	/**
-	 * Public constant media type for {@code application/graphql-response+json}.
-	 * @since 6.0.3
-	 * @see <a href="https://github.com/graphql/graphql-over-http">GraphQL over HTTP spec</a>
-	 */
-	public static final MediaType APPLICATION_GRAPHQL_RESPONSE;
-
-	/**
-	 * A String equivalent of {@link MediaType#APPLICATION_GRAPHQL_RESPONSE}.
-	 * @since 6.0.3
-	 */
-	public static final String APPLICATION_GRAPHQL_RESPONSE_VALUE = "application/graphql-response+json";
-
-
-	/**
 	 * Public constant media type for {@code application/json}.
 	 */
 	public static final MediaType APPLICATION_JSON;
@@ -139,7 +98,8 @@ public class MediaType extends MimeType implements Serializable {
 
 	/**
 	 * Public constant media type for {@code application/json;charset=UTF-8}.
-	 * @deprecated as of 5.2 in favor of {@link #APPLICATION_JSON}
+	 *
+	 * @deprecated Deprecated as of Spring Framework 5.2 in favor of {@link #APPLICATION_JSON}
 	 * since major browsers like Chrome
 	 * <a href="https://bugs.chromium.org/p/chromium/issues/detail?id=438464">
 	 * now comply with the specification</a> and interpret correctly UTF-8 special
@@ -150,7 +110,7 @@ public class MediaType extends MimeType implements Serializable {
 
 	/**
 	 * A String equivalent of {@link MediaType#APPLICATION_JSON_UTF8}.
-	 * @deprecated as of 5.2 in favor of {@link #APPLICATION_JSON_VALUE}
+	 * @deprecated Deprecated as of Spring Framework 5.2 in favor of {@link #APPLICATION_JSON_VALUE}
 	 * since major browsers like Chrome
 	 * <a href="https://bugs.chromium.org/p/chromium/issues/detail?id=438464">
 	 * now comply with the specification</a> and interpret correctly UTF-8 special
@@ -200,7 +160,7 @@ public class MediaType extends MimeType implements Serializable {
 	 * @since 5.0
 	 * @see <a href="https://tools.ietf.org/html/rfc7807#section-6.1">
 	 *     Problem Details for HTTP APIs, 6.1. application/problem+json</a>
-	 * @deprecated as of 5.2 in favor of {@link #APPLICATION_PROBLEM_JSON}
+	 * @deprecated Deprecated as of Spring Framework 5.2 in favor of {@link #APPLICATION_PROBLEM_JSON}
 	 * since major browsers like Chrome
 	 * <a href="https://bugs.chromium.org/p/chromium/issues/detail?id=438464">
 	 * now comply with the specification</a> and interpret correctly UTF-8 special
@@ -212,7 +172,7 @@ public class MediaType extends MimeType implements Serializable {
 	/**
 	 * A String equivalent of {@link MediaType#APPLICATION_PROBLEM_JSON_UTF8}.
 	 * @since 5.0
-	 * @deprecated as of 5.2 in favor of {@link #APPLICATION_PROBLEM_JSON_VALUE}
+	 * @deprecated Deprecated as of Spring Framework 5.2 in favor of {@link #APPLICATION_PROBLEM_JSON_VALUE}
 	 * since major browsers like Chrome
 	 * <a href="https://bugs.chromium.org/p/chromium/issues/detail?id=438464">
 	 * now comply with the specification</a> and interpret correctly UTF-8 special
@@ -236,18 +196,6 @@ public class MediaType extends MimeType implements Serializable {
 	public static final String APPLICATION_PROBLEM_XML_VALUE = "application/problem+xml";
 
 	/**
-	 * Public constant media type for {@code application/x-protobuf}.
-	 * @since 6.0
-	 */
-	public static final MediaType APPLICATION_PROTOBUF;
-
-	/**
-	 * A String equivalent of {@link MediaType#APPLICATION_PROTOBUF}.
-	 * @since 6.0
-	 */
-	public static final String APPLICATION_PROTOBUF_VALUE = "application/x-protobuf";
-
-	/**
 	 * Public constant media type for {@code application/rss+xml}.
 	 * @since 4.3.6
 	 */
@@ -260,35 +208,15 @@ public class MediaType extends MimeType implements Serializable {
 	public static final String APPLICATION_RSS_XML_VALUE = "application/rss+xml";
 
 	/**
-	 * Public constant media type for {@code application/x-ndjson}.
-	 * @since 5.3
-	 */
-	public static final MediaType APPLICATION_NDJSON;
-
-	/**
-	 * A String equivalent of {@link MediaType#APPLICATION_NDJSON}.
-	 * @since 5.3
-	 */
-	public static final String APPLICATION_NDJSON_VALUE = "application/x-ndjson";
-
-	/**
 	 * Public constant media type for {@code application/stream+json}.
 	 * @since 5.0
-	 * @deprecated as of 5.3, see notice on {@link #APPLICATION_STREAM_JSON_VALUE}.
 	 */
-	@Deprecated
 	public static final MediaType APPLICATION_STREAM_JSON;
 
 	/**
 	 * A String equivalent of {@link MediaType#APPLICATION_STREAM_JSON}.
 	 * @since 5.0
-	 * @deprecated as of 5.3 since it originates from the W3C Activity Streams
-	 * specification which has a more specific purpose and has been since
-	 * replaced with a different mime type. Use {@link #APPLICATION_NDJSON} as
-	 * a replacement or any other line-delimited JSON format (e.g. JSON Lines,
-	 * JSON Text Sequences).
 	 */
-	@Deprecated
 	public static final String APPLICATION_STREAM_JSON_VALUE = "application/stream+json";
 
 	/**
@@ -364,18 +292,6 @@ public class MediaType extends MimeType implements Serializable {
 	public static final String MULTIPART_MIXED_VALUE = "multipart/mixed";
 
 	/**
-	 * Public constant media type for {@code multipart/related}.
-	 * @since 5.2.5
-	 */
-	public static final MediaType MULTIPART_RELATED;
-
-	/**
-	 * A String equivalent of {@link MediaType#MULTIPART_RELATED}.
-	 * @since 5.2.5
-	 */
-	public static final String MULTIPART_RELATED_VALUE = "multipart/related";
-
-	/**
 	 * Public constant media type for {@code text/event-stream}.
 	 * @since 4.3.6
 	 * @see <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events W3C recommendation</a>
@@ -435,21 +351,17 @@ public class MediaType extends MimeType implements Serializable {
 
 	static {
 		// Not using "valueOf' to avoid static init cost
-		ALL = new MediaType(MimeType.WILDCARD_TYPE, MimeType.WILDCARD_TYPE);
+		ALL = new MediaType("*", "*");
 		APPLICATION_ATOM_XML = new MediaType("application", "atom+xml");
 		APPLICATION_CBOR = new MediaType("application", "cbor");
 		APPLICATION_FORM_URLENCODED = new MediaType("application", "x-www-form-urlencoded");
-		APPLICATION_GRAPHQL = new MediaType("application", "graphql+json");
-		APPLICATION_GRAPHQL_RESPONSE = new MediaType("application", "graphql-response+json");
 		APPLICATION_JSON = new MediaType("application", "json");
 		APPLICATION_JSON_UTF8 = new MediaType("application", "json", StandardCharsets.UTF_8);
-		APPLICATION_NDJSON = new MediaType("application", "x-ndjson");
 		APPLICATION_OCTET_STREAM = new MediaType("application", "octet-stream");
 		APPLICATION_PDF = new MediaType("application", "pdf");
 		APPLICATION_PROBLEM_JSON = new MediaType("application", "problem+json");
-		APPLICATION_PROBLEM_JSON_UTF8 = new MediaType("application", "problem+json", StandardCharsets.UTF_8);
+		APPLICATION_PROBLEM_JSON_UTF8 = new MediaType("application", "problem", StandardCharsets.UTF_8);
 		APPLICATION_PROBLEM_XML = new MediaType("application", "problem+xml");
-		APPLICATION_PROTOBUF = new MediaType("application", "x-protobuf");
 		APPLICATION_RSS_XML = new MediaType("application", "rss+xml");
 		APPLICATION_STREAM_JSON = new MediaType("application", "stream+json");
 		APPLICATION_XHTML_XML = new MediaType("application", "xhtml+xml");
@@ -459,7 +371,6 @@ public class MediaType extends MimeType implements Serializable {
 		IMAGE_PNG = new MediaType("image", "png");
 		MULTIPART_FORM_DATA = new MediaType("multipart", "form-data");
 		MULTIPART_MIXED = new MediaType("multipart", "mixed");
-		MULTIPART_RELATED = new MediaType("multipart", "related");
 		TEXT_EVENT_STREAM = new MediaType("text", "event-stream");
 		TEXT_HTML = new MediaType("text", "html");
 		TEXT_MARKDOWN = new MediaType("text", "markdown");
@@ -536,8 +447,9 @@ public class MediaType extends MimeType implements Serializable {
 
 	/**
 	 * Create a new {@code MediaType} for the given type, subtype, and parameters.
-	 * @param type the primary type
-	 * @param subtype the subtype
+	 *
+	 * @param type       the primary type
+	 * @param subtype    the subtype
 	 * @param parameters the parameters, may be {@code null}
 	 * @throws IllegalArgumentException if any of the parameters contain illegal characters
 	 */
@@ -546,114 +458,40 @@ public class MediaType extends MimeType implements Serializable {
 	}
 
 	/**
-	 * Create a new {@code MediaType} for the given {@link MimeType}.
-	 * The type, subtype and parameters information is copied and {@code MediaType}-specific
-	 * checks on parameters are performed.
-	 * @param mimeType the MIME type
-	 * @throws IllegalArgumentException if any of the parameters contain illegal characters
-	 * @since 5.3
+	 * Re-create the given mime types as media types.
+	 *
+	 * @since 5.0
 	 */
-	public MediaType(MimeType mimeType) {
-		super(mimeType);
-		getParameters().forEach(this::checkParameters);
-	}
-
-
-	@Override
-	protected void checkParameters(String parameter, String value) {
-		super.checkParameters(parameter, value);
-		if (PARAM_QUALITY_FACTOR.equals(parameter)) {
-			String unquotedValue = unquote(value);
-			double d = Double.parseDouble(unquotedValue);
-			Assert.isTrue(d >= 0D && d <= 1D,
-					() -> "Invalid quality value \"" + unquotedValue + "\": should be between 0.0 and 1.0");
+	public static List<MediaType> asMediaTypes(List<MimeType> mimeTypes) {
+		List<MediaType> mediaTypes = new ArrayList<>(mimeTypes.size());
+		for (MimeType mimeType : mimeTypes) {
+			mediaTypes.add(MediaType.asMediaType(mimeType));
 		}
+		return mediaTypes;
 	}
 
 	/**
-	 * Return the quality factor, as indicated by a {@code q} parameter, if any.
-	 * Defaults to {@code 1.0}.
-	 * @return the quality factor as double value
+	 * Parse the given list of (potentially) comma-separated strings into a
+	 * list of {@code MediaType} objects.
+	 * <p>This method can be used to parse an Accept or Content-Type header.
+	 *
+	 * @param mediaTypes the string to parse
+	 * @return the list of media types
+	 * @throws InvalidMediaTypeException if the media type value cannot be parsed
+	 * @since 4.3.2
 	 */
-	public double getQualityValue() {
-		String qualityFactor = getParameter(PARAM_QUALITY_FACTOR);
-		return (qualityFactor != null ? Double.parseDouble(unquote(qualityFactor)) : 1D);
-	}
-
-	/**
-	 * Indicates whether this {@code MediaType} more specific than the given type.
-	 * <ol>
-	 * <li>if this media type has a {@linkplain #getQualityValue() quality factor} higher than the other,
-	 * then this method returns {@code true}.</li>
-	 * <li>if this media type has a {@linkplain #getQualityValue() quality factor} lower than the other,
-	 * then this method returns {@code false}.</li>
-	 * <li>if this mime type has a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does not, then this method returns {@code false}.</li>
-	 * <li>if this mime type does not have a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does, then this method returns {@code true}.</li>
-	 * <li>if this mime type has a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does not, then this method returns {@code false}.</li>
-	 * <li>if this mime type does not have a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does, then this method returns {@code true}.</li>
-	 * <li>if the two mime types have identical {@linkplain #getType() type} and
-	 * {@linkplain #getSubtype() subtype}, then the mime type with the most
-	 * parameters is more specific than the other.</li>
-	 * <li>Otherwise, this method returns {@code false}.</li>
-	 * </ol>
-	 * @param other the {@code MimeType} to be compared
-	 * @return the result of the comparison
-	 * @since 6.0
-	 * @see #isLessSpecific(MimeType)
-	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">HTTP 1.1: Semantics
-	 * and Content, section 5.3.2</a>
-	 */
-	@Override
-	public boolean isMoreSpecific(MimeType other) {
-		Assert.notNull(other, "Other must not be null");
-		if (other instanceof MediaType otherMediaType) {
-			double quality1 = getQualityValue();
-			double quality2 = otherMediaType.getQualityValue();
-			if (quality1 > quality2) {
-				return true;
+	public static List<MediaType> parseMediaTypes(@Nullable List<String> mediaTypes) {
+		if (CollectionUtils.isEmpty(mediaTypes)) {
+			return Collections.emptyList();
+		} else if (mediaTypes.size() == 1) {
+			return parseMediaTypes(mediaTypes.get(0));
+		} else {
+			List<MediaType> result = new ArrayList<>(8);
+			for (String mediaType : mediaTypes) {
+				result.addAll(parseMediaTypes(mediaType));
 			}
-			else if (quality1 < quality2) {
-				return false;
-			}
+			return result;
 		}
-		return super.isMoreSpecific(other);
-	}
-
-	/**
-	 * Indicates whether this {@code MediaType} more specific than the given type.
-	 * <ol>
-	 * <li>if this media type has a {@linkplain #getQualityValue() quality factor} higher than the other,
-	 * then this method returns {@code false}.</li>
-	 * <li>if this media type has a {@linkplain #getQualityValue() quality factor} lower than the other,
-	 * then this method returns {@code true}.</li>
-	 * <li>if this mime type has a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does not, then this method returns {@code true}.</li>
-	 * <li>if this mime type does not have a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does, then this method returns {@code false}.</li>
-	 * <li>if this mime type has a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does not, then this method returns {@code true}.</li>
-	 * <li>if this mime type does not have a {@linkplain #isWildcardType() wildcard type},
-	 * and the other does, then this method returns {@code false}.</li>
-	 * <li>if the two mime types have identical {@linkplain #getType() type} and
-	 * {@linkplain #getSubtype() subtype}, then the mime type with the least
-	 * parameters is less specific than the other.</li>
-	 * <li>Otherwise, this method returns {@code false}.</li>
-	 * </ol>
-	 * @param other the {@code MimeType} to be compared
-	 * @return the result of the comparison
-	 * @since 6.0
-	 * @see #isMoreSpecific(MimeType)
-	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">HTTP 1.1: Semantics
-	 * and Content, section 5.3.2</a>
-	 */
-	@Override
-	public boolean isLessSpecific(MimeType other) {
-		Assert.notNull(other, "Other must not be null");
-		return other.isMoreSpecific(this);
 	}
 
 	/**
@@ -742,7 +580,7 @@ public class MediaType extends MimeType implements Serializable {
 			throw new InvalidMediaTypeException(ex);
 		}
 		try {
-			return new MediaType(type);
+			return new MediaType(type.getType(), type.getSubtype(), type.getParameters());
 		}
 		catch (IllegalArgumentException ex) {
 			throw new InvalidMediaTypeException(mediaType, ex.getMessage());
@@ -772,56 +610,43 @@ public class MediaType extends MimeType implements Serializable {
 	}
 
 	/**
-	 * Parse the given list of (potentially) comma-separated strings into a
-	 * list of {@code MediaType} objects.
-	 * <p>This method can be used to parse an Accept or Content-Type header.
-	 * @param mediaTypes the string to parse
-	 * @return the list of media types
-	 * @throws InvalidMediaTypeException if the media type value cannot be parsed
-	 * @since 4.3.2
-	 */
-	public static List<MediaType> parseMediaTypes(@Nullable List<String> mediaTypes) {
-		if (CollectionUtils.isEmpty(mediaTypes)) {
-			return Collections.emptyList();
-		}
-		else if (mediaTypes.size() == 1) {
-			return parseMediaTypes(mediaTypes.get(0));
-		}
-		else {
-			List<MediaType> result = new ArrayList<>(8);
-			for (String mediaType : mediaTypes) {
-				result.addAll(parseMediaTypes(mediaType));
-			}
-			return result;
-		}
-	}
-
-	/**
-	 * Re-create the given mime types as media types.
-	 * @since 5.0
-	 */
-	public static List<MediaType> asMediaTypes(List<MimeType> mimeTypes) {
-		List<MediaType> mediaTypes = new ArrayList<>(mimeTypes.size());
-		for (MimeType mimeType : mimeTypes) {
-			mediaTypes.add(MediaType.asMediaType(mimeType));
-		}
-		return mediaTypes;
-	}
-
-	/**
 	 * Re-create the given mime type as a media type.
+	 *
 	 * @since 5.0
 	 */
 	public static MediaType asMediaType(MimeType mimeType) {
-		if (mimeType instanceof MediaType mediaType) {
-			return mediaType;
+		if (mimeType instanceof MediaType) {
+			return (MediaType) mimeType;
 		}
 		return new MediaType(mimeType.getType(), mimeType.getSubtype(), mimeType.getParameters());
 	}
 
 	/**
+	 * Return the quality factor, as indicated by a {@code q} parameter, if any.
+	 * Defaults to {@code 1.0}.
+	 *
+	 * @return the quality factor as double value
+	 */
+	public double getQualityValue() {
+		String qualityFactor = getParameter(PARAM_QUALITY_FACTOR);
+		return (qualityFactor != null ? Double.parseDouble(unquote(qualityFactor)) : 1D);
+	}
+
+	@Override
+	protected void checkParameters(String attribute, String value) {
+		super.checkParameters(attribute, value);
+		if (PARAM_QUALITY_FACTOR.equals(attribute)) {
+			value = unquote(value);
+			double d = Double.parseDouble(value);
+			Assert.isTrue(d >= 0D && d <= 1D,
+					"Invalid quality value \"" + value + "\": should be between 0.0 and 1.0");
+		}
+	}
+
+	/**
 	 * Return a string representation of the given list of {@code MediaType} objects.
 	 * <p>This method can be used to for an {@code Accept} or {@code Content-Type} header.
+	 *
 	 * @param mediaTypes the media types to create a string representation for
 	 * @return the string representation
 	 */
@@ -853,9 +678,9 @@ public class MediaType extends MimeType implements Serializable {
 	 * <blockquote>audio/basic == text/html</blockquote>
 	 * <blockquote>audio/basic == audio/wave</blockquote>
 	 * @param mediaTypes the list of media types to be sorted
-	 * @deprecated As of 6.0, in favor of {@link MimeTypeUtils#sortBySpecificity(List)}
+	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">HTTP 1.1: Semantics
+	 * and Content, section 5.3.2</a>
 	 */
-	@Deprecated(since = "6.0", forRemoval = true)
 	public static void sortBySpecificity(List<MediaType> mediaTypes) {
 		Assert.notNull(mediaTypes, "'mediaTypes' must not be null");
 		if (mediaTypes.size() > 1) {
@@ -882,9 +707,7 @@ public class MediaType extends MimeType implements Serializable {
 	 * </ol>
 	 * @param mediaTypes the list of media types to be sorted
 	 * @see #getQualityValue()
-	 * @deprecated As of 6.0, with no direct replacement
 	 */
-	@Deprecated(since = "6.0", forRemoval = true)
 	public static void sortByQualityValue(List<MediaType> mediaTypes) {
 		Assert.notNull(mediaTypes, "'mediaTypes' must not be null");
 		if (mediaTypes.size() > 1) {
@@ -895,9 +718,9 @@ public class MediaType extends MimeType implements Serializable {
 	/**
 	 * Sorts the given list of {@code MediaType} objects by specificity as the
 	 * primary criteria and quality value the secondary.
-	 * @deprecated As of 6.0, in favor of {@link MimeTypeUtils#sortBySpecificity(List)}
+	 * @see MediaType#sortBySpecificity(List)
+	 * @see MediaType#sortByQualityValue(List)
 	 */
-	@Deprecated(since = "6.0")
 	public static void sortBySpecificityAndQuality(List<MediaType> mediaTypes) {
 		Assert.notNull(mediaTypes, "'mediaTypes' must not be null");
 		if (mediaTypes.size() > 1) {
@@ -908,9 +731,7 @@ public class MediaType extends MimeType implements Serializable {
 
 	/**
 	 * Comparator used by {@link #sortByQualityValue(List)}.
-	 * @deprecated As of 6.0, with no direct replacement
 	 */
-	@Deprecated(since = "6.0", forRemoval = true)
 	public static final Comparator<MediaType> QUALITY_VALUE_COMPARATOR = (mediaType1, mediaType2) -> {
 		double quality1 = mediaType1.getQualityValue();
 		double quality2 = mediaType2.getQualityValue();
@@ -948,11 +769,8 @@ public class MediaType extends MimeType implements Serializable {
 
 	/**
 	 * Comparator used by {@link #sortBySpecificity(List)}.
-	 * @deprecated As of 6.0, with no direct replacement
 	 */
-	@Deprecated(since = "6.0", forRemoval = true)
-	@SuppressWarnings("removal")
-	public static final Comparator<MediaType> SPECIFICITY_COMPARATOR = new SpecificityComparator<>() {
+	public static final Comparator<MediaType> SPECIFICITY_COMPARATOR = new SpecificityComparator<MediaType>() {
 
 		@Override
 		protected int compareParameters(MediaType mediaType1, MediaType mediaType2) {

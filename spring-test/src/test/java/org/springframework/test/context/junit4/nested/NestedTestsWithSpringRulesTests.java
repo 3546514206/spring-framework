@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Sam Brannen
  * @since 5.0
- * @see org.springframework.test.context.junit.jupiter.nested.ContextConfigurationNestedTests
+ * @see org.springframework.test.context.junit.jupiter.nested.NestedTestsWithSpringAndJUnitJupiterTestCase
  */
 @RunWith(HierarchicalContextRunner.class)
 @ContextConfiguration(classes = TopLevelConfig.class)
@@ -54,15 +54,21 @@ public class NestedTestsWithSpringRulesTests extends SpringRuleConfigurer {
 
 
 	@ContextConfiguration(classes = NestedConfig.class)
-	public class NestedTests extends SpringRuleConfigurer {
+	public class NestedTestCase extends SpringRuleConfigurer {
 
 		@Autowired
 		String bar;
 
 
 		@Test
-		public void nestedTest() {
-			assertThat(foo).isEqualTo("foo");
+		public void nestedTest() throws Exception {
+			// Note: the following would fail since TestExecutionListeners in
+			// the Spring TestContext Framework are not applied to the enclosing
+			// instance of an inner test class.
+			//
+			// assertEquals("foo", foo);
+
+			assertThat(foo).as("@Autowired field in enclosing instance should be null.").isNull();
 			assertThat(bar).isEqualTo("bar");
 		}
 	}

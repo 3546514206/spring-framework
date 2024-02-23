@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,19 +39,19 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
-class RdbmsOperationTests {
+public class RdbmsOperationTests {
 
 	private final TestRdbmsOperation operation = new TestRdbmsOperation();
 
 
 	@Test
-	void emptySql() {
+	public void emptySql() {
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(
 				operation::compile);
 	}
 
 	@Test
-	void setTypeAfterCompile() {
+	public void setTypeAfterCompile() {
 		operation.setDataSource(new DriverManagerDataSource());
 		operation.setSql("select * from mytable");
 		operation.compile();
@@ -60,7 +60,7 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void declareParameterAfterCompile() {
+	public void declareParameterAfterCompile() {
 		operation.setDataSource(new DriverManagerDataSource());
 		operation.setSql("select * from mytable");
 		operation.compile();
@@ -69,47 +69,38 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void tooFewParameters() {
+	public void tooFewParameters() {
 		operation.setSql("select * from mytable");
 		operation.setTypes(new int[] { Types.INTEGER });
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
-				operation.validateParameters(null));
+				operation.validateParameters((Object[]) null));
 	}
 
 	@Test
-	void tooFewMapParameters() {
-		operation.setDataSource(new DriverManagerDataSource());
+	public void tooFewMapParameters() {
 		operation.setSql("select * from mytable");
 		operation.setTypes(new int[] { Types.INTEGER });
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
-				operation.validateNamedParameters(null));
+				operation.validateNamedParameters((Map<String, String>) null));
 	}
 
 	@Test
-	void operationConfiguredViaJdbcTemplateMustGetDataSource() {
+	public void operationConfiguredViaJdbcTemplateMustGetDataSource() throws Exception {
 		operation.setSql("foo");
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(operation::compile)
-			.withMessageContaining("'dataSource'");
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
+				operation.compile())
+			.withMessageContaining("ataSource");
 	}
 
 	@Test
-	void tooManyParameters() {
-		operation.setDataSource(new DriverManagerDataSource());
+	public void tooManyParameters() {
 		operation.setSql("select * from mytable");
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
 				operation.validateParameters(new Object[] { 1, 2 }));
 	}
-	@Test
-	void tooManyMapParameters() {
-		operation.setDataSource(new DriverManagerDataSource());
-		operation.setSql("select * from mytable");
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
-				operation.validateNamedParameters(Map.of("a", "b", "c", "d")));
-	}
 
 	@Test
-	void unspecifiedMapParameters() {
-		operation.setDataSource(new DriverManagerDataSource());
+	public void unspecifiedMapParameters() {
 		operation.setSql("select * from mytable");
 		Map<String, String> params = new HashMap<>();
 		params.put("col1", "value");
@@ -118,7 +109,7 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void compileTwice() {
+	public void compileTwice() {
 		operation.setDataSource(new DriverManagerDataSource());
 		operation.setSql("select * from mytable");
 		operation.setTypes(null);
@@ -127,7 +118,7 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void emptyDataSource() {
+	public void emptyDataSource() {
 		SqlOperation operation = new SqlOperation() {};
 		operation.setSql("select * from mytable");
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(
@@ -135,7 +126,7 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void parameterPropagation() {
+	public void parameterPropagation() {
 		SqlOperation operation = new SqlOperation() {};
 		DataSource ds = new DriverManagerDataSource();
 		operation.setDataSource(ds);
@@ -148,7 +139,7 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void validateInOutParameter() {
+	public void validateInOutParameter() {
 		operation.setDataSource(new DriverManagerDataSource());
 		operation.setSql("DUMMY_PROC");
 		operation.declareParameter(new SqlOutParameter("DUMMY_OUT_PARAM", Types.VARCHAR));
@@ -157,15 +148,16 @@ class RdbmsOperationTests {
 	}
 
 	@Test
-	void parametersSetWithList() {
+	public void parametersSetWithList() {
 		DataSource ds = new DriverManagerDataSource();
 		operation.setDataSource(ds);
 		operation.setSql("select * from mytable where one = ? and two = ?");
-		operation.setParameters(new SqlParameter("one", Types.NUMERIC),
-				new SqlParameter("two", Types.NUMERIC));
+		operation.setParameters(new SqlParameter[] {
+				new SqlParameter("one", Types.NUMERIC),
+				new SqlParameter("two", Types.NUMERIC)});
 		operation.afterPropertiesSet();
 		operation.validateParameters(new Object[] { 1, "2" });
-		assertThat(operation.getDeclaredParameters()).hasSize(2);
+		assertThat(operation.getDeclaredParameters().size()).isEqualTo(2);
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,20 +29,25 @@ import static org.mockito.Mockito.mock;
  *
  * @author Rossen Stoyanchev
  */
-abstract class AbstractSockJsSessionTests<S extends AbstractSockJsSession> {
+public abstract class AbstractSockJsSessionTests<S extends AbstractSockJsSession> {
 
-	protected WebSocketHandler webSocketHandler = mock();
+	protected WebSocketHandler webSocketHandler;
 
-	protected TaskScheduler taskScheduler = mock();
+	protected StubSockJsServiceConfig sockJsConfig;
 
-	protected StubSockJsServiceConfig sockJsConfig = new StubSockJsServiceConfig();
+	protected TaskScheduler taskScheduler;
 
 	protected S session;
 
 
 	@BeforeEach
-	protected void setUp() {
+	public void setUp() {
+		this.webSocketHandler = mock(WebSocketHandler.class);
+		this.taskScheduler = mock(TaskScheduler.class);
+
+		this.sockJsConfig = new StubSockJsServiceConfig();
 		this.sockJsConfig.setTaskScheduler(this.taskScheduler);
+
 		this.session = initSockJsSession();
 	}
 

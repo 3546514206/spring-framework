@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,23 @@
 package org.springframework.beans.factory.support;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@code equals()} and {@code hashCode()} in bean definitions.
+ * Unit tests for {@code equals()} and {@code hashCode()} in bean definitions.
  *
  * @author Rob Harrop
  * @author Sam Brannen
  */
 @SuppressWarnings("serial")
-class DefinitionMetadataEqualsHashCodeTests {
+public class DefinitionMetadataEqualsHashCodeTests {
 
 	@Test
-	void rootBeanDefinition() {
+	public void rootBeanDefinition() {
 		RootBeanDefinition master = new RootBeanDefinition(TestBean.class);
 		RootBeanDefinition equal = new RootBeanDefinition(TestBean.class);
 		RootBeanDefinition notEqual = new RootBeanDefinition(String.class);
@@ -53,7 +52,7 @@ class DefinitionMetadataEqualsHashCodeTests {
 	 * @see <a href="https://jira.spring.io/browse/SPR-11420">SPR-11420</a>
 	 */
 	@Test
-	void rootBeanDefinitionAndMethodOverridesWithDifferentOverloadedValues() {
+	public void rootBeanDefinitionAndMethodOverridesWithDifferentOverloadedValues() {
 		RootBeanDefinition master = new RootBeanDefinition(TestBean.class);
 		RootBeanDefinition equal = new RootBeanDefinition(TestBean.class);
 
@@ -73,7 +72,7 @@ class DefinitionMetadataEqualsHashCodeTests {
 	}
 
 	@Test
-	void childBeanDefinition() {
+	public void childBeanDefinition() {
 		ChildBeanDefinition master = new ChildBeanDefinition("foo");
 		ChildBeanDefinition equal = new ChildBeanDefinition("foo");
 		ChildBeanDefinition notEqual = new ChildBeanDefinition("bar");
@@ -88,7 +87,7 @@ class DefinitionMetadataEqualsHashCodeTests {
 	}
 
 	@Test
-	void runtimeBeanReference() {
+	public void runtimeBeanReference() {
 		RuntimeBeanReference master = new RuntimeBeanReference("name");
 		RuntimeBeanReference equal = new RuntimeBeanReference("name");
 		RuntimeBeanReference notEqual = new RuntimeBeanReference("someOtherName");
@@ -104,7 +103,7 @@ class DefinitionMetadataEqualsHashCodeTests {
 		definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
 		// definition.getConstructorArgumentValues().addGenericArgumentValue("foo");
 		definition.setDependencyCheck(AbstractBeanDefinition.DEPENDENCY_CHECK_OBJECTS);
-		definition.setDependsOn("foo", "bar");
+		definition.setDependsOn(new String[] { "foo", "bar" });
 		definition.setDestroyMethodName("destroy");
 		definition.setEnforceDestroyMethod(false);
 		definition.setEnforceInitMethod(true);
@@ -126,7 +125,7 @@ class DefinitionMetadataEqualsHashCodeTests {
 		assertThat(equal.hashCode()).as("Hash code for equal instances should match").isEqualTo(master.hashCode());
 
 		assertThat(notEqual).as("Should not be equal").isNotEqualTo(master);
-		assertThat(notEqual.hashCode()).as("Hash code for non-equal instances should not match").isNotEqualTo(master.hashCode());
+		assertThat(notEqual.hashCode()).as("Hash code for non-equal instances should not match").isNotEqualTo((long) master.hashCode());
 
 		assertThat(subclass).as("Subclass should be equal").isEqualTo(master);
 		assertThat(subclass.hashCode()).as("Hash code for subclass should match").isEqualTo(master.hashCode());

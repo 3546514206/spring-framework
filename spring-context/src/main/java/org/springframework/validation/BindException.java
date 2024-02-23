@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.validation;
 
-import java.beans.PropertyEditor;
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.beans.PropertyEditor;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Thrown when binding errors are considered fatal. Implements the
@@ -58,7 +58,8 @@ public class BindException extends Exception implements BindingResult {
 
 	/**
 	 * Create a new BindException instance for a target bean.
-	 * @param target the target bean to bind onto
+	 *
+	 * @param target     target bean to bind onto
 	 * @param objectName the name of the target object
 	 * @see BeanPropertyBindingResult
 	 */
@@ -70,6 +71,8 @@ public class BindException extends Exception implements BindingResult {
 
 	/**
 	 * Return the BindingResult that this BindException wraps.
+	 * Will typically be a BeanPropertyBindingResult.
+	 * @see BeanPropertyBindingResult
 	 */
 	public final BindingResult getBindingResult() {
 		return this.bindingResult;
@@ -128,9 +131,7 @@ public class BindException extends Exception implements BindingResult {
 	}
 
 	@Override
-	public void rejectValue(@Nullable String field, String errorCode,
-			@Nullable Object[] errorArgs, @Nullable String defaultMessage) {
-
+	public void rejectValue(@Nullable String field, String errorCode, @Nullable Object[] errorArgs, @Nullable String defaultMessage) {
 		this.bindingResult.rejectValue(field, errorCode, errorArgs, defaultMessage);
 	}
 
@@ -231,7 +232,6 @@ public class BindException extends Exception implements BindingResult {
 	}
 
 	@Override
-	@Nullable
 	public Object getTarget() {
 		return this.bindingResult.getTarget();
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,15 +33,12 @@ import org.springframework.util.ObjectUtils;
 
 /**
  * Represents projection, where a given operation is performed on all elements in some
- * input sequence, returning a new sequence of the same size.
- *
- * <p>For example: <code>{1,2,3,4,5,6,7,8,9,10}.![#isEven(#this)]</code> evaluates
- * to {@code [n, y, n, y, n, y, n, y, n, y]}.
+ * input sequence, returning a new sequence of the same size. For example:
+ * "{1,2,3,4,5,6,7,8,9,10}.!{#isEven(#this)}" returns "[n, y, n, y, n, y, n, y, n, y]"
  *
  * @author Andy Clement
  * @author Mark Fisher
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0
  */
 public class Projection extends SpelNodeImpl {
@@ -63,13 +60,18 @@ public class Projection extends SpelNodeImpl {
 	@Override
 	protected ValueRef getValueRef(ExpressionState state) throws EvaluationException {
 		TypedValue op = state.getActiveContextObject();
-		Object operand = op.getValue();
 
-		// When the input is a map, we push a Map.Entry on the stack before calling
-		// the specified operation. Map.Entry has two properties 'key' and 'value'
-		// that can be referenced in the operation -- for example,
-		// {'a':'y', 'b':'n'}.![value == 'y' ? key : null] evaluates to ['a', null].
-		if (operand instanceof Map<?, ?> mapData) {
+		Object operand = op.getValue();
+		boolean operandIsArray = ObjectUtils.isArray(operand);
+		// TypeDescriptor operandTypeDescriptor = op.getTypeDescriptor();
+
+		// When the input is a map, we push a special context object on the stack
+		// before calling the specified operation. This special context object
+		// has two fields 'key' and 'value' that refer to the map entries key
+		// and value, and they can be referenced in the operation
+		// eg. {'a':'y','b':'n'}.![value=='y'?key:null]" == ['a', null]
+		if (operand instanceof Map) {
+			Map<?, ?> mapData = (Map<?, ?>) operand;
 			List<Object> result = new ArrayList<>();
 			for (Map.Entry<?, ?> entry : mapData.entrySet()) {
 				try {
@@ -82,20 +84,19 @@ public class Projection extends SpelNodeImpl {
 					state.exitScope();
 				}
 			}
-			return new ValueRef.TypedValueHolderValueRef(new TypedValue(result), this);
+			return new ValueRef.TypedValueHolderValueRef(new TypedValue(result), this);  // TODO unable to build correct type descriptor
 		}
 
-		boolean operandIsArray = ObjectUtils.isArray(operand);
 		if (operand instanceof Iterable || operandIsArray) {
-			Iterable<?> data = (operand instanceof Iterable<?> iterable ?
-					iterable : Arrays.asList(ObjectUtils.toObjectArray(operand)));
+			Iterable<?> data = (operand instanceof Iterable ?
+					(Iterable<?>) operand : Arrays.asList(ObjectUtils.toObjectArray(operand)));
 
 			List<Object> result = new ArrayList<>();
 			Class<?> arrayElementType = null;
 			for (Object element : data) {
 				try {
 					state.pushActiveContextObject(new TypedValue(element));
-					state.enterScope();
+					state.enterScope("index", result.size());
 					Object value = this.children[0].getValueInternal(state).getValue();
 					if (value != null && operandIsArray) {
 						arrayElementType = determineCommonType(arrayElementType, value.getClass());

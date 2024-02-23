@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.web.servlet.support;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -27,6 +25,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * UriComponentsBuilder with additional static factory methods to create links
@@ -92,7 +92,7 @@ public class ServletUriComponentsBuilder extends UriComponentsBuilder {
 	 */
 	public static ServletUriComponentsBuilder fromServletMapping(HttpServletRequest request) {
 		ServletUriComponentsBuilder builder = fromContextPath(request);
-		if (StringUtils.hasText(UrlPathHelper.defaultInstance.getPathWithinServletMapping(request))) {
+		if (StringUtils.hasText(new UrlPathHelper().getPathWithinServletMapping(request))) {
 			builder.path(request.getServletPath());
 		}
 		return builder;

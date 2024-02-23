@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  *
  * @author Dave Syer
  */
-class NullPrimitiveTests {
+public class NullPrimitiveTests {
 
 	interface Foo {
 		int getValue();
 	}
 
 	@Test
-	void testNullPrimitiveWithJdkProxy() {
+	public void testNullPrimitiveWithJdkProxy() {
 
 		class SimpleFoo implements Foo {
 			@Override
@@ -51,7 +51,8 @@ class NullPrimitiveTests {
 
 		Foo foo = (Foo) factory.getProxy();
 
-		assertThatExceptionOfType(AopInvocationException.class).isThrownBy(foo::getValue)
+		assertThatExceptionOfType(AopInvocationException.class).isThrownBy(() ->
+				foo.getValue())
 			.withMessageContaining("Foo.getValue()");
 	}
 
@@ -62,7 +63,7 @@ class NullPrimitiveTests {
 	}
 
 	@Test
-	void testNullPrimitiveWithCglibProxy() {
+	public void testNullPrimitiveWithCglibProxy() {
 
 		Bar target = new Bar();
 		ProxyFactory factory = new ProxyFactory(target);
@@ -70,7 +71,8 @@ class NullPrimitiveTests {
 
 		Bar bar = (Bar) factory.getProxy();
 
-		assertThatExceptionOfType(AopInvocationException.class).isThrownBy(bar::getValue)
+		assertThatExceptionOfType(AopInvocationException.class).isThrownBy(() ->
+				bar.getValue())
 			.withMessageContaining("Bar.getValue()");
 	}
 

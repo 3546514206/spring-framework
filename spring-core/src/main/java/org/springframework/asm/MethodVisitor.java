@@ -51,8 +51,8 @@ public abstract class MethodVisitor {
   private static final String REQUIRES_ASM5 = "This feature requires ASM5";
 
   /**
-   * The ASM API version implemented by this visitor. The value of this field must be one of the
-   * {@code ASM}<i>x</i> values in {@link Opcodes}.
+   * The ASM API version implemented by this visitor. The value of this field must be one of {@link
+   * Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    */
   protected final int api;
 
@@ -64,44 +64,27 @@ public abstract class MethodVisitor {
   /**
    * Constructs a new {@link MethodVisitor}.
    *
-   * @param api the ASM API version implemented by this visitor. Must be one of the {@code
-   *     ASM}<i>x</i> values in {@link Opcodes}.
+   * @param api the ASM API version implemented by this visitor. Must be one of {@link
+   *     Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    */
-  protected MethodVisitor(final int api) {
+  public MethodVisitor(final int api) {
     this(api, null);
   }
 
   /**
    * Constructs a new {@link MethodVisitor}.
    *
-   * @param api the ASM API version implemented by this visitor. Must be one of the {@code
-   *     ASM}<i>x</i> values in {@link Opcodes}.
+   * @param api the ASM API version implemented by this visitor. Must be one of {@link
+   *     Opcodes#ASM4}, {@link Opcodes#ASM5}, {@link Opcodes#ASM6} or {@link Opcodes#ASM7}.
    * @param methodVisitor the method visitor to which this visitor must delegate method calls. May
    *     be null.
    */
-  protected MethodVisitor(final int api, final MethodVisitor methodVisitor) {
-    if (api != Opcodes.ASM9
-        && api != Opcodes.ASM8
-        && api != Opcodes.ASM7
-        && api != Opcodes.ASM6
-        && api != Opcodes.ASM5
-        && api != Opcodes.ASM4
-        && api != Opcodes.ASM10_EXPERIMENTAL) {
+  public MethodVisitor(final int api, final MethodVisitor methodVisitor) {
+    if (api != Opcodes.ASM7 && api != Opcodes.ASM6 && api != Opcodes.ASM5 && api != Opcodes.ASM4) {
       throw new IllegalArgumentException("Unsupported api " + api);
     }
-    // SPRING PATCH: no preview mode check for ASM experimental
     this.api = api;
     this.mv = methodVisitor;
-  }
-
-  /**
-   * The method visitor to which this visitor must delegate method calls. May be {@literal null}.
-   *
-   * @return the method visitor to which this visitor must delegate method calls, or {@literal
-   *     null}.
-   */
-  public MethodVisitor getDelegate() {
-    return mv;
   }
 
   // -----------------------------------------------------------------------------------------------
@@ -130,7 +113,7 @@ public abstract class MethodVisitor {
    * @return a visitor to the visit the actual default value of this annotation interface method, or
    *     {@literal null} if this visitor is not interested in visiting this default value. The
    *     'name' parameters passed to the methods of this annotation visitor are ignored. Moreover,
-   *     exactly one visit method must be called on this annotation visitor, followed by visitEnd.
+   *     exacly one visit method must be called on this annotation visitor, followed by visitEnd.
    */
   public AnnotationVisitor visitAnnotationDefault() {
     if (mv != null) {
@@ -283,17 +266,15 @@ public abstract class MethodVisitor {
    * @param type the type of this stack map frame. Must be {@link Opcodes#F_NEW} for expanded
    *     frames, or {@link Opcodes#F_FULL}, {@link Opcodes#F_APPEND}, {@link Opcodes#F_CHOP}, {@link
    *     Opcodes#F_SAME} or {@link Opcodes#F_APPEND}, {@link Opcodes#F_SAME1} for compressed frames.
-   * @param numLocal the number of local variables in the visited frame. Long and double values
-   *     count for one variable.
+   * @param numLocal the number of local variables in the visited frame.
    * @param local the local variable types in this frame. This array must not be modified. Primitive
    *     types are represented by {@link Opcodes#TOP}, {@link Opcodes#INTEGER}, {@link
    *     Opcodes#FLOAT}, {@link Opcodes#LONG}, {@link Opcodes#DOUBLE}, {@link Opcodes#NULL} or
    *     {@link Opcodes#UNINITIALIZED_THIS} (long and double are represented by a single element).
-   *     Reference types are represented by String objects (representing internal names, see {@link
-   *     Type#getInternalName()}), and uninitialized types by Label objects (this label designates
-   *     the NEW instruction that created this uninitialized value).
-   * @param numStack the number of operand stack elements in the visited frame. Long and double
-   *     values count for one stack element.
+   *     Reference types are represented by String objects (representing internal names), and
+   *     uninitialized types by Label objects (this label designates the NEW instruction that
+   *     created this uninitialized value).
+   * @param numStack the number of operand stack elements in the visited frame.
    * @param stack the operand stack types in this frame. This array must not be modified. Its
    *     content has the same format as the "local" array.
    * @throws IllegalStateException if a frame is visited just after another one, without any
@@ -361,18 +342,18 @@ public abstract class MethodVisitor {
    *
    * @param opcode the opcode of the local variable instruction to be visited. This opcode is either
    *     ILOAD, LLOAD, FLOAD, DLOAD, ALOAD, ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
-   * @param varIndex the operand of the instruction to be visited. This operand is the index of a
-   *     local variable.
+   * @param var the operand of the instruction to be visited. This operand is the index of a local
+   *     variable.
    */
-  public void visitVarInsn(final int opcode, final int varIndex) {
+  public void visitVarInsn(final int opcode, final int var) {
     if (mv != null) {
-      mv.visitVarInsn(opcode, varIndex);
+      mv.visitVarInsn(opcode, var);
     }
   }
 
   /**
    * Visits a type instruction. A type instruction is an instruction that takes the internal name of
-   * a class as parameter (see {@link Type#getInternalName()}).
+   * a class as parameter.
    *
    * @param opcode the opcode of the type instruction to be visited. This opcode is either NEW,
    *     ANEWARRAY, CHECKCAST or INSTANCEOF.
@@ -549,11 +530,11 @@ public abstract class MethodVisitor {
    */
   public void visitLdcInsn(final Object value) {
     if (api < Opcodes.ASM5
-        && (value instanceof Handle
+            && (value instanceof Handle
             || (value instanceof Type && ((Type) value).getSort() == Type.METHOD))) {
       throw new UnsupportedOperationException(REQUIRES_ASM5);
     }
-    if (api < Opcodes.ASM7 && value instanceof ConstantDynamic) {
+    if (api != Opcodes.ASM7 && value instanceof ConstantDynamic) {
       throw new UnsupportedOperationException("This feature requires ASM7");
     }
     if (mv != null) {
@@ -564,12 +545,12 @@ public abstract class MethodVisitor {
   /**
    * Visits an IINC instruction.
    *
-   * @param varIndex index of the local variable to be incremented.
+   * @param var index of the local variable to be incremented.
    * @param increment amount to increment the local variable by.
    */
-  public void visitIincInsn(final int varIndex, final int increment) {
+  public void visitIincInsn(final int var, final int increment) {
     if (mv != null) {
-      mv.visitIincInsn(varIndex, increment);
+      mv.visitIincInsn(var, increment);
     }
   }
 
@@ -655,9 +636,8 @@ public abstract class MethodVisitor {
    * @param start the beginning of the exception handler's scope (inclusive).
    * @param end the end of the exception handler's scope (exclusive).
    * @param handler the beginning of the exception handler's code.
-   * @param type the internal name of the type of exceptions handled by the handler (see {@link
-   *     Type#getInternalName()}), or {@literal null} to catch any exceptions (for "finally"
-   *     blocks).
+   * @param type the internal name of the type of exceptions handled by the handler, or {@literal
+   *     null} to catch any exceptions (for "finally" blocks).
    * @throws IllegalArgumentException if one of the labels has already been visited by this visitor
    *     (by the {@link #visitLabel} method).
    */

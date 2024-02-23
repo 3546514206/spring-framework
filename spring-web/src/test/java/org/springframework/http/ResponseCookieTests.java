@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,21 @@
 
 package org.springframework.http;
 
-import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Tests for {@link ResponseCookie}.
- *
+ * Unit tests for {@link ResponseCookie}.
  * @author Rossen Stoyanchev
  */
-class ResponseCookieTests {
+public class ResponseCookieTests {
 
 	@Test
-	void basic() {
+	public void basic() {
 
 		assertThat(ResponseCookie.from("id", null).build().toString()).isEqualTo("id=");
 		assertThat(ResponseCookie.from("id", "1fWa").build().toString()).isEqualTo("id=1fWa");
@@ -46,7 +45,7 @@ class ResponseCookieTests {
 	}
 
 	@Test
-	void nameChecks() {
+	public void nameChecks() {
 
 		Arrays.asList("id", "i.d.", "i-d", "+id", "i*d", "i$d", "#id")
 				.forEach(name -> ResponseCookie.from(name, "value").build());
@@ -57,7 +56,7 @@ class ResponseCookieTests {
 	}
 
 	@Test
-	void valueChecks() {
+	public void valueChecks() {
 
 		Arrays.asList("1fWa", "", null, "1f=Wa", "1f-Wa", "1f/Wa", "1.f.W.a.")
 				.forEach(value -> ResponseCookie.from("id", value).build());
@@ -67,29 +66,4 @@ class ResponseCookieTests {
 						.hasMessageContaining("RFC2616 cookie value"));
 	}
 
-	@Test
-	void domainChecks() {
-
-		Arrays.asList("abc", "abc.org", "abc-def.org", "abc3.org", ".abc.org")
-				.forEach(domain -> ResponseCookie.from("n", "v").domain(domain).build());
-
-		Arrays.asList("-abc.org", "abc.org.", "abc.org-")
-				.forEach(domain -> assertThatThrownBy(() -> ResponseCookie.from("n", "v").domain(domain).build())
-						.hasMessageContaining("Invalid first/last char"));
-
-		Arrays.asList("abc..org", "abc.-org", "abc-.org")
-				.forEach(domain -> assertThatThrownBy(() -> ResponseCookie.from("n", "v").domain(domain).build())
-						.hasMessageContaining("invalid cookie domain char"));
-	}
-
-	@Test // gh-24663
-	public void domainWithEmptyDoubleQuotes() {
-
-		Arrays.asList("\"\"", "\t\"\" ", " \" \t \"\t")
-				.forEach(domain -> {
-					ResponseCookie cookie = ResponseCookie.fromClientResponse("id", "1fWa").domain(domain).build();
-					assertThat(cookie.getDomain()).isNull();
-				});
-
-	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package org.springframework.http;
 
-import java.time.Duration;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.time.Duration;
 
 /**
  * An {@code HttpCookie} subclass with the additional attributes allowed in
@@ -54,7 +54,7 @@ public final class ResponseCookie extends HttpCookie {
 	/**
 	 * Private constructor. See {@link #from(String, String)}.
 	 */
-	private ResponseCookie(String name, @Nullable String value, Duration maxAge, @Nullable String domain,
+	private ResponseCookie(String name, String value, Duration maxAge, @Nullable String domain,
 			@Nullable String path, boolean secure, boolean httpOnly, @Nullable String sameSite) {
 
 		super(name, value);
@@ -120,34 +120,27 @@ public final class ResponseCookie extends HttpCookie {
 	 * Return the cookie "SameSite" attribute, or {@code null} if not set.
 	 * <p>This limits the scope of the cookie such that it will only be attached to
 	 * same site requests if {@code "Strict"} or cross-site requests if {@code "Lax"}.
-	 * @since 5.1
 	 * @see <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis#section-4.1.2.7">RFC6265 bis</a>
+	 * @since 5.1
 	 */
 	@Nullable
 	public String getSameSite() {
 		return this.sameSite;
 	}
 
-	/**
-	 * Return a builder pre-populated with values from {@code "this"} instance.
-	 * @since 6.0
-	 */
-	public ResponseCookieBuilder mutate() {
-		return new DefaultResponseCookieBuilder(getName(), getValue(), false)
-				.maxAge(this.maxAge)
-				.domain(this.domain)
-				.path(this.path)
-				.secure(this.secure)
-				.httpOnly(this.httpOnly)
-				.sameSite(this.sameSite);
-	}
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other ||(other instanceof ResponseCookie that &&
-				getName().equalsIgnoreCase(that.getName()) &&
-				ObjectUtils.nullSafeEquals(this.path, that.getPath()) &&
-				ObjectUtils.nullSafeEquals(this.domain, that.getDomain())));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof ResponseCookie)) {
+			return false;
+		}
+		ResponseCookie otherCookie = (ResponseCookie) other;
+		return (getName().equalsIgnoreCase(otherCookie.getName()) &&
+				ObjectUtils.nullSafeEquals(this.path, otherCookie.getPath()) &&
+				ObjectUtils.nullSafeEquals(this.domain, otherCookie.getDomain()));
 	}
 
 	@Override
@@ -171,7 +164,7 @@ public final class ResponseCookie extends HttpCookie {
 		if (!this.maxAge.isNegative()) {
 			sb.append("; Max-Age=").append(this.maxAge.getSeconds());
 			sb.append("; Expires=");
-			long millis = (this.maxAge.getSeconds() > 0 ? System.currentTimeMillis() + this.maxAge.toMillis() : 0);
+			long millis = this.maxAge.getSeconds() > 0 ? System.currentTimeMillis() + this.maxAge.toMillis() : 0;
 			sb.append(HttpHeaders.formatDate(millis));
 		}
 		if (this.secure) {
@@ -188,40 +181,80 @@ public final class ResponseCookie extends HttpCookie {
 
 
 	/**
-	 * Factory method to obtain a builder for a server-defined cookie, given its
-	 * name only, and where the value as well as other attributes can be set
-	 * later via builder methods.
-	 * @param name the cookie name
-	 * @return a builder to create the cookie with
-	 * @since 6.0
-	 */
-	public static ResponseCookieBuilder from(final String name) {
-		return new DefaultResponseCookieBuilder(name, null, false);
-	}
-
-	/**
 	 * Factory method to obtain a builder for a server-defined cookie that starts
 	 * with a name-value pair and may also include attributes.
-	 * @param name the cookie name
+	 *
+	 * @param name  the cookie name
 	 * @param value the cookie value
-	 * @return a builder to create the cookie with
+	 * @return the created cookie instance
 	 */
 	public static ResponseCookieBuilder from(final String name, final String value) {
-		return new DefaultResponseCookieBuilder(name, value, false);
-	}
 
-	/**
-	 * Factory method to obtain a builder for a server-defined cookie. Unlike
-	 * {@link #from(String, String)} this option assumes input from a remote
-	 * server, which can be handled more leniently, e.g. ignoring an empty domain
-	 * name with double quotes.
-	 * @param name the cookie name
-	 * @param value the cookie value
-	 * @return a builder to create the cookie with
-	 * @since 5.2.5
-	 */
-	public static ResponseCookieBuilder fromClientResponse(final String name, final String value) {
-		return new DefaultResponseCookieBuilder(name, value, true);
+		return new ResponseCookieBuilder() {
+
+			private Duration maxAge = Duration.ofSeconds(-1);
+
+			@Nullable
+			private String domain;
+
+			@Nullable
+			private String path;
+
+			private boolean secure;
+
+			private boolean httpOnly;
+
+			@Nullable
+			private String sameSite;
+
+			@Override
+			public ResponseCookieBuilder maxAge(Duration maxAge) {
+				this.maxAge = maxAge;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder maxAge(long maxAgeSeconds) {
+				this.maxAge = maxAgeSeconds >= 0 ? Duration.ofSeconds(maxAgeSeconds) : Duration.ofSeconds(-1);
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder domain(String domain) {
+				this.domain = domain;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder path(String path) {
+				this.path = path;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder secure(boolean secure) {
+				this.secure = secure;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder httpOnly(boolean httpOnly) {
+				this.httpOnly = httpOnly;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder sameSite(@Nullable String sameSite) {
+				this.sameSite = sameSite;
+				return this;
+			}
+
+			@Override
+			public ResponseCookie build() {
+				return new ResponseCookie(name, value, this.maxAge, this.domain, this.path,
+						this.secure, this.httpOnly, this.sameSite);
+			}
+		};
 	}
 
 
@@ -229,12 +262,6 @@ public final class ResponseCookie extends HttpCookie {
 	 * A builder for a server-defined HttpCookie with attributes.
 	 */
 	public interface ResponseCookieBuilder {
-
-		/**
-		 * Set the cookie value.
-		 * @since 6.0
-		 */
-		ResponseCookieBuilder value(@Nullable String value);
 
 		/**
 		 * Set the cookie "Max-Age" attribute.
@@ -254,12 +281,12 @@ public final class ResponseCookie extends HttpCookie {
 		/**
 		 * Set the cookie "Path" attribute.
 		 */
-		ResponseCookieBuilder path(@Nullable String path);
+		ResponseCookieBuilder path(String path);
 
 		/**
 		 * Set the cookie "Domain" attribute.
 		 */
-		ResponseCookieBuilder domain(@Nullable String domain);
+		ResponseCookieBuilder domain(String domain);
 
 		/**
 		 * Add the "Secure" attribute to the cookie.
@@ -328,8 +355,9 @@ public final class ResponseCookie extends HttpCookie {
 				start = 1;
 				end--;
 			}
+			char[] chars = value.toCharArray();
 			for (int i = start; i < end; i++) {
-				char c = value.charAt(i);
+				char c = chars[i];
 				if (c < 0x21 || c == 0x22 || c == 0x2c || c == 0x3b || c == 0x5c || c == 0x7f) {
 					throw new IllegalArgumentException(
 							"RFC2616 cookie value cannot have '" + c + "'");
@@ -347,7 +375,7 @@ public final class ResponseCookie extends HttpCookie {
 			}
 			int char1 = domain.charAt(0);
 			int charN = domain.charAt(domain.length() - 1);
-			if (char1 == '-' || charN == '.' || charN == '-') {
+			if (char1 == '.' || char1 == '-' || charN == '.' || charN == '-') {
 				throw new IllegalArgumentException("Invalid first/last char in cookie domain: " + domain);
 			}
 			for (int i = 0, c = -1; i < domain.length(); i++) {
@@ -369,108 +397,6 @@ public final class ResponseCookie extends HttpCookie {
 					throw new IllegalArgumentException(path + ": Invalid cookie path char '" + c + "'");
 				}
 			}
-		}
-	}
-
-
-	/**
-	 * Default implementation of {@link ResponseCookieBuilder}.
-	 */
-	private static class DefaultResponseCookieBuilder implements ResponseCookieBuilder {
-
-		private final String name;
-
-		@Nullable
-		private String value;
-
-		private final boolean lenient;
-
-		private Duration maxAge = Duration.ofSeconds(-1);
-
-		@Nullable
-		private String domain;
-
-		@Nullable
-		private String path;
-
-		private boolean secure;
-
-		private boolean httpOnly;
-
-		@Nullable
-		private String sameSite;
-
-		public DefaultResponseCookieBuilder(String name, @Nullable String value, boolean lenient) {
-			this.name = name;
-			this.value = value;
-			this.lenient = lenient;
-		}
-
-		@Override
-		public ResponseCookieBuilder value(@Nullable String value) {
-			this.value = value;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder maxAge(Duration maxAge) {
-			this.maxAge = maxAge;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder maxAge(long maxAgeSeconds) {
-			this.maxAge = (maxAgeSeconds >= 0 ? Duration.ofSeconds(maxAgeSeconds) : Duration.ofSeconds(-1));
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder domain(@Nullable String domain) {
-			this.domain = initDomain(domain);
-			return this;
-		}
-
-		@Nullable
-		private String initDomain(@Nullable String domain) {
-			if (this.lenient && StringUtils.hasLength(domain)) {
-				String str = domain.trim();
-				if (str.startsWith("\"") && str.endsWith("\"")) {
-					if (str.substring(1, str.length() - 1).trim().isEmpty()) {
-						return null;
-					}
-				}
-			}
-			return domain;
-		}
-
-		@Override
-		public ResponseCookieBuilder path(@Nullable String path) {
-			this.path = path;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder secure(boolean secure) {
-			this.secure = secure;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder httpOnly(boolean httpOnly) {
-			this.httpOnly = httpOnly;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder sameSite(@Nullable String sameSite) {
-			this.sameSite = sameSite;
-			return this;
-		}
-
-		@Override
-		public ResponseCookie build() {
-			return new ResponseCookie(this.name, this.value, this.maxAge,
-					this.domain, this.path, this.secure, this.httpOnly, this.sameSite);
 		}
 	}
 

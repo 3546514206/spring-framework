@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,10 @@ import org.springframework.jdbc.support.KeyHolder;
 
 /**
  * Interface specifying the API for a Simple JDBC Insert implemented by {@link SimpleJdbcInsert}.
- *
- * <p>This interface is not often used directly, but provides the option to enhance testability,
+ * This interface is not often used directly, but provides the option to enhance testability,
  * as it can easily be mocked or stubbed.
  *
  * @author Thomas Risberg
- * @author Sam Brannen
  * @since 2.5
  */
 public interface SimpleJdbcInsertOperations {
@@ -36,76 +34,52 @@ public interface SimpleJdbcInsertOperations {
 	/**
 	 * Specify the table name to be used for the insert.
 	 * @param tableName the name of the stored table
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations withTableName(String tableName);
 
 	/**
 	 * Specify the schema name, if any, to be used for the insert.
 	 * @param schemaName the name of the schema
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations withSchemaName(String schemaName);
 
 	/**
 	 * Specify the catalog name, if any, to be used for the insert.
 	 * @param catalogName the name of the catalog
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations withCatalogName(String catalogName);
 
 	/**
 	 * Specify the column names that the insert statement should be limited to use.
 	 * @param columnNames one or more column names
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations usingColumns(String... columnNames);
 
 	/**
-	 * Specify the names of any columns that have auto-generated keys.
+	 * Specify the names of any columns that have auto generated keys.
 	 * @param columnNames one or more column names
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations usingGeneratedKeyColumns(String... columnNames);
 
 	/**
-	 * Specify that SQL identifiers should be quoted.
-	 * <p>If this method is invoked, the identifier quote string for the underlying
-	 * database will be used to quote SQL identifiers in generated SQL statements.
-	 * In this context, SQL identifiers refer to schema, table, and column names.
-	 * <p>When identifiers are quoted, explicit column names must be supplied via
-	 * {@link #usingColumns(String...)}. Furthermore, all identifiers for the
-	 * schema name, table name, and column names must match the corresponding
-	 * identifiers in the database's metadata regarding casing (mixed case,
-	 * uppercase, or lowercase).
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
-	 * @since 6.1
-	 * @see #withSchemaName(String)
-	 * @see #withTableName(String)
-	 * @see #usingColumns(String...)
-	 * @see java.sql.DatabaseMetaData#getIdentifierQuoteString()
-	 * @see java.sql.DatabaseMetaData#storesMixedCaseIdentifiers()
-	 * @see java.sql.DatabaseMetaData#storesMixedCaseQuotedIdentifiers()
-	 * @see java.sql.DatabaseMetaData#storesUpperCaseIdentifiers()
-	 * @see java.sql.DatabaseMetaData#storesUpperCaseQuotedIdentifiers()
-	 * @see java.sql.DatabaseMetaData#storesLowerCaseIdentifiers()
-	 * @see java.sql.DatabaseMetaData#storesLowerCaseQuotedIdentifiers()
-	 */
-	SimpleJdbcInsertOperations usingQuotedIdentifiers();
-
-	/**
 	 * Turn off any processing of column meta-data information obtained via JDBC.
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations withoutTableColumnMetaDataAccess();
 
 	/**
 	 * Include synonyms for the column meta-data lookups via JDBC.
 	 * <p>Note: This is only necessary to include for Oracle since other databases
-	 * supporting synonyms seem to include the synonyms automatically.
-	 * @return this {@code SimpleJdbcInsert} (for method chaining)
+	 * supporting synonyms seems to include the synonyms automatically.
+	 * @return the instance of this SimpleJdbcInsert
 	 */
 	SimpleJdbcInsertOperations includeSynonymsForTableColumnMetaData();
+
 
 	/**
 	 * Execute the insert using the values passed in.

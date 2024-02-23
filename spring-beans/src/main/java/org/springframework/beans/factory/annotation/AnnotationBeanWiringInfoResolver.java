@@ -55,12 +55,10 @@ public class AnnotationBeanWiringInfoResolver implements BeanWiringInfoResolver 
 		if (!Autowire.NO.equals(annotation.autowire())) {
 			// Autowiring by name or by type
 			return new BeanWiringInfo(annotation.autowire().value(), annotation.dependencyCheck());
-		}
-		else if (!annotation.value().isEmpty()) {
+		} else if (!"".equals(annotation.value())) {
 			// Explicitly specified bean name for bean definition to take property values from
 			return new BeanWiringInfo(annotation.value(), false);
-		}
-		else {
+		} else {
 			// Default bean name for bean definition to take property values from
 			return new BeanWiringInfo(getDefaultBeanName(beanInstance), true);
 		}

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.servlet.support;
 
 import java.util.Collection;
@@ -22,8 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterRegistration.Dynamic;
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterRegistration.Dynamic;
 
 class MockFilterRegistration implements Dynamic {
 

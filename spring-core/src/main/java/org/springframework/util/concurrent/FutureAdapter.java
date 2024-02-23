@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,7 @@ import org.springframework.util.Assert;
  * @since 4.0
  * @param <T> the type of this {@code Future}
  * @param <S> the type of the adaptee's {@code Future}
- * @deprecated as of 6.0, with no concrete replacement
  */
-@Deprecated(since = "6.0")
 public abstract class FutureAdapter<T, S> implements Future<T> {
 
 	private final Future<S> adaptee;
@@ -96,18 +94,18 @@ public abstract class FutureAdapter<T, S> implements Future<T> {
 	@Nullable
 	final T adaptInternal(S adapteeResult) throws ExecutionException {
 		synchronized (this.mutex) {
-			return switch (this.state) {
-				case SUCCESS -> (T) this.result;
-				case FAILURE -> {
+			switch (this.state) {
+				case SUCCESS:
+					return (T) this.result;
+				case FAILURE:
 					Assert.state(this.result instanceof ExecutionException, "Failure without exception");
 					throw (ExecutionException) this.result;
-				}
-				case NEW -> {
+				case NEW:
 					try {
 						T adapted = adapt(adapteeResult);
 						this.result = adapted;
 						this.state = State.SUCCESS;
-						yield adapted;
+						return adapted;
 					}
 					catch (ExecutionException ex) {
 						this.result = ex;
@@ -120,8 +118,9 @@ public abstract class FutureAdapter<T, S> implements Future<T> {
 						this.state = State.FAILURE;
 						throw execEx;
 					}
-				}
-			};
+				default:
+					throw new IllegalStateException();
+			}
 		}
 	}
 

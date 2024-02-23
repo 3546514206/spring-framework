@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.http.server;
 
 import java.net.URI;
@@ -21,11 +20,7 @@ import java.net.URI;
 import org.springframework.lang.Nullable;
 
 /**
- * Specialization of {@link PathContainer} that subdivides the path into a
- * {@link #contextPath()} and the remaining {@link #pathWithinApplication()}.
- * The latter is typically used for request mapping within the application
- * while the former is useful when preparing external links that point back to
- * the application.
+ * Represents the complete path for a request.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -45,8 +40,7 @@ public interface RequestPath extends PathContainer {
 	PathContainer contextPath();
 
 	/**
-	 * The portion of the request path after the context path which is typically
-	 * used for request mapping within the application.
+	 * The portion of the request path after the context path.
 	 */
 	PathContainer pathWithinApplication();
 
@@ -60,23 +54,10 @@ public interface RequestPath extends PathContainer {
 
 
 	/**
-	 * Parse the URI for a request into a {@code RequestPath}.
-	 * @param uri the URI of the request
-	 * @param contextPath the contextPath portion of the URI path
+	 * Create a new {@code RequestPath} with the given parameters.
 	 */
 	static RequestPath parse(URI uri, @Nullable String contextPath) {
-		return parse(uri.getRawPath(), contextPath);
-	}
-
-	/**
-	 * Variant of {@link #parse(URI, String)} with the encoded
-	 * {@link URI#getRawPath() raw path}.
-	 * @param rawPath the path
-	 * @param contextPath the contextPath portion of the URI path
-	 * @since 5.3
-	 */
-	static RequestPath parse(String rawPath, @Nullable String contextPath) {
-		return new DefaultRequestPath(rawPath, contextPath);
+		return new DefaultRequestPath(uri, contextPath);
 	}
 
 }

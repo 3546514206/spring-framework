@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,24 @@
 
 package org.springframework.web.reactive.result.method;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.lang.Nullable;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.ResolvableMethod;
+import org.springframework.web.reactive.BindingContext;
+import org.springframework.web.reactive.HandlerResult;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.UnsupportedMediaTypeStatusException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -23,40 +41,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.lang.Nullable;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.reactive.BindingContext;
-import org.springframework.web.reactive.HandlerResult;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.UnsupportedMediaTypeStatusException;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.method.ResolvableMethod;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.get;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
 
 /**
- * Tests for {@link InvocableHandlerMethod}.
+ * Unit tests for {@link InvocableHandlerMethod}.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  */
-class InvocableHandlerMethodTests {
+public class InvocableHandlerMethodTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
@@ -67,7 +64,7 @@ class InvocableHandlerMethodTests {
 
 
 	@Test
-	void resolveArg() {
+	public void resolveArg() {
 		this.resolvers.add(stubResolver("value1"));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
@@ -76,7 +73,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveNoArgValue() {
+	public void resolveNoArgValue() {
 		this.resolvers.add(stubResolver(Mono.empty()));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
@@ -85,25 +82,23 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveNoArgs() {
+	public void resolveNoArgs() {
 		Method method = ResolvableMethod.on(TestController.class).mockCall(TestController::noArgs).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
-
 		assertHandlerResultValue(mono, "success");
 	}
 
 	@Test
-	void cannotResolveArg() {
+	public void cannotResolveArg() {
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
-
-		assertThatIllegalStateException()
-			.isThrownBy(mono::block)
-			.withMessage("Could not resolve parameter [0] in %s: No suitable resolver", method.toGenericString());
+		assertThatIllegalStateException().isThrownBy(
+				mono::block)
+			.withMessage("Could not resolve parameter [0] in " + method.toGenericString() + ": No suitable resolver");
 	}
 
 	@Test
-	void resolveProvidedArg() {
+	public void resolveProvidedArg() {
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method, "value1");
 
@@ -111,7 +106,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveProvidedArgFirst() {
+	public void resolveProvidedArgFirst() {
 		this.resolvers.add(stubResolver("value1"));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method, "value2");
@@ -120,24 +115,23 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void exceptionInResolvingArg() {
+	public void exceptionInResolvingArg() {
 		this.resolvers.add(stubResolver(Mono.error(new UnsupportedMediaTypeStatusException("boo"))));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
 
-		assertThatExceptionOfType(UnsupportedMediaTypeStatusException.class)
-			.isThrownBy(mono::block)
+		assertThatExceptionOfType(UnsupportedMediaTypeStatusException.class).isThrownBy(
+				mono::block)
 			.withMessage("415 UNSUPPORTED_MEDIA_TYPE \"boo\"");
 	}
 
 	@Test
-	void illegalArgumentException() {
+	public void illegalArgumentException() {
 		this.resolvers.add(stubResolver(1));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(o -> o.singleArg(null)).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
-
-		assertThatIllegalStateException()
-			.isThrownBy(mono::block)
+		assertThatIllegalStateException().isThrownBy(
+				mono::block)
 			.withCauseInstanceOf(IllegalArgumentException.class)
 			.withMessageContaining("Controller [")
 			.withMessageContaining("Method [")
@@ -146,17 +140,17 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void invocationTargetException() {
+	public void invocationTargetException() {
 		Method method = ResolvableMethod.on(TestController.class).mockCall(TestController::exceptionMethod).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
 
-		assertThatIllegalStateException()
-			.isThrownBy(mono::block)
+		assertThatIllegalStateException().isThrownBy(
+				mono::block)
 			.withMessage("boo");
 	}
 
 	@Test
-	void responseStatusAnnotation() {
+	public void responseStatusAnnotation() {
 		Method method = ResolvableMethod.on(TestController.class).mockCall(TestController::created).method();
 		Mono<HandlerResult> mono = invoke(new TestController(), method);
 
@@ -165,7 +159,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void voidMethodWithResponseArg() {
+	public void voidMethodWithResponseArg() {
 		ServerHttpResponse response = this.exchange.getResponse();
 		this.resolvers.add(stubResolver(response));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(c -> c.response(response)).method();
@@ -176,7 +170,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void voidMonoMethodWithResponseArg() {
+	public void voidMonoMethodWithResponseArg() {
 		ServerHttpResponse response = this.exchange.getResponse();
 		this.resolvers.add(stubResolver(response));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(c -> c.responseMonoVoid(response)).method();
@@ -187,7 +181,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void voidMethodWithExchangeArg() {
+	public void voidMethodWithExchangeArg() {
 		this.resolvers.add(stubResolver(this.exchange));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(c -> c.exchange(exchange)).method();
 		HandlerResult result = invokeForResult(new TestController(), method);
@@ -197,7 +191,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void voidMonoMethodWithExchangeArg() {
+	public void voidMonoMethodWithExchangeArg() {
 		this.resolvers.add(stubResolver(this.exchange));
 		Method method = ResolvableMethod.on(TestController.class).mockCall(c -> c.exchangeMonoVoid(exchange)).method();
 		HandlerResult result = invokeForResult(new TestController(), method);
@@ -207,7 +201,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void checkNotModified() {
+	public void checkNotModified() {
 		MockServerHttpRequest request = MockServerHttpRequest.get("/").ifModifiedSince(10 * 1000 * 1000).build();
 		ServerWebExchange exchange = MockServerWebExchange.from(request);
 		this.resolvers.add(stubResolver(exchange));
@@ -229,12 +223,12 @@ class InvocableHandlerMethodTests {
 		return invocable.invoke(this.exchange, new BindingContext(), providedArgs);
 	}
 
-	private HandlerMethodArgumentResolver stubResolver(Object stubValue) {
+	private <T> HandlerMethodArgumentResolver stubResolver(Object stubValue) {
 		return stubResolver(Mono.just(stubValue));
 	}
 
-	private HandlerMethodArgumentResolver stubResolver(Mono<Object> stubValue) {
-		HandlerMethodArgumentResolver resolver = mock();
+	private <T> HandlerMethodArgumentResolver stubResolver(Mono<Object> stubValue) {
+		HandlerMethodArgumentResolver resolver = mock(HandlerMethodArgumentResolver.class);
 		given(resolver.supportsParameter(any())).willReturn(true);
 		given(resolver.resolveArgument(any(), any(), any())).willReturn(stubValue);
 		return resolver;
@@ -295,8 +289,7 @@ class InvocableHandlerMethodTests {
 		}
 
 		private Flux<DataBuffer> getBody(String body) {
-			byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-			return Flux.just(DefaultDataBufferFactory.sharedInstance.wrap(bytes));
+			return Flux.just(new DefaultDataBufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8)));
 		}
 	}
 

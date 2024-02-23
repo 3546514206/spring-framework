@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,26 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.time.Duration;
-import java.util.Objects;
-
-import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.AbstractHttpHandlerIntegrationTests;
 import org.springframework.http.server.reactive.HttpHandler;
-import org.springframework.lang.Nullable;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.DispatcherHandler;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
-import static org.springframework.http.MediaType.APPLICATION_NDJSON;
-import static org.springframework.http.MediaType.APPLICATION_NDJSON_VALUE;
+import java.time.Duration;
+
+import static org.springframework.http.MediaType.APPLICATION_STREAM_JSON;
+import static org.springframework.http.MediaType.APPLICATION_STREAM_JSON_VALUE;
 
 /**
  * @author Sebastien Deleuze
@@ -73,7 +70,7 @@ class JacksonStreamingIntegrationTests extends AbstractHttpHandlerIntegrationTes
 
 		Flux<Person> result = this.webClient.get()
 				.uri("/stream")
-				.accept(APPLICATION_NDJSON)
+				.accept(APPLICATION_STREAM_JSON)
 				.retrieve()
 				.bodyToFlux(Person.class);
 
@@ -107,7 +104,7 @@ class JacksonStreamingIntegrationTests extends AbstractHttpHandlerIntegrationTes
 	static class JacksonStreamingController {
 
 		@GetMapping(value = "/stream",
-				produces = { APPLICATION_NDJSON_VALUE, "application/stream+x-jackson-smile" })
+				produces = { APPLICATION_STREAM_JSON_VALUE, "application/stream+x-jackson-smile" })
 		Flux<Person> person() {
 			return testInterval(Duration.ofMillis(100), 50).map(l -> new Person("foo " + l));
 		}
@@ -146,7 +143,7 @@ class JacksonStreamingIntegrationTests extends AbstractHttpHandlerIntegrationTes
 		}
 
 		@Override
-		public boolean equals(@Nullable Object o) {
+		public boolean equals(Object o) {
 			if (this == o) {
 				return true;
 			}
@@ -154,7 +151,7 @@ class JacksonStreamingIntegrationTests extends AbstractHttpHandlerIntegrationTes
 				return false;
 			}
 			Person person = (Person) o;
-			return Objects.equals(this.name, person.name);
+			return !(this.name != null ? !this.name.equals(person.name) : person.name != null);
 		}
 
 		@Override

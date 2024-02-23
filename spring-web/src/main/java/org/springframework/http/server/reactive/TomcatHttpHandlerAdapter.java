@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,32 @@
 
 package org.springframework.http.server.reactive;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
 import org.apache.catalina.connector.CoyoteInputStream;
 import org.apache.catalina.connector.CoyoteOutputStream;
 import org.apache.catalina.connector.RequestFacade;
 import org.apache.catalina.connector.ResponseFacade;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
-import org.springframework.util.MultiValueMap;
 import org.springframework.util.ReflectionUtils;
+
+import javax.servlet.AsyncContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * {@link ServletHttpHandlerAdapter} extension that uses Tomcat APIs for reading
@@ -47,12 +49,11 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author Violeta Georgieva
  * @author Brian Clozel
- * @author Sam Brannen
- * @author Juergen Hoeller
- * @since 5.0
  * @see org.springframework.web.server.adapter.AbstractReactiveWebInitializer
+ * @since 5.0
  */
 public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
+
 
 	public TomcatHttpHandlerAdapter(HttpHandler httpHandler) {
 		super(httpHandler);
@@ -63,7 +64,7 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 	protected ServletServerHttpRequest createRequest(HttpServletRequest request, AsyncContext asyncContext)
 			throws IOException, URISyntaxException {
 
-		Assert.state(getServletPath() != null, "Servlet path is not initialized");
+		Assert.notNull(getServletPath(), "Servlet path is not initialized");
 		return new TomcatServerHttpRequest(
 				request, asyncContext, getServletPath(), getDataBufferFactory(), getBufferSize());
 	}
@@ -101,20 +102,22 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 			this.bufferSize = bufferSize;
 		}
 
-		private static MultiValueMap<String, String> createTomcatHttpHeaders(HttpServletRequest request) {
+		private static HttpHeaders createTomcatHttpHeaders(HttpServletRequest request) {
 			RequestFacade requestFacade = getRequestFacade(request);
 			org.apache.catalina.connector.Request connectorRequest = (org.apache.catalina.connector.Request)
 					ReflectionUtils.getField(COYOTE_REQUEST_FIELD, requestFacade);
 			Assert.state(connectorRequest != null, "No Tomcat connector request");
 			Request tomcatRequest = connectorRequest.getCoyoteRequest();
-			return new TomcatHeadersAdapter(tomcatRequest.getMimeHeaders());
+			TomcatHeadersAdapter headers = new TomcatHeadersAdapter(tomcatRequest.getMimeHeaders());
+			return new HttpHeaders(headers);
 		}
 
 		private static RequestFacade getRequestFacade(HttpServletRequest request) {
-			if (request instanceof RequestFacade facade) {
-				return facade;
+			if (request instanceof RequestFacade) {
+				return (RequestFacade) request;
 			}
-			else if (request instanceof HttpServletRequestWrapper wrapper) {
+			else if (request instanceof HttpServletRequestWrapper) {
+				HttpServletRequestWrapper wrapper = (HttpServletRequestWrapper) request;
 				HttpServletRequest wrappedRequest = (HttpServletRequest) wrapper.getRequest();
 				return getRequestFacade(wrappedRequest);
 			}
@@ -126,38 +129,29 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 
 		@Override
 		protected DataBuffer readFromInputStream() throws IOException {
-			if (getInputStream() instanceof CoyoteInputStream coyoteInputStream) {
-				DataBuffer dataBuffer = this.factory.allocateBuffer(this.bufferSize);
-				int read = -1;
-				try {
-					try (DataBuffer.ByteBufferIterator iterator = dataBuffer.writableByteBuffers()) {
-						Assert.state(iterator.hasNext(), "No ByteBuffer available");
-						ByteBuffer byteBuffer = iterator.next();
-						read = coyoteInputStream.read(byteBuffer);
-					}
-					logBytesRead(read);
-					if (read > 0) {
-						dataBuffer.writePosition(read);
-						return dataBuffer;
-					}
-					else if (read == -1) {
-						return EOF_BUFFER;
-					}
-					else {
-						return AbstractListenerReadPublisher.EMPTY_BUFFER;
-					}
-				}
-				finally {
-					if (read <= 0) {
-						DataBufferUtils.release(dataBuffer);
-					}
+			boolean release = true;
+			int capacity = this.bufferSize;
+			DataBuffer dataBuffer = this.factory.allocateBuffer(capacity);
+			try {
+				ByteBuffer byteBuffer = dataBuffer.asByteBuffer(0, capacity);
+				ServletRequest request = getNativeRequest();
+				int read = ((CoyoteInputStream) request.getInputStream()).read(byteBuffer);
+				logBytesRead(read);
+				if (read > 0) {
+					dataBuffer.writePosition(read);
+					release = false;
+					return dataBuffer;
+				} else if (read == -1) {
+					return EOF_BUFFER;
+				} else {
+					return null;
 				}
 			}
-			else {
-				// It's possible InputStream can be wrapped, preventing use of CoyoteInputStream
-				return super.readFromInputStream();
+			finally {
+				if (release) {
+					DataBufferUtils.release(dataBuffer);
+				}
 			}
-
 		}
 	}
 
@@ -190,10 +184,11 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 		}
 
 		private static ResponseFacade getResponseFacade(HttpServletResponse response) {
-			if (response instanceof ResponseFacade facade) {
-				return facade;
+			if (response instanceof ResponseFacade) {
+				return (ResponseFacade) response;
 			}
-			else if (response instanceof HttpServletResponseWrapper wrapper) {
+			else if (response instanceof HttpServletResponseWrapper) {
+				HttpServletResponseWrapper wrapper = (HttpServletResponseWrapper) response;
 				HttpServletResponse wrappedResponse = (HttpServletResponse) wrapper.getResponse();
 				return getResponseFacade(wrappedResponse);
 			}
@@ -205,25 +200,35 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 
 		@Override
 		protected void applyHeaders() {
-			adaptHeaders(true);
+			HttpServletResponse response = getNativeResponse();
+			MediaType contentType = null;
+			try {
+				contentType = getHeaders().getContentType();
+			}
+			catch (Exception ex) {
+				String rawContentType = getHeaders().getFirst(HttpHeaders.CONTENT_TYPE);
+				response.setContentType(rawContentType);
+			}
+			if (response.getContentType() == null && contentType != null) {
+				response.setContentType(contentType.toString());
+			}
+			Charset charset = (contentType != null ? contentType.getCharset() : null);
+			if (response.getCharacterEncoding() == null && charset != null) {
+				response.setCharacterEncoding(charset.name());
+			}
+			long contentLength = getHeaders().getContentLength();
+			if (contentLength != -1) {
+				response.setContentLengthLong(contentLength);
+			}
 		}
 
 		@Override
 		protected int writeToOutputStream(DataBuffer dataBuffer) throws IOException {
-			if (getOutputStream() instanceof CoyoteOutputStream coyoteOutputStream) {
-				int len = 0;
-				try (DataBuffer.ByteBufferIterator iterator = dataBuffer.readableByteBuffers()) {
-					while (iterator.hasNext() && coyoteOutputStream.isReady()) {
-						ByteBuffer byteBuffer = iterator.next();
-						len += byteBuffer.remaining();
-						coyoteOutputStream.write(byteBuffer);
-					}
-				}
-				return len;
-			}
-			else {
-				return super.writeToOutputStream(dataBuffer);
-			}
+			ByteBuffer input = dataBuffer.asByteBuffer();
+			int len = input.remaining();
+			ServletResponse response = getNativeResponse();
+			((CoyoteOutputStream) response.getOutputStream()).write(input);
+			return len;
 		}
 	}
 

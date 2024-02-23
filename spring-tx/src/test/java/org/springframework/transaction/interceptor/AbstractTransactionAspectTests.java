@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,20 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.transaction.CannotCreateTransactionException;
-import org.springframework.transaction.NoTransactionException;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.TransactionSystemException;
-import org.springframework.transaction.UnexpectedRollbackException;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.transaction.*;
 import org.springframework.transaction.interceptor.TransactionAspectSupport.TransactionInfo;
-import org.springframework.transaction.testfixture.MockCallbackPreferringTransactionManager;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
+import java.lang.reflect.Method;
+
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 
 /**
  * Mock object based tests for transaction aspects. A true unit test in that it
@@ -66,7 +53,7 @@ public abstract class AbstractTransactionAspectTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		getNameMethod = ITestBean.class.getMethod("getName");
 		setNameMethod = ITestBean.class.getMethod("setName", String.class);
 		exceptionalMethod = ITestBean.class.getMethod("exceptional", Throwable.class);
@@ -74,8 +61,8 @@ public abstract class AbstractTransactionAspectTests {
 
 
 	@Test
-	void noTransaction() throws Exception {
-		PlatformTransactionManager ptm = mock();
+	public void noTransaction() throws Exception {
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 
 		TestBean tb = new TestBean();
 		TransactionAttributeSource tas = new MapTransactionAttributeSource();
@@ -90,21 +77,21 @@ public abstract class AbstractTransactionAspectTests {
 		checkTransactionStatus(false);
 
 		// expect no calls
-		verifyNoInteractions(ptm);
+		verifyZeroInteractions(ptm);
 	}
 
 	/**
 	 * Check that a transaction is created and committed.
 	 */
 	@Test
-	void transactionShouldSucceed() throws Exception {
+	public void transactionShouldSucceed() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(getNameMethod, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// expect a transaction
 		given(ptm.getTransaction(txatt)).willReturn(status);
 
@@ -123,7 +110,7 @@ public abstract class AbstractTransactionAspectTests {
 	 * CallbackPreferringPlatformTransactionManager.
 	 */
 	@Test
-	void transactionShouldSucceedWithCallbackPreference() throws Exception {
+	public void transactionShouldSucceedWithCallbackPreference() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
@@ -143,7 +130,7 @@ public abstract class AbstractTransactionAspectTests {
 	}
 
 	@Test
-	void transactionExceptionPropagatedWithCallbackPreference() throws Throwable {
+	public void transactionExceptionPropagatedWithCallbackPreference() throws Throwable {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
@@ -167,7 +154,7 @@ public abstract class AbstractTransactionAspectTests {
 	 * Check that two transactions are created and committed.
 	 */
 	@Test
-	void twoTransactionsShouldSucceed() throws Exception {
+	public void twoTransactionsShouldSucceed() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas1 = new MapTransactionAttributeSource();
@@ -175,8 +162,8 @@ public abstract class AbstractTransactionAspectTests {
 		MapTransactionAttributeSource tas2 = new MapTransactionAttributeSource();
 		tas2.register(setNameMethod, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// expect a transaction
 		given(ptm.getTransaction(txatt)).willReturn(status);
 
@@ -196,14 +183,14 @@ public abstract class AbstractTransactionAspectTests {
 	 * Check that a transaction is created and committed.
 	 */
 	@Test
-	void transactionShouldSucceedWithNotNew() throws Exception {
+	public void transactionShouldSucceedWithNotNew() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(getNameMethod, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// expect a transaction
 		given(ptm.getTransaction(txatt)).willReturn(status);
 
@@ -219,14 +206,14 @@ public abstract class AbstractTransactionAspectTests {
 	}
 
 	@Test
-	void enclosingTransactionWithNonTransactionMethodOnAdvisedInside() throws Throwable {
+	public void enclosingTransactionWithNonTransactionMethodOnAdvisedInside() throws Throwable {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(exceptionalMethod, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// Expect a transaction
 		given(ptm.getTransaction(txatt)).willReturn(status);
 
@@ -234,7 +221,7 @@ public abstract class AbstractTransactionAspectTests {
 
 		TestBean outer = new TestBean() {
 			@Override
-			public void exceptional(Throwable t) {
+			public void exceptional(Throwable t) throws Throwable {
 				TransactionInfo ti = TransactionAspectSupport.currentTransactionInfo();
 				assertThat(ti.hasTransaction()).isTrue();
 				assertThat(getSpouse().getName()).isEqualTo(spouseName);
@@ -265,7 +252,7 @@ public abstract class AbstractTransactionAspectTests {
 	}
 
 	@Test
-	void enclosingTransactionWithNestedTransactionOnAdvisedInside() throws Throwable {
+	public void enclosingTransactionWithNestedTransactionOnAdvisedInside() throws Throwable {
 		final TransactionAttribute outerTxatt = new DefaultTransactionAttribute();
 		final TransactionAttribute innerTxatt = new DefaultTransactionAttribute(TransactionDefinition.PROPAGATION_NESTED);
 
@@ -275,10 +262,10 @@ public abstract class AbstractTransactionAspectTests {
 		tas.register(outerMethod, outerTxatt);
 		tas.register(innerMethod, innerTxatt);
 
-		TransactionStatus outerStatus = mock();
-		TransactionStatus innerStatus = mock();
+		TransactionStatus outerStatus = mock(TransactionStatus.class);
+		TransactionStatus innerStatus = mock(TransactionStatus.class);
 
-		PlatformTransactionManager ptm = mock();
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// Expect a transaction
 		given(ptm.getTransaction(outerTxatt)).willReturn(outerStatus);
 		given(ptm.getTransaction(innerTxatt)).willReturn(innerStatus);
@@ -287,7 +274,7 @@ public abstract class AbstractTransactionAspectTests {
 
 		TestBean outer = new TestBean() {
 			@Override
-			public void exceptional(Throwable t) {
+			public void exceptional(Throwable t) throws Throwable {
 				TransactionInfo ti = TransactionAspectSupport.currentTransactionInfo();
 				assertThat(ti.hasTransaction()).isTrue();
 				assertThat(ti.getTransactionAttribute()).isEqualTo(outerTxatt);
@@ -322,42 +309,42 @@ public abstract class AbstractTransactionAspectTests {
 	}
 
 	@Test
-	void rollbackOnCheckedException() throws Throwable {
+	public void rollbackOnCheckedException() throws Throwable {
 		doTestRollbackOnException(new Exception(), true, false);
 	}
 
 	@Test
-	void noRollbackOnCheckedException() throws Throwable {
+	public void noRollbackOnCheckedException() throws Throwable {
 		doTestRollbackOnException(new Exception(), false, false);
 	}
 
 	@Test
-	void rollbackOnUncheckedException() throws Throwable {
+	public void rollbackOnUncheckedException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), true, false);
 	}
 
 	@Test
-	void noRollbackOnUncheckedException() throws Throwable {
+	public void noRollbackOnUncheckedException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), false, false);
 	}
 
 	@Test
-	void rollbackOnCheckedExceptionWithRollbackException() throws Throwable {
+	public void rollbackOnCheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new Exception(), true, true);
 	}
 
 	@Test
-	void noRollbackOnCheckedExceptionWithRollbackException() throws Throwable {
+	public void noRollbackOnCheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new Exception(), false, true);
 	}
 
 	@Test
-	void rollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
+	public void rollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), true, true);
 	}
 
 	@Test
-	void noRollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
+	public void noRollbackOnUncheckedExceptionWithRollbackException() throws Throwable {
 		doTestRollbackOnException(new RuntimeException(), false, true);
 	}
 
@@ -367,13 +354,14 @@ public abstract class AbstractTransactionAspectTests {
 	 * @param ex exception to be thrown by the target
 	 * @param shouldRollback whether this should cause a transaction rollback
 	 */
+	@SuppressWarnings("serial")
 	protected void doTestRollbackOnException(
 			final Exception ex, final boolean shouldRollback, boolean rollbackException) throws Exception {
 
 		TransactionAttribute txatt = new DefaultTransactionAttribute() {
 			@Override
 			public boolean rollbackOn(Throwable t) {
-				assertThat(t).isSameAs(ex);
+				assertThat(t == ex).isTrue();
 				return shouldRollback;
 			}
 		};
@@ -382,8 +370,8 @@ public abstract class AbstractTransactionAspectTests {
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(m, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// Gets additional call(s) from TransactionControl
 
 		given(ptm.getTransaction(txatt)).willReturn(status);
@@ -428,15 +416,15 @@ public abstract class AbstractTransactionAspectTests {
 	 * Test that TransactionStatus.setRollbackOnly works.
 	 */
 	@Test
-	void programmaticRollback() throws Exception {
+	public void programmaticRollback() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		Method m = getNameMethod;
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(m, txatt);
 
-		TransactionStatus status = mock();
-		PlatformTransactionManager ptm = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 
 		given(ptm.getTransaction(txatt)).willReturn(status);
 
@@ -453,7 +441,7 @@ public abstract class AbstractTransactionAspectTests {
 		ITestBean itb = (ITestBean) advised(tb, ptm, tas);
 
 		// verification!?
-		assertThat(itb.getName()).isEqualTo(name);
+		assertThat(name.equals(itb.getName())).isTrue();
 
 		verify(ptm).commit(status);
 	}
@@ -463,14 +451,14 @@ public abstract class AbstractTransactionAspectTests {
 	 * Shouldn't invoke target method.
 	 */
 	@Test
-	void cannotCreateTransaction() throws Exception {
+	public void cannotCreateTransaction() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		Method m = getNameMethod;
 		MapTransactionAttributeSource tas = new MapTransactionAttributeSource();
 		tas.register(m, txatt);
 
-		PlatformTransactionManager ptm = mock();
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 		// Expect a transaction
 		CannotCreateTransactionException ex = new CannotCreateTransactionException("foobar", null);
 		given(ptm.getTransaction(txatt)).willThrow(ex);
@@ -489,7 +477,7 @@ public abstract class AbstractTransactionAspectTests {
 			fail("Shouldn't have invoked method");
 		}
 		catch (CannotCreateTransactionException thrown) {
-			assertThat(thrown).isSameAs(ex);
+			assertThat(thrown == ex).isTrue();
 		}
 	}
 
@@ -499,7 +487,7 @@ public abstract class AbstractTransactionAspectTests {
 	 * infrastructure exception was thrown to the client
 	 */
 	@Test
-	void cannotCommitTransaction() throws Exception {
+	public void cannotCommitTransaction() throws Exception {
 		TransactionAttribute txatt = new DefaultTransactionAttribute();
 
 		Method m = setNameMethod;
@@ -508,9 +496,9 @@ public abstract class AbstractTransactionAspectTests {
 		// Method m2 = getNameMethod;
 		// No attributes for m2
 
-		PlatformTransactionManager ptm = mock();
+		PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
 
-		TransactionStatus status = mock();
+		TransactionStatus status = mock(TransactionStatus.class);
 		given(ptm.getTransaction(txatt)).willReturn(status);
 		UnexpectedRollbackException ex = new UnexpectedRollbackException("foobar", null);
 		willThrow(ex).given(ptm).commit(status);
@@ -524,11 +512,11 @@ public abstract class AbstractTransactionAspectTests {
 			fail("Shouldn't have succeeded");
 		}
 		catch (UnexpectedRollbackException thrown) {
-			assertThat(thrown).isSameAs(ex);
+			assertThat(thrown == ex).isTrue();
 		}
 
 		// Should have invoked target and changed name
-		assertThat(itb.getName()).isSameAs(name);
+		assertThat(itb.getName() == name).isTrue();
 	}
 
 	protected void checkTransactionStatus(boolean expected) {
@@ -558,8 +546,9 @@ public abstract class AbstractTransactionAspectTests {
 	 * have been created, as there's no distinction between target and proxy.
 	 * In the case of Spring's own AOP framework, a proxy must be created
 	 * using a suitably configured transaction interceptor
-	 * @param target the target if there's a distinct target. If not (AspectJ),
-	 * return target.
+	 *
+	 * @param target target if there's a distinct target. If not (AspectJ),
+	 *               return target.
 	 * @return transactional advised object
 	 */
 	protected abstract Object advised(

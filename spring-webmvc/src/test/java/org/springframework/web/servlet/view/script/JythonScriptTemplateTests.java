@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,55 +16,53 @@
 
 package org.springframework.web.servlet.view.script;
 
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import javax.servlet.ServletContext;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for String templates running on Jython.
+ * Unit tests for String templates running on Jython.
  *
  * @author Sebastien Deleuze
- * @author Sam Brannen
  */
-class JythonScriptTemplateTests {
+public class JythonScriptTemplateTests {
 
-	private WebApplicationContext webAppContext = mock();
+	private WebApplicationContext webAppContext;
 
-	private ServletContext servletContext = new MockServletContext();
+	private ServletContext servletContext;
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
+		this.webAppContext = mock(WebApplicationContext.class);
+		this.servletContext = new MockServletContext();
 		this.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.webAppContext);
 	}
 
 	@Test
-	void renderTemplate() throws Exception {
-		Map<String, Object> model = Map.of(
-			"title", "Layout example",
-			"body", "This is the body"
-		);
+	public void renderTemplate() throws Exception {
+		Map<String, Object> model = new HashMap<>();
+		model.put("title", "Layout example");
+		model.put("body", "This is the body");
 		String url = "org/springframework/web/servlet/view/script/jython/template.html";
 		MockHttpServletResponse response = render(url, model);
-		assertThat(response.getContentAsString())
-			.isEqualTo("<html><head><title>Layout example</title></head><body><p>This is the body</p></body></html>");
+		assertThat(response.getContentAsString()).isEqualTo("<html><head><title>Layout example</title></head><body><p>This is the body</p></body></html>");
 	}
 
-	private static MockHttpServletResponse render(String viewUrl, Map<String, Object> model) throws Exception {
+	private MockHttpServletResponse render(String viewUrl, Map<String, Object> model) throws Exception {
 		ScriptTemplateView view = createViewWithUrl(viewUrl);
 		MockHttpServletResponse response = new MockHttpServletResponse();
 		MockHttpServletRequest request = new MockHttpServletRequest();
@@ -72,8 +70,10 @@ class JythonScriptTemplateTests {
 		return response;
 	}
 
-	private static ScriptTemplateView createViewWithUrl(String viewUrl) throws Exception {
-		ApplicationContext ctx = new AnnotationConfigApplicationContext(ScriptTemplatingConfiguration.class);
+	private ScriptTemplateView createViewWithUrl(String viewUrl) throws Exception {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ScriptTemplatingConfiguration.class);
+		ctx.refresh();
 
 		ScriptTemplateView view = new ScriptTemplateView();
 		view.setApplicationContext(ctx);
@@ -87,7 +87,7 @@ class JythonScriptTemplateTests {
 	static class ScriptTemplatingConfiguration {
 
 		@Bean
-		ScriptTemplateConfigurer jythonConfigurer() {
+		public ScriptTemplateConfigurer jythonConfigurer() {
 			ScriptTemplateConfigurer configurer = new ScriptTemplateConfigurer();
 			configurer.setScripts("org/springframework/web/servlet/view/script/jython/render.py");
 			configurer.setEngineName("jython");

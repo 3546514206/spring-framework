@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,7 @@
 
 package org.springframework.web.method.support;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -29,34 +24,35 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.method.annotation.RequestHeaderMethodArgumentResolver;
 import org.springframework.web.method.annotation.RequestParamMethodArgumentResolver;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link CompositeUriComponentsContributor}.
+ * Unit tests for
+ * {@link org.springframework.web.method.support.CompositeUriComponentsContributor}.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
  */
-class CompositeUriComponentsContributorTests {
+public class CompositeUriComponentsContributorTests {
+
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
+
 		List<HandlerMethodArgumentResolver> resolvers = new ArrayList<>();
 		resolvers.add(new RequestParamMethodArgumentResolver(false));
 		resolvers.add(new RequestHeaderMethodArgumentResolver(null));
 		resolvers.add(new RequestParamMethodArgumentResolver(true));
 
-		CompositeUriComponentsContributor contributor = new CompositeUriComponentsContributor(resolvers);
 		Method method = ClassUtils.getMethod(this.getClass(), "handleRequest", String.class, String.class, String.class);
+
+		CompositeUriComponentsContributor contributor = new CompositeUriComponentsContributor(resolvers);
 		assertThat(contributor.supportsParameter(new MethodParameter(method, 0))).isTrue();
 		assertThat(contributor.supportsParameter(new MethodParameter(method, 1))).isTrue();
 		assertThat(contributor.supportsParameter(new MethodParameter(method, 2))).isFalse();
-	}
-
-	@Test
-	void hasContributors() {
-		assertThat(new CompositeUriComponentsContributor().hasContributors()).isFalse();
-		assertThat(new CompositeUriComponentsContributor(new RequestParamMethodArgumentResolver(true)).hasContributors()).isTrue();
 	}
 
 

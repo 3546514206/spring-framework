@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Juergen Hoeller
  */
-class ConfigurableMimeFileTypeMapTests {
+public class ConfigurableMimeFileTypeMapTests {
 
 	@Test
-	void againstDefaultConfiguration() {
+	public void againstDefaultConfiguration() throws Exception {
 		ConfigurableMimeFileTypeMap ftm = new ConfigurableMimeFileTypeMap();
 		ftm.afterPropertiesSet();
 
@@ -45,15 +45,15 @@ class ConfigurableMimeFileTypeMapTests {
 	}
 
 	@Test
-	void againstDefaultConfigurationWithFilePath() {
+	public void againstDefaultConfigurationWithFilePath() throws Exception {
 		ConfigurableMimeFileTypeMap ftm = new ConfigurableMimeFileTypeMap();
 		assertThat(ftm.getContentType(new File("/tmp/foobar.HTM"))).as("Invalid content type for HTM").isEqualTo("text/html");
 	}
 
 	@Test
-	void withAdditionalMappings() {
+	public void withAdditionalMappings() throws Exception {
 		ConfigurableMimeFileTypeMap ftm = new ConfigurableMimeFileTypeMap();
-		ftm.setMappings("foo/bar HTM foo", "foo/cpp c++");
+		ftm.setMappings(new String[] {"foo/bar HTM foo", "foo/cpp c++"});
 		ftm.afterPropertiesSet();
 
 		assertThat(ftm.getContentType("foobar.HTM")).as("Invalid content type for HTM - override didn't work").isEqualTo("foo/bar");
@@ -62,7 +62,7 @@ class ConfigurableMimeFileTypeMapTests {
 	}
 
 	@Test
-	void withCustomMappingLocation() {
+	public void withCustomMappingLocation() throws Exception {
 		Resource resource = new ClassPathResource("test.mime.types", getClass());
 
 		ConfigurableMimeFileTypeMap ftm = new ConfigurableMimeFileTypeMap();

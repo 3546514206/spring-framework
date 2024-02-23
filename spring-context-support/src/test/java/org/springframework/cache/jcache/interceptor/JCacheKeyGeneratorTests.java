@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.cache.interceptor.SimpleKeyGenerator;
-import org.springframework.cache.jcache.config.JCacheConfigurer;
+import org.springframework.cache.jcache.config.JCacheConfigurerSupport;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Stephane Nicoll
  */
-class JCacheKeyGeneratorTests {
+public class JCacheKeyGeneratorTests {
 
 	private TestKeyGenerator keyGenerator;
 
@@ -53,7 +53,7 @@ class JCacheKeyGeneratorTests {
 	private Cache cache;
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
 		this.keyGenerator = context.getBean(TestKeyGenerator.class);
 		this.simpleService = context.getBean(SimpleService.class);
@@ -62,7 +62,7 @@ class JCacheKeyGeneratorTests {
 	}
 
 	@Test
-	void getSimple() {
+	public void getSimple() {
 		this.keyGenerator.expect(1L);
 		Object first = this.simpleService.get(1L);
 		Object second = this.simpleService.get(1L);
@@ -73,7 +73,7 @@ class JCacheKeyGeneratorTests {
 	}
 
 	@Test
-	void getFlattenVararg() {
+	public void getFlattenVararg() {
 		this.keyGenerator.expect(1L, "foo", "bar");
 		Object first = this.simpleService.get(1L, "foo", "bar");
 		Object second = this.simpleService.get(1L, "foo", "bar");
@@ -84,7 +84,7 @@ class JCacheKeyGeneratorTests {
 	}
 
 	@Test
-	void getFiltered() {
+	public void getFiltered() {
 		this.keyGenerator.expect(1L);
 		Object first = this.simpleService.getFiltered(1L, "foo", "bar");
 		Object second = this.simpleService.getFiltered(1L, "foo", "bar");
@@ -97,7 +97,7 @@ class JCacheKeyGeneratorTests {
 
 	@Configuration
 	@EnableCaching
-	static class Config implements JCacheConfigurer {
+	static class Config extends JCacheConfigurerSupport {
 
 		@Bean
 		@Override
@@ -120,7 +120,7 @@ class JCacheKeyGeneratorTests {
 
 	@CacheDefaults(cacheName = "test")
 	public static class SimpleService {
-		private final AtomicLong counter = new AtomicLong();
+		private AtomicLong counter = new AtomicLong();
 
 		@CacheResult
 		public Object get(long id) {
@@ -151,7 +151,7 @@ class JCacheKeyGeneratorTests {
 		@Override
 		public Object generate(Object target, Method method, Object... params) {
 			assertThat(Arrays.equals(expectedParams, params)).as("Unexpected parameters: expected: "
-					+ Arrays.toString(this.expectedParams) + " but got: " + Arrays.toString(params)).isTrue();
+								+ Arrays.toString(this.expectedParams) + " but got: " + Arrays.toString(params)).isTrue();
 			return new SimpleKey(params);
 		}
 	}

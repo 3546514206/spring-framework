@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.web.reactive.function.server
 
-import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
 import org.springframework.core.io.ClassPathResource
@@ -24,12 +23,10 @@ import org.springframework.http.HttpHeaders.*
 import org.springframework.http.HttpMethod.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.*
-import org.springframework.web.reactive.function.server.support.ServerRequestWrapper
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.*
-import org.springframework.web.testfixture.server.MockServerWebExchange
+import org.springframework.web.reactive.function.server.MockServerRequest.builder
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
-import java.security.Principal
+import java.net.URI
 
 /**
  * Tests for [RouterFunctionDsl].
@@ -40,9 +37,7 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun header() {
-		val mockRequest = get("https://example.com")
-				.header("bar","bar").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().header("bar", "bar").build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -50,9 +45,7 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun accept() {
-		val mockRequest = get("https://example.com/content")
-				.header(ACCEPT, APPLICATION_ATOM_XML_VALUE).build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().uri(URI("/content")).header(ACCEPT, APPLICATION_ATOM_XML_VALUE).build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -60,10 +53,11 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun acceptAndPOST() {
-		val mockRequest = post("https://example.com/api/foo/")
+		val request = builder()
+				.method(POST)
+				.uri(URI("/api/foo/"))
 				.header(ACCEPT, APPLICATION_JSON_VALUE)
 				.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -71,10 +65,11 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun acceptAndPOSTWithRequestPredicate() {
-		val mockRequest = post("https://example.com/api/bar/")
+		val request = builder()
+				.method(POST)
+				.uri(URI("/api/bar/"))
 				.header(CONTENT_TYPE, APPLICATION_JSON_VALUE)
 				.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -82,10 +77,15 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun contentType() {
-		val mockRequest = get("https://example.com/content/")
-				.header(CONTENT_TYPE, APPLICATION_OCTET_STREAM_VALUE)
-				.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().uri(URI("/content")).header(CONTENT_TYPE, APPLICATION_OCTET_STREAM_VALUE).build()
+		StepVerifier.create(sampleRouter().route(request))
+				.expectNextCount(1)
+				.verifyComplete()
+	}
+
+	@Test
+	fun resourceByPath() {
+		val request = builder().uri(URI("/org/springframework/web/reactive/function/response.txt")).build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -93,9 +93,7 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun method() {
-		val mockRequest = patch("https://example.com/")
-				.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().method(PATCH).build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -103,44 +101,15 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun path() {
-		val mockRequest = get("https://example.com/baz").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().uri(URI("/baz")).build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
 	}
 
 	@Test
-	fun pathExtension() {
-		val mockRequest = get("https://example.com/test.properties").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
-		StepVerifier.create(sampleRouter().route(request))
-			.expectNextCount(1)
-			.verifyComplete()
-	}
-
-	@Test
 	fun resource() {
-		val mockRequest = get("https://example.com/response2.txt").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
-		StepVerifier.create(sampleRouter().route(request))
-			.expectNextCount(1)
-			.verifyComplete()
-	}
-
-	@Test
-	fun resources() {
-		val mockRequest = get("https://example.com/resources/response.txt").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
-		StepVerifier.create(sampleRouter().route(request))
-			.expectNextCount(1)
-			.verifyComplete()
-	}
-
-	@Test
-	fun resourcesLookupFunction() {
-		val mockRequest = get("https://example.com/response.txt").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().uri(URI("/response.txt")).build()
 		StepVerifier.create(sampleRouter().route(request))
 				.expectNextCount(1)
 				.verifyComplete()
@@ -148,19 +117,18 @@ class RouterFunctionDslTests {
 
 	@Test
 	fun noRoute() {
-		val mockRequest = get("https://example.com/bar")
+		val request = builder()
+				.uri(URI("/bar"))
 				.header(ACCEPT, APPLICATION_PDF_VALUE)
 				.header(CONTENT_TYPE, APPLICATION_PDF_VALUE)
 				.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
 		StepVerifier.create(sampleRouter().route(request))
 				.verifyComplete()
 	}
 
 	@Test
 	fun rendering() {
-		val mockRequest = get("https://example.com/rendering").build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
+		val request = builder().uri(URI("/rendering")).build()
 		StepVerifier.create(sampleRouter().route(request).flatMap { it.handle(request) })
 				.expectNextMatches { it is RenderingResponse}
 				.verifyComplete()
@@ -173,66 +141,6 @@ class RouterFunctionDslTests {
 		}
 	}
 
-	@Test
-	fun attributes() {
-		val visitor = AttributesTestVisitor()
-		attributesRouter.accept(visitor)
-		assertThat(visitor.routerFunctionsAttributes()).containsExactly(
-			listOf(mapOf("foo" to "bar", "baz" to "qux")),
-			listOf(mapOf("foo" to "bar", "baz" to "qux")),
-			listOf(mapOf("foo" to "bar"), mapOf("foo" to "n1")),
-			listOf(mapOf("baz" to "qux"), mapOf("foo" to "n1")),
-			listOf(mapOf("foo" to "n3"), mapOf("foo" to "n2"), mapOf("foo" to "n1"))
-		)
-		assertThat(visitor.visitCount()).isEqualTo(7)
-	}
-
-	@Test
-	fun acceptFilterAndPOST() {
-		val mockRequest = post("https://example.com/filter")
-			.header(ACCEPT, APPLICATION_JSON_VALUE)
-			.build()
-		val request = DefaultServerRequest(MockServerWebExchange.from(mockRequest), emptyList())
-		StepVerifier.create(filteredRouter.route(request).flatMap { it.handle(request) })
-			.expectNextCount(1)
-			.verifyComplete()
-	}
-
-	private val filteredRouter = router {
-		POST("/filter", ::handleRequestWrapper)
-
-		filter (TestFilterProvider.provide())
-		before {
-			it
-		}
-		after { _, response ->
-			response
-		}
-		onError({it is IllegalStateException}) { _, _ ->
-			ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
-		}
-		onError<IllegalStateException> { _, _ ->
-			ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
-		}
-	}
-
-	private class TestServerRequestWrapper(delegate: ServerRequest, private val principalOverride: String = "foo"): ServerRequestWrapper(delegate) {
-		override fun principal(): Mono<out Principal> = Mono.just(Principal { principalOverride })
-	}
-
-	private object TestFilterProvider {
-		fun provide(): (ServerRequest, (ServerRequest) -> Mono<ServerResponse>) -> Mono<ServerResponse> = { request, next ->
-			next(TestServerRequestWrapper(request))
-		}
-	}
-
-	private fun handleRequestWrapper(req: ServerRequest): Mono<ServerResponse> {
-		return req.principal()
-			.flatMap {
-				assertThat(it.name).isEqualTo("foo")
-				ServerResponse.ok().build()
-			}
-	}
 
 	private fun sampleRouter() = router {
 		(GET("/foo/") or GET("/foos/")) { req -> handle(req) }
@@ -254,9 +162,8 @@ class RouterFunctionDslTests {
 			GET("/api/foo/", ::handle)
 		}
 		headers({ it.header("bar").isNotEmpty() }, ::handle)
-		resource(path("/response2.txt"), ClassPathResource("/org/springframework/web/reactive/function/response.txt"))
-		resources("/resources/**",
-				ClassPathResource("/org/springframework/web/reactive/function/"))
+		resources("/org/springframework/web/reactive/function/**",
+				ClassPathResource("/org/springframework/web/reactive/function/response.txt"))
 		resources {
 			if (it.path() == "/response.txt") {
 				Mono.just(ClassPathResource("/org/springframework/web/reactive/function/response.txt"))
@@ -264,9 +171,6 @@ class RouterFunctionDslTests {
 			else {
 				Mono.empty()
 			}
-		}
-		GET(pathExtension { it == "properties" }) {
-			ok().bodyValue("foo=bar")
 		}
 		path("/baz", ::handle)
 		GET("/rendering") { RenderingResponse.create("index").build() }
@@ -292,39 +196,6 @@ class RouterFunctionDslTests {
 		onError<IllegalStateException> { _, _ ->
 			ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
 		}
-	}
-
-	private val attributesRouter = router {
-		GET("/atts/1") {
-			ok().build()
-		}
-		withAttribute("foo", "bar")
-		withAttribute("baz", "qux")
-		GET("/atts/2") {
-			ok().build()
-		}
-		withAttributes { atts ->
-			atts["foo"] = "bar"
-			atts["baz"] = "qux"
-		}
-		"/atts".nest {
-			GET("/3") {
-				ok().build()
-			}
-			withAttribute("foo", "bar")
-			GET("/4") {
-				ok().build()
-			}
-			withAttribute("baz", "qux")
-			"/5".nest {
-				GET {
-					ok().build()
-				}
-				withAttribute("foo", "n3")
-			}
-			withAttribute("foo", "n2")
-		}
-		withAttribute("foo", "n1")
 	}
 
 	@Suppress("UNUSED_PARAMETER")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,21 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.cglib.core.ClassLoaderAwareGeneratorStrategy;
 import org.springframework.cglib.core.SpringNamingPolicy;
-import org.springframework.cglib.proxy.Callback;
-import org.springframework.cglib.proxy.CallbackFilter;
-import org.springframework.cglib.proxy.Enhancer;
-import org.springframework.cglib.proxy.Factory;
-import org.springframework.cglib.proxy.MethodInterceptor;
-import org.springframework.cglib.proxy.MethodProxy;
-import org.springframework.cglib.proxy.NoOp;
-import org.springframework.core.ResolvableType;
+import org.springframework.cglib.proxy.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
 /**
  * Default object instantiation strategy for use in BeanFactories.
@@ -81,15 +73,8 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			@Nullable Constructor<?> ctor, Object... args) {
 
+		// Must generate CGLIB subclass...
 		return new CglibSubclassCreator(bd, owner).instantiate(ctor, args);
-	}
-
-	@Override
-	public Class<?> getActualBeanClass(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
-		if (!bd.hasMethodOverrides()) {
-			return super.getActualBeanClass(bd, beanName, owner);
-		}
-		return new CglibSubclassCreator(bd, owner).createEnhancedSubclass(bd);
 	}
 
 
@@ -149,13 +134,12 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 		 * Create an enhanced subclass of the bean class for the provided bean
 		 * definition, using CGLIB.
 		 */
-		public Class<?> createEnhancedSubclass(RootBeanDefinition beanDefinition) {
+		private Class<?> createEnhancedSubclass(RootBeanDefinition beanDefinition) {
 			Enhancer enhancer = new Enhancer();
 			enhancer.setSuperclass(beanDefinition.getBeanClass());
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
-			enhancer.setAttemptLoad(true);
-			if (this.owner instanceof ConfigurableBeanFactory cbf) {
-				ClassLoader cl = cbf.getBeanClassLoader();
+			if (this.owner instanceof ConfigurableBeanFactory) {
+				ClassLoader cl = ((ConfigurableBeanFactory) this.owner).getBeanClassLoader();
 				enhancer.setStrategy(new ClassLoaderAwareGeneratorStrategy(cl));
 			}
 			enhancer.setCallbackFilter(new MethodOverrideCallbackFilter(beanDefinition));
@@ -247,16 +231,12 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			Assert.state(lo != null, "LookupOverride not found");
 			Object[] argsToUse = (args.length > 0 ? args : null);  // if no-arg, don't insist on args at all
 			if (StringUtils.hasText(lo.getBeanName())) {
-				Object bean = (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
+				return (argsToUse != null ? this.owner.getBean(lo.getBeanName(), argsToUse) :
 						this.owner.getBean(lo.getBeanName()));
-				// Detect package-protected NullBean instance through equals(null) check
-				return (bean.equals(null) ? null : bean);
 			}
 			else {
-				// Find target bean matching the (potentially generic) method return type
-				ResolvableType genericReturnType = ResolvableType.forMethodReturnType(method);
-				return (argsToUse != null ? this.owner.getBeanProvider(genericReturnType).getObject(argsToUse) :
-						this.owner.getBeanProvider(genericReturnType).getObject());
+				return (argsToUse != null ? this.owner.getBean(method.getReturnType(), argsToUse) :
+						this.owner.getBean(method.getReturnType()));
 			}
 		}
 	}

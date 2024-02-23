@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.beans.factory
 
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
@@ -33,10 +32,8 @@ class BeanFactoryExtensionsTests {
 
 	@Test
 	fun `getBean with reified type parameters`() {
-		val foo = Foo()
-		every { bf.getBeanProvider<Foo>(ofType<ResolvableType>()).getObject() } returns foo
 		bf.getBean<Foo>()
-		verify { bf.getBeanProvider<ObjectProvider<Foo>>(ofType<ResolvableType>()).getObject() }
+		verify { bf.getBean(Foo::class.java) }
 	}
 
 	@Test
@@ -50,10 +47,8 @@ class BeanFactoryExtensionsTests {
 	fun `getBean with reified type parameters and varargs`() {
 		val arg1 = "arg1"
 		val arg2 = "arg2"
-		val bar = Bar(arg1, arg2)
-		every { bf.getBeanProvider<Bar>(ofType<ResolvableType>()).getObject(arg1, arg2) } returns bar
-		bf.getBean<Bar>(arg1, arg2)
-		verify { bf.getBeanProvider<Bar>(ofType<ResolvableType>()).getObject(arg1, arg2) }
+		bf.getBean<Foo>(arg1, arg2)
+		verify { bf.getBean(Foo::class.java, arg1, arg2) }
 	}
 
 	@Test
@@ -63,7 +58,4 @@ class BeanFactoryExtensionsTests {
 	}
 
 	class Foo
-
-	@Suppress("UNUSED_PARAMETER")
-	class Bar(arg1: String, arg2: String)
 }

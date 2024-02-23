@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@ package org.springframework.orm.jpa.persistenceunit;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
+import javax.persistence.SharedCacheMode;
+import javax.persistence.ValidationMode;
+import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import jakarta.persistence.SharedCacheMode;
-import jakarta.persistence.ValidationMode;
-import jakarta.persistence.spi.PersistenceUnitTransactionType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
@@ -123,16 +123,20 @@ final class PersistenceUnitReader {
 	 */
 	public SpringPersistenceUnitInfo[] readPersistenceUnitInfos(String[] persistenceXmlLocations) {
 		ErrorHandler handler = new SimpleSaxErrorHandler(logger);
-		List<SpringPersistenceUnitInfo> infos = new ArrayList<>(1);
+		List<SpringPersistenceUnitInfo> infos = new LinkedList<>();
 		String resourceLocation = null;
 		try {
 			for (String location : persistenceXmlLocations) {
 				Resource[] resources = this.resourcePatternResolver.getResources(location);
 				for (Resource resource : resources) {
 					resourceLocation = resource.toString();
-					try (InputStream stream = resource.getInputStream()) {
+					InputStream stream = resource.getInputStream();
+					try {
 						Document document = buildDocument(handler, stream);
 						parseDocument(resource, document, infos);
+					}
+					finally {
+						stream.close();
 					}
 				}
 			}
@@ -312,7 +316,7 @@ final class PersistenceUnitReader {
 					// relative to the persistence unit root, according to the JPA spec
 					URL rootUrl = unitInfo.getPersistenceUnitRootUrl();
 					if (rootUrl != null) {
-						unitInfo.addJarFileUrl(ResourceUtils.toRelativeURL(rootUrl, value));
+						unitInfo.addJarFileUrl(new URL(rootUrl, value));
 					}
 					else {
 						logger.warn("Cannot resolve jar-file entry [" + value + "] in persistence unit '" +
@@ -363,7 +367,7 @@ final class PersistenceUnitReader {
 		if (persistenceUnitRoot.endsWith("/")) {
 			persistenceUnitRoot = persistenceUnitRoot.substring(0, persistenceUnitRoot.length() - 1);
 		}
-		return ResourceUtils.toURL(persistenceUnitRoot);
+		return new URL(persistenceUnitRoot);
 	}
 
 }

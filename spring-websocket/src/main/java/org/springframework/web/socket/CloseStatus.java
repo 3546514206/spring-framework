@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.web.socket;
 
-import java.io.Serializable;
-import java.util.Objects;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -33,10 +30,7 @@ import org.springframework.util.ObjectUtils;
  * @author Rossen Stoyanchev
  * @since 4.0
  */
-public final class CloseStatus implements Serializable {
-
-	private static final long serialVersionUID = 5199057709285570947L;
-
+public final class CloseStatus {
 
 	/**
 	 * "1000 indicates a normal closure, meaning that the purpose for which the connection
@@ -54,7 +48,7 @@ public final class CloseStatus implements Serializable {
 	 * "1002 indicates that an endpoint is terminating the connection due to a protocol
 	 * error."
 	 */
-	public static final CloseStatus PROTOCOL_ERROR = new CloseStatus(1002);
+	public static final CloseStatus PROTOCOL_ERROR  = new CloseStatus(1002);
 
 	/**
 	 * "1003 indicates that an endpoint is terminating the connection because it has
@@ -140,14 +134,13 @@ public final class CloseStatus implements Serializable {
 	public static final CloseStatus TLS_HANDSHAKE_FAILURE = new CloseStatus(1015);
 
 	/**
-	 * A status code for use within the framework that indicates a session has
+	 * A status code for use within the framework the indicate a session has
 	 * become unreliable (e.g. timed out while sending a message) and extra
 	 * care should be exercised, e.g. avoid sending any further data to the
 	 * client that may be done during normal shutdown.
 	 * @since 4.0.3
 	 */
-	public static final CloseStatus SESSION_NOT_RELIABLE =
-			new CloseStatus(4500).withReason("Failed to send message within the configured send limit");
+	public static final CloseStatus SESSION_NOT_RELIABLE = new CloseStatus(4500);
 
 
 	private final int code;
@@ -170,7 +163,7 @@ public final class CloseStatus implements Serializable {
 	 * @param reason the reason
 	 */
 	public CloseStatus(int code, @Nullable String reason) {
-		Assert.isTrue((code >= 1000 && code < 5000), () -> "Invalid status code: " + code);
+		Assert.isTrue((code >= 1000 && code < 5000), "Invalid status code");
 		this.code = code;
 		this.reason = reason;
 	}
@@ -208,13 +201,19 @@ public final class CloseStatus implements Serializable {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof CloseStatus that &&
-				this.code == that.code && ObjectUtils.nullSafeEquals(this.reason, that.reason)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof CloseStatus)) {
+			return false;
+		}
+		CloseStatus otherStatus = (CloseStatus) other;
+		return (this.code == otherStatus.code && ObjectUtils.nullSafeEquals(this.reason, otherStatus.reason));
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.code, this.reason);
+		return this.code * 29 + ObjectUtils.nullSafeHashCode(this.reason);
 	}
 
 	@Override

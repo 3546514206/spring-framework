@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,8 +83,8 @@ class ConditionEvaluator {
 		}
 
 		if (phase == null) {
-			if (metadata instanceof AnnotationMetadata annotationMetadata &&
-					ConfigurationClassUtils.isConfigurationCandidate(annotationMetadata)) {
+			if (metadata instanceof AnnotationMetadata &&
+					ConfigurationClassUtils.isConfigurationCandidate((AnnotationMetadata) metadata)) {
 				return shouldSkip(metadata, ConfigurationPhase.PARSE_CONFIGURATION);
 			}
 			return shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN);
@@ -102,8 +102,8 @@ class ConditionEvaluator {
 
 		for (Condition condition : conditions) {
 			ConfigurationPhase requiredPhase = null;
-			if (condition instanceof ConfigurationCondition configurationCondition) {
-				requiredPhase = configurationCondition.getConfigurationPhase();
+			if (condition instanceof ConfigurationCondition) {
+				requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
 			}
 			if ((requiredPhase == null || requiredPhase == phase) && !condition.matches(this.context, metadata)) {
 				return true;
@@ -155,32 +155,32 @@ class ConditionEvaluator {
 		}
 
 		@Nullable
-		private static ConfigurableListableBeanFactory deduceBeanFactory(@Nullable BeanDefinitionRegistry source) {
-			if (source instanceof ConfigurableListableBeanFactory configurableListableBeanFactory) {
-				return configurableListableBeanFactory;
+		private ConfigurableListableBeanFactory deduceBeanFactory(@Nullable BeanDefinitionRegistry source) {
+			if (source instanceof ConfigurableListableBeanFactory) {
+				return (ConfigurableListableBeanFactory) source;
 			}
-			if (source instanceof ConfigurableApplicationContext configurableApplicationContext) {
-				return configurableApplicationContext.getBeanFactory();
+			if (source instanceof ConfigurableApplicationContext) {
+				return (((ConfigurableApplicationContext) source).getBeanFactory());
 			}
 			return null;
 		}
 
-		private static Environment deduceEnvironment(@Nullable BeanDefinitionRegistry source) {
-			if (source instanceof EnvironmentCapable environmentCapable) {
-				return environmentCapable.getEnvironment();
+		private Environment deduceEnvironment(@Nullable BeanDefinitionRegistry source) {
+			if (source instanceof EnvironmentCapable) {
+				return ((EnvironmentCapable) source).getEnvironment();
 			}
 			return new StandardEnvironment();
 		}
 
-		private static ResourceLoader deduceResourceLoader(@Nullable BeanDefinitionRegistry source) {
-			if (source instanceof ResourceLoader resourceLoader) {
-				return resourceLoader;
+		private ResourceLoader deduceResourceLoader(@Nullable BeanDefinitionRegistry source) {
+			if (source instanceof ResourceLoader) {
+				return (ResourceLoader) source;
 			}
 			return new DefaultResourceLoader();
 		}
 
 		@Nullable
-		private static ClassLoader deduceClassLoader(@Nullable ResourceLoader resourceLoader,
+		private ClassLoader deduceClassLoader(@Nullable ResourceLoader resourceLoader,
 				@Nullable ConfigurableListableBeanFactory beanFactory) {
 
 			if (resourceLoader != null) {

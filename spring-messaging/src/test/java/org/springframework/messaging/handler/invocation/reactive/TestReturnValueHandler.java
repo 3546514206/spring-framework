@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.handler.invocation.reactive;
 
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
+import reactor.core.publisher.Mono;
 
 /**
  * Return value handler that simply stores the last return value.
@@ -45,7 +43,7 @@ public class TestReturnValueHandler implements HandlerMethodReturnValueHandler {
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	public Mono<Void> handleReturnValue(@Nullable Object value, MethodParameter returnType, Message<?> message) {
 		return value instanceof Publisher ?
 				new ChannelSendOperator((Publisher) value, this::saveValue) :

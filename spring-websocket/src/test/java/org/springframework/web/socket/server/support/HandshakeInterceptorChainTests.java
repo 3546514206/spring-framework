@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 
 package org.springframework.web.socket.server.support;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.socket.AbstractHttpRequestTests;
@@ -32,30 +34,46 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
- * Tests for {@link HandshakeInterceptorChain}.
+ * Test fixture for {@link HandshakeInterceptorChain}.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
  */
-class HandshakeInterceptorChainTests extends AbstractHttpRequestTests {
+public class HandshakeInterceptorChainTests extends AbstractHttpRequestTests {
 
-	private Map<String, Object> attributes = new HashMap<>();
+	private HandshakeInterceptor i1;
 
-	private HandshakeInterceptor i1 = mock();
-	private HandshakeInterceptor i2 = mock();
-	private HandshakeInterceptor i3 = mock();
+	private HandshakeInterceptor i2;
 
-	private WebSocketHandler wsHandler = mock();
+	private HandshakeInterceptor i3;
 
-	private HandshakeInterceptorChain chain = new HandshakeInterceptorChain(List.of(i1, i2, i3), wsHandler);
+	private List<HandshakeInterceptor> interceptors;
+
+	private WebSocketHandler wsHandler;
+
+	private Map<String, Object> attributes;
+
+
+	@Override
+	@BeforeEach
+	public void setup() {
+		super.setup();
+
+		i1 = mock(HandshakeInterceptor.class);
+		i2 = mock(HandshakeInterceptor.class);
+		i3 = mock(HandshakeInterceptor.class);
+		interceptors = Arrays.asList(i1, i2, i3);
+		wsHandler = mock(WebSocketHandler.class);
+		attributes = new HashMap<>();
+	}
 
 
 	@Test
-	void success() throws Exception {
+	public void success() throws Exception {
 		given(i1.beforeHandshake(request, response, wsHandler, attributes)).willReturn(true);
 		given(i2.beforeHandshake(request, response, wsHandler, attributes)).willReturn(true);
 		given(i3.beforeHandshake(request, response, wsHandler, attributes)).willReturn(true);
 
+		HandshakeInterceptorChain chain = new HandshakeInterceptorChain(interceptors, wsHandler);
 		chain.applyBeforeHandshake(request, response, attributes);
 
 		verify(i1).beforeHandshake(request, response, wsHandler, attributes);
@@ -65,10 +83,11 @@ class HandshakeInterceptorChainTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void applyBeforeHandshakeWithFalseReturnValue() throws Exception {
+	public void applyBeforeHandshakeWithFalseReturnValue() throws Exception {
 		given(i1.beforeHandshake(request, response, wsHandler, attributes)).willReturn(true);
 		given(i2.beforeHandshake(request, response, wsHandler, attributes)).willReturn(false);
 
+		HandshakeInterceptorChain chain = new HandshakeInterceptorChain(interceptors, wsHandler);
 		chain.applyBeforeHandshake(request, response, attributes);
 
 		verify(i1).beforeHandshake(request, response, wsHandler, attributes);
@@ -78,7 +97,8 @@ class HandshakeInterceptorChainTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void applyAfterHandshakeOnly() {
+	public void applyAfterHandshakeOnly() {
+		HandshakeInterceptorChain chain = new HandshakeInterceptorChain(interceptors, wsHandler);
 		chain.applyAfterHandshake(request, response, null);
 
 		verifyNoMoreInteractions(i1, i2, i3);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,10 @@
 
 package org.springframework.context.index.processor;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Specialization of {@link Properties} that sorts properties alphanumerically
@@ -88,7 +79,7 @@ class SortedProperties extends Properties {
 	public void store(OutputStream out, String comments) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		super.store(baos, (this.omitComments ? null : comments));
-		String contents = baos.toString(StandardCharsets.ISO_8859_1);
+		String contents = new String(baos.toByteArray(), StandardCharsets.ISO_8859_1);
 		for (String line : contents.split(EOL)) {
 			if (!(this.omitComments && line.startsWith("#"))) {
 				out.write((line + EOL).getBytes(StandardCharsets.ISO_8859_1));

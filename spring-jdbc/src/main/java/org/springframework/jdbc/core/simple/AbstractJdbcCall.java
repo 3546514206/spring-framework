@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,24 @@
 
 package org.springframework.jdbc.core.simple;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.sql.DataSource;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.jdbc.core.CallableStatementCreator;
-import org.springframework.jdbc.core.CallableStatementCreatorFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlParameter;
+import org.springframework.jdbc.core.*;
 import org.springframework.jdbc.core.metadata.CallMetaDataContext;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+import javax.sql.DataSource;
+import java.util.*;
+
 /**
  * Abstract class to provide base functionality for easy stored procedure calls
  * based on configuration options and database meta-data.
  *
- * <p>This class provides the processing arrangement for {@link SimpleJdbcCall}.
+ * <p>This class provides the base SPI for {@link SimpleJdbcCall}.
  *
  * @author Thomas Risberg
  * @author Juergen Hoeller
@@ -70,7 +60,7 @@ public abstract class AbstractJdbcCall {
 	 * Has this operation been compiled? Compilation means at least checking
 	 * that a DataSource or JdbcTemplate has been provided.
 	 */
-	private volatile boolean compiled;
+	private volatile boolean compiled = false;
 
 	/** The generated string used for call statement. */
 	@Nullable
@@ -347,7 +337,7 @@ public abstract class AbstractJdbcCall {
 	/**
 	 * Check whether this operation has been compiled already;
 	 * lazily compile it if not already compiled.
-	 * <p>Automatically called by all {@code doExecute(...)} methods.
+	 * <p>Automatically called by {@code doExecute}.
 	 */
 	protected void checkCompiled() {
 		if (!isCompiled()) {
@@ -404,7 +394,7 @@ public abstract class AbstractJdbcCall {
 			logger.debug("The following parameters are used for call " + getCallString() + " with " + args);
 			int i = 1;
 			for (SqlParameter param : getCallParameters()) {
-				logger.debug(i + ": " + param.getName() + ", SQL type " + param.getSqlType() + ", type name " +
+				logger.debug(i + ": " +  param.getName() + ", SQL type "+ param.getSqlType() + ", type name " +
 						param.getTypeName() + ", parameter class [" + param.getClass().getName() + "]");
 				i++;
 			}
@@ -433,7 +423,7 @@ public abstract class AbstractJdbcCall {
 	/**
 	 * Match the provided in parameter values with registered parameters and
 	 * parameters defined via meta-data processing.
-	 * @param parameterSource the parameter values provided as a {@link SqlParameterSource}
+	 * @param parameterSource the parameter vakues provided as a {@link SqlParameterSource}
 	 * @return a Map with parameter names and values
 	 */
 	protected Map<String, Object> matchInParameterValuesWithCallParameters(SqlParameterSource parameterSource) {
@@ -453,7 +443,7 @@ public abstract class AbstractJdbcCall {
 	/**
 	 * Match the provided in parameter values with registered parameters and
 	 * parameters defined via meta-data processing.
-	 * @param args the parameter values provided as a Map
+	 * @param args the parameter values provided in a Map
 	 * @return a Map with parameter names and values
 	 */
 	protected Map<String, ?> matchInParameterValuesWithCallParameters(Map<String, ?> args) {

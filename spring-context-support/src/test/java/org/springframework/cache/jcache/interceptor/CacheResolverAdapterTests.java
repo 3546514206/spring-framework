@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,20 +38,20 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Stephane Nicoll
  */
-class CacheResolverAdapterTests extends AbstractJCacheTests {
+public class CacheResolverAdapterTests extends AbstractJCacheTests {
 
 	@Test
-	void resolveSimpleCache() throws Exception {
+	public void resolveSimpleCache() throws Exception {
 		DefaultCacheInvocationContext<?> dummyContext = createDummyContext();
 		CacheResolverAdapter adapter = new CacheResolverAdapter(getCacheResolver(dummyContext, "testCache"));
 		Collection<? extends Cache> caches = adapter.resolveCaches(dummyContext);
 		assertThat(caches).isNotNull();
-		assertThat(caches).hasSize(1);
+		assertThat(caches.size()).isEqualTo(1);
 		assertThat(caches.iterator().next().getName()).isEqualTo("testCache");
 	}
 
 	@Test
-	void resolveUnknownCache() throws Exception {
+	public void resolveUnknownCache() throws Exception {
 		DefaultCacheInvocationContext<?> dummyContext = createDummyContext();
 		CacheResolverAdapter adapter = new CacheResolverAdapter(getCacheResolver(dummyContext, null));
 
@@ -61,13 +61,13 @@ class CacheResolverAdapterTests extends AbstractJCacheTests {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected CacheResolver getCacheResolver(CacheInvocationContext<? extends Annotation> context, String cacheName) {
-		CacheResolver cacheResolver = mock();
+		CacheResolver cacheResolver = mock(CacheResolver.class);
 		javax.cache.Cache cache;
 		if (cacheName == null) {
 			cache = null;
 		}
 		else {
-			cache = mock();
+			cache = mock(javax.cache.Cache.class);
 			given(cache.getName()).willReturn(cacheName);
 		}
 		given(cacheResolver.resolveCache(context)).willReturn(cache);

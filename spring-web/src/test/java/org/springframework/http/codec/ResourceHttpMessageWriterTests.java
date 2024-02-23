@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,35 @@
 
 package org.springframework.http.codec;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.StringUtils;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import org.springframework.core.ResolvableType;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.util.StringUtils;
-import org.springframework.web.testfixture.http.client.reactive.MockClientHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.TEXT_PLAIN;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.get;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
 
 /**
- * Tests for {@link ResourceHttpMessageWriter}.
+ * Unit tests for {@link ResourceHttpMessageWriter}.
  *
  * @author Brian Clozel
  * @author Rossen Stoyanchev
  */
-class ResourceHttpMessageWriterTests {
+public class ResourceHttpMessageWriterTests {
 
 	private static final Map<String, Object> HINTS = Collections.emptyMap();
 
@@ -63,13 +59,13 @@ class ResourceHttpMessageWriterTests {
 
 	@Test
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void getWritableMediaTypes() {
+	public void getWritableMediaTypes() throws Exception {
 		assertThat((List) this.writer.getWritableMediaTypes())
 				.containsExactlyInAnyOrder(MimeTypeUtils.APPLICATION_OCTET_STREAM, MimeTypeUtils.ALL);
 	}
 
 	@Test
-	void writeResourceServer() {
+	public void writeResource() throws Exception {
 
 		testWrite(get("/").build());
 
@@ -82,22 +78,7 @@ class ResourceHttpMessageWriterTests {
 	}
 
 	@Test
-	void writeResourceClient() {
-
-		MockClientHttpRequest request = new MockClientHttpRequest(HttpMethod.GET, "/");
-		Mono<Void> mono = this.writer.write(this.input, ResolvableType.forClass(Resource.class), TEXT_PLAIN, request, HINTS);
-		StepVerifier.create(mono).expectComplete().verify();
-
-		assertThat(request.getHeaders().getContentType()).isEqualTo(TEXT_PLAIN);
-		assertThat(request.getHeaders().getContentLength()).isEqualTo(39L);
-		assertThat(request.getHeaders().getFirst(HttpHeaders.ACCEPT_RANGES)).isNull();
-
-		String content = "Spring Framework test resource content.";
-		StepVerifier.create(request.getBodyAsString()).expectNext(content).expectComplete().verify();
-	}
-
-	@Test
-	void writeSingleRegion() {
+	public void writeSingleRegion() throws Exception {
 
 		testWrite(get("/").range(of(0, 5)).build());
 
@@ -109,7 +90,7 @@ class ResourceHttpMessageWriterTests {
 	}
 
 	@Test
-	void writeMultipleRegions() {
+	public void writeMultipleRegions() throws Exception {
 
 		testWrite(get("/").range(of(0,5), of(7,15), of(17,20), of(22,38)).build());
 
@@ -148,7 +129,7 @@ class ResourceHttpMessageWriterTests {
 	}
 
 	@Test
-	void invalidRange() {
+	public void invalidRange() throws Exception {
 
 		testWrite(get("/").header(HttpHeaders.RANGE, "invalid").build());
 

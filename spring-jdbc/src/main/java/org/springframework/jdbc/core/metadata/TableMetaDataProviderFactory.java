@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package org.springframework.jdbc.core.metadata;
 
-import javax.sql.DataSource;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
+
+import javax.sql.DataSource;
 
 /**
  * Factory used to create a {@link TableMetaDataProvider} implementation
@@ -49,37 +48,33 @@ public final class TableMetaDataProviderFactory {
 	 */
 	public static TableMetaDataProvider createMetaDataProvider(DataSource dataSource, TableMetaDataContext context) {
 		try {
-			return JdbcUtils.extractDatabaseMetaData(dataSource, databaseMetaData -> {
-				String databaseProductName = JdbcUtils.commonDatabaseName(databaseMetaData.getDatabaseProductName());
+			return (TableMetaDataProvider) JdbcUtils.extractDatabaseMetaData(dataSource, databaseMetaData -> {
+				String databaseProductName =
+						JdbcUtils.commonDatabaseName(databaseMetaData.getDatabaseProductName());
+				boolean accessTableColumnMetaData = context.isAccessTableColumnMetaData();
 				TableMetaDataProvider provider;
 
 				if ("Oracle".equals(databaseProductName)) {
 					provider = new OracleTableMetaDataProvider(
 							databaseMetaData, context.isOverrideIncludeSynonymsDefault());
-				}
-				else if ("PostgreSQL".equals(databaseProductName)) {
+				} else if ("PostgreSQL".equals(databaseProductName)) {
 					provider = new PostgresTableMetaDataProvider(databaseMetaData);
-				}
-				else if ("Apache Derby".equals(databaseProductName)) {
+				} else if ("Apache Derby".equals(databaseProductName)) {
 					provider = new DerbyTableMetaDataProvider(databaseMetaData);
-				}
-				else if ("HSQL Database Engine".equals(databaseProductName)) {
+				} else if ("HSQL Database Engine".equals(databaseProductName)) {
 					provider = new HsqlTableMetaDataProvider(databaseMetaData);
-				}
-				else {
+				} else {
 					provider = new GenericTableMetaDataProvider(databaseMetaData);
 				}
+
 				if (logger.isDebugEnabled()) {
 					logger.debug("Using " + provider.getClass().getSimpleName());
 				}
-
 				provider.initializeWithMetaData(databaseMetaData);
-
-				if (context.isAccessTableColumnMetaData()) {
+				if (accessTableColumnMetaData) {
 					provider.initializeWithTableColumnMetaData(databaseMetaData,
 							context.getCatalogName(), context.getSchemaName(), context.getTableName());
 				}
-
 				return provider;
 			});
 		}

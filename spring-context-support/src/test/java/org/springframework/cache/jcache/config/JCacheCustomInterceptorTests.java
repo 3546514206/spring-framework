@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,9 @@
 
 package org.springframework.cache.jcache.config;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -37,15 +32,18 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.contextsupport.testfixture.jcache.JCacheableService;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatRuntimeException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Stephane Nicoll
  */
-class JCacheCustomInterceptorTests {
+public class JCacheCustomInterceptorTests {
 
 	protected ConfigurableApplicationContext ctx;
 
@@ -55,14 +53,14 @@ class JCacheCustomInterceptorTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		ctx = new AnnotationConfigApplicationContext(EnableCachingConfig.class);
 		cs = ctx.getBean("service", JCacheableService.class);
 		exceptionCache = ctx.getBean("exceptionCache", Cache.class);
 	}
 
 	@AfterEach
-	void tearDown() {
+	public void tearDown() {
 		if (ctx != null) {
 			ctx.close();
 		}
@@ -70,24 +68,24 @@ class JCacheCustomInterceptorTests {
 
 
 	@Test
-	void onlyOneInterceptorIsAvailable() {
+	public void onlyOneInterceptorIsAvailable() {
 		Map<String, JCacheInterceptor> interceptors = ctx.getBeansOfType(JCacheInterceptor.class);
-		assertThat(interceptors).as("Only one interceptor should be defined").hasSize(1);
+		assertThat(interceptors.size()).as("Only one interceptor should be defined").isEqualTo(1);
 		JCacheInterceptor interceptor = interceptors.values().iterator().next();
 		assertThat(interceptor.getClass()).as("Custom interceptor not defined").isEqualTo(TestCacheInterceptor.class);
 	}
 
 	@Test
-	void customInterceptorAppliesWithRuntimeException() {
+	public void customInterceptorAppliesWithRuntimeException() {
 		Object o = cs.cacheWithException("id", true);
 		// See TestCacheInterceptor
 		assertThat(o).isEqualTo(55L);
 	}
 
 	@Test
-	void customInterceptorAppliesWithCheckedException() {
-		assertThatRuntimeException()
-			.isThrownBy(() -> cs.cacheWithCheckedException("id", true))
+	public void customInterceptorAppliesWithCheckedException() {
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(() ->
+				cs.cacheWithCheckedException("id", true))
 			.withCauseExactlyInstanceOf(IOException.class);
 	}
 

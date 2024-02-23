@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
+import org.springframework.http.converter.xml.SourceHttpMessageConverter;
 import org.springframework.lang.Nullable;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.accept.ContentNegotiationManager;
@@ -46,6 +47,7 @@ import org.springframework.web.method.ControllerAdviceBean;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.annotation.ExceptionHandlerMethodResolver;
 import org.springframework.web.method.annotation.MapMethodProcessor;
+import org.springframework.web.method.annotation.ModelAttributeMethodProcessor;
 import org.springframework.web.method.annotation.ModelMethodProcessor;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.HandlerMethodArgumentResolverComposite;
@@ -56,9 +58,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.handler.AbstractHandlerMethodExceptionResolver;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
 import org.springframework.web.servlet.support.RequestContextUtils;
-import org.springframework.web.util.DisconnectedClientHelper;
 
 /**
  * An {@link AbstractHandlerMethodExceptionResolver} that resolves exceptions
@@ -71,22 +71,10 @@ import org.springframework.web.util.DisconnectedClientHelper;
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 3.1
  */
 public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExceptionResolver
 		implements ApplicationContextAware, InitializingBean {
-
-	/**
-	 * Log category to use for network failure after a client has gone away.
-	 * @see DisconnectedClientHelper
-	 */
-	private static final String DISCONNECTED_CLIENT_LOG_CATEGORY =
-			"org.springframework.web.servlet.mvc.method.annotation.DisconnectedClient";
-
-	private static final DisconnectedClientHelper disconnectedClientHelper =
-			new DisconnectedClientHelper(DISCONNECTED_CLIENT_LOG_CATEGORY);
-
 
 	@Nullable
 	private List<HandlerMethodArgumentResolver> customArgumentResolvers;
@@ -100,7 +88,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 	@Nullable
 	private HandlerMethodReturnValueHandlerComposite returnValueHandlers;
 
-	private final List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
+	private List<HttpMessageConverter<?>> messageConverters;
 
 	private ContentNegotiationManager contentNegotiationManager = new ContentNegotiationManager();
 
@@ -114,6 +102,20 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 
 	private final Map<ControllerAdviceBean, ExceptionHandlerMethodResolver> exceptionHandlerAdviceCache =
 			new LinkedHashMap<>();
+
+
+	public ExceptionHandlerExceptionResolver() {
+		this.messageConverters = new ArrayList<>();
+		this.messageConverters.add(new ByteArrayHttpMessageConverter());
+		this.messageConverters.add(new StringHttpMessageConverter());
+		try {
+			this.messageConverters.add(new SourceHttpMessageConverter<>());
+		}
+		catch (Error err) {
+			// Ignore when no TransformerFactory implementation is available
+		}
+		this.messageConverters.add(new AllEncompassingFormHttpMessageConverter());
+	}
 
 
 	/**
@@ -201,8 +203,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 	 * <p>These converters are used to convert from and to HTTP requests and responses.
 	 */
 	public void setMessageConverters(List<HttpMessageConverter<?>> messageConverters) {
-		this.messageConverters.clear();
-		this.messageConverters.addAll(messageConverters);
+		this.messageConverters = messageConverters;
 	}
 
 	/**
@@ -234,6 +235,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 	 * {@code HttpMessageConverter}.
 	 */
 	public void setResponseBodyAdvice(@Nullable List<ResponseBodyAdvice<?>> responseBodyAdvice) {
+		this.responseBodyAdvice.clear();
 		if (responseBodyAdvice != null) {
 			this.responseBodyAdvice.addAll(responseBodyAdvice);
 		}
@@ -254,7 +256,6 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 	public void afterPropertiesSet() {
 		// Do this first, it may add ResponseBodyAdvice beans
 		initExceptionHandlerAdviceCache();
-		initMessageConverters();
 
 		if (this.argumentResolvers == null) {
 			List<HandlerMethodArgumentResolver> resolvers = getDefaultArgumentResolvers();
@@ -264,15 +265,6 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 			List<HandlerMethodReturnValueHandler> handlers = getDefaultReturnValueHandlers();
 			this.returnValueHandlers = new HandlerMethodReturnValueHandlerComposite().addHandlers(handlers);
 		}
-	}
-
-	private void initMessageConverters() {
-		if (!this.messageConverters.isEmpty()) {
-			return;
-		}
-		this.messageConverters.add(new ByteArrayHttpMessageConverter());
-		this.messageConverters.add(new StringHttpMessageConverter());
-		this.messageConverters.add(new AllEncompassingFormHttpMessageConverter());
 	}
 
 	private void initExceptionHandlerAdviceCache() {
@@ -340,9 +332,6 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 			resolvers.addAll(getCustomArgumentResolvers());
 		}
 
-		// Catch-all
-		resolvers.add(new PrincipalMethodArgumentResolver());
-
 		return resolvers;
 	}
 
@@ -361,7 +350,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 				getMessageConverters(), this.contentNegotiationManager, this.responseBodyAdvice));
 
 		// Annotation-based return value types
-		handlers.add(new ServletModelAttributeMethodProcessor(false));
+		handlers.add(new ModelAttributeMethodProcessor(false));
 		handlers.add(new RequestResponseBodyMethodProcessor(
 				getMessageConverters(), this.contentNegotiationManager, this.responseBodyAdvice));
 
@@ -375,21 +364,11 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 		}
 
 		// Catch-all
-		handlers.add(new ServletModelAttributeMethodProcessor(true));
+		handlers.add(new ModelAttributeMethodProcessor(true));
 
 		return handlers;
 	}
 
-	@Override
-	protected boolean hasGlobalExceptionHandlers() {
-		return !this.exceptionHandlerAdviceCache.isEmpty();
-	}
-
-	@Override
-	protected boolean shouldApplyTo(HttpServletRequest request, @Nullable Object handler) {
-		return (handler instanceof ResourceHttpRequestHandler ?
-				hasGlobalExceptionHandlers() : super.shouldApplyTo(request, handler));
-	}
 
 	/**
 	 * Find an {@code @ExceptionHandler} method and invoke it to handle the raised exception.
@@ -414,30 +393,25 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 		ServletWebRequest webRequest = new ServletWebRequest(request, response);
 		ModelAndViewContainer mavContainer = new ModelAndViewContainer();
 
-		ArrayList<Throwable> exceptions = new ArrayList<>();
 		try {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Using @ExceptionHandler " + exceptionHandlerMethod);
 			}
-			// Expose causes as provided arguments as well
-			Throwable exToExpose = exception;
-			while (exToExpose != null) {
-				exceptions.add(exToExpose);
-				Throwable cause = exToExpose.getCause();
-				exToExpose = (cause != exToExpose ? cause : null);
+			Throwable cause = exception.getCause();
+			if (cause != null) {
+				// Expose cause as provided argument as well
+				exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, cause, handlerMethod);
 			}
-			Object[] arguments = new Object[exceptions.size() + 1];
-			exceptions.toArray(arguments);  // efficient arraycopy call in ArrayList
-			arguments[arguments.length - 1] = handlerMethod;
-			exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, arguments);
+			else {
+				// Otherwise, just the given exception as-is
+				exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, handlerMethod);
+			}
 		}
 		catch (Throwable invocationEx) {
-			if (!disconnectedClientHelper.checkAndLogClientDisconnectedException(invocationEx)) {
-				// Any other than the original exception (or a cause) is unintended here,
-				// probably an accident (e.g. failed assertion or the like).
-				if (!exceptions.contains(invocationEx) && logger.isWarnEnabled()) {
-					logger.warn("Failure in @ExceptionHandler " + exceptionHandlerMethod, invocationEx);
-				}
+			// Any other than the original exception (or its cause) is unintended here,
+			// probably an accident (e.g. failed assertion or the like).
+			if (invocationEx != exception && invocationEx != exception.getCause() && logger.isWarnEnabled()) {
+				logger.warn("Failure in @ExceptionHandler " + exceptionHandlerMethod, invocationEx);
 			}
 			// Continue with default processing of the original exception...
 			return null;
@@ -448,14 +422,14 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 		}
 		else {
 			ModelMap model = mavContainer.getModel();
-			HttpStatusCode status = mavContainer.getStatus();
+			HttpStatus status = mavContainer.getStatus();
 			ModelAndView mav = new ModelAndView(mavContainer.getViewName(), model, status);
 			mav.setViewName(mavContainer.getViewName());
 			if (!mavContainer.isViewReference()) {
 				mav.setView((View) mavContainer.getView());
 			}
-			if (model instanceof RedirectAttributes redirectAttributes) {
-				Map<String, ?> flashAttributes = redirectAttributes.getFlashAttributes();
+			if (model instanceof RedirectAttributes) {
+				Map<String, ?> flashAttributes = ((RedirectAttributes) model).getFlashAttributes();
 				RequestContextUtils.getOutputFlashMap(request).putAll(flashAttributes);
 			}
 			return mav;
@@ -482,11 +456,14 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 			// Local exception handler methods on the controller class itself.
 			// To be invoked through the proxy, even in case of an interface-based proxy.
 			handlerType = handlerMethod.getBeanType();
-			ExceptionHandlerMethodResolver resolver = this.exceptionHandlerCache.computeIfAbsent(
-					handlerType, ExceptionHandlerMethodResolver::new);
+			ExceptionHandlerMethodResolver resolver = this.exceptionHandlerCache.get(handlerType);
+			if (resolver == null) {
+				resolver = new ExceptionHandlerMethodResolver(handlerType);
+				this.exceptionHandlerCache.put(handlerType, resolver);
+			}
 			Method method = resolver.resolveMethod(exception);
 			if (method != null) {
-				return new ServletInvocableHandlerMethod(handlerMethod.getBean(), method, this.applicationContext);
+				return new ServletInvocableHandlerMethod(handlerMethod.getBean(), method);
 			}
 			// For advice applicability check below (involving base packages, assignable types
 			// and annotation presence), use target class instead of interface-based proxy.
@@ -501,7 +478,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 				ExceptionHandlerMethodResolver resolver = entry.getValue();
 				Method method = resolver.resolveMethod(exception);
 				if (method != null) {
-					return new ServletInvocableHandlerMethod(advice.resolveBean(), method, this.applicationContext);
+					return new ServletInvocableHandlerMethod(advice.resolveBean(), method);
 				}
 			}
 		}

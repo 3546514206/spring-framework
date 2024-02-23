@@ -18,12 +18,11 @@ package org.springframework.test.context.junit4.profile.importresource;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.testfixture.beans.Employee;
-import org.springframework.beans.testfixture.beans.Pet;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.tests.sample.beans.Employee;
+import org.springframework.tests.sample.beans.Pet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

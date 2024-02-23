@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.http.client;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.StreamingHttpOutputMessage;
+import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 
 /**
@@ -41,9 +41,9 @@ class InterceptingClientHttpRequest extends AbstractBufferingClientHttpRequest {
 
 	private final List<ClientHttpRequestInterceptor> interceptors;
 
-	private final HttpMethod method;
+	private HttpMethod method;
 
-	private final URI uri;
+	private URI uri;
 
 
 	protected InterceptingClientHttpRequest(ClientHttpRequestFactory requestFactory,
@@ -59,6 +59,11 @@ class InterceptingClientHttpRequest extends AbstractBufferingClientHttpRequest {
 	@Override
 	public HttpMethod getMethod() {
 		return this.method;
+	}
+
+	@Override
+	public String getMethodValue() {
+		return this.method.name();
 	}
 
 	@Override
@@ -89,21 +94,13 @@ class InterceptingClientHttpRequest extends AbstractBufferingClientHttpRequest {
 			}
 			else {
 				HttpMethod method = request.getMethod();
+				Assert.state(method != null, "No standard HTTP method");
 				ClientHttpRequest delegate = requestFactory.createRequest(request.getURI(), method);
 				request.getHeaders().forEach((key, value) -> delegate.getHeaders().addAll(key, value));
 				if (body.length > 0) {
-					if (delegate instanceof StreamingHttpOutputMessage streamingOutputMessage) {
-						streamingOutputMessage.setBody(new StreamingHttpOutputMessage.Body() {
-							@Override
-							public void writeTo(OutputStream outputStream) throws IOException {
-								StreamUtils.copy(body, outputStream);
-							}
-
-							@Override
-							public boolean repeatable() {
-								return true;
-							}
-						});
+					if (delegate instanceof StreamingHttpOutputMessage) {
+						StreamingHttpOutputMessage streamingOutputMessage = (StreamingHttpOutputMessage) delegate;
+						streamingOutputMessage.setBody(outputStream -> StreamUtils.copy(body, outputStream));
 					}
 					else {
 						StreamUtils.copy(body, delegate.getBody());

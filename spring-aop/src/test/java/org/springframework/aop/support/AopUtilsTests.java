@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,29 @@
 
 package org.springframework.aop.support;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.interceptor.ExposeInvocationInterceptor;
 import org.springframework.aop.target.EmptyTargetSource;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
 import org.springframework.lang.Nullable;
-import org.springframework.util.ReflectionUtils;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.util.SerializationTestUtils;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Rod Johnson
  * @author Chris Beams
- * @author Sebastien Deleuze
  */
-class AopUtilsTests {
+public class AopUtilsTests {
 
 	@Test
-	void testPointcutCanNeverApply() {
+	public void testPointcutCanNeverApply() {
 		class TestPointcut extends StaticMethodMatcherPointcut {
 			@Override
 			public boolean matches(Method method, @Nullable Class<?> clazzy) {
@@ -54,13 +51,13 @@ class AopUtilsTests {
 	}
 
 	@Test
-	void testPointcutAlwaysApplies() {
+	public void testPointcutAlwaysApplies() {
 		assertThat(AopUtils.canApply(new DefaultPointcutAdvisor(new NopInterceptor()), Object.class)).isTrue();
 		assertThat(AopUtils.canApply(new DefaultPointcutAdvisor(new NopInterceptor()), TestBean.class)).isTrue();
 	}
 
 	@Test
-	void testPointcutAppliesToOneMethodOnObject() {
+	public void testPointcutAppliesToOneMethodOnObject() {
 		class TestPointcut extends StaticMethodMatcherPointcut {
 			@Override
 			public boolean matches(Method method, @Nullable Class<?> clazz) {
@@ -80,7 +77,7 @@ class AopUtilsTests {
 	 * that's subverted the singleton construction limitation.
 	 */
 	@Test
-	void testCanonicalFrameworkClassesStillCanonicalOnDeserialization() throws Exception {
+	public void testCanonicalFrameworkClassesStillCanonicalOnDeserialization() throws Exception {
 		assertThat(SerializationTestUtils.serializeAndDeserialize(MethodMatcher.TRUE)).isSameAs(MethodMatcher.TRUE);
 		assertThat(SerializationTestUtils.serializeAndDeserialize(ClassFilter.TRUE)).isSameAs(ClassFilter.TRUE);
 		assertThat(SerializationTestUtils.serializeAndDeserialize(Pointcut.TRUE)).isSameAs(Pointcut.TRUE);
@@ -88,15 +85,6 @@ class AopUtilsTests {
 		assertThat(SerializationTestUtils.serializeAndDeserialize(Pointcuts.SETTERS)).isSameAs(Pointcuts.SETTERS);
 		assertThat(SerializationTestUtils.serializeAndDeserialize(Pointcuts.GETTERS)).isSameAs(Pointcuts.GETTERS);
 		assertThat(SerializationTestUtils.serializeAndDeserialize(ExposeInvocationInterceptor.INSTANCE)).isSameAs(ExposeInvocationInterceptor.INSTANCE);
-	}
-
-	@Test
-	void testInvokeJoinpointUsingReflection() throws Throwable {
-		String name = "foo";
-		TestBean testBean = new TestBean(name);
-		Method method = ReflectionUtils.findMethod(TestBean.class, "getName");
-		Object result = AopUtils.invokeJoinpointUsingReflection(testBean, method, new Object[0]);
-		assertThat(result).isEqualTo(name);
 	}
 
 }

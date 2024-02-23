@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="edu.zjnu.biz.dao.IBookDao">
+
+	<insert id="insertBatch">
+		INSERT INTO book
+		(name, uuid, user_id)
+		VALUES
+		<foreach collection="books" item="book" separator=",">
+			(#{book.name}, #{book.uuid}, #{book.userId})
+		</foreach>
+	</insert>
+
+	<update id="updateById" parameterType="edu.zjnu.biz.entity.Book">
+		update book
+		<set>
+			<if test="updateBook.name != null">
+				name = #{updateBook.name},
+			</if>
+			<if test="updateBook.userId != null">
+				user_id = #{updateBook.userId},
+			</if>
+			<if test="updateBook.uuid != null">
+				uuid = #{updateBook.uuid},
+			</if>
+		</set>
+		where id = #{updateBook.id}
+	</update>
+
+	<select id="getBookById" resultType="edu.zjnu.biz.entity.Book">
+		select t.*
+		from book t
+		where id = #{id};
+	</select>
+</mapper>

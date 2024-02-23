@@ -16,12 +16,12 @@
 
 package org.springframework.web.socket.server;
 
-import java.util.Map;
-
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.web.socket.WebSocketHandler;
+
+import java.util.Map;
 
 /**
  * Interceptor for WebSocket handshake requests. Can be used to inspect the
@@ -37,11 +37,12 @@ public interface HandshakeInterceptor {
 
 	/**
 	 * Invoked before the handshake is processed.
-	 * @param request the current request
-	 * @param response the current response
-	 * @param wsHandler the target WebSocket handler
-	 * @param attributes the attributes from the HTTP handshake to associate with the WebSocket
-	 * session; the provided attributes are copied, the original map is not used.
+	 *
+	 * @param request    the current request
+	 * @param response   the current response
+	 * @param wsHandler  the target WebSocket handler
+	 * @param attributes attributes from the HTTP handshake to associate with the WebSocket
+	 *                   session; the provided attributes are copied, the original map is not used.
 	 * @return whether to proceed with the handshake ({@code true}) or abort ({@code false})
 	 */
 	boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,

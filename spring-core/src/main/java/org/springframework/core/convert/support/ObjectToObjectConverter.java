@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package org.springframework.core.convert.support;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Collections;
@@ -41,27 +41,21 @@ import org.springframework.util.ReflectionUtils;
  * <h3>Conversion Algorithm</h3>
  * <ol>
  * <li>Invoke a non-static {@code to[targetType.simpleName]()} method on the
- * source object that has a return type assignable to {@code targetType}, if such
+ * source object that has a return type equal to {@code targetType}, if such
  * a method exists. For example, {@code org.example.Bar Foo#toBar()} is a
  * method that follows this convention.
  * <li>Otherwise invoke a <em>static</em> {@code valueOf(sourceType)} or Java
  * 8 style <em>static</em> {@code of(sourceType)} or {@code from(sourceType)}
- * method on the {@code targetType} that has a return type <em>related</em> to
- * {@code targetType}, if such a method exists. For example, a static
- * {@code Foo.of(sourceType)} method that returns a {@code Foo},
- * {@code SuperFooType}, or {@code SubFooType} is a method that follows this
- * convention. {@link java.time.ZoneId#of(String)} is a concrete example of
- * such a static factory method which returns a subtype of {@code ZoneId}.
+ * method on the {@code targetType}, if such a method exists.
  * <li>Otherwise invoke a constructor on the {@code targetType} that accepts
  * a single {@code sourceType} argument, if such a constructor exists.
- * <li>Otherwise throw a {@link ConversionFailedException} or
- * {@link IllegalStateException}.
+ * <li>Otherwise throw a {@link ConversionFailedException}.
  * </ol>
  *
  * <p><strong>Warning</strong>: this converter does <em>not</em> support the
- * {@link Object#toString()} or {@link String#valueOf(Object)} methods for converting
- * from a {@code sourceType} to {@code java.lang.String}. For {@code toString()}
- * support, use {@link FallbackObjectToStringConverter} instead.
+ * {@link Object#toString()} method for converting from a {@code sourceType}
+ * to {@code java.lang.String}. For {@code toString()} support, use
+ * {@link FallbackObjectToStringConverter} instead.
  *
  * @author Keith Donald
  * @author Juergen Hoeller
@@ -71,9 +65,8 @@ import org.springframework.util.ReflectionUtils;
  */
 final class ObjectToObjectConverter implements ConditionalGenericConverter {
 
-	// Cache for the latest to-method, static factory method, or factory constructor
-	// resolved on a given Class
-	private static final Map<Class<?>, Executable> conversionExecutableCache =
+	// Cache for the latest to-method resolved on a given Class
+	private static final Map<Class<?>, Member> conversionMemberCache =
 			new ConcurrentReferenceHashMap<>(32);
 
 
@@ -96,10 +89,11 @@ final class ObjectToObjectConverter implements ConditionalGenericConverter {
 		}
 		Class<?> sourceClass = sourceType.getType();
 		Class<?> targetClass = targetType.getType();
-		Executable executable = getValidatedExecutable(targetClass, sourceClass);
+		Member member = getValidatedMember(targetClass, sourceClass);
 
 		try {
-			if (executable instanceof Method method) {
+			if (member instanceof Method) {
+				Method method = (Method) member;
 				ReflectionUtils.makeAccessible(method);
 				if (!Modifier.isStatic(method.getModifiers())) {
 					return method.invoke(source);
@@ -108,9 +102,10 @@ final class ObjectToObjectConverter implements ConditionalGenericConverter {
 					return method.invoke(null, source);
 				}
 			}
-			else if (executable instanceof Constructor<?> constructor) {
-				ReflectionUtils.makeAccessible(constructor);
-				return constructor.newInstance(source);
+			else if (member instanceof Constructor) {
+				Constructor<?> ctor = (Constructor<?>) member;
+				ReflectionUtils.makeAccessible(ctor);
+				return ctor.newInstance(source);
 			}
 		}
 		catch (InvocationTargetException ex) {
@@ -129,40 +124,43 @@ final class ObjectToObjectConverter implements ConditionalGenericConverter {
 	}
 
 
+
 	static boolean hasConversionMethodOrConstructor(Class<?> targetClass, Class<?> sourceClass) {
-		return (getValidatedExecutable(targetClass, sourceClass) != null);
+		return (getValidatedMember(targetClass, sourceClass) != null);
 	}
 
 	@Nullable
-	private static Executable getValidatedExecutable(Class<?> targetClass, Class<?> sourceClass) {
-		Executable executable = conversionExecutableCache.get(targetClass);
-		if (isApplicable(executable, sourceClass)) {
-			return executable;
+	private static Member getValidatedMember(Class<?> targetClass, Class<?> sourceClass) {
+		Member member = conversionMemberCache.get(targetClass);
+		if (isApplicable(member, sourceClass)) {
+			return member;
 		}
 
-		executable = determineToMethod(targetClass, sourceClass);
-		if (executable == null) {
-			executable = determineFactoryMethod(targetClass, sourceClass);
-			if (executable == null) {
-				executable = determineFactoryConstructor(targetClass, sourceClass);
-				if (executable == null) {
+		member = determineToMethod(targetClass, sourceClass);
+		if (member == null) {
+			member = determineFactoryMethod(targetClass, sourceClass);
+			if (member == null) {
+				member = determineFactoryConstructor(targetClass, sourceClass);
+				if (member == null) {
 					return null;
 				}
 			}
 		}
 
-		conversionExecutableCache.put(targetClass, executable);
-		return executable;
+		conversionMemberCache.put(targetClass, member);
+		return member;
 	}
 
-	private static boolean isApplicable(Executable executable, Class<?> sourceClass) {
-		if (executable instanceof Method method) {
+	private static boolean isApplicable(Member member, Class<?> sourceClass) {
+		if (member instanceof Method) {
+			Method method = (Method) member;
 			return (!Modifier.isStatic(method.getModifiers()) ?
 					ClassUtils.isAssignable(method.getDeclaringClass(), sourceClass) :
 					method.getParameterTypes()[0] == sourceClass);
 		}
-		else if (executable instanceof Constructor<?> constructor) {
-			return (constructor.getParameterTypes()[0] == sourceClass);
+		else if (member instanceof Constructor) {
+			Constructor<?> ctor = (Constructor<?>) member;
+			return (ctor.getParameterTypes()[0] == sourceClass);
 		}
 		else {
 			return false;
@@ -195,18 +193,7 @@ final class ObjectToObjectConverter implements ConditionalGenericConverter {
 				method = ClassUtils.getStaticMethod(targetClass, "from", sourceClass);
 			}
 		}
-
-		return (method != null && areRelatedTypes(targetClass, method.getReturnType()) ? method : null);
-	}
-
-	/**
-	 * Determine if the two types reside in the same type hierarchy (i.e., type 1
-	 * is assignable to type 2 or vice versa).
-	 * @since 5.3.21
-	 * @see ClassUtils#isAssignable(Class, Class)
-	 */
-	private static boolean areRelatedTypes(Class<?> type1, Class<?> type2) {
-		return (ClassUtils.isAssignable(type1, type2) || ClassUtils.isAssignable(type2, type1));
+		return method;
 	}
 
 	@Nullable

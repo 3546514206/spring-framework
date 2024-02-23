@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+			xmlns="http://www.springframework.org/schema/ext/spring-schemas-ext-distributed-id.xsd"
+			targetNamespace="http://www.springframework.org/schema/ext/spring-schemas-ext-distributed-id.xsd">
+	<xsd:element name="distributed-id">
+		<xsd:complexType>
+			<xsd:attribute name="id" type="xsd:string"/>
+			<xsd:attribute name="bizCode" type="xsd:string"/>
+			<xsd:attribute name="length" type="xsd:int"/>
+		</xsd:complexType>
+	</xsd:element>
+</xsd:schema>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.messaging.simp.annotation.support;
 
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-
 import com.fasterxml.jackson.annotation.JsonView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +24,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -44,6 +39,10 @@ import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.util.MimeType;
+
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -86,7 +85,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		SimpMessagingTemplate messagingTemplate = new SimpMessagingTemplate(this.messageChannel);
 		messagingTemplate.setMessageConverter(new StringMessageConverter());
 		this.handler = new SubscriptionMethodReturnValueHandler(messagingTemplate);
@@ -110,14 +109,14 @@ public class SubscriptionMethodReturnValueHandlerTests {
 
 
 	@Test
-	void supportsReturnType() {
+	public void supportsReturnType() throws Exception {
 		assertThat(this.handler.supportsReturnType(this.subscribeEventReturnType)).isTrue();
 		assertThat(this.handler.supportsReturnType(this.subscribeEventSendToReturnType)).isFalse();
 		assertThat(this.handler.supportsReturnType(this.messageMappingReturnType)).isFalse();
 	}
 
 	@Test
-	void testMessageSentToChannel() throws Exception {
+	public void testMessageSentToChannel() throws Exception {
 		given(this.messageChannel.send(any(Message.class))).willReturn(true);
 
 		String sessionId = "sess1";
@@ -150,7 +149,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 		String destination = "/dest";
 		Message<?> inputMessage = createInputMessage(sessionId, subscriptionId, destination, null);
 
-		MessageSendingOperations messagingTemplate = mock();
+		MessageSendingOperations messagingTemplate = mock(MessageSendingOperations.class);
 		SubscriptionMethodReturnValueHandler handler = new SubscriptionMethodReturnValueHandler(messagingTemplate);
 
 		handler.handleReturnValue(PAYLOAD, this.subscribeEventReturnType, inputMessage);
@@ -169,7 +168,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void testJsonView() throws Exception {
+	public void testJsonView() throws Exception {
 		given(this.messageChannel.send(any(Message.class))).willReturn(true);
 
 		String sessionId = "sess1";
@@ -224,8 +223,8 @@ public class SubscriptionMethodReturnValueHandlerTests {
 	}
 
 
-	private interface MyJacksonView1 {}
-	private interface MyJacksonView2 {}
+	private interface MyJacksonView1 {};
+	private interface MyJacksonView2 {};
 
 	private static class JacksonViewBean {
 
@@ -237,7 +236,6 @@ public class SubscriptionMethodReturnValueHandlerTests {
 
 		private String withoutView;
 
-		@SuppressWarnings("unused")
 		public String getWithView1() {
 			return withView1;
 		}
@@ -246,7 +244,6 @@ public class SubscriptionMethodReturnValueHandlerTests {
 			this.withView1 = withView1;
 		}
 
-		@SuppressWarnings("unused")
 		public String getWithView2() {
 			return withView2;
 		}
@@ -255,7 +252,6 @@ public class SubscriptionMethodReturnValueHandlerTests {
 			this.withView2 = withView2;
 		}
 
-		@SuppressWarnings("unused")
 		public String getWithoutView() {
 			return withoutView;
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,12 @@
 
 package org.springframework.http.converter.json;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.databind.DatabindContext;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.KeyDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -46,13 +31,18 @@ import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Sebastien Deleuze
  */
-class SpringHandlerInstantiatorTests {
+public class SpringHandlerInstantiatorTests {
 
 	private SpringHandlerInstantiator instantiator;
 
@@ -69,7 +59,7 @@ class SpringHandlerInstantiatorTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		AutowiredAnnotationBeanPostProcessor bpp = new AutowiredAnnotationBeanPostProcessor();
 		bpp.setBeanFactory(bf);
@@ -81,35 +71,35 @@ class SpringHandlerInstantiatorTests {
 
 
 	@Test
-	void autowiredSerializer() throws JsonProcessingException {
+	public void autowiredSerializer() throws JsonProcessingException {
 		User user = new User("bob");
 		String json = this.objectMapper.writeValueAsString(user);
 		assertThat(json).isEqualTo("{\"username\":\"BOB\"}");
 	}
 
 	@Test
-	void autowiredDeserializer() throws IOException {
+	public void autowiredDeserializer() throws IOException {
 		String json = "{\"username\":\"bob\"}";
 		User user = this.objectMapper.readValue(json, User.class);
 		assertThat(user.getUsername()).isEqualTo("BOB");
 	}
 
 	@Test
-	void autowiredKeyDeserializer() throws IOException {
+	public void autowiredKeyDeserializer() throws IOException {
 		String json = "{\"credentials\":{\"bob\":\"admin\"}}";
 		SecurityRegistry registry = this.objectMapper.readValue(json, SecurityRegistry.class);
-		assertThat(registry.getCredentials()).containsKey("BOB");
-		assertThat(registry.getCredentials()).doesNotContainKey("bob");
+		assertThat(registry.getCredentials().keySet().contains("BOB")).isTrue();
+		assertThat(registry.getCredentials().keySet().contains("bob")).isFalse();
 	}
 
 	@Test
-	void applicationContextAwaretypeResolverBuilder() throws JsonProcessingException {
+	public void applicationContextAwaretypeResolverBuilder() throws JsonProcessingException {
 		this.objectMapper.writeValueAsString(new Group());
 		assertThat(CustomTypeResolverBuilder.isAutowiredFiledInitialized).isTrue();
 	}
 
 	@Test
-	void applicationContextAwareTypeIdResolver() throws JsonProcessingException {
+	public void applicationContextAwareTypeIdResolver() throws JsonProcessingException {
 		this.objectMapper.writeValueAsString(new Group());
 		assertThat(CustomTypeIdResolver.isAutowiredFiledInitialized).isTrue();
 	}
@@ -121,7 +111,7 @@ class SpringHandlerInstantiatorTests {
 		private Capitalizer capitalizer;
 
 		@Override
-		public User deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+		public User deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws  IOException {
 			ObjectCodec oc = jsonParser.getCodec();
 			JsonNode node = oc.readTree(jsonParser);
 			return new User(this.capitalizer.capitalize(node.get("username").asText()));
@@ -151,7 +141,7 @@ class SpringHandlerInstantiatorTests {
 		private Capitalizer capitalizer;
 
 		@Override
-		public Object deserializeKey(String key, DeserializationContext context) {
+		public Object deserializeKey(String key, DeserializationContext context) throws IOException {
 			return this.capitalizer.capitalize(key);
 		}
 	}
@@ -201,6 +191,11 @@ class SpringHandlerInstantiatorTests {
 			return JsonTypeInfo.Id.CUSTOM;
 		}
 
+		// Only needed when compiling against Jackson 2.7; gone in 2.8
+		public JavaType typeFromId(String s) {
+			return TypeFactory.defaultInstance().constructFromCanonical(s);
+		}
+
 		@Override
 		public String idFromValue(Object value) {
 			isAutowiredFiledInitialized = (this.capitalizer != null);
@@ -221,6 +216,7 @@ class SpringHandlerInstantiatorTests {
 			return null;
 		}
 
+		// New in Jackson 2.7
 		@Override
 		public String getDescForKnownTypeIds() {
 			return null;

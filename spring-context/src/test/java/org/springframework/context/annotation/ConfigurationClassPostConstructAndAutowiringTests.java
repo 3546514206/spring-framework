@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package org.springframework.context.annotation;
 
-import jakarta.annotation.PostConstruct;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
+
+import javax.annotation.PostConstruct;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  * Tests cornering the issue reported in SPR-8080. If the product of a @Bean method
@@ -31,22 +32,22 @@ import static org.assertj.core.api.Assertions.assertThat;
  * (or other initializer) method, the container would become confused about the
  * 'currently in creation' status of the autowired bean and result in creating multiple
  * instances of the given @Bean, violating container scoping / singleton semantics.
- *
- * <p>This is resolved through no longer relying on 'currently in creation' status, but
+ * <p>
+ * This is resolved through no longer relying on 'currently in creation' status, but
  * rather on a thread local that informs the enhanced bean method implementation whether
  * the factory is the caller or not.
  *
  * @author Chris Beams
  * @since 3.1
  */
-class ConfigurationClassPostConstructAndAutowiringTests {
+public class ConfigurationClassPostConstructAndAutowiringTests {
 
 	/**
 	 * Prior to the fix for SPR-8080, this method would succeed due to ordering of
 	 * configuration class registration.
 	 */
 	@Test
-	void control() {
+	public void control() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config1.class, Config2.class);
 		ctx.refresh();
@@ -62,7 +63,7 @@ class ConfigurationClassPostConstructAndAutowiringTests {
 	 * configuration class registration.
 	 */
 	@Test
-	void originalReproCase() {
+	public void originalReproCase() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config2.class, Config1.class);
 		ctx.refresh();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.util;
 
+import org.springframework.lang.Nullable;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import org.springframework.lang.Nullable;
 
 /**
  * Helper class that allows for specifying a method to invoke in a declarative
@@ -123,8 +123,8 @@ public class MethodInvoker {
 
 	/**
 	 * Set a fully qualified static method name to invoke,
-	 * e.g. "example.MyExampleClass.myExampleMethod". This is a
-	 * convenient alternative to specifying targetClass and targetMethod.
+	 * e.g. "example.MyExampleClass.myExampleMethod".
+	 * Convenient alternative to specifying targetClass and targetMethod.
 	 * @see #setTargetClass
 	 * @see #setTargetMethod
 	 */
@@ -157,16 +157,14 @@ public class MethodInvoker {
 	public void prepare() throws ClassNotFoundException, NoSuchMethodException {
 		if (this.staticMethod != null) {
 			int lastDotIndex = this.staticMethod.lastIndexOf('.');
-			if (lastDotIndex == -1 || lastDotIndex == this.staticMethod.length() - 1) {
+			if (lastDotIndex == -1 || lastDotIndex == this.staticMethod.length()) {
 				throw new IllegalArgumentException(
 						"staticMethod must be a fully qualified class plus method name: " +
 						"e.g. 'example.MyExampleClass.myExampleMethod'");
 			}
 			String className = this.staticMethod.substring(0, lastDotIndex);
 			String methodName = this.staticMethod.substring(lastDotIndex + 1);
-			if (this.targetClass == null || !this.targetClass.getName().equals(className)) {
-				this.targetClass = resolveClassName(className);
-			}
+			this.targetClass = resolveClassName(className);
 			this.targetMethod = methodName;
 		}
 
@@ -227,8 +225,8 @@ public class MethodInvoker {
 
 		for (Method candidate : candidates) {
 			if (candidate.getName().equals(targetMethod)) {
-				if (candidate.getParameterCount() == argCount) {
-					Class<?>[] paramTypes = candidate.getParameterTypes();
+				Class<?>[] paramTypes = candidate.getParameterTypes();
+				if (paramTypes.length == argCount) {
 					int typeDiffWeight = getTypeDifferenceWeight(paramTypes, arguments);
 					if (typeDiffWeight < minTypeDiffWeight) {
 						minTypeDiffWeight = typeDiffWeight;
@@ -290,7 +288,7 @@ public class MethodInvoker {
 	 * Algorithm that judges the match between the declared parameter types of a candidate method
 	 * and a specific list of arguments that this method is supposed to be invoked with.
 	 * <p>Determines a weight that represents the class hierarchy difference between types and
-	 * arguments. A direct match, i.e. type Integer &rarr; arg of class Integer, does not increase
+	 * arguments. A direct match, i.e. type Integer -> arg of class Integer, does not increase
 	 * the result - all direct matches means weight 0. A match between type Object and arg of
 	 * class Integer would increase the weight by 2, due to the superclass 2 steps up in the
 	 * hierarchy (i.e. Object) being the last one that still matches the required type Object.

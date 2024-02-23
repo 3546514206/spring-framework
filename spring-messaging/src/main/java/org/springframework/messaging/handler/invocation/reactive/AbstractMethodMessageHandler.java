@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,8 @@
 
 package org.springframework.messaging.handler.invocation.reactive;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import reactor.core.publisher.Mono;
-
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -48,13 +31,14 @@ import org.springframework.messaging.ReactiveMessageHandler;
 import org.springframework.messaging.handler.HandlerMethod;
 import org.springframework.messaging.handler.MessagingAdviceBean;
 import org.springframework.messaging.handler.invocation.AbstractExceptionHandlerMethodResolver;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.RouteMatcher;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
+import reactor.core.publisher.Mono;
+
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Abstract base class for reactive HandlerMethod-based message handling.
@@ -105,15 +89,15 @@ public abstract class AbstractMethodMessageHandler<T>
 	@Nullable
 	private String beanName;
 
-	private final Map<T, HandlerMethod> handlerMethods = new ConcurrentHashMap<>(64);
+	private final Map<T, HandlerMethod> handlerMethods = new LinkedHashMap<>(64);
 
-	private final Map<String, List<T>> destinationLookup = new ConcurrentHashMap<>(48);
+	private final MultiValueMap<String, T> destinationLookup = new LinkedMultiValueMap<>(64);
 
 
 	/**
 	 * Configure a predicate for selecting which Spring beans to check for the
 	 * presence of message handler methods.
-	 * <p>This is not set by default. However, subclasses may initialize it to
+	 * <p>This is not set by default. However sub-classes may initialize it to
 	 * some default strategy (e.g. {@code @Controller} classes).
 	 * @see #setHandlers(List)
 	 */
@@ -146,7 +130,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * Configure custom resolvers for handler method arguments.
 	 */
 	public void setArgumentResolverConfigurer(ArgumentResolverConfigurer configurer) {
-		Assert.notNull(configurer, "ArgumentResolverConfigurer is required");
+		Assert.notNull(configurer, "HandlerMethodArgumentResolver is required");
 		this.argumentResolverConfigurer = configurer;
 	}
 
@@ -158,7 +142,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	}
 
 	/**
-	 * Configure custom return value handlers for handler methods.
+	 * Configure custom return value handlers for handler metohds.
 	 */
 	public void setReturnValueHandlerConfigurer(ReturnValueHandlerConfigurer configurer) {
 		Assert.notNull(configurer, "ReturnValueHandlerConfigurer is required");
@@ -230,16 +214,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * (e.g. for non-pattern destinations).
 	 */
 	public MultiValueMap<String, T> getDestinationLookup() {
-		return CollectionUtils.unmodifiableMultiValueMap(CollectionUtils.toMultiValueMap(this.destinationLookup));
-	}
-
-	/**
-	 * Return the argument resolvers initialized during {@link #afterPropertiesSet()}.
-	 * Primarily for internal use in subclasses.
-	 * @since 5.2.2
-	 */
-	protected HandlerMethodArgumentResolverComposite getArgumentResolvers() {
-		return this.invocableHelper.getArgumentResolvers();
+		return CollectionUtils.unmodifiableMultiValueMap(this.destinationLookup);
 	}
 
 
@@ -322,10 +297,10 @@ public abstract class AbstractMethodMessageHandler<T>
 	 */
 	protected final void detectHandlerMethods(Object handler) {
 		Class<?> handlerType;
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
 			ApplicationContext context = getApplicationContext();
 			Assert.state(context != null, "ApplicationContext is required for resolving handler bean names");
-			handlerType = context.getType(handlerName);
+			handlerType = context.getType((String) handler);
 		}
 		else {
 			handlerType = handler.getClass();
@@ -342,12 +317,9 @@ public abstract class AbstractMethodMessageHandler<T>
 	}
 
 	private String formatMappings(Class<?> userType, Map<Method, T> methods) {
-		String packageName = ClassUtils.getPackageName(userType);
-		String formattedType = (StringUtils.hasText(packageName) ?
-				Arrays.stream(packageName.split("\\."))
-						.map(packageSegment -> packageSegment.substring(0, 1))
-						.collect(Collectors.joining(".", "", "." + userType.getSimpleName())) :
-				userType.getSimpleName());
+		String formattedType = Arrays.stream(ClassUtils.getPackageName(userType).split("\\."))
+				.map(p -> p.substring(0, 1))
+				.collect(Collectors.joining(".", "", "." + userType.getSimpleName()));
 		Function<Method, String> methodFormatter = method -> Arrays.stream(method.getParameterTypes())
 				.map(Class::getSimpleName)
 				.collect(Collectors.joining(",", "(", ")"));
@@ -362,7 +334,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	/**
 	 * Obtain the mapping for the given method, if any.
 	 * @param method the method to check
-	 * @param handlerType the handler type, possibly a subtype of the method's declaring class
+	 * @param handlerType the handler type, possibly a sub-type of the method's declaring class
 	 * @return the mapping, or {@code null} if the method is not mapped
 	 */
 	@Nullable
@@ -370,15 +342,16 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	/**
 	 * Register a handler method and its unique mapping.
-	 * <p><strong>Note:</strong> As of 5.3 this method is public (rather than
-	 * protected) and can be used both at startup and at runtime.
+	 * <p><strong>Note:</strong> This method is protected and can be invoked by
+	 * subclasses. Keep in mind however that the registration is not protected
+	 * for concurrent use, and is expected to be done on startup.
 	 * @param handler the bean name of the handler or the handler instance
 	 * @param method the method to register
 	 * @param mapping the mapping conditions associated with the handler method
 	 * @throws IllegalStateException if another method was already registered
 	 * under the same mapping
 	 */
-	public final void registerHandlerMethod(Object handler, Method method, T mapping) {
+	protected final void registerHandlerMethod(Object handler, Method method, T mapping) {
 		Assert.notNull(mapping, "Mapping must not be null");
 		HandlerMethod newHandlerMethod = createHandlerMethod(handler, method);
 		HandlerMethod oldHandlerMethod = this.handlerMethods.get(mapping);
@@ -389,12 +362,10 @@ public abstract class AbstractMethodMessageHandler<T>
 					oldHandlerMethod.getBean() + "' bean method\n" + oldHandlerMethod + " mapped.");
 		}
 
-		mapping = extendMapping(mapping, newHandlerMethod);
 		this.handlerMethods.put(mapping, newHandlerMethod);
 
 		for (String pattern : getDirectLookupMappings(mapping)) {
-			List<T> values = this.destinationLookup.computeIfAbsent(pattern, p -> new CopyOnWriteArrayList<>());
-			values.add(mapping);
+			this.destinationLookup.add(pattern, mapping);
 		}
 	}
 
@@ -404,30 +375,16 @@ public abstract class AbstractMethodMessageHandler<T>
 	 */
 	private HandlerMethod createHandlerMethod(Object handler, Method method) {
 		HandlerMethod handlerMethod;
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
 			ApplicationContext context = getApplicationContext();
 			Assert.state(context != null, "ApplicationContext is required for resolving handler bean names");
-			handlerMethod = new HandlerMethod(handlerName, context.getAutowireCapableBeanFactory(), method);
+			String beanName = (String) handler;
+			handlerMethod = new HandlerMethod(beanName, context.getAutowireCapableBeanFactory(), method);
 		}
 		else {
 			handlerMethod = new HandlerMethod(handler, method);
 		}
 		return handlerMethod;
-	}
-
-	/**
-	 * This method is invoked just before mappings are added. It allows
-	 * subclasses to update the mapping with the {@link HandlerMethod} in mind.
-	 * This can be useful when the method signature is used to refine the
-	 * mapping, e.g. based on the cardinality of input and output.
-	 * <p>By default this method returns the mapping that is passed in.
-	 * @param mapping the mapping to be added
-	 * @param handlerMethod the target handler for the mapping
-	 * @return a new mapping or the same
-	 * @since 5.2.2
-	 */
-	protected T extendMapping(T mapping, HandlerMethod handlerMethod) {
-		return mapping;
 	}
 
 	/**
@@ -442,13 +399,7 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	@Override
 	public Mono<Void> handleMessage(Message<?> message) throws MessagingException {
-		Match<T> match = null;
-		try {
-			match = getHandlerMethod(message);
-		}
-		catch (Exception ex) {
-			return Mono.error(ex);
-		}
+		Match<T> match = getHandlerMethod(message);
 		if (match == null) {
 			// handleNoMatch would have been invoked already
 			return Mono.empty();
@@ -511,7 +462,7 @@ public abstract class AbstractMethodMessageHandler<T>
 		for (T mapping : mappingsToCheck) {
 			T match = getMatchingMapping(mapping, message);
 			if (match != null) {
-				matches.add(new Match<>(match, this.handlerMethods.get(mapping)));
+				matches.add(new Match<T>(match, this.handlerMethods.get(mapping)));
 			}
 		}
 	}
@@ -567,6 +518,14 @@ public abstract class AbstractMethodMessageHandler<T>
 		Match(T mapping, HandlerMethod handlerMethod) {
 			this.mapping = mapping;
 			this.handlerMethod = handlerMethod;
+		}
+
+		public T getMapping() {
+			return this.mapping;
+		}
+
+		public HandlerMethod getHandlerMethod() {
+			return this.handlerMethod;
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,24 @@
 
 package org.springframework.web.util;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
 import java.io.Serializable;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-
 /**
- * Representation of a URI template that can be expanded with URI variables via
- * {@link #expand(Map)}, {@link #expand(Object[])}, or matched to a URL via
- * {@link #match(String)}. This class is designed to be thread-safe and
- * reusable, and allows any number of expand or match calls.
+ * Represents a URI template. A URI template is a URI-like String that contains variables
+ * enclosed by braces ({@code {}}) which can be expanded to produce an actual URI.
  *
- * <p><strong>Note:</strong> this class uses {@link UriComponentsBuilder}
- * internally to expand URI templates, and is merely a shortcut for already
- * prepared URI templates. For more dynamic preparation and extra flexibility,
- * e.g. around URI encoding, consider using {@code UriComponentsBuilder} or the
- * higher level {@link DefaultUriBuilderFactory} which adds several encoding
- * modes on top of {@code UriComponentsBuilder}. See the
- * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-uri-building">reference docs</a>
- * for further details.
+ * <p>See {@link #expand(Map)}, {@link #expand(Object[])}, and {@link #match(String)}
+ * for example usages.
+ *
+ * <p>This class is designed to be thread-safe and reusable, allowing for any number
+ * of expand or match calls.
  *
  * @author Arjen Poutsma
  * @author Juergen Hoeller
@@ -92,7 +83,7 @@ public class UriTemplate implements Serializable {
 	 * UriTemplate template = new UriTemplate("https://example.com/hotels/{hotel}/bookings/{booking}");
 	 * Map&lt;String, String&gt; uriVariables = new HashMap&lt;String, String&gt;();
 	 * uriVariables.put("booking", "42");
-	 * uriVariables.put("hotel", "Rest &amp; Relax");
+	 * uriVariables.put("hotel", "Rest & Relax");
 	 * System.out.println(template.expand(uriVariables));
 	 * </pre>
 	 * will print: <blockquote>{@code https://example.com/hotels/Rest%20%26%20Relax/bookings/42}</blockquote>
@@ -113,7 +104,7 @@ public class UriTemplate implements Serializable {
 	 * <p>Example:
 	 * <pre class="code">
 	 * UriTemplate template = new UriTemplate("https://example.com/hotels/{hotel}/bookings/{booking}");
-	 * System.out.println(template.expand("Rest &amp; Relax", 42));
+	 * System.out.println(template.expand("Rest & Relax", 42));
 	 * </pre>
 	 * will print: <blockquote>{@code https://example.com/hotels/Rest%20%26%20Relax/bookings/42}</blockquote>
 	 * @param uriVariableValues the array of URI variables
@@ -154,7 +145,7 @@ public class UriTemplate implements Serializable {
 	 */
 	public Map<String, String> match(String uri) {
 		Assert.notNull(uri, "'uri' must not be null");
-		Map<String, String> result = CollectionUtils.newLinkedHashMap(this.variableNames.size());
+		Map<String, String> result = new LinkedHashMap<>(this.variableNames.size());
 		Matcher matcher = this.matchPattern.matcher(uri);
 		if (matcher.find()) {
 			for (int i = 1; i <= matcher.groupCount(); i++) {
@@ -225,7 +216,7 @@ public class UriTemplate implements Serializable {
 								throw new IllegalArgumentException(
 										"No custom regular expression specified after ':' in \"" + variable + "\"");
 							}
-							String regex = variable.substring(idx + 1);
+							String regex = variable.substring(idx + 1, variable.length());
 							pattern.append('(');
 							pattern.append(regex);
 							pattern.append(')');

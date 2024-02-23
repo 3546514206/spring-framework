@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -389,17 +389,16 @@ public class FreeMarkerConfigurationFactory {
 	 */
 	@Nullable
 	protected TemplateLoader getAggregateTemplateLoader(List<TemplateLoader> templateLoaders) {
-		return switch (templateLoaders.size()) {
-			case 0 -> {
+		switch (templateLoaders.size()) {
+			case 0:
 				logger.debug("No FreeMarker TemplateLoaders specified");
-				yield null;
-			}
-			case 1 -> templateLoaders.get(0);
-			default -> {
+				return null;
+			case 1:
+				return templateLoaders.get(0);
+			default:
 				TemplateLoader[] loaders = templateLoaders.toArray(new TemplateLoader[0]);
-				yield new MultiTemplateLoader(loaders);
-			}
-		};
+				return new MultiTemplateLoader(loaders);
+		}
 	}
 
 	/**

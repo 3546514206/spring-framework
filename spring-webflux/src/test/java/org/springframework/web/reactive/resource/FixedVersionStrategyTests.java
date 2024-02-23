@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link FixedVersionStrategy}.
- *
+ * Unit tests for {@link FixedVersionStrategy}.
  * @author Rossen Stoyanchev
  * @author Brian Clozel
  */
-class FixedVersionStrategyTests {
+public class FixedVersionStrategyTests {
 
 	private static final String VERSION = "1df341f";
 
@@ -39,30 +38,30 @@ class FixedVersionStrategyTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.strategy = new FixedVersionStrategy(VERSION);
 	}
 
 
 	@Test
-	void emptyPrefixVersion() {
+	public void emptyPrefixVersion() {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new FixedVersionStrategy("  "));
 	}
 
 	@Test
-	void extractVersion() {
+	public void extractVersion() {
 		assertThat(this.strategy.extractVersion(VERSION + "/" + PATH)).isEqualTo(VERSION);
 		assertThat(this.strategy.extractVersion(PATH)).isNull();
 	}
 
 	@Test
-	void removeVersion() {
+	public void removeVersion() {
 		assertThat(this.strategy.removeVersion(VERSION + "/" + PATH, VERSION)).isEqualTo(("/" + PATH));
 	}
 
 	@Test
-	void addVersion() {
+	public void addVersion() {
 		assertThat(this.strategy.addVersion("/" + PATH, VERSION)).isEqualTo((VERSION + "/" + PATH));
 	}
 

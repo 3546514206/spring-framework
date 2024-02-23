@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,20 +31,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Jakub Narloch
  * @author Sam Brannen
  */
-class OxmNamespaceHandlerTests {
+public class OxmNamespaceHandlerTests {
 
 	private final ApplicationContext applicationContext =
 			new ClassPathXmlApplicationContext("oxmNamespaceHandlerTest.xml", getClass());
 
 
 	@Test
-	void jaxb2ContextPathMarshaller() {
+	public void jaxb2ContextPathMarshaller() {
 		Jaxb2Marshaller jaxb2Marshaller = applicationContext.getBean("jaxb2ContextPathMarshaller", Jaxb2Marshaller.class);
 		assertThat(jaxb2Marshaller).isNotNull();
 	}
 
 	@Test
-	void jaxb2ClassesToBeBoundMarshaller() {
+	public void jaxb2ClassesToBeBoundMarshaller() {
 		Jaxb2Marshaller jaxb2Marshaller = applicationContext.getBean("jaxb2ClassesMarshaller", Jaxb2Marshaller.class);
 		assertThat(jaxb2Marshaller).isNotNull();
 	}

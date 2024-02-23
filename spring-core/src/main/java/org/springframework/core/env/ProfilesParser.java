@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,20 @@
 
 package org.springframework.core.env;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.StringTokenizer;
+import java.util.function.Predicate;
 
 /**
  * Internal parser used by {@link Profiles#of}.
  *
  * @author Phillip Webb
- * @author Sam Brannen
  * @since 5.1
  */
 final class ProfilesParser {
@@ -43,7 +39,7 @@ final class ProfilesParser {
 
 
 	static Profiles parse(String... expressions) {
-		Assert.notEmpty(expressions, "Must specify at least one profile expression");
+		Assert.notEmpty(expressions, "Must specify at least one profile");
 		Profiles[] parsed = new Profiles[expressions.length];
 		for (int i = 0; i < expressions.length; i++) {
 			parsed[i] = parseExpression(expressions[i]);
@@ -60,7 +56,6 @@ final class ProfilesParser {
 	private static Profiles parseTokens(String expression, StringTokenizer tokens) {
 		return parseTokens(expression, tokens, Context.NONE);
 	}
-
 	private static Profiles parseTokens(String expression, StringTokenizer tokens, Context context) {
 		List<Profiles> elements = new ArrayList<>();
 		Operator operator = null;
@@ -70,38 +65,39 @@ final class ProfilesParser {
 				continue;
 			}
 			switch (token) {
-				case "(" -> {
-					Profiles contents = parseTokens(expression, tokens, Context.PARENTHESIS);
-					if (context == Context.NEGATE) {
+				case "(":
+					Profiles contents = parseTokens(expression, tokens, Context.BRACKET);
+					if (context == Context.INVERT) {
 						return contents;
 					}
 					elements.add(contents);
-				}
-				case "&" -> {
+					break;
+				case "&":
 					assertWellFormed(expression, operator == null || operator == Operator.AND);
 					operator = Operator.AND;
-				}
-				case "|" -> {
+					break;
+				case "|":
 					assertWellFormed(expression, operator == null || operator == Operator.OR);
 					operator = Operator.OR;
-				}
-				case "!" -> elements.add(not(parseTokens(expression, tokens, Context.NEGATE)));
-				case ")" -> {
+					break;
+				case "!":
+					elements.add(not(parseTokens(expression, tokens, Context.INVERT)));
+					break;
+				case ")":
 					Profiles merged = merge(expression, elements, operator);
-					if (context == Context.PARENTHESIS) {
+					if (context == Context.BRACKET) {
 						return merged;
 					}
 					elements.clear();
 					elements.add(merged);
 					operator = null;
-				}
-				default -> {
+					break;
+				default:
 					Profiles value = equals(token);
-					if (context == Context.NEGATE) {
+					if (context == Context.INVERT) {
 						return value;
 					}
 					elements.add(value);
-				}
 			}
 		}
 		return merge(expression, elements, operator);
@@ -136,24 +132,25 @@ final class ProfilesParser {
 		return activeProfile -> activeProfile.test(profile);
 	}
 
-	private static Predicate<Profiles> isMatch(Predicate<String> activeProfiles) {
-		return profiles -> profiles.matches(activeProfiles);
+	private static Predicate<Profiles> isMatch(Predicate<String> activeProfile) {
+		return profiles -> profiles.matches(activeProfile);
 	}
 
 
-	private enum Operator { AND, OR }
+	private enum Operator {AND, OR}
 
-	private enum Context { NONE, NEGATE, PARENTHESIS }
+
+	private enum Context {NONE, INVERT, BRACKET}
 
 
 	private static class ParsedProfiles implements Profiles {
 
-		private final Set<String> expressions = new LinkedHashSet<>();
+		private final String[] expressions;
 
 		private final Profiles[] parsed;
 
 		ParsedProfiles(String[] expressions, Profiles[] parsed) {
-			Collections.addAll(this.expressions, expressions);
+			this.expressions = expressions;
 			this.parsed = parsed;
 		}
 
@@ -168,26 +165,8 @@ final class ProfilesParser {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ParsedProfiles that &&
-					this.expressions.equals(that.expressions)));
-		}
-
-		@Override
-		public int hashCode() {
-			return this.expressions.hashCode();
-		}
-
-		@Override
 		public String toString() {
-			if (this.expressions.size() == 1) {
-				return this.expressions.iterator().next();
-			}
-			return this.expressions.stream().map(this::wrap).collect(Collectors.joining(" | "));
-		}
-
-		private String wrap(String str) {
-			return "(" + str + ")";
+			return StringUtils.arrayToDelimitedString(this.expressions, " or ");
 		}
 	}
 

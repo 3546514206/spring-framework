@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.weaver.tools.JoinPointMatch;
 
 import org.springframework.aop.ProxyMethodInvocation;
-import org.springframework.lang.Nullable;
 
 /**
  * Spring AOP around advice (MethodInterceptor) that wraps
@@ -61,11 +60,11 @@ public class AspectJAroundAdvice extends AbstractAspectJAdvice implements Method
 	}
 
 	@Override
-	@Nullable
 	public Object invoke(MethodInvocation mi) throws Throwable {
-		if (!(mi instanceof ProxyMethodInvocation pmi)) {
+		if (!(mi instanceof ProxyMethodInvocation)) {
 			throw new IllegalStateException("MethodInvocation is not a Spring ProxyMethodInvocation: " + mi);
 		}
+		ProxyMethodInvocation pmi = (ProxyMethodInvocation) mi;
 		ProceedingJoinPoint pjp = lazyGetProceedingJoinPoint(pmi);
 		JoinPointMatch jpm = getJoinPointMatch(pmi);
 		return invokeAdviceMethod(pjp, jpm, null, null);

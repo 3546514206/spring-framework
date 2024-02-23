@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,23 @@
 
 package org.springframework.http.codec;
 
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.core.codec.CharSequenceEncoder;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.ReflectionUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -24,36 +41,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import org.springframework.core.codec.CharSequenceEncoder;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.MediaType;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.core.ResolvableType.forClass;
-import static org.springframework.http.MediaType.TEXT_HTML;
-import static org.springframework.http.MediaType.TEXT_PLAIN;
-import static org.springframework.http.MediaType.TEXT_XML;
+import static org.springframework.http.MediaType.*;
 
 /**
- * Tests for {@link EncoderHttpMessageWriter}.
+ * Unit tests for {@link EncoderHttpMessageWriter}.
  *
  * @author Rossen Stoyanchev
  * @author Brian Clozel
@@ -155,9 +152,9 @@ class EncoderHttpMessageWriterTests {
 
 	@Test
 	void setContentLengthForMonoBody() {
-		DefaultDataBufferFactory factory = DefaultDataBufferFactory.sharedInstance;
+		DefaultDataBufferFactory factory = new DefaultDataBufferFactory();
 		DataBuffer buffer = factory.wrap("body".getBytes(StandardCharsets.UTF_8));
-		configureEncoder(Flux.just(buffer), MimeTypeUtils.TEXT_PLAIN);
+		configureEncoder(buffer, MimeTypeUtils.TEXT_PLAIN);
 		HttpMessageWriter<String> writer = new EncoderHttpMessageWriter<>(this.encoder);
 		writer.write(Mono.just("body"), forClass(String.class), TEXT_PLAIN, this.response, NO_HINTS).block();
 
@@ -180,7 +177,7 @@ class EncoderHttpMessageWriterTests {
 		configureEncoder(MimeTypeUtils.TEXT_PLAIN);
 		HttpMessageWriter<String> writer = new EncoderHttpMessageWriter<>(this.encoder);
 		writer.write(Mono.empty(), forClass(String.class), TEXT_PLAIN, this.response, NO_HINTS).block();
-		StepVerifier.create(this.response.getBody()).verifyComplete();
+		StepVerifier.create(this.response.getBody()).expectComplete();
 		assertThat(this.response.getHeaders().getContentLength()).isEqualTo(0);
 	}
 
@@ -188,15 +185,15 @@ class EncoderHttpMessageWriterTests {
 	void isStreamingMediaType() throws InvocationTargetException, IllegalAccessException {
 		configureEncoder(TEXT_HTML);
 		MediaType streamingMediaType = new MediaType(TEXT_PLAIN, Collections.singletonMap("streaming", "true"));
-		given(this.encoder.getStreamingMediaTypes()).willReturn(List.of(streamingMediaType));
+		given(this.encoder.getStreamingMediaTypes()).willReturn(Arrays.asList(streamingMediaType));
 
 		HttpMessageWriter<String> writer = new EncoderHttpMessageWriter<>(this.encoder);
 		Method method = ReflectionUtils.findMethod(writer.getClass(), "isStreamingMediaType", MediaType.class);
 		ReflectionUtils.makeAccessible(method);
 
-		assertThat((Boolean) method.invoke(writer, streamingMediaType)).isTrue();
-		assertThat((Boolean) method.invoke(writer, new MediaType(TEXT_PLAIN, Collections.singletonMap("streaming", "false")))).isFalse();
-		assertThat((Boolean) method.invoke(writer, TEXT_HTML)).isFalse();
+		assertThat((boolean) (Boolean) method.invoke(writer, streamingMediaType)).isTrue();
+		assertThat((boolean) (Boolean) method.invoke(writer, new MediaType(TEXT_PLAIN, Collections.singletonMap("streaming", "false")))).isFalse();
+		assertThat((boolean) (Boolean) method.invoke(writer, TEXT_HTML)).isFalse();
 	}
 
 	private void configureEncoder(MimeType... mimeTypes) {
@@ -208,6 +205,13 @@ class EncoderHttpMessageWriterTests {
 		given(this.encoder.getEncodableMimeTypes()).willReturn(typeList);
 		given(this.encoder.encode(any(), any(), any(), this.mediaTypeCaptor.capture(), any()))
 				.willReturn(encodedStream);
+	}
+
+	private void configureEncoder(DataBuffer dataBuffer, MimeType... mimeTypes) {
+		List<MimeType> typeList = Arrays.asList(mimeTypes);
+		given(this.encoder.getEncodableMimeTypes()).willReturn(typeList);
+		given(this.encoder.encodeValue(any(), any(), any(), this.mediaTypeCaptor.capture(), any()))
+				.willReturn(dataBuffer);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,38 @@
 
 package org.springframework.expression.spel;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.expression.*;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.tests.EnabledForTestGroups;
+import org.springframework.util.StopWatch;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.Expression;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.PropertyAccessor;
-import org.springframework.expression.TypedValue;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.tests.TestGroup.PERFORMANCE;
 
 /**
  * Testing variations on map access.
  *
  * @author Andy Clement
  */
-class MapAccessTests extends AbstractExpressionTests {
+public class MapAccessTests extends AbstractExpressionTests {
 
 	@Test
-	void testSimpleMapAccess01() {
+	public void testSimpleMapAccess01() {
 		evaluate("testMap.get('monday')", "montag", String.class);
 	}
 
 	@Test
-	void testMapAccessThroughIndexer() {
+	public void testMapAccessThroughIndexer() {
 		evaluate("testMap['monday']", "montag", String.class);
 	}
 
 	@Test
-	void testCustomMapAccessor() {
+	public void testCustomMapAccessor() throws Exception {
 		ExpressionParser parser = new SpelExpressionParser();
 		StandardEvaluationContext ctx = TestScenarioCreator.getTestEvaluationContext();
 		ctx.addPropertyAccessor(new MapAccessor());
@@ -60,7 +58,7 @@ class MapAccessTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testVariableMapAccess() {
+	public void testVariableMapAccess() throws Exception {
 		ExpressionParser parser = new SpelExpressionParser();
 		StandardEvaluationContext ctx = TestScenarioCreator.getTestEvaluationContext();
 		ctx.setVariable("day", "saturday");
@@ -71,8 +69,8 @@ class MapAccessTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testGetValue() {
-		Map<String, String> props1 = new HashMap<>();
+	public void testGetValue(){
+		Map<String,String> props1 = new HashMap<>();
 		props1.put("key1", "value1");
 		props1.put("key2", "value2");
 		props1.put("key3", "value3");
@@ -85,13 +83,32 @@ class MapAccessTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testGetValueFromRootMap() {
+	public void testGetValueFromRootMap() {
 		Map<String, String> map = new HashMap<>();
 		map.put("key", "value");
 
 		ExpressionParser spelExpressionParser = new SpelExpressionParser();
 		Expression expr = spelExpressionParser.parseExpression("#root['key']");
 		assertThat(expr.getValue(map)).isEqualTo("value");
+	}
+
+	@Test
+	@EnabledForTestGroups(PERFORMANCE)
+	public void testGetValuePerformance() throws Exception {
+		Map<String, String> map = new HashMap<>();
+		map.put("key", "value");
+		EvaluationContext context = new StandardEvaluationContext(map);
+
+		ExpressionParser spelExpressionParser = new SpelExpressionParser();
+		Expression expr = spelExpressionParser.parseExpression("#root['key']");
+
+		StopWatch s = new StopWatch();
+		s.start();
+		for (int i = 0; i < 10000; i++) {
+			expr.getValue(context);
+		}
+		s.stop();
+		assertThat(s.getTotalTimeMillis()).isLessThan(200L);
 	}
 
 
@@ -143,11 +160,11 @@ class MapAccessTests extends AbstractExpressionTests {
 			this.priority = priority;
 		}
 
-		public Map<String, String> getProperties() {
+		public Map<String,String> getProperties() {
 			return properties;
 		}
 
-		public void setProperties(Map<String, String> properties) {
+		public void setProperties(Map<String,String> properties) {
 			this.properties = properties;
 		}
 	}
@@ -156,24 +173,24 @@ class MapAccessTests extends AbstractExpressionTests {
 	public static class MapAccessor implements PropertyAccessor {
 
 		@Override
-		public boolean canRead(EvaluationContext context, Object target, String name) {
+		public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
 			return (((Map<?, ?>) target).containsKey(name));
 		}
 
 		@Override
-		public TypedValue read(EvaluationContext context, Object target, String name) {
-			return new TypedValue(((Map<?, ?>) target).get(name));
+		public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
+			return new TypedValue(((Map<? ,?>) target).get(name));
 		}
 
 		@Override
-		public boolean canWrite(EvaluationContext context, Object target, String name) {
+		public boolean canWrite(EvaluationContext context, Object target, String name) throws AccessException {
 			return true;
 		}
 
 		@Override
 		@SuppressWarnings("unchecked")
-		public void write(EvaluationContext context, Object target, String name, Object newValue) {
-			((Map<Object, Object>) target).put(name, newValue);
+		public void write(EvaluationContext context, Object target, String name, Object newValue) throws AccessException {
+			((Map<Object,Object>) target).put(name, newValue);
 		}
 
 		@Override

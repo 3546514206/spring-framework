@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,22 @@
 
 package org.springframework.jms.listener.adapter;
 
-import jakarta.jms.BytesMessage;
-import jakarta.jms.Destination;
-import jakarta.jms.InvalidDestinationException;
-import jakarta.jms.JMSException;
-import jakarta.jms.Message;
-import jakarta.jms.MessageListener;
-import jakarta.jms.MessageProducer;
-import jakarta.jms.Session;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.jms.listener.SessionAwareMessageListener;
 import org.springframework.jms.support.JmsHeaderMapper;
 import org.springframework.jms.support.JmsUtils;
 import org.springframework.jms.support.QosSettings;
 import org.springframework.jms.support.SimpleJmsHeaderMapper;
-import org.springframework.jms.support.converter.MessageConversionException;
-import org.springframework.jms.support.converter.MessageConverter;
-import org.springframework.jms.support.converter.MessagingMessageConverter;
-import org.springframework.jms.support.converter.SimpleMessageConverter;
-import org.springframework.jms.support.converter.SmartMessageConverter;
+import org.springframework.jms.support.converter.*;
 import org.springframework.jms.support.destination.DestinationResolver;
 import org.springframework.jms.support.destination.DynamicDestinationResolver;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.util.Assert;
+
+import javax.jms.*;
+import java.lang.IllegalStateException;
 
 /**
  * An abstract JMS {@link MessageListener} adapter providing the necessary
@@ -95,7 +85,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * "JMSReplyTo" field.
 	 * <p>Alternatively, specify a JMS Destination object as "defaultResponseDestination".
 	 * @see #setDestinationResolver
-	 * @see #setDefaultResponseDestination(jakarta.jms.Destination)
+	 * @see #setDefaultResponseDestination(javax.jms.Destination)
 	 */
 	public void setDefaultResponseQueueName(String destinationName) {
 		this.defaultResponseDestination = new DestinationNameHolder(destinationName, false);
@@ -107,7 +97,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * "JMSReplyTo" field.
 	 * <p>Alternatively, specify a JMS Destination object as "defaultResponseDestination".
 	 * @see #setDestinationResolver
-	 * @see #setDefaultResponseDestination(jakarta.jms.Destination)
+	 * @see #setDefaultResponseDestination(javax.jms.Destination)
 	 */
 	public void setDefaultResponseTopicName(String destinationName) {
 		this.defaultResponseDestination = new DestinationNameHolder(destinationName, true);
@@ -138,9 +128,9 @@ public abstract class AbstractAdaptableMessageListener
 	 * listener method arguments, and objects returned from listener
 	 * methods back to JMS messages.
 	 * <p>The default converter is a {@link SimpleMessageConverter}, which is able
-	 * to handle {@link jakarta.jms.BytesMessage BytesMessages},
-	 * {@link jakarta.jms.TextMessage TextMessages} and
-	 * {@link jakarta.jms.ObjectMessage ObjectMessages}.
+	 * to handle {@link javax.jms.BytesMessage BytesMessages},
+	 * {@link javax.jms.TextMessage TextMessages} and
+	 * {@link javax.jms.ObjectMessage ObjectMessages}.
 	 */
 	public void setMessageConverter(@Nullable MessageConverter messageConverter) {
 		this.messageConverter = messageConverter;
@@ -207,7 +197,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * message listener container) for handling result objects as well.
 	 * @param message the incoming JMS message
 	 * @see #handleListenerException
-	 * @see #onMessage(jakarta.jms.Message, jakarta.jms.Session)
+	 * @see #onMessage(javax.jms.Message, javax.jms.Session)
 	 */
 	@Override
 	public void onMessage(Message message) {
@@ -229,7 +219,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * In case of the Spring {@link SessionAwareMessageListener} mechanism,
 	 * exceptions get handled by the caller instead.
 	 * @param ex the exception to handle
-	 * @see #onMessage(jakarta.jms.Message)
+	 * @see #onMessage(javax.jms.Message)
 	 */
 	protected void handleListenerException(Throwable ex) {
 		logger.error("Listener execution failed", ex);
@@ -243,7 +233,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * as an argument
 	 * @throws MessageConversionException if the message could not be extracted
 	 */
-	protected Object extractMessage(Message message) {
+	protected Object extractMessage(Message message)  {
 		try {
 			MessageConverter converter = getMessageConverter();
 			if (converter != null) {
@@ -303,8 +293,8 @@ public abstract class AbstractAdaptableMessageListener
 	 * @see #setMessageConverter
 	 */
 	protected Message buildMessage(Session session, Object result) throws JMSException {
-		Object content = preProcessResponse(result instanceof JmsResponse<?> jmsResponse ?
-				jmsResponse.getResponse() : result);
+		Object content = preProcessResponse(result instanceof JmsResponse
+				? ((JmsResponse<?>) result).getResponse() : result);
 
 		MessageConverter converter = getMessageConverter();
 		if (converter != null) {
@@ -316,11 +306,11 @@ public abstract class AbstractAdaptableMessageListener
 			}
 		}
 
-		if (!(content instanceof Message message)) {
+		if (!(content instanceof Message)) {
 			throw new MessageConversionException(
 					"No MessageConverter specified - cannot handle message [" + content + "]");
 		}
-		return message;
+		return (Message) content;
 	}
 
 	/**
@@ -342,7 +332,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * @param request the original incoming JMS message
 	 * @param response the outgoing JMS message about to be sent
 	 * @throws JMSException if thrown by JMS API methods
-	 * @see jakarta.jms.Message#setJMSCorrelationID
+	 * @see javax.jms.Message#setJMSCorrelationID
 	 */
 	protected void postProcessResponse(Message request, Message response) throws JMSException {
 		String correlation = request.getJMSCorrelationID();
@@ -355,7 +345,8 @@ public abstract class AbstractAdaptableMessageListener
 	private Destination getResponseDestination(Message request, Message response, Session session, Object result)
 			throws JMSException {
 
-		if (result instanceof JmsResponse<?> jmsResponse) {
+		if (result instanceof JmsResponse) {
+			JmsResponse<?> jmsResponse = (JmsResponse) result;
 			Destination destination = jmsResponse.resolveDestination(getDestinationResolver(), session);
 			if (destination != null) {
 				return destination;
@@ -371,15 +362,15 @@ public abstract class AbstractAdaptableMessageListener
 	 * it is returned; if it is {@code null}, then the configured
 	 * {@link #resolveDefaultResponseDestination default response destination}
 	 * is returned; if this too is {@code null}, then an
-	 * {@link jakarta.jms.InvalidDestinationException} is thrown.
+	 * {@link javax.jms.InvalidDestinationException} is thrown.
 	 * @param request the original incoming JMS message
 	 * @param response the outgoing JMS message about to be sent
 	 * @param session the JMS Session to operate on
 	 * @return the response destination (never {@code null})
 	 * @throws JMSException if thrown by JMS API methods
-	 * @throws jakarta.jms.InvalidDestinationException if no {@link Destination} can be determined
+	 * @throws javax.jms.InvalidDestinationException if no {@link Destination} can be determined
 	 * @see #setDefaultResponseDestination
-	 * @see jakarta.jms.Message#getJMSReplyTo()
+	 * @see javax.jms.Message#getJMSReplyTo()
 	 */
 	protected Destination getResponseDestination(Message request, Message response, Session session)
 			throws JMSException {
@@ -399,7 +390,7 @@ public abstract class AbstractAdaptableMessageListener
 	 * Resolve the default response destination into a JMS {@link Destination}, using this
 	 * accessor's {@link DestinationResolver} in case of a destination name.
 	 * @return the located {@link Destination}
-	 * @throws jakarta.jms.JMSException if resolution failed
+	 * @throws javax.jms.JMSException if resolution failed
 	 * @see #setDefaultResponseDestination
 	 * @see #setDefaultResponseQueueName
 	 * @see #setDefaultResponseTopicName
@@ -407,10 +398,11 @@ public abstract class AbstractAdaptableMessageListener
 	 */
 	@Nullable
 	protected Destination resolveDefaultResponseDestination(Session session) throws JMSException {
-		if (this.defaultResponseDestination instanceof Destination destination) {
-			return destination;
+		if (this.defaultResponseDestination instanceof Destination) {
+			return (Destination) this.defaultResponseDestination;
 		}
-		if (this.defaultResponseDestination instanceof DestinationNameHolder nameHolder) {
+		if (this.defaultResponseDestination instanceof DestinationNameHolder) {
+			DestinationNameHolder nameHolder = (DestinationNameHolder) this.defaultResponseDestination;
 			return getDestinationResolver().resolveDestinationName(session, nameHolder.name, nameHolder.isTopic);
 		}
 		return null;
@@ -423,8 +415,8 @@ public abstract class AbstractAdaptableMessageListener
 	 * @param session the JMS session to operate on
 	 * @throws JMSException if thrown by JMS API methods
 	 * @see #postProcessProducer
-	 * @see jakarta.jms.Session#createProducer
-	 * @see jakarta.jms.MessageProducer#send
+	 * @see javax.jms.Session#createProducer
+	 * @see javax.jms.MessageProducer#send
 	 */
 	protected void sendResponse(Session session, Destination destination, Message response) throws JMSException {
 		MessageProducer producer = session.createProducer(destination);
@@ -456,25 +448,26 @@ public abstract class AbstractAdaptableMessageListener
 
 
 	/**
-	 * A {@link MessagingMessageConverter} that lazily invokes payload extraction and
-	 * delegates it to {@link #extractMessage(jakarta.jms.Message)} in order to enforce
+	 * A {@link MessagingMessageConverter} that lazily invoke payload extraction and
+	 * delegate it to {@link #extractMessage(javax.jms.Message)} in order to enforce
 	 * backward compatibility.
 	 */
 	private class MessagingMessageConverterAdapter extends MessagingMessageConverter {
 
+		@SuppressWarnings("unchecked")
 		@Override
-		public Object fromMessage(jakarta.jms.Message message) throws JMSException, MessageConversionException {
+		public Object fromMessage(javax.jms.Message message) throws JMSException, MessageConversionException {
 			return new LazyResolutionMessage(message);
 		}
 
 		@Override
 		protected Object extractPayload(Message message) throws JMSException {
 			Object payload = extractMessage(message);
-			if (message instanceof BytesMessage bytesMessage) {
+			if (message instanceof BytesMessage) {
 				try {
 					// In case the BytesMessage is going to be received as a user argument:
 					// reset it, otherwise it would appear empty to such processing code...
-					bytesMessage.reset();
+					((BytesMessage) message).reset();
 				}
 				catch (JMSException ex) {
 					// Continue since the BytesMessage typically won't be used any further.
@@ -492,8 +485,8 @@ public abstract class AbstractAdaptableMessageListener
 			if (converter == null) {
 				throw new IllegalStateException("No message converter, cannot handle '" + payload + "'");
 			}
-			if (converter instanceof SmartMessageConverter smartMessageConverter) {
-				return smartMessageConverter.toMessage(payload, session, conversionHint);
+			if (converter instanceof SmartMessageConverter) {
+				return ((SmartMessageConverter) converter).toMessage(payload, session, conversionHint);
 
 			}
 			return converter.toMessage(payload, session);
@@ -502,7 +495,7 @@ public abstract class AbstractAdaptableMessageListener
 
 		protected class LazyResolutionMessage implements org.springframework.messaging.Message<Object> {
 
-			private final jakarta.jms.Message message;
+			private final javax.jms.Message message;
 
 			@Nullable
 			private Object payload;
@@ -510,7 +503,7 @@ public abstract class AbstractAdaptableMessageListener
 			@Nullable
 			private MessageHeaders headers;
 
-			public LazyResolutionMessage(jakarta.jms.Message message) {
+			public LazyResolutionMessage(javax.jms.Message message) {
 				this.message = message;
 			}
 
@@ -534,11 +527,10 @@ public abstract class AbstractAdaptableMessageListener
 			 * this case, its payload is returned.
 			 * @return the payload of the message
 			 */
-			@SuppressWarnings("rawtypes")
 			private Object unwrapPayload() throws JMSException {
 				Object payload = extractPayload(this.message);
-				if (payload instanceof org.springframework.messaging.Message springMessage) {
-					return springMessage.getPayload();
+				if (payload instanceof org.springframework.messaging.Message) {
+					return ((org.springframework.messaging.Message) payload).getPayload();
 				}
 				return payload;
 			}
@@ -550,29 +542,6 @@ public abstract class AbstractAdaptableMessageListener
 				}
 				return this.headers;
 			}
-
-			@Override
-			public String toString() {
-				StringBuilder sb = new StringBuilder(getClass().getSimpleName());
-				if (this.payload == null) {
-					sb.append(" [rawMessage=").append(this.message);
-				}
-				else {
-					sb.append(" [payload=");
-					if (this.payload instanceof byte[] bytes) {
-						sb.append("byte[").append(bytes.length).append(']');
-					}
-					else {
-						sb.append(this.payload);
-					}
-				}
-				if (this.headers != null) {
-					sb.append(", headers=").append(this.headers);
-				}
-				sb.append(']');
-				return sb.toString();
-			}
-
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package org.springframework.messaging.rsocket
 import io.rsocket.transport.ClientTransport
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.reactive.asFlow
-import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.reactive.awaitSingle
 import org.reactivestreams.Publisher
 import org.springframework.core.ParameterizedTypeReference
 import reactor.core.publisher.Flux
@@ -33,7 +33,6 @@ import java.net.URI
  * @author Sebastien Deleuze
  * @since 5.2
  */
-@Suppress("DEPRECATION")
 suspend fun RSocketRequester.Builder.connectAndAwait(transport: ClientTransport): RSocketRequester =
 		connect(transport).awaitSingle()
 
@@ -43,7 +42,6 @@ suspend fun RSocketRequester.Builder.connectAndAwait(transport: ClientTransport)
  * @author Sebastien Deleuze
  * @since 5.2
  */
-@Suppress("DEPRECATION")
 suspend fun RSocketRequester.Builder.connectTcpAndAwait(host: String, port: Int): RSocketRequester =
 		connectTcp(host, port).awaitSingle()
 
@@ -53,7 +51,6 @@ suspend fun RSocketRequester.Builder.connectTcpAndAwait(host: String, port: Int)
  * @author Sebastien Deleuze
  * @since 5.2
  */
-@Suppress("DEPRECATION")
 suspend fun RSocketRequester.Builder.connectWebSocketAndAwait(uri: URI): RSocketRequester =
 		connectWebSocket(uri).awaitSingle()
 
@@ -68,7 +65,7 @@ suspend fun RSocketRequester.Builder.connectWebSocketAndAwait(uri: URI): RSocket
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(producer: Any): RSocketRequester.RetrieveSpec =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(producer: Any): RSocketRequester.RequestSpec =
 		data(producer, object : ParameterizedTypeReference<T>() {})
 
 /**
@@ -80,7 +77,7 @@ inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(producer:
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(publisher: Publisher<T>): RSocketRequester.RetrieveSpec =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(publisher: Publisher<T>): RSocketRequester.RequestSpec =
 		data(publisher, object : ParameterizedTypeReference<T>() {})
 
 /**
@@ -92,67 +89,57 @@ inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(publisher
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(flow: Flow<T>): RSocketRequester.RetrieveSpec =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.dataWithType(flow: Flow<T>): RSocketRequester.RequestSpec =
 		data(flow, object : ParameterizedTypeReference<T>() {})
 
 
 /**
- * Coroutines variant of [RSocketRequester.RetrieveSpec.send].
+ * Coroutines variant of [RSocketRequester.RequestSpec.send].
  *
  * @author Sebastien Deleuze
  * @since 5.2
  */
-suspend fun RSocketRequester.RetrieveSpec.sendAndAwait() {
-	send().awaitSingleOrNull()
+suspend fun RSocketRequester.RequestSpec.sendAndAwait() {
+	send().awaitFirstOrNull()
 }
 
 /**
- * Coroutines variant of [RSocketRequester.RetrieveSpec.retrieveMono].
+ * Coroutines variant of [RSocketRequester.RequestSpec.retrieveMono].
  *
- * @throws NoSuchElementException if the underlying [Mono] does not emit any value
  * @author Sebastien Deleuze
  * @since 5.2
  */
-suspend inline fun <reified T : Any> RSocketRequester.RetrieveSpec.retrieveAndAwait(): T =
+suspend inline fun <reified T : Any> RSocketRequester.RequestSpec.retrieveAndAwait(): T =
 		retrieveMono(object : ParameterizedTypeReference<T>() {}).awaitSingle()
 
 /**
- * Nullable coroutines variant of [RSocketRequester.RetrieveSpec.retrieveMono].
- *
- * @author Sebastien Deleuze
- * @since 5.2.1
- */
-suspend inline fun <reified T : Any> RSocketRequester.RetrieveSpec.retrieveAndAwaitOrNull(): T? =
-		retrieveMono(object : ParameterizedTypeReference<T>() {}).awaitSingleOrNull()
-
-/**
- * Coroutines variant of [RSocketRequester.RetrieveSpec.retrieveFlux].
+ * Coroutines variant of [RSocketRequester.RequestSpec.retrieveFlux].
  *
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RetrieveSpec.retrieveFlow(): Flow<T> =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.retrieveFlow(): Flow<T> =
 		retrieveFlux(object : ParameterizedTypeReference<T>() {}).asFlow()
 
 /**
- * Extension for [RSocketRequester.RetrieveSpec.retrieveMono] providing a `retrieveMono<Foo>()`
+ * Extension for [RSocketRequester.RequestSpec.retrieveMono] providing a `retrieveMono<Foo>()`
  * variant leveraging Kotlin reified type parameters. This extension is not subject to type
  * erasure and retains actual generic type arguments.
  *
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RetrieveSpec.retrieveMono(): Mono<T> =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.retrieveMono(): Mono<T> =
 		retrieveMono(object : ParameterizedTypeReference<T>() {})
 
 
 /**
- * Extension for [RSocketRequester.RetrieveSpec.retrieveFlux] providing a `retrieveFlux<Foo>()`
+ * Extension for [RSocketRequester.RequestSpec.retrieveFlux] providing a `retrieveFlux<Foo>()`
  * variant leveraging Kotlin reified type parameters. This extension is not subject to type
  * erasure and retains actual generic type arguments.
  *
  * @author Sebastien Deleuze
  * @since 5.2
  */
-inline fun <reified T : Any> RSocketRequester.RetrieveSpec.retrieveFlux(): Flux<T> =
+inline fun <reified T : Any> RSocketRequester.RequestSpec.retrieveFlux(): Flux<T> =
 		retrieveFlux(object : ParameterizedTypeReference<T>() {})

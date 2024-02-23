@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,10 +281,6 @@ class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 				return;
 			}
 			synchronized (this) {
-				if (this.state == State.READY_TO_WRITE) {
-					s.request(n);
-					return;
-				}
 				if (this.writeSubscriber != null) {
 					if (this.state == State.EMITTING_CACHED_SIGNALS) {
 						this.demandBeforeReadyToWrite = n;
@@ -347,8 +343,8 @@ class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		private void releaseCachedItem() {
 			synchronized (this) {
 				Object item = this.item;
-				if (item instanceof DataBuffer dataBuffer) {
-					DataBufferUtils.release(dataBuffer);
+				if (item instanceof DataBuffer) {
+					DataBufferUtils.release((DataBuffer) item);
 				}
 				this.item = null;
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package org.springframework.web.servlet.config.annotation;
 
-import java.util.Collections;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.servlet.mvc.ParameterizableViewController;
 import org.springframework.web.servlet.view.RedirectView;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import java.util.Collections;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ViewControllerRegistryTests {
+public class ViewControllerRegistryTests {
 
 	private ViewControllerRegistry registry;
 
@@ -47,7 +46,7 @@ class ViewControllerRegistryTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.registry = new ViewControllerRegistry(new StaticApplicationContext());
 		this.request = new MockHttpServletRequest("GET", "/");
 		this.response = new MockHttpServletResponse();
@@ -55,12 +54,12 @@ class ViewControllerRegistryTests {
 
 
 	@Test
-	void noViewControllers() {
+	public void noViewControllers() {
 		assertThat(this.registry.buildHandlerMapping()).isNull();
 	}
 
 	@Test
-	void addViewController() {
+	public void addViewController() {
 		this.registry.addViewController("/path").setViewName("viewName");
 		ParameterizableViewController controller = getController("/path");
 
@@ -71,7 +70,7 @@ class ViewControllerRegistryTests {
 	}
 
 	@Test
-	void addViewControllerWithDefaultViewName() {
+	public void addViewControllerWithDefaultViewName() {
 		this.registry.addViewController("/path");
 		ParameterizableViewController controller = getController("/path");
 
@@ -82,7 +81,7 @@ class ViewControllerRegistryTests {
 	}
 
 	@Test
-	void addRedirectViewController() throws Exception {
+	public void addRedirectViewController() throws Exception {
 		this.registry.addRedirectViewController("/path", "/redirectTo");
 		RedirectView redirectView = getRedirectView("/path");
 		this.request.setQueryString("a=b");
@@ -95,7 +94,7 @@ class ViewControllerRegistryTests {
 	}
 
 	@Test
-	void addRedirectViewControllerWithCustomSettings() throws Exception {
+	public void addRedirectViewControllerWithCustomSettings() throws Exception {
 		this.registry.addRedirectViewController("/path", "/redirectTo")
 				.setContextRelative(false)
 				.setKeepQueryParams(true)
@@ -112,7 +111,7 @@ class ViewControllerRegistryTests {
 	}
 
 	@Test
-	void addStatusController() {
+	public void addStatusController() {
 		this.registry.addStatusController("/path", HttpStatus.NOT_FOUND);
 		ParameterizableViewController controller = getController("/path");
 
@@ -123,7 +122,7 @@ class ViewControllerRegistryTests {
 	}
 
 	@Test
-	void order() {
+	public void order() {
 		this.registry.addViewController("/path");
 		SimpleUrlHandlerMapping handlerMapping = this.registry.buildHandlerMapping();
 		assertThat(handlerMapping.getOrder()).isEqualTo(1);

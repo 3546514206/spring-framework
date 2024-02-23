@@ -1,8 +1,5 @@
 /**
- * Simplification layer for common JDBC interactions.
- *
- * <p>{@code JdbcClient} provides a fluent API for JDBC query and update operations,
- * supporting JDBC-style positional as well as Spring-style named parameters.
+ * Simplification layer for table inserts and stored procedure calls.
  *
  * <p>{@code SimpleJdbcInsert} and {@code SimpleJdbcCall} take advantage of database
  * meta-data provided by the JDBC driver to simplify the application code. Much of the

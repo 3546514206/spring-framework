@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,14 @@ import org.springframework.expression.spel.CodeFlow;
 import org.springframework.expression.spel.ExpressionState;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
- * Represents the Elvis operator <code>?:</code>. For an expression <code>a?:b</code> if <code>a</code> is neither null
- * nor an empty String, the value of the expression is <code>a</code>.
- * If <code>a</code> is null or the empty String, then the value of the expression is <code>b</code>.
+ * Represents the elvis operator ?:. For an expression "a?:b" if a is not null, the value
+ * of the expression is "a", if a is null then the value of the expression is "b".
  *
  * @author Andy Clement
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0
  */
 public class Elvis extends SpelNodeImpl {
@@ -43,8 +42,8 @@ public class Elvis extends SpelNodeImpl {
 
 
 	/**
-	 * Evaluate the condition and if neither null nor an empty String, return it.
-	 * If it is null or an empty String, return the other value.
+	 * Evaluate the condition and if not null, return it.
+	 * If it is null, return the other value.
 	 * @param state the expression state
 	 * @throws EvaluationException if the condition does not evaluate correctly
 	 * to a boolean or there is a problem executing the chosen alternative
@@ -53,7 +52,7 @@ public class Elvis extends SpelNodeImpl {
 	public TypedValue getValueInternal(ExpressionState state) throws EvaluationException {
 		TypedValue value = this.children[0].getValueInternal(state);
 		// If this check is changed, the generateCode method will need changing too
-		if (value.getValue() != null && !"".equals(value.getValue())) {
+		if (!StringUtils.isEmpty(value.getValue())) {
 			return value;
 		}
 		else {
@@ -65,7 +64,7 @@ public class Elvis extends SpelNodeImpl {
 
 	@Override
 	public String toStringAST() {
-		return "(" + getChild(0).toStringAST() + " ?: " + getChild(1).toStringAST() + ")";
+		return getChild(0).toStringAST() + " ?: " + getChild(1).toStringAST();
 	}
 
 	@Override
@@ -119,7 +118,7 @@ public class Elvis extends SpelNodeImpl {
 				this.exitTypeDescriptor = conditionDescriptor;
 			}
 			else {
-				// Use the easiest to compute common supertype
+				// Use the easiest to compute common super type
 				this.exitTypeDescriptor = "Ljava/lang/Object";
 			}
 		}

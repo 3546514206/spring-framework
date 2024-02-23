@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package org.springframework.jms.support.destination;
 
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.Queue;
-import jakarta.jms.QueueSession;
-import jakarta.jms.Session;
-import jakarta.jms.Topic;
-import jakarta.jms.TopicSession;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.Queue;
+import javax.jms.QueueSession;
+import javax.jms.Session;
+import javax.jms.Topic;
+import javax.jms.TopicSession;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.jms.StubQueue;
@@ -35,39 +36,39 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Rick Evans
  */
-class DynamicDestinationResolverTests {
+public class DynamicDestinationResolverTests {
 
 	private static final String DESTINATION_NAME = "foo";
 
 
 	@Test
-	void resolveWithPubSubTopicSession() throws Exception {
+	public void resolveWithPubSubTopicSession() throws Exception {
 		Topic expectedDestination = new StubTopic();
-		TopicSession session = mock();
+		TopicSession session = mock(TopicSession.class);
 		given(session.createTopic(DESTINATION_NAME)).willReturn(expectedDestination);
 		testResolveDestination(session, expectedDestination, true);
 	}
 
 	@Test
-	void resolveWithPubSubVanillaSession() throws Exception {
+	public void resolveWithPubSubVanillaSession() throws Exception {
 		Topic expectedDestination = new StubTopic();
-		Session session = mock();
+		Session session = mock(Session.class);
 		given(session.createTopic(DESTINATION_NAME)).willReturn(expectedDestination);
 		testResolveDestination(session, expectedDestination, true);
 	}
 
 	@Test
-	void resolveWithPointToPointQueueSession() throws Exception {
+	public void resolveWithPointToPointQueueSession() throws Exception {
 		Queue expectedDestination = new StubQueue();
-		QueueSession session = mock();
+		Session session = mock(QueueSession.class);
 		given(session.createQueue(DESTINATION_NAME)).willReturn(expectedDestination);
 		testResolveDestination(session, expectedDestination, false);
 	}
 
 	@Test
-	void resolveWithPointToPointVanillaSession() throws Exception {
+	public void resolveWithPointToPointVanillaSession() throws Exception {
 		Queue expectedDestination = new StubQueue();
-		Session session = mock();
+		Session session = mock(Session.class);
 		given(session.createQueue(DESTINATION_NAME)).willReturn(expectedDestination);
 		testResolveDestination(session, expectedDestination, false);
 	}

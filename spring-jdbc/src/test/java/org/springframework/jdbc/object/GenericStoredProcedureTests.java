@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.jdbc.object;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Types;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.sql.DataSource;
@@ -38,17 +39,17 @@ import static org.mockito.Mockito.verify;
 /**
  * @author Thomas Risberg
  */
-class GenericStoredProcedureTests {
+public class GenericStoredProcedureTests {
 
 	@Test
-	void testAddInvoices() throws Exception {
+	public void testAddInvoices() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("org/springframework/jdbc/object/GenericStoredProcedureTests-context.xml"));
-		Connection connection = mock();
-		DataSource dataSource = mock();
+		Connection connection = mock(Connection.class);
+		DataSource dataSource = mock(DataSource.class);
 		given(dataSource.getConnection()).willReturn(connection);
-		CallableStatement callableStatement = mock();
+		CallableStatement callableStatement = mock(CallableStatement.class);
 		TestDataSourceWrapper testDataSource = (TestDataSourceWrapper) bf.getBean("dataSource");
 		testDataSource.setTarget(dataSource);
 
@@ -59,9 +60,12 @@ class GenericStoredProcedureTests {
 		given(connection.prepareCall("{call " + "add_invoice" + "(?, ?, ?)}")).willReturn(callableStatement);
 
 		StoredProcedure adder = (StoredProcedure) bf.getBean("genericProcedure");
-		Map<String, Object> in = Map.of("amount", 1106, "custid", 3);
+		Map<String, Object> in = new HashMap<>(2);
+		in.put("amount", 1106);
+		in.put("custid", 3);
 		Map<String, Object> out = adder.execute(in);
-		assertThat(out.get("newid")).isEqualTo(4);
+		Integer id = (Integer) out.get("newid");
+		assertThat(id.intValue()).isEqualTo(4);
 
 		verify(callableStatement).setObject(1, 1106, Types.INTEGER);
 		verify(callableStatement).setObject(2, 3, Types.INTEGER);

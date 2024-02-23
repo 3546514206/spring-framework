@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,15 @@
 
 package org.springframework.beans.factory.xml;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
-import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.BeanDefinitionReader;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.tests.sample.beans.TestBean;
 
-import static java.util.Map.entry;
+import java.util.*;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -41,146 +34,166 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rick Evans
  */
 @SuppressWarnings("rawtypes")
-class CollectionMergingTests {
+public class CollectionMergingTests {
 
 	private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(this.beanFactory);
 		reader.loadBeanDefinitions(new ClassPathResource("collectionMerging.xml", getClass()));
 	}
 
 	@Test
-	void mergeList() {
+	public void mergeList() throws Exception {
 		TestBean bean = (TestBean) this.beanFactory.getBean("childWithList");
-		List<?> list = bean.getSomeList();
-		assertThat(list).asInstanceOf(InstanceOfAssertFactories.list(String.class))
-				.containsExactly("Rob Harrop", "Rod Johnson", "Juergen Hoeller");
+		List list = bean.getSomeList();
+		assertThat(list.size()).as("Incorrect size").isEqualTo(3);
+		assertThat(list.get(0)).isEqualTo("Rob Harrop");
+		assertThat(list.get(1)).isEqualTo("Rod Johnson");
+		assertThat(list.get(2)).isEqualTo("Juergen Hoeller");
 	}
 
 	@Test
-	void mergeListWithInnerBeanAsListElement() {
+	public void mergeListWithInnerBeanAsListElement() throws Exception {
 		TestBean bean = (TestBean) this.beanFactory.getBean("childWithListOfRefs");
 		List<?> list = bean.getSomeList();
 		assertThat(list).isNotNull();
-		assertThat(list).hasSize(3);
-		assertThat(list.get(2)).isInstanceOf(TestBean.class);
+		assertThat(list.size()).isEqualTo(3);
+		assertThat(list.get(2)).isNotNull();
+		boolean condition = list.get(2) instanceof TestBean;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
-	void mergeSet() {
+	public void mergeSet() {
 		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSet");
-		Set<?> set = bean.getSomeSet();
-		assertThat(set).asInstanceOf(InstanceOfAssertFactories.collection(String.class))
-				.containsOnly("Rob Harrop", "Sally Greenwood");
-	}
-
-	@Test
-	void mergeSetWithInnerBeanAsSetElement() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetOfRefs");
-		Set<?> set = bean.getSomeSet();
-		assertThat(set).isNotNull();
-		assertThat(set).hasSize(2);
-		Iterator it = set.iterator();
-		it.next();
-		Object o = it.next();
-		assertThat(o).isInstanceOf(TestBean.class);
-		assertThat(((TestBean) o).getName()).isEqualTo("Sally");
-	}
-
-	@Test
-	void mergeMap() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMap");
-		Map<?, ?> map = bean.getSomeMap();
-		assertThat(map).asInstanceOf(InstanceOfAssertFactories.map(String.class,String.class))
-				.containsOnly(entry("Rob", "Sally"), entry("Rod", "Kerry"), entry("Juergen", "Eva"));
-	}
-
-	@Test
-	void mergeMapWithInnerBeanAsMapEntryValue() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapOfRefs");
-		Map<?, ?> map = bean.getSomeMap();
-		assertThat(map).isNotNull();
-		assertThat(map).hasSize(2);
-		assertThat(map.get("Rob")).isNotNull();
-		assertThat(map.get("Rob")).isInstanceOf(TestBean.class);
-		assertThat(((TestBean) map.get("Rob")).getName()).isEqualTo("Sally");
-	}
-
-	@Test
-	void mergeProperties() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithProps");
-		Properties props = bean.getSomeProperties();
-		assertThat(props).as("Incorrect size").hasSize(3);
-		assertThat(props.getProperty("Rob")).isEqualTo("Sally");
-		assertThat(props.getProperty("Rod")).isEqualTo("Kerry");
-		assertThat(props.getProperty("Juergen")).isEqualTo("Eva");
-	}
-
-	@Test
-	void mergeListInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithListInConstructor");
-		List<?> list = bean.getSomeList();
-		assertThat(list).asInstanceOf(InstanceOfAssertFactories.list(String.class))
-				.containsExactly("Rob Harrop", "Rod Johnson", "Juergen Hoeller");
-	}
-
-	@Test
-	void mergeListWithInnerBeanAsListElementInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithListOfRefsInConstructor");
-		List<?> list = bean.getSomeList();
-		assertThat(list).hasSize(3).element(2).isInstanceOf(TestBean.class);
-	}
-
-	@Test
-	void mergeSetInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetInConstructor");
-		Set<?> set = bean.getSomeSet();
-		assertThat(set).as("Incorrect size").hasSize(2);
+		Set set = bean.getSomeSet();
+		assertThat(set.size()).as("Incorrect size").isEqualTo(2);
 		assertThat(set.contains("Rob Harrop")).isTrue();
 		assertThat(set.contains("Sally Greenwood")).isTrue();
 	}
 
 	@Test
-	void mergeSetWithInnerBeanAsSetElementInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetOfRefsInConstructor");
+	public void mergeSetWithInnerBeanAsSetElement() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetOfRefs");
 		Set<?> set = bean.getSomeSet();
 		assertThat(set).isNotNull();
-		assertThat(set).hasSize(2);
+		assertThat(set.size()).isEqualTo(2);
 		Iterator it = set.iterator();
 		it.next();
 		Object o = it.next();
-		assertThat(o).isInstanceOf(TestBean.class);
+		assertThat(o).isNotNull();
+		boolean condition = o instanceof TestBean;
+		assertThat(condition).isTrue();
 		assertThat(((TestBean) o).getName()).isEqualTo("Sally");
 	}
 
 	@Test
-	void mergeMapInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapInConstructor");
-		Map<?, ?> map = bean.getSomeMap();
-		assertThat(map).as("Incorrect size").hasSize(3);
+	public void mergeMap() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMap");
+		Map map = bean.getSomeMap();
+		assertThat(map.size()).as("Incorrect size").isEqualTo(3);
 		assertThat(map.get("Rob")).isEqualTo("Sally");
 		assertThat(map.get("Rod")).isEqualTo("Kerry");
 		assertThat(map.get("Juergen")).isEqualTo("Eva");
 	}
 
 	@Test
-	void mergeMapWithInnerBeanAsMapEntryValueInConstructor() {
-		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapOfRefsInConstructor");
+	public void mergeMapWithInnerBeanAsMapEntryValue() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapOfRefs");
 		Map<?, ?> map = bean.getSomeMap();
 		assertThat(map).isNotNull();
-		assertThat(map).hasSize(2);
-		assertThat(map.get("Rob")).isInstanceOf(TestBean.class);
+		assertThat(map.size()).isEqualTo(2);
+		assertThat(map.get("Rob")).isNotNull();
+		boolean condition = map.get("Rob") instanceof TestBean;
+		assertThat(condition).isTrue();
 		assertThat(((TestBean) map.get("Rob")).getName()).isEqualTo("Sally");
 	}
 
 	@Test
-	void mergePropertiesInConstructor() {
+	public void mergeProperties() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithProps");
+		Properties props = bean.getSomeProperties();
+		assertThat(props.size()).as("Incorrect size").isEqualTo(3);
+		assertThat(props.getProperty("Rob")).isEqualTo("Sally");
+		assertThat(props.getProperty("Rod")).isEqualTo("Kerry");
+		assertThat(props.getProperty("Juergen")).isEqualTo("Eva");
+	}
+
+	@Test
+	public void mergeListInConstructor() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithListInConstructor");
+		List list = bean.getSomeList();
+		assertThat(list.size()).as("Incorrect size").isEqualTo(3);
+		assertThat(list.get(0)).isEqualTo("Rob Harrop");
+		assertThat(list.get(1)).isEqualTo("Rod Johnson");
+		assertThat(list.get(2)).isEqualTo("Juergen Hoeller");
+	}
+
+	@Test
+	public void mergeListWithInnerBeanAsListElementInConstructor() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithListOfRefsInConstructor");
+		List<?> list = bean.getSomeList();
+		assertThat(list).isNotNull();
+		assertThat(list.size()).isEqualTo(3);
+		assertThat(list.get(2)).isNotNull();
+		boolean condition = list.get(2) instanceof TestBean;
+		assertThat(condition).isTrue();
+	}
+
+	@Test
+	public void mergeSetInConstructor() {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetInConstructor");
+		Set set = bean.getSomeSet();
+		assertThat(set.size()).as("Incorrect size").isEqualTo(2);
+		assertThat(set.contains("Rob Harrop")).isTrue();
+		assertThat(set.contains("Sally Greenwood")).isTrue();
+	}
+
+	@Test
+	public void mergeSetWithInnerBeanAsSetElementInConstructor() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithSetOfRefsInConstructor");
+		Set<?> set = bean.getSomeSet();
+		assertThat(set).isNotNull();
+		assertThat(set.size()).isEqualTo(2);
+		Iterator it = set.iterator();
+		it.next();
+		Object o = it.next();
+		assertThat(o).isNotNull();
+		boolean condition = o instanceof TestBean;
+		assertThat(condition).isTrue();
+		assertThat(((TestBean) o).getName()).isEqualTo("Sally");
+	}
+
+	@Test
+	public void mergeMapInConstructor() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapInConstructor");
+		Map map = bean.getSomeMap();
+		assertThat(map.size()).as("Incorrect size").isEqualTo(3);
+		assertThat(map.get("Rob")).isEqualTo("Sally");
+		assertThat(map.get("Rod")).isEqualTo("Kerry");
+		assertThat(map.get("Juergen")).isEqualTo("Eva");
+	}
+
+	@Test
+	public void mergeMapWithInnerBeanAsMapEntryValueInConstructor() throws Exception {
+		TestBean bean = (TestBean) this.beanFactory.getBean("childWithMapOfRefsInConstructor");
+		Map<?, ?> map = bean.getSomeMap();
+		assertThat(map).isNotNull();
+		assertThat(map.size()).isEqualTo(2);
+		assertThat(map.get("Rob")).isNotNull();
+		boolean condition = map.get("Rob") instanceof TestBean;
+		assertThat(condition).isTrue();
+		assertThat(((TestBean) map.get("Rob")).getName()).isEqualTo("Sally");
+	}
+
+	@Test
+	public void mergePropertiesInConstructor() throws Exception {
 		TestBean bean = (TestBean) this.beanFactory.getBean("childWithPropsInConstructor");
 		Properties props = bean.getSomeProperties();
-		assertThat(props).as("Incorrect size").hasSize(3);
+		assertThat(props.size()).as("Incorrect size").isEqualTo(3);
 		assertThat(props.getProperty("Rob")).isEqualTo("Sally");
 		assertThat(props.getProperty("Rod")).isEqualTo("Kerry");
 		assertThat(props.getProperty("Juergen")).isEqualTo("Eva");

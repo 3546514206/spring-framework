@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,8 @@
 
 package org.springframework.web.reactive.resource;
 
-import java.io.StringWriter;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -39,6 +26,14 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.StringWriter;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 /**
  * A {@link ResourceTransformer} implementation that modifies links in a CSS
@@ -69,8 +64,8 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 	}
 
 
-	@Override
 	@SuppressWarnings("deprecation")
+	@Override
 	public Mono<Resource> transform(ServerWebExchange exchange, Resource inputResource,
 			ResourceTransformerChain transformerChain) {
 
@@ -78,7 +73,8 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 				.flatMap(outputResource -> {
 					String filename = outputResource.getFilename();
 					if (!"css".equals(StringUtils.getFilenameExtension(filename)) ||
-							inputResource instanceof EncodedResourceResolver.EncodedResource) {
+							inputResource instanceof EncodedResourceResolver.EncodedResource ||
+							inputResource instanceof GzipResourceResolver.GzippedResource) {
 						return Mono.just(outputResource);
 					}
 
@@ -87,8 +83,9 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 							.read(outputResource, bufferFactory, StreamUtils.BUFFER_SIZE);
 					return DataBufferUtils.join(flux)
 							.flatMap(dataBuffer -> {
-								String cssContent = dataBuffer.toString(DEFAULT_CHARSET);
+								CharBuffer charBuffer = DEFAULT_CHARSET.decode(dataBuffer.asByteBuffer());
 								DataBufferUtils.release(dataBuffer);
+								String cssContent = charBuffer.toString();
 								return transformContent(cssContent, outputResource, transformerChain, exchange);
 							});
 				});
@@ -187,6 +184,7 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 				}
 				else {
 					position = extractUnquotedLink(position, content, result);
+
 				}
 			}
 		}
@@ -199,7 +197,7 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 		}
 
 		/**
-		 * Invoked after a keyword match, after whitespace has been removed, and when
+		 * Invoked after a keyword match, after whitespaces removed, and when
 		 * the next char is neither a single nor double quote.
 		 */
 		protected abstract int extractUnquotedLink(int position, String content,
@@ -217,10 +215,9 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 
 		@Override
 		protected int extractUnquotedLink(int position, String content, Set<ContentChunkInfo> result) {
-			if (content.startsWith("url(", position)) {
-				// Ignore: UrlFunctionLinkParser will handle it.
-			}
-			else if (logger.isTraceEnabled()) {
+			if (content.substring(position, position + 4).equals("url(")) {
+				// Ignore, UrlFunctionContentParser will take care
+			} else if (logger.isTraceEnabled()) {
 				logger.trace("Unexpected syntax for @import link at index " + position);
 			}
 			return position;
@@ -282,8 +279,14 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ContentChunkInfo that &&
-					this.start == that.start && this.end == that.end));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ContentChunkInfo)) {
+				return false;
+			}
+			ContentChunkInfo otherCci = (ContentChunkInfo) other;
+			return (this.start == otherCci.start && this.end == otherCci.end);
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,8 @@ package org.springframework.expression.spel.testresources;
 
 import java.util.List;
 
-public class TestAddress{
-
+public class TestAddress {
 	private String street;
-
 	private List<String> crossStreets;
 
 	public String getStreet() {
@@ -39,5 +37,4 @@ public class TestAddress{
 	public void setCrossStreets(List<String> crossStreets) {
 		this.crossStreets = crossStreets;
 	}
-
 }

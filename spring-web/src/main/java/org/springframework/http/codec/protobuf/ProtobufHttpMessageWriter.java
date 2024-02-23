@@ -45,7 +45,7 @@ import org.springframework.util.ConcurrentReferenceHashMap;
  * <p>For {@code HttpMessageReader}, just use
  * {@code new DecoderHttpMessageReader(new ProtobufDecoder())}.
  *
- * @author Sebastien Deleuze
+ * @author Sébastien Deleuze
  * @since 5.1
  * @see ProtobufEncoder
  */

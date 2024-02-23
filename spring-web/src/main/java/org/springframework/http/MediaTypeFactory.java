@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,12 @@
 
 package org.springframework.http;
 
+import org.springframework.core.io.Resource;
+import org.springframework.lang.Nullable;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,13 +31,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-
-import org.springframework.core.io.Resource;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
 
 /**
  * A factory delegate for resolving {@link MediaType} objects
@@ -66,7 +65,6 @@ public final class MediaTypeFactory {
 	 */
 	private static MultiValueMap<String, MediaType> parseMimeTypes() {
 		InputStream is = MediaTypeFactory.class.getResourceAsStream(MIME_TYPES_FILE_NAME);
-		Assert.state(is != null, MIME_TYPES_FILE_NAME + " not found in classpath");
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.US_ASCII))) {
 			MultiValueMap<String, MediaType> result = new LinkedMultiValueMap<>();
 			String line;
@@ -84,7 +82,7 @@ public final class MediaTypeFactory {
 			return result;
 		}
 		catch (IOException ex) {
-			throw new IllegalStateException("Could not read " + MIME_TYPES_FILE_NAME, ex);
+			throw new IllegalStateException("Could not load '" + MIME_TYPES_FILE_NAME + "'", ex);
 		}
 	}
 
@@ -114,12 +112,10 @@ public final class MediaTypeFactory {
 	 * @return the corresponding media types, or an empty list if none found
 	 */
 	public static List<MediaType> getMediaTypes(@Nullable String filename) {
-		List<MediaType> mediaTypes = null;
-		String ext = StringUtils.getFilenameExtension(filename);
-		if (ext != null) {
-			mediaTypes = fileExtensionToMediaTypes.get(ext.toLowerCase(Locale.ENGLISH));
-		}
-		return (mediaTypes != null ? mediaTypes : Collections.emptyList());
+		return Optional.ofNullable(StringUtils.getFilenameExtension(filename))
+				.map(s -> s.toLowerCase(Locale.ENGLISH))
+				.map(fileExtensionToMediaTypes::get)
+				.orElse(Collections.emptyList());
 	}
 
 }

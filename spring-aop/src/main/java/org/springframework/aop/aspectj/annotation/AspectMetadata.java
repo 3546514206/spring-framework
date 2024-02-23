@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package org.springframework.aop.aspectj.annotation;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.AjType;
 import org.aspectj.lang.reflect.AjTypeSystem;
 import org.aspectj.lang.reflect.PerClauseKind;
-
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
 import org.springframework.aop.aspectj.TypePatternClassFilter;
 import org.springframework.aop.framework.AopConfigException;
 import org.springframework.aop.support.ComposablePointcut;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 
 /**
  * Metadata for an AspectJ aspect class, with an additional Spring AOP pointcut
@@ -60,14 +59,14 @@ public class AspectMetadata implements Serializable {
 	private final Class<?> aspectClass;
 
 	/**
-	 * AspectJ reflection information.
-	 * <p>Re-resolved on deserialization since it isn't serializable itself.
+	 * AspectJ reflection information (AspectJ 5 / Java 5 specific).
+	 * Re-resolved on deserialization since it isn't serializable itself.
 	 */
 	private transient AjType<?> ajType;
 
 	/**
 	 * Spring AOP pointcut corresponding to the per clause of the
-	 * aspect. Will be the {@code Pointcut.TRUE} canonical instance in the
+	 * aspect. Will be the Pointcut.TRUE canonical instance in the
 	 * case of a singleton, otherwise an AspectJExpressionPointcut.
 	 */
 	private final Pointcut perClausePointcut;
@@ -101,22 +100,24 @@ public class AspectMetadata implements Serializable {
 		this.ajType = ajType;
 
 		switch (this.ajType.getPerClause().getKind()) {
-			case SINGLETON -> {
+			case SINGLETON:
 				this.perClausePointcut = Pointcut.TRUE;
-			}
-			case PERTARGET, PERTHIS -> {
+				return;
+			case PERTARGET:
+			case PERTHIS:
 				AspectJExpressionPointcut ajexp = new AspectJExpressionPointcut();
 				ajexp.setLocation(aspectClass.getName());
 				ajexp.setExpression(findPerClause(aspectClass));
 				ajexp.setPointcutDeclarationScope(aspectClass);
 				this.perClausePointcut = ajexp;
-			}
-			case PERTYPEWITHIN -> {
+				return;
+			case PERTYPEWITHIN:
 				// Works with a type pattern
 				this.perClausePointcut = new ComposablePointcut(new TypePatternClassFilter(findPerClause(aspectClass)));
-			}
-			default -> throw new AopConfigException(
-					"PerClause " + ajType.getPerClause().getKind() + " not supported by Spring AOP for " + aspectClass);
+				return;
+			default:
+				throw new AopConfigException(
+						"PerClause " + ajType.getPerClause().getKind() + " not supported by Spring AOP for " + aspectClass);
 		}
 	}
 
@@ -125,9 +126,9 @@ public class AspectMetadata implements Serializable {
 	 */
 	private String findPerClause(Class<?> aspectClass) {
 		String str = aspectClass.getAnnotation(Aspect.class).value();
-		int beginIndex = str.indexOf('(') + 1;
-		int endIndex = str.length() - 1;
-		return str.substring(beginIndex, endIndex);
+		str = str.substring(str.indexOf('(') + 1);
+		str = str.substring(0, str.length() - 1);
+		return str;
 	}
 
 

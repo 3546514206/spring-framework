@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,73 +16,79 @@
 
 package org.springframework.beans.propertyeditors;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link CustomCollectionEditor}.
+ * Unit tests for the {@link CustomCollectionEditor} class.
  *
  * @author Rick Evans
  * @author Chris Beams
  */
-class CustomCollectionEditorTests {
+public class CustomCollectionEditorTests {
 
 	@Test
-	void testCtorWithNullCollectionType() {
+	public void testCtorWithNullCollectionType() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new CustomCollectionEditor(null));
 	}
 
 	@Test
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public void testCtorWithNonCollectionType() {
+	public void testCtorWithNonCollectionType() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new CustomCollectionEditor((Class) String.class));
 	}
 
 	@Test
-	void testWithCollectionTypeThatDoesNotExposeAPublicNoArgCtor() {
+	public void testWithCollectionTypeThatDoesNotExposeAPublicNoArgCtor() throws Exception {
 		CustomCollectionEditor editor = new CustomCollectionEditor(CollectionTypeWithNoNoArgCtor.class);
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				editor.setValue("1"));
 	}
 
 	@Test
-	void testSunnyDaySetValue() {
+	public void testSunnyDaySetValue() throws Exception {
 		CustomCollectionEditor editor = new CustomCollectionEditor(ArrayList.class);
-		editor.setValue(new int[] {0, 1, 2});
+		editor.setValue(new int[]{0, 1, 2});
 		Object value = editor.getValue();
 		assertThat(value).isNotNull();
-		assertThat(value).isInstanceOf(ArrayList.class);
-		assertThat(value).asList().containsExactly(0, 1, 2);
+		boolean condition = value instanceof ArrayList;
+		assertThat(condition).isTrue();
+		List<?> list = (List<?>) value;
+		assertThat(list.size()).as("There must be 3 elements in the converted collection").isEqualTo(3);
+		assertThat(list.get(0)).isEqualTo(new Integer(0));
+		assertThat(list.get(1)).isEqualTo(new Integer(1));
+		assertThat(list.get(2)).isEqualTo(new Integer(2));
 	}
 
 	@Test
-	void testWhenTargetTypeIsExactlyTheCollectionInterfaceUsesFallbackCollectionType() {
+	public void testWhenTargetTypeIsExactlyTheCollectionInterfaceUsesFallbackCollectionType() throws Exception {
 		CustomCollectionEditor editor = new CustomCollectionEditor(Collection.class);
 		editor.setValue("0, 1, 2");
 		Collection<?> value = (Collection<?>) editor.getValue();
 		assertThat(value).isNotNull();
-		assertThat(value).as("There must be 1 element in the converted collection").hasSize(1);
-		assertThat(value).singleElement().isEqualTo("0, 1, 2");
+		assertThat(value.size()).as("There must be 1 element in the converted collection").isEqualTo(1);
+		assertThat(value.iterator().next()).isEqualTo("0, 1, 2");
 	}
 
 	@Test
-	void testSunnyDaySetAsTextYieldsSingleValue() {
+	public void testSunnyDaySetAsTextYieldsSingleValue() throws Exception {
 		CustomCollectionEditor editor = new CustomCollectionEditor(ArrayList.class);
 		editor.setValue("0, 1, 2");
 		Object value = editor.getValue();
 		assertThat(value).isNotNull();
-		assertThat(value).isInstanceOf(ArrayList.class);
+		boolean condition = value instanceof ArrayList;
+		assertThat(condition).isTrue();
 		List<?> list = (List<?>) value;
-		assertThat(list).as("There must be 1 element in the converted collection").hasSize(1);
-		assertThat(list).singleElement().isEqualTo("0, 1, 2");
+		assertThat(list.size()).as("There must be 1 element in the converted collection").isEqualTo(1);
+		assertThat(list.get(0)).isEqualTo("0, 1, 2");
 	}
 
 

@@ -17,7 +17,7 @@
 package org.springframework.beans.factory.xml;
 
 import org.springframework.beans.factory.FactoryBean;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
 /**
  * @author Juergen Hoeller

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,15 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link PropertyComparator}.
+ * Unit tests for {@link PropertyComparator}.
  *
  * @author Keith Donald
  * @author Chris Beams
  */
-class PropertyComparatorTests {
+public class PropertyComparatorTests {
 
 	@Test
-	void testPropertyComparator() {
+	public void testPropertyComparator() {
 		Dog dog = new Dog();
 		dog.setNickName("mace");
 
@@ -39,21 +39,21 @@ class PropertyComparatorTests {
 		dog2.setNickName("biscy");
 
 		PropertyComparator<Dog> c = new PropertyComparator<>("nickName", false, true);
-		assertThat(c.compare(dog, dog2)).isGreaterThan(0);
-		assertThat(c.compare(dog, dog)).isEqualTo(0);
-		assertThat(c.compare(dog2, dog)).isLessThan(0);
+		assertThat(c.compare(dog, dog2) > 0).isTrue();
+		assertThat(c.compare(dog, dog) == 0).isTrue();
+		assertThat(c.compare(dog2, dog) < 0).isTrue();
 	}
 
 	@Test
-	void testPropertyComparatorNulls() {
+	public void testPropertyComparatorNulls() {
 		Dog dog = new Dog();
 		Dog dog2 = new Dog();
 		PropertyComparator<Dog> c = new PropertyComparator<>("nickName", false, true);
-		assertThat(c.compare(dog, dog2)).isEqualTo(0);
+		assertThat(c.compare(dog, dog2) == 0).isTrue();
 	}
 
 	@Test
-	void testChainedComparators() {
+	public void testChainedComparators() {
 		Comparator<Dog> c = new PropertyComparator<>("lastName", false, true);
 
 		Dog dog1 = new Dog();
@@ -64,17 +64,17 @@ class PropertyComparatorTests {
 		dog2.setFirstName("biscuit");
 		dog2.setLastName("grayspots");
 
-		assertThat(c.compare(dog1, dog2)).isEqualTo(0);
+		assertThat(c.compare(dog1, dog2) == 0).isTrue();
 
 		c = c.thenComparing(new PropertyComparator<>("firstName", false, true));
-		assertThat(c.compare(dog1, dog2)).isGreaterThan(0);
+		assertThat(c.compare(dog1, dog2) > 0).isTrue();
 
 		dog2.setLastName("konikk dog");
-		assertThat(c.compare(dog2, dog1)).isGreaterThan(0);
+		assertThat(c.compare(dog2, dog1) > 0).isTrue();
 	}
 
 	@Test
-	void testChainedComparatorsReversed() {
+	public void testChainedComparatorsReversed() {
 		Comparator<Dog> c = (new PropertyComparator<Dog>("lastName", false, true)).
 				thenComparing(new PropertyComparator<>("firstName", false, true));
 
@@ -86,9 +86,9 @@ class PropertyComparatorTests {
 		dog2.setFirstName("biscuit");
 		dog2.setLastName("grayspots");
 
-		assertThat(c.compare(dog1, dog2)).isGreaterThan(0);
+		assertThat(c.compare(dog1, dog2) > 0).isTrue();
 		c = c.reversed();
-		assertThat(c.compare(dog1, dog2)).isLessThan(0);
+		assertThat(c.compare(dog1, dog2) < 0).isTrue();
 	}
 
 

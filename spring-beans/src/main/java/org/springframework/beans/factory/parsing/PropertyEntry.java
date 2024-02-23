@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,12 +30,15 @@ public class PropertyEntry implements ParseState.Entry {
 
 
 	/**
-	 * Create a new {@code PropertyEntry} instance.
+	 * Creates a new instance of the {@link PropertyEntry} class.
+	 *
 	 * @param name the name of the JavaBean property represented by this instance
+	 * @throws IllegalArgumentException if the supplied {@code name} is {@code null}
+	 *                                  or consists wholly of whitespace
 	 */
 	public PropertyEntry(String name) {
 		if (!StringUtils.hasText(name)) {
-			throw new IllegalArgumentException("Invalid property name '" + name + "'");
+			throw new IllegalArgumentException("Invalid property name '" + name + "'.");
 		}
 		this.name = name;
 	}

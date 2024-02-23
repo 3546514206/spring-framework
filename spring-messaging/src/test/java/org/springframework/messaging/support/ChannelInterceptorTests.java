@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.mock;
  *
  * @author Rossen Stoyanchev
  */
-class ChannelInterceptorTests {
+public class ChannelInterceptorTests {
 
 	private ExecutorSubscribableChannel channel;
 
@@ -45,7 +45,7 @@ class ChannelInterceptorTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.channel = new ExecutorSubscribableChannel();
 		this.messageHandler = new TestMessageHandler();
 		this.channel.subscribe(this.messageHandler);
@@ -53,14 +53,14 @@ class ChannelInterceptorTests {
 
 
 	@Test
-	void preSendInterceptorReturningModifiedMessage() {
-		Message<?> expected = mock();
+	public void preSendInterceptorReturningModifiedMessage() {
+		Message<?> expected = mock(Message.class);
 		PreSendInterceptor interceptor = new PreSendInterceptor();
 		interceptor.setMessageToReturn(expected);
 		this.channel.addInterceptor(interceptor);
 		this.channel.send(MessageBuilder.withPayload("test").build());
 
-		assertThat(this.messageHandler.getMessages()).hasSize(1);
+		assertThat(this.messageHandler.getMessages().size()).isEqualTo(1);
 		Message<?> result = this.messageHandler.getMessages().get(0);
 
 		assertThat(result).isNotNull();
@@ -69,7 +69,7 @@ class ChannelInterceptorTests {
 	}
 
 	@Test
-	void preSendInterceptorReturningNull() {
+	public void preSendInterceptorReturningNull() {
 		PreSendInterceptor interceptor1 = new PreSendInterceptor();
 		NullReturningPreSendInterceptor interceptor2 = new NullReturningPreSendInterceptor();
 		this.channel.addInterceptor(interceptor1);
@@ -79,15 +79,15 @@ class ChannelInterceptorTests {
 
 		assertThat(interceptor1.getCounter().get()).isEqualTo(1);
 		assertThat(interceptor2.getCounter().get()).isEqualTo(1);
-		assertThat(this.messageHandler.getMessages()).isEmpty();
+		assertThat(this.messageHandler.getMessages().size()).isEqualTo(0);
 		assertThat(interceptor1.wasAfterCompletionInvoked()).isTrue();
 		assertThat(interceptor2.wasAfterCompletionInvoked()).isFalse();
 	}
 
 	@Test
-	void postSendInterceptorMessageWasSent() {
-		final AtomicBoolean preSendInvoked = new AtomicBoolean();
-		final AtomicBoolean completionInvoked = new AtomicBoolean();
+	public void postSendInterceptorMessageWasSent() {
+		final AtomicBoolean preSendInvoked = new AtomicBoolean(false);
+		final AtomicBoolean completionInvoked = new AtomicBoolean(false);
 		this.channel.addInterceptor(new ChannelInterceptor() {
 			@Override
 			public void postSend(Message<?> message, MessageChannel channel, boolean sent) {
@@ -112,15 +112,15 @@ class ChannelInterceptorTests {
 	}
 
 	@Test
-	void postSendInterceptorMessageWasNotSent() {
+	public void postSendInterceptorMessageWasNotSent() {
 		final AbstractMessageChannel testChannel = new AbstractMessageChannel() {
 			@Override
 			protected boolean sendInternal(Message<?> message, long timeout) {
 				return false;
 			}
 		};
-		final AtomicBoolean preSendInvoked = new AtomicBoolean();
-		final AtomicBoolean completionInvoked = new AtomicBoolean();
+		final AtomicBoolean preSendInvoked = new AtomicBoolean(false);
+		final AtomicBoolean completionInvoked = new AtomicBoolean(false);
 		testChannel.addInterceptor(new ChannelInterceptor() {
 			@Override
 			public void postSend(Message<?> message, MessageChannel channel, boolean sent) {
@@ -145,7 +145,7 @@ class ChannelInterceptorTests {
 	}
 
 	@Test
-	void afterCompletionWithSendException() {
+	public void afterCompletionWithSendException() {
 		final AbstractMessageChannel testChannel = new AbstractMessageChannel() {
 			@Override
 			protected boolean sendInternal(Message<?> message, long timeout) {
@@ -167,7 +167,7 @@ class ChannelInterceptorTests {
 	}
 
 	@Test
-	void afterCompletionWithPreSendException() {
+	public void afterCompletionWithPreSendException() {
 		PreSendInterceptor interceptor1 = new PreSendInterceptor();
 		PreSendInterceptor interceptor2 = new PreSendInterceptor();
 		interceptor2.setExceptionToRaise(new RuntimeException("Simulated exception"));

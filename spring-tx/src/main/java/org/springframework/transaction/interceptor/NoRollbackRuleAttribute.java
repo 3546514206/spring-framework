@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ package org.springframework.transaction.interceptor;
  * to the {@code RollbackRuleAttribute} superclass.
  *
  * @author Rod Johnson
- * @author Sam Brannen
  * @since 09.04.2003
  */
 @SuppressWarnings("serial")
@@ -29,28 +28,22 @@ public class NoRollbackRuleAttribute extends RollbackRuleAttribute {
 
 	/**
 	 * Create a new instance of the {@code NoRollbackRuleAttribute} class
-	 * for the given {@code exceptionType}.
-	 * @param exceptionType exception type; must be {@link Throwable} or a subclass
-	 * of {@code Throwable}
-	 * @throws IllegalArgumentException if the supplied {@code exceptionType} is
-	 * not a {@code Throwable} type or is {@code null}
+	 * for the supplied {@link Throwable} class.
+	 * @param clazz the {@code Throwable} class
 	 * @see RollbackRuleAttribute#RollbackRuleAttribute(Class)
 	 */
-	public NoRollbackRuleAttribute(Class<?> exceptionType) {
-		super(exceptionType);
+	public NoRollbackRuleAttribute(Class<?> clazz) {
+		super(clazz);
 	}
 
 	/**
 	 * Create a new instance of the {@code NoRollbackRuleAttribute} class
-	 * for the supplied {@code exceptionPattern}.
-	 * @param exceptionPattern the exception name pattern; can also be a fully
-	 * package-qualified class name
-	 * @throws IllegalArgumentException if the supplied {@code exceptionPattern}
-	 * is {@code null} or empty
+	 * for the supplied {@code exceptionName}.
+	 * @param exceptionName the exception name pattern
 	 * @see RollbackRuleAttribute#RollbackRuleAttribute(String)
 	 */
-	public NoRollbackRuleAttribute(String exceptionPattern) {
-		super(exceptionPattern);
+	public NoRollbackRuleAttribute(String exceptionName) {
+		super(exceptionName);
 	}
 
 	@Override

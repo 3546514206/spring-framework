@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 
 package org.springframework.aop.aspectj.autoproxy;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.Method;
-import java.util.function.Supplier;
-
-import org.aopalliance.aop.Advice;
-import org.aopalliance.intercept.MethodInvocation;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -30,43 +25,39 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
-import org.springframework.aop.ClassFilter;
-import org.springframework.aop.IntroductionAdvisor;
-import org.springframework.aop.IntroductionInterceptor;
 import org.springframework.aop.MethodBeforeAdvice;
-import org.springframework.aop.SpringProxy;
 import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
 import org.springframework.aop.aspectj.annotation.AspectMetadata;
 import org.springframework.aop.config.AopConfigUtils;
-import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyConfig;
-import org.springframework.aop.support.AbstractPointcutAdvisor;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
-import org.springframework.aop.testfixture.aspectj.PerTargetAspect;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.cglib.proxy.Factory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.context.annotation.Scope;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.DecoratingProxy;
 import org.springframework.core.NestedRuntimeException;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.lang.Nullable;
+import org.springframework.tests.Assume;
+import org.springframework.tests.EnabledForTestGroups;
+import org.springframework.tests.TestGroup;
+import org.springframework.tests.sample.beans.INestedTestBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.NestedTestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.util.StopWatch;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -79,10 +70,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @author Sam Brannen
  */
-class AspectJAutoProxyCreatorTests {
+public class AspectJAutoProxyCreatorTests {
+
+	private static final Log factoryLog = LogFactory.getLog(DefaultListableBeanFactory.class);
+
 
 	@Test
-	void aspectsAreApplied() {
+	public void testAspectsAreApplied() {
 		ClassPathXmlApplicationContext bf = newContext("aspects.xml");
 
 		ITestBean tb = (ITestBean) bf.getBean("adrian");
@@ -93,7 +87,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void multipleAspectsWithParameterApplied() {
+	public void testMultipleAspectsWithParameterApplied() {
 		ClassPathXmlApplicationContext bf = newContext("aspects.xml");
 
 		ITestBean tb = (ITestBean) bf.getBean("adrian");
@@ -102,7 +96,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void aspectsAreAppliedInDefinedOrder() {
+	public void testAspectsAreAppliedInDefinedOrder() {
 		ClassPathXmlApplicationContext bf = newContext("aspectsWithOrdering.xml");
 
 		ITestBean tb = (ITestBean) bf.getBean("adrian");
@@ -110,7 +104,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void aspectsAndAdvisorAreApplied() {
+	public void testAspectsAndAdvisorAreApplied() {
 		ClassPathXmlApplicationContext ac = newContext("aspectsPlusAdvisor.xml");
 
 		ITestBean shouldBeWeaved = (ITestBean) ac.getBean("adrian");
@@ -118,7 +112,73 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void aspectsAndAdvisorAreAppliedEvenIfComingFromParentFactory() {
+	@EnabledForTestGroups(TestGroup.PERFORMANCE)
+	public void testAspectsAndAdvisorAppliedToPrototypeIsFastEnough() {
+		Assume.notLogging(factoryLog);
+
+		ClassPathXmlApplicationContext ac = newContext("aspectsPlusAdvisor.xml");
+
+		StopWatch sw = new StopWatch();
+		sw.start("Prototype Creation");
+		for (int i = 0; i < 10000; i++) {
+			ITestBean shouldBeWeaved = (ITestBean) ac.getBean("adrian2");
+			if (i < 10) {
+				doTestAspectsAndAdvisorAreApplied(ac, shouldBeWeaved);
+			}
+		}
+		sw.stop();
+
+		// What's a reasonable expectation for _any_ server or developer machine load?
+		// 9 seconds?
+		assertStopWatchTimeLimit(sw, 9000);
+	}
+
+	@Test
+	@EnabledForTestGroups(TestGroup.PERFORMANCE)
+	public void testAspectsAndAdvisorNotAppliedToPrototypeIsFastEnough() {
+		Assume.notLogging(factoryLog);
+
+		ClassPathXmlApplicationContext ac = newContext("aspectsPlusAdvisor.xml");
+
+		StopWatch sw = new StopWatch();
+		sw.start("Prototype Creation");
+		for (int i = 0; i < 100000; i++) {
+			INestedTestBean shouldNotBeWeaved = (INestedTestBean) ac.getBean("i21");
+			if (i < 10) {
+				assertThat(AopUtils.isAopProxy(shouldNotBeWeaved)).isFalse();
+			}
+		}
+		sw.stop();
+
+		// What's a reasonable expectation for _any_ server or developer machine load?
+		// 3 seconds?
+		assertStopWatchTimeLimit(sw, 6000);
+	}
+
+	@Test
+	@EnabledForTestGroups(TestGroup.PERFORMANCE)
+	public void testAspectsAndAdvisorNotAppliedToManySingletonsIsFastEnough() {
+		Assume.notLogging(factoryLog);
+
+		GenericApplicationContext ac = new GenericApplicationContext();
+
+		new XmlBeanDefinitionReader(ac).loadBeanDefinitions(new ClassPathResource(qName("aspectsPlusAdvisor.xml"),
+				getClass()));
+		for (int i = 0; i < 10000; i++) {
+			ac.registerBeanDefinition("singleton" + i, new RootBeanDefinition(NestedTestBean.class));
+		}
+		StopWatch sw = new StopWatch();
+		sw.start("Singleton Creation");
+		ac.refresh();
+		sw.stop();
+
+		// What's a reasonable expectation for _any_ server or developer machine load?
+		// 8 seconds?
+		assertStopWatchTimeLimit(sw, 8000);
+	}
+
+	@Test
+	public void testAspectsAndAdvisorAreAppliedEvenIfComingFromParentFactory() {
 		ClassPathXmlApplicationContext ac = newContext("aspectsPlusAdvisor.xml");
 
 		GenericApplicationContext childAc = new GenericApplicationContext(ac);
@@ -155,7 +215,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void perThisAspect() {
+	public void testPerThisAspect() {
 		ClassPathXmlApplicationContext bf = newContext("perthis.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -175,7 +235,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void perTargetAspect() throws SecurityException, NoSuchMethodException {
+	public void testPerTargetAspect() throws SecurityException, NoSuchMethodException {
 		ClassPathXmlApplicationContext bf = newContext("pertarget.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -210,33 +270,8 @@ class AspectJAutoProxyCreatorTests {
 		assertThat(adrian1.getAge()).isEqualTo(3);
 	}
 
-	@Test  // gh-31238
-	void cglibProxyClassIsCachedAcrossApplicationContextsForPerTargetAspect() {
-		Class<?> configClass = PerTargetProxyTargetClassTrueConfig.class;
-		TestBean testBean1;
-		TestBean testBean2;
-
-		// Round #1
-		try (ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(configClass)) {
-			testBean1 = context.getBean(TestBean.class);
-			assertThat(AopUtils.isCglibProxy(testBean1)).as("CGLIB proxy").isTrue();
-			assertThat(testBean1.getClass().getInterfaces()).containsExactlyInAnyOrder(
-					Factory.class, SpringProxy.class, Advised.class);
-		}
-
-		// Round #2
-		try (ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(configClass)) {
-			testBean2 = context.getBean(TestBean.class);
-			assertThat(AopUtils.isCglibProxy(testBean2)).as("CGLIB proxy").isTrue();
-			assertThat(testBean2.getClass().getInterfaces()).containsExactlyInAnyOrder(
-					Factory.class, SpringProxy.class, Advised.class);
-		}
-
-		assertThat(testBean1.getClass()).isSameAs(testBean2.getClass());
-	}
-
 	@Test
-	void twoAdviceAspect() {
+	public void testTwoAdviceAspect() {
 		ClassPathXmlApplicationContext bf = newContext("twoAdviceAspect.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -244,7 +279,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void twoAdviceAspectSingleton() {
+	public void testTwoAdviceAspectSingleton() {
 		ClassPathXmlApplicationContext bf = newContext("twoAdviceAspectSingleton.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -255,7 +290,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void twoAdviceAspectPrototype() {
+	public void testTwoAdviceAspectPrototype() {
 		ClassPathXmlApplicationContext bf = newContext("twoAdviceAspectPrototype.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -271,13 +306,13 @@ class AspectJAutoProxyCreatorTests {
 		assertThat(adrian.age()).isEqualTo(start);
 		int newAge = 32;
 		adrian.setAge(newAge);
-		assertThat(adrian.age()).isEqualTo(start + increment);
+		assertThat(adrian.age()).isEqualTo((start + increment));
 		adrian.setAge(0);
-		assertThat(adrian.age()).isEqualTo(start + increment * 2);
+		assertThat(adrian.age()).isEqualTo((start + increment * 2));
 	}
 
 	@Test
-	void adviceUsingJoinPoint() {
+	public void testAdviceUsingJoinPoint() {
 		ClassPathXmlApplicationContext bf = newContext("usesJoinPointAspect.xml");
 
 		ITestBean adrian1 = (ITestBean) bf.getBean("adrian");
@@ -285,11 +320,11 @@ class AspectJAutoProxyCreatorTests {
 		AdviceUsingThisJoinPoint aspectInstance = (AdviceUsingThisJoinPoint) bf.getBean("aspect");
 		//(AdviceUsingThisJoinPoint) Aspects.aspectOf(AdviceUsingThisJoinPoint.class);
 		//assertEquals("method-execution(int TestBean.getAge())",aspectInstance.getLastMethodEntered());
-		assertThat(aspectInstance.getLastMethodEntered()).doesNotStartWith("TestBean.getAge())");
+		assertThat(aspectInstance.getLastMethodEntered().indexOf("TestBean.getAge())") != 0).isTrue();
 	}
 
 	@Test
-	void includeMechanism() {
+	public void testIncludeMechanism() {
 		ClassPathXmlApplicationContext bf = newContext("usesInclude.xml");
 
 		ITestBean adrian = (ITestBean) bf.getBean("adrian");
@@ -298,7 +333,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void forceProxyTargetClass() {
+	public void testForceProxyTargetClass() {
 		ClassPathXmlApplicationContext bf = newContext("aspectsWithCGLIB.xml");
 
 		ProxyConfig pc = (ProxyConfig) bf.getBean(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME);
@@ -307,7 +342,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void withAbstractFactoryBeanAreApplied() {
+	public void testWithAbstractFactoryBeanAreApplied() {
 		ClassPathXmlApplicationContext bf = newContext("aspectsWithAbstractBean.xml");
 
 		ITestBean adrian = (ITestBean) bf.getBean("adrian");
@@ -316,7 +351,7 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void retryAspect() {
+	public void testRetryAspect() {
 		ClassPathXmlApplicationContext bf = newContext("retryAspect.xml");
 
 		UnreliableBean bean = (UnreliableBean) bf.getBean("unreliableBean");
@@ -329,44 +364,63 @@ class AspectJAutoProxyCreatorTests {
 	}
 
 	@Test
-	void withBeanNameAutoProxyCreator() {
+	public void testWithBeanNameAutoProxyCreator() {
 		ClassPathXmlApplicationContext bf = newContext("withBeanNameAutoProxyCreator.xml");
 
 		ITestBean tb = (ITestBean) bf.getBean("adrian");
 		assertThat(tb.getAge()).isEqualTo(68);
 	}
 
-	@ParameterizedTest(name = "[{index}] {0}")
-	@ValueSource(classes = {ProxyTargetClassFalseConfig.class, ProxyTargetClassTrueConfig.class})
-	void lambdaIsAlwaysProxiedWithJdkProxy(Class<?> configClass) {
-		try (ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(configClass)) {
-			@SuppressWarnings("unchecked")
-			Supplier<String> supplier = context.getBean(Supplier.class);
-			assertThat(AopUtils.isAopProxy(supplier)).as("AOP proxy").isTrue();
-			assertThat(AopUtils.isJdkDynamicProxy(supplier)).as("JDK Dynamic proxy").isTrue();
-			assertThat(supplier.getClass().getInterfaces()).containsExactlyInAnyOrder(
-					Supplier.class, SpringProxy.class, Advised.class, DecoratingProxy.class);
-			assertThat(supplier.get()).isEqualTo("advised: lambda");
-		}
-	}
 
-	@ParameterizedTest(name = "[{index}] {0}")
-	@ValueSource(classes = {MixinProxyTargetClassFalseConfig.class, MixinProxyTargetClassTrueConfig.class})
-	void lambdaIsAlwaysProxiedWithJdkProxyWithIntroductions(Class<?> configClass) {
-		try (ConfigurableApplicationContext context = new AnnotationConfigApplicationContext(configClass)) {
-			MessageGenerator messageGenerator = context.getBean(MessageGenerator.class);
-			assertThat(AopUtils.isAopProxy(messageGenerator)).as("AOP proxy").isTrue();
-			assertThat(AopUtils.isJdkDynamicProxy(messageGenerator)).as("JDK Dynamic proxy").isTrue();
-			assertThat(messageGenerator.getClass().getInterfaces()).containsExactlyInAnyOrder(
-					MessageGenerator.class, Mixin.class, SpringProxy.class, Advised.class, DecoratingProxy.class);
-			assertThat(messageGenerator.generateMessage()).isEqualTo("mixin: lambda");
-		}
-	}
-
+	/**
+	 * Returns a new {@link ClassPathXmlApplicationContext} for the file ending in <var>fileSuffix</var>.
+	 */
 	private ClassPathXmlApplicationContext newContext(String fileSuffix) {
-		return new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-" + fileSuffix, getClass());
+		return new ClassPathXmlApplicationContext(qName(fileSuffix), getClass());
 	}
 
+	/**
+	 * Returns the relatively qualified name for <var>fileSuffix</var>.
+	 * e.g. for a fileSuffix='foo.xml', this method will return
+	 * 'AspectJAutoProxyCreatorTests-foo.xml'
+	 */
+	private String qName(String fileSuffix) {
+		return String.format("%s-%s", getClass().getSimpleName(), fileSuffix);
+	}
+
+	private void assertStopWatchTimeLimit(final StopWatch sw, final long maxTimeMillis) {
+		long totalTimeMillis = sw.getTotalTimeMillis();
+		assertThat(totalTimeMillis < maxTimeMillis).as("'" + sw.getLastTaskName() + "' took too long: expected less than<" + maxTimeMillis +
+				"> ms, actual<" + totalTimeMillis + "> ms.").isTrue();
+	}
+
+}
+
+@Aspect("pertarget(execution(* *.getSpouse()))")
+class PerTargetAspect implements Ordered {
+
+	public int count;
+
+	private int order = Ordered.LOWEST_PRECEDENCE;
+
+	@Around("execution(int *.getAge())")
+	public int returnCountAsAge() {
+		return count++;
+	}
+
+	@Before("execution(void *.set*(int))")
+	public void countSetter() {
+		++count;
+	}
+
+	@Override
+	public int getOrder() {
+		return this.order;
+	}
+
+	public void setOrder(int order) {
+		this.order = order;
+	}
 }
 
 @Aspect
@@ -404,6 +458,7 @@ class DummyAspectWithParameter {
 	public Object test(ProceedingJoinPoint pjp, int age) throws Throwable {
 		return pjp.proceed();
 	}
+
 }
 
 class DummyFactoryBean implements FactoryBean<Object> {
@@ -422,6 +477,7 @@ class DummyFactoryBean implements FactoryBean<Object> {
 	public boolean isSingleton() {
 		throw new UnsupportedOperationException();
 	}
+
 }
 
 @Aspect
@@ -557,11 +613,11 @@ class RetryAspect {
 @SuppressWarnings("serial")
 class RetryableException extends NestedRuntimeException {
 
-	RetryableException(String msg) {
+	public RetryableException(String msg) {
 		super(msg);
 	}
 
-	RetryableException(String msg, Throwable cause) {
+	public RetryableException(String msg, Throwable cause) {
 		super(msg, cause);
 	}
 }
@@ -577,6 +633,7 @@ class UnreliableBean {
 		}
 		return this.calls;
 	}
+
 }
 
 @SuppressWarnings("serial")
@@ -585,134 +642,17 @@ class TestBeanAdvisor extends StaticMethodMatcherPointcutAdvisor {
 	public int count;
 
 	public TestBeanAdvisor() {
-		setAdvice((MethodBeforeAdvice) (method, args, target) -> ++count);
+		setAdvice(new MethodBeforeAdvice() {
+			@Override
+			public void before(Method method, Object[] args, @Nullable Object target) throws Throwable {
+				++count;
+			}
+		});
 	}
 
 	@Override
 	public boolean matches(Method method, @Nullable Class<?> targetClass) {
 		return ITestBean.class.isAssignableFrom(targetClass);
 	}
-}
 
-abstract class AbstractProxyTargetClassConfig {
-
-	@Bean
-	Supplier<String> stringSupplier() {
-		return () -> "lambda";
-	}
-
-	@Bean
-	SupplierAdvice supplierAdvice() {
-		return new SupplierAdvice();
-	}
-
-	@Aspect
-	static class SupplierAdvice {
-
-		@Around("execution(public * org.springframework.aop.aspectj.autoproxy..*.*(..))")
-		Object aroundSupplier(ProceedingJoinPoint joinPoint) throws Throwable {
-			return "advised: " + joinPoint.proceed();
-		}
-	}
-}
-
-@Configuration(proxyBeanMethods = false)
-@EnableAspectJAutoProxy(proxyTargetClass = false)
-class ProxyTargetClassFalseConfig extends AbstractProxyTargetClassConfig {
-}
-
-@Configuration(proxyBeanMethods = false)
-@EnableAspectJAutoProxy(proxyTargetClass = true)
-class ProxyTargetClassTrueConfig extends AbstractProxyTargetClassConfig {
-}
-
-@Configuration
-@EnableAspectJAutoProxy(proxyTargetClass = true)
-class PerTargetProxyTargetClassTrueConfig {
-
-	@Bean
-	@Scope("prototype")
-	TestBean testBean() {
-		return new TestBean("Jane", 34);
-	}
-
-	@Bean
-	@Scope("prototype")
-	PerTargetAspect perTargetAspect() {
-		return new PerTargetAspect();
-	}
-}
-
-@FunctionalInterface
-interface MessageGenerator {
-
-	String generateMessage();
-}
-
-interface Mixin {
-}
-
-class MixinIntroductionInterceptor implements IntroductionInterceptor {
-
-	@Override
-	public Object invoke(MethodInvocation invocation) throws Throwable {
-		return "mixin: " + invocation.proceed();
-	}
-
-	@Override
-	public boolean implementsInterface(Class<?> intf) {
-		return Mixin.class.isAssignableFrom(intf);
-	}
-}
-
-@SuppressWarnings("serial")
-class MixinAdvisor extends AbstractPointcutAdvisor implements IntroductionAdvisor {
-
-	@Override
-	public org.springframework.aop.Pointcut getPointcut() {
-		return org.springframework.aop.Pointcut.TRUE;
-	}
-
-	@Override
-	public Advice getAdvice() {
-		return new MixinIntroductionInterceptor();
-	}
-
-	@Override
-	public Class<?>[] getInterfaces() {
-		return new Class[] { Mixin.class };
-	}
-
-	@Override
-	public ClassFilter getClassFilter() {
-		return MessageGenerator.class::isAssignableFrom;
-	}
-
-	@Override
-	public void validateInterfaces() {
-		/* no-op */
-	}
-}
-
-abstract class AbstractMixinConfig {
-
-	@Bean
-	MessageGenerator messageGenerator() {
-		return () -> "lambda";
-	}
-
-	@Bean
-	MixinAdvisor mixinAdvisor() {
-		return new MixinAdvisor();
-	}
-}
-
-@Configuration(proxyBeanMethods = false)
-@EnableAspectJAutoProxy(proxyTargetClass = false)
-class MixinProxyTargetClassFalseConfig extends AbstractMixinConfig {
-}
-
-@Configuration(proxyBeanMethods = false)
-@EnableAspectJAutoProxy(proxyTargetClass = true)
-class MixinProxyTargetClassTrueConfig extends AbstractMixinConfig {
 }

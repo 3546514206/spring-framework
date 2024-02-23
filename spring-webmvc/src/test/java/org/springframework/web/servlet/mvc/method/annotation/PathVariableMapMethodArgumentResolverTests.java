@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,20 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class PathVariableMapMethodArgumentResolverTests {
+public class PathVariableMapMethodArgumentResolverTests {
 
 	private PathVariableMapMethodArgumentResolver resolver;
 
@@ -55,7 +54,7 @@ class PathVariableMapMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		resolver = new PathVariableMapMethodArgumentResolver();
 		mavContainer = new ModelAndViewContainer();
 		request = new MockHttpServletRequest();
@@ -69,14 +68,14 @@ class PathVariableMapMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		assertThat(resolver.supportsParameter(paramMap)).isTrue();
 		assertThat(resolver.supportsParameter(paramNamedMap)).isFalse();
 		assertThat(resolver.supportsParameter(paramMapNoAnnot)).isFalse();
 	}
 
 	@Test
-	void resolveArgument() throws Exception {
+	public void resolveArgument() throws Exception {
 		Map<String, String> uriTemplateVars = new HashMap<>();
 		uriTemplateVars.put("name1", "value1");
 		uriTemplateVars.put("name2", "value2");

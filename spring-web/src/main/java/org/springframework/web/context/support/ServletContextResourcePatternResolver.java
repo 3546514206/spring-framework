@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 package org.springframework.web.context.support;
 
-import java.io.IOException;
-import java.util.Enumeration;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-
-import jakarta.servlet.ServletContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
+
+import javax.servlet.ServletContext;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * ServletContext-aware subclass of {@link PathMatchingResourcePatternResolver},
@@ -51,7 +50,7 @@ public class ServletContextResourcePatternResolver extends PathMatchingResourceP
 	/**
 	 * Create a new ServletContextResourcePatternResolver.
 	 * @param servletContext the ServletContext to load resources with
-	 * @see ServletContextResourceLoader#ServletContextResourceLoader(jakarta.servlet.ServletContext)
+	 * @see ServletContextResourceLoader#ServletContextResourceLoader(javax.servlet.ServletContext)
 	 */
 	public ServletContextResourcePatternResolver(ServletContext servletContext) {
 		super(new ServletContextResourceLoader(servletContext));
@@ -74,13 +73,14 @@ public class ServletContextResourcePatternResolver extends PathMatchingResourceP
 	 * In case of other resources, delegates to the superclass version.
 	 * @see #doRetrieveMatchingServletContextResources
 	 * @see ServletContextResource
-	 * @see jakarta.servlet.ServletContext#getResourcePaths
+	 * @see javax.servlet.ServletContext#getResourcePaths
 	 */
 	@Override
 	protected Set<Resource> doFindPathMatchingFileResources(Resource rootDirResource, String subPattern)
 			throws IOException {
 
-		if (rootDirResource instanceof ServletContextResource scResource) {
+		if (rootDirResource instanceof ServletContextResource) {
+			ServletContextResource scResource = (ServletContextResource) rootDirResource;
 			ServletContext sc = scResource.getServletContext();
 			String fullPattern = scResource.getPath() + subPattern;
 			Set<Resource> result = new LinkedHashSet<>(8);
@@ -97,12 +97,12 @@ public class ServletContextResourcePatternResolver extends PathMatchingResourceP
 	 * adding them to the given result set.
 	 * @param servletContext the ServletContext to work on
 	 * @param fullPattern the pattern to match against,
-	 * with prepended root directory path
+	 * with preprended root directory path
 	 * @param dir the current directory
 	 * @param result the Set of matching Resources to add to
 	 * @throws IOException if directory contents could not be retrieved
 	 * @see ServletContextResource
-	 * @see jakarta.servlet.ServletContext#getResourcePaths
+	 * @see javax.servlet.ServletContext#getResourcePaths
 	 */
 	protected void doRetrieveMatchingServletContextResources(
 			ServletContext servletContext, String fullPattern, String dir, Set<Resource> result)
@@ -157,18 +157,22 @@ public class ServletContextResourcePatternResolver extends PathMatchingResourceP
 		if (logger.isDebugEnabled()) {
 			logger.debug("Searching jar file [" + jarFilePath + "] for entries matching [" + entryPattern + "]");
 		}
-		try (JarFile jarFile = new JarFile(jarFilePath)) {
-			for (Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements();) {
-				JarEntry entry = entries.nextElement();
-				String entryPath = entry.getName();
-				if (getPathMatcher().match(entryPattern, entryPath)) {
-					result.add(new UrlResource(
-							ResourceUtils.URL_PROTOCOL_JAR,
-							ResourceUtils.FILE_URL_PREFIX + jarFilePath + ResourceUtils.JAR_URL_SEPARATOR + entryPath));
+		try {
+			JarFile jarFile = new JarFile(jarFilePath);
+			try {
+				for (Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements(); ) {
+					JarEntry entry = entries.nextElement();
+					String entryPath = entry.getName();
+					if (getPathMatcher().match(entryPattern, entryPath)) {
+						result.add(new UrlResource(
+								ResourceUtils.URL_PROTOCOL_JAR,
+								ResourceUtils.FILE_URL_PREFIX + jarFilePath + ResourceUtils.JAR_URL_SEPARATOR + entryPath));
+					}
 				}
+			} finally {
+				jarFile.close();
 			}
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			if (logger.isWarnEnabled()) {
 				logger.warn("Cannot search for matching resources in jar file [" + jarFilePath +
 						"] because the jar cannot be opened through the file system", ex);

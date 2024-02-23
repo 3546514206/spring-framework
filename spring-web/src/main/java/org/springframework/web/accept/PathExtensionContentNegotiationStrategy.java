@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,6 @@
 
 package org.springframework.web.accept;
 
-import java.util.Locale;
-import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
@@ -30,6 +25,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.util.UriUtils;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * A {@code ContentNegotiationStrategy} that resolves the file extension in the
@@ -41,11 +40,7 @@ import org.springframework.web.util.UrlPathHelper;
  *
  * @author Rossen Stoyanchev
  * @since 3.2
- * @deprecated as of 5.2.4. See class-level note in
- * {@link ContentNegotiationManagerFactoryBean} on the deprecation of path
- * extension config options.
  */
-@Deprecated
 public class PathExtensionContentNegotiationStrategy extends AbstractMappingContentNegotiationStrategy {
 
 	private UrlPathHelper urlPathHelper = new UrlPathHelper();

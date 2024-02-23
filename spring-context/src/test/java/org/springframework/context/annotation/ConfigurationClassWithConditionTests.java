@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ConfigurationClassWithConditionTests {
 
 	@Test
-	void conditionalOnMissingBeanMatch() {
+	public void conditionalOnMissingBeanMatch() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(BeanOneConfiguration.class, BeanTwoConfiguration.class);
 		ctx.refresh();
@@ -53,7 +53,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void conditionalOnMissingBeanNoMatch() {
+	public void conditionalOnMissingBeanNoMatch() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(BeanTwoConfiguration.class);
 		ctx.refresh();
@@ -63,7 +63,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void conditionalOnBeanMatch() {
+	public void conditionalOnBeanMatch() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(BeanOneConfiguration.class, BeanThreeConfiguration.class);
 		ctx.refresh();
@@ -72,7 +72,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void conditionalOnBeanNoMatch() {
+	public void conditionalOnBeanNoMatch() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(BeanThreeConfiguration.class);
 		ctx.refresh();
@@ -81,7 +81,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void metaConditional() {
+	public void metaConditional() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConfigurationWithMetaCondition.class);
 		ctx.refresh();
@@ -89,7 +89,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void metaConditionalWithAsm() {
+	public void metaConditionalWithAsm() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.registerBeanDefinition("config", new RootBeanDefinition(ConfigurationWithMetaCondition.class.getName()));
 		ctx.refresh();
@@ -97,7 +97,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void nonConfigurationClass() {
+	public void nonConfigurationClass() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(NonConfigurationClass.class);
 		ctx.refresh();
@@ -105,7 +105,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void nonConfigurationClassWithAsm() {
+	public void nonConfigurationClassWithAsm() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.registerBeanDefinition("config", new RootBeanDefinition(NonConfigurationClass.class.getName()));
 		ctx.refresh();
@@ -113,7 +113,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void methodConditional() {
+	public void methodConditional() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConditionOnMethodConfiguration.class);
 		ctx.refresh();
@@ -121,7 +121,7 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void methodConditionalWithAsm() {
+	public void methodConditionalWithAsm() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.registerBeanDefinition("config", new RootBeanDefinition(ConditionOnMethodConfiguration.class.getName()));
 		ctx.refresh();
@@ -129,30 +129,32 @@ public class ConfigurationClassWithConditionTests {
 	}
 
 	@Test
-	void importsNotCreated() {
+	public void importsNotCreated() throws Exception {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ImportsNotCreated.class);
 		ctx.refresh();
 	}
 
 	@Test
-	void conditionOnOverriddenMethodHonored() {
+	public void conditionOnOverriddenMethodHonored() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithBeanSkipped.class);
-		assertThat(context.getBeansOfType(ExampleBean.class)).isEmpty();
+		assertThat(context.getBeansOfType(ExampleBean.class).size()).isEqualTo(0);
 	}
 
 	@Test
-	void noConditionOnOverriddenMethodHonored() {
+	public void noConditionOnOverriddenMethodHonored() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithBeanReactivated.class);
 		Map<String, ExampleBean> beans = context.getBeansOfType(ExampleBean.class);
-		assertThat(beans).containsOnlyKeys("baz");
+		assertThat(beans.size()).isEqualTo(1);
+		assertThat(beans.keySet().iterator().next()).isEqualTo("baz");
 	}
 
 	@Test
-	void configWithAlternativeBeans() {
+	public void configWithAlternativeBeans() {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConfigWithAlternativeBeans.class);
 		Map<String, ExampleBean> beans = context.getBeansOfType(ExampleBean.class);
-		assertThat(beans).containsOnlyKeys("baz");
+		assertThat(beans.size()).isEqualTo(1);
+		assertThat(beans.keySet().iterator().next()).isEqualTo("baz");
 	}
 
 
@@ -289,9 +291,7 @@ public class ConfigurationClassWithConditionTests {
 	static class ImportsNotCreated {
 
 		static {
-			if (true) {
-				throw new RuntimeException();
-			}
+			if (true) throw new RuntimeException();
 		}
 	}
 
@@ -299,18 +299,14 @@ public class ConfigurationClassWithConditionTests {
 	static class ConfigurationNotCreated {
 
 		static {
-			if (true) {
-				throw new RuntimeException();
-			}
+			if (true) throw new RuntimeException();
 		}
 	}
 
 	static class RegistrarNotCreated implements ImportBeanDefinitionRegistrar {
 
 		static {
-			if (true) {
-				throw new RuntimeException();
-			}
+			if (true) throw new RuntimeException();
 		}
 
 		@Override
@@ -322,9 +318,7 @@ public class ConfigurationClassWithConditionTests {
 	static class ImportSelectorNotCreated implements ImportSelector {
 
 		static {
-			if (true) {
-				throw new RuntimeException();
-			}
+			if (true) throw new RuntimeException();
 		}
 
 		@Override

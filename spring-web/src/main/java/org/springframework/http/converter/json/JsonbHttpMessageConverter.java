@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,21 @@
 
 package org.springframework.http.converter.json;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
-import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
-import jakarta.json.bind.JsonbConfig;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-
 /**
  * Implementation of {@link org.springframework.http.converter.HttpMessageConverter}
  * that can read and write JSON using the
- * <a href="https://javaee.github.io/jsonb-spec/">JSON Binding API</a>.
+ * <a href="http://json-b.net/">JSON Binding API</a>.
  *
  * <p>This converter can be used to bind to typed beans or untyped {@code HashMap}s.
  * By default, it supports {@code application/json} and {@code application/*+json} with
@@ -39,8 +38,8 @@ import org.springframework.util.Assert;
  *
  * @author Juergen Hoeller
  * @since 5.0
- * @see jakarta.json.bind.Jsonb
- * @see jakarta.json.bind.JsonbBuilder
+ * @see javax.json.bind.Jsonb
+ * @see javax.json.bind.JsonbBuilder
  * @see #setJsonb
  */
 public class JsonbHttpMessageConverter extends AbstractJsonHttpMessageConverter {
@@ -101,17 +100,12 @@ public class JsonbHttpMessageConverter extends AbstractJsonHttpMessageConverter 
 	}
 
 	@Override
-	protected void writeInternal(Object object, @Nullable Type type, Writer writer) throws Exception {
+	protected void writeInternal(Object o, @Nullable Type type, Writer writer) throws Exception {
 		if (type instanceof ParameterizedType) {
-			getJsonb().toJson(object, type, writer);
-		}
-		else {
-			getJsonb().toJson(object, writer);
+			getJsonb().toJson(o, type, writer);
+		} else {
+			getJsonb().toJson(o, writer);
 		}
 	}
 
-	@Override
-	protected boolean supportsRepeatableWrites(Object o) {
-		return true;
-	}
 }

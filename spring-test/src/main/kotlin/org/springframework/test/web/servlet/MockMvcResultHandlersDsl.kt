@@ -16,7 +16,7 @@
 
 package org.springframework.test.web.servlet
 
-import org.springframework.test.web.servlet.result.*
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import java.io.OutputStream
 import java.io.Writer
 
@@ -26,7 +26,7 @@ import java.io.Writer
  * @author Sebastien Deleuze
  * @since 5.2
  */
-class MockMvcResultHandlersDsl internal constructor (private val actions: ResultActions) {
+class MockMvcResultHandlersDsl(private val actions: ResultActions) {
 
 	/**
 	 * @see MockMvcResultHandlers.print

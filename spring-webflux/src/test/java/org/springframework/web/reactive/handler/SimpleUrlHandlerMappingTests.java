@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,33 @@
 
 package org.springframework.web.reactive.handler;
 
-import java.net.URI;
-import java.util.Collections;
-import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.PathContainer;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+
+import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.web.reactive.HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE;
 
 /**
- * Tests for {@link SimpleUrlHandlerMapping}.
+ * Unit tests for {@link SimpleUrlHandlerMapping}.
  *
  * @author Rossen Stoyanchev
  */
-class SimpleUrlHandlerMappingTests {
+public class SimpleUrlHandlerMappingTests {
 
 	@Test
-	void handlerMappingJavaConfig() {
+	@SuppressWarnings("resource")
+	public void handlerMappingJavaConfig() throws Exception {
 		AnnotationConfigApplicationContext wac = new AnnotationConfigApplicationContext();
 		wac.register(WebConfig.class);
 		wac.refresh();
@@ -55,12 +53,14 @@ class SimpleUrlHandlerMappingTests {
 
 		testUrl("/welcome.html", mainController, handlerMapping, "");
 		testUrl("/welcome.x", otherController, handlerMapping, "welcome.x");
+		testUrl("/welcome/", otherController, handlerMapping, "welcome");
 		testUrl("/show.html", mainController, handlerMapping, "");
 		testUrl("/bookseats.html", mainController, handlerMapping, "");
 	}
 
 	@Test
-	void handlerMappingXmlConfig() {
+	@SuppressWarnings("resource")
+	public void handlerMappingXmlConfig() throws Exception {
 		ClassPathXmlApplicationContext wac = new ClassPathXmlApplicationContext("map.xml", getClass());
 		wac.refresh();
 
@@ -97,13 +97,14 @@ class SimpleUrlHandlerMappingTests {
 		testUrl("outofpattern*ye", null, handlerMapping, null);
 	}
 
-	void testUrl(String url, Object bean, HandlerMapping handlerMapping, String pathWithinMapping) {
+	private void testUrl(String url, Object bean, HandlerMapping handlerMapping, String pathWithinMapping) {
 		MockServerHttpRequest request = MockServerHttpRequest.method(HttpMethod.GET, URI.create(url)).build();
 		ServerWebExchange exchange = MockServerWebExchange.from(request);
 		Object actual = handlerMapping.getHandler(exchange).block();
 		if (bean != null) {
 			assertThat(actual).isNotNull();
 			assertThat(actual).isSameAs(bean);
+			//noinspection OptionalGetWithoutIsPresent
 			PathContainer path = exchange.getAttribute(PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
 			assertThat(path).isNotNull();
 			assertThat(path.value()).isEqualTo(pathWithinMapping);
@@ -113,19 +114,6 @@ class SimpleUrlHandlerMappingTests {
 		}
 	}
 
-	@Test
-	void uriTemplateVariables() {
-		Object handler = new Object();
-		SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
-		mapping.registerHandlers(Collections.singletonMap("/foo/{bar}/baz", handler));
-
-		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/foo/123/baz").build());
-		Object expected = mapping.getHandler(exchange).block();
-		assertThat(expected).isSameAs(handler);
-
-		Map<String, String> vars = exchange.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-		assertThat(vars).isNotNull().containsEntry("bar", "123");
-	}
 
 	@Configuration
 	static class WebConfig {

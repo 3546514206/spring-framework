@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,12 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
+
+import java.lang.annotation.*;
 
 /**
  * Indicates that a class declares one or more {@link Bean @Bean} methods and
@@ -83,13 +79,12 @@ import org.springframework.stereotype.Component;
  *
  * <h3>Via component scanning</h3>
  *
- * <p>Since {@code @Configuration} is meta-annotated with {@link Component @Component},
- * {@code @Configuration} classes are candidates for component scanning &mdash;
- * for example, using {@link ComponentScan @ComponentScan} or Spring XML's
- * {@code <context:component-scan/>} element &mdash; and therefore may also take
- * advantage of {@link Autowired @Autowired}/{@link jakarta.inject.Inject @Inject}
- * like any regular {@code @Component}. In particular, if a single constructor is
- * present, autowiring semantics will be applied transparently for that constructor:
+ * <p>{@code @Configuration} is meta-annotated with {@link Component @Component}, therefore
+ * {@code @Configuration} classes are candidates for component scanning (typically using
+ * Spring XML's {@code <context:component-scan/>} element) and therefore may also take
+ * advantage of {@link Autowired @Autowired}/{@link javax.inject.Inject @Inject}
+ * like any regular {@code @Component}. In particular, if a single constructor is present
+ * autowiring semantics will be applied transparently for that constructor:
  *
  * <pre class="code">
  * &#064;Configuration
@@ -105,8 +100,8 @@ import org.springframework.stereotype.Component;
  *
  * }</pre>
  *
- * <p>{@code @Configuration} classes may not only be bootstrapped using component
- * scanning, but may also themselves <em>configure</em> component scanning using
+ * <p>{@code @Configuration} classes may not only be bootstrapped using
+ * component scanning, but may also themselves <em>configure</em> component scanning using
  * the {@link ComponentScan @ComponentScan} annotation:
  *
  * <pre class="code">
@@ -130,7 +125,7 @@ import org.springframework.stereotype.Component;
  * &#064;Configuration
  * public class AppConfig {
  *
- *     &#064;Autowired Environment env;
+ *     &#064Autowired Environment env;
  *
  *     &#064;Bean
  *     public MyBean myBean() {
@@ -150,7 +145,7 @@ import org.springframework.stereotype.Component;
  * &#064;PropertySource("classpath:/com/acme/app.properties")
  * public class AppConfig {
  *
- *     &#064;Inject Environment env;
+ *     &#064Inject Environment env;
  *
  *     &#064;Bean
  *     public MyBean myBean() {
@@ -171,7 +166,7 @@ import org.springframework.stereotype.Component;
  * &#064;PropertySource("classpath:/com/acme/app.properties")
  * public class AppConfig {
  *
- *     &#064;Value("${bean.name}") String beanName;
+ *     &#064Value("${bean.name}") String beanName;
  *
  *     &#064;Bean
  *     public MyBean myBean() {
@@ -298,7 +293,7 @@ import org.springframework.stereotype.Component;
  * &#064;ImportResource("classpath:/com/acme/database-config.xml")
  * public class AppConfig {
  *
- *     &#064;Inject DataSource dataSource; // from XML
+ *     &#064Inject DataSource dataSource; // from XML
  *
  *     &#064;Bean
  *     public MyBean myBean() {
@@ -357,16 +352,16 @@ import org.springframework.stereotype.Component;
  * {@code @Component} classes.
  *
  * <pre class="code">
- * &#064;ExtendWith(SpringExtension.class)
+ * &#064;RunWith(SpringRunner.class)
  * &#064;ContextConfiguration(classes = {AppConfig.class, DatabaseConfig.class})
- * class MyTests {
+ * public class MyTests {
  *
  *     &#064;Autowired MyBean myBean;
  *
  *     &#064;Autowired DataSource dataSource;
  *
  *     &#064;Test
- *     void test() {
+ *     public void test() {
  *         // assertions against myBean ...
  *     }
  * }</pre>
@@ -434,7 +429,6 @@ public @interface Configuration {
 	 * {@link AnnotationConfigApplicationContext}. If the {@code @Configuration} class
 	 * is registered as a traditional XML bean definition, the name/id of the bean
 	 * element will take precedence.
-	 * <p>Alias for {@link Component#value}.
 	 * @return the explicit component name, if any (or empty String otherwise)
 	 * @see AnnotationBeanNameGenerator
 	 */
@@ -448,30 +442,19 @@ public @interface Configuration {
 	 * requires method interception, implemented through a runtime-generated CGLIB
 	 * subclass which comes with limitations such as the configuration class and
 	 * its methods not being allowed to declare {@code final}.
-	 * <p>The default is {@code true}, allowing for 'inter-bean references' via direct
-	 * method calls within the configuration class as well as for external calls to
-	 * this configuration's {@code @Bean} methods, e.g. from another configuration class.
-	 * If this is not needed since each of this particular configuration's {@code @Bean}
-	 * methods is self-contained and designed as a plain factory method for container use,
+	 * <p>The default is {@code true}, allowing for 'inter-bean references' within
+	 * the configuration class as well as for external calls to this configuration's
+	 * {@code @Bean} methods, e.g. from another configuration class. If this is not
+	 * needed since each of this particular configuration's {@code @Bean} methods
+	 * is self-contained and designed as a plain factory method for container use,
 	 * switch this flag to {@code false} in order to avoid CGLIB subclass processing.
 	 * <p>Turning off bean method interception effectively processes {@code @Bean}
 	 * methods individually like when declared on non-{@code @Configuration} classes,
 	 * a.k.a. "@Bean Lite Mode" (see {@link Bean @Bean's javadoc}). It is therefore
 	 * behaviorally equivalent to removing the {@code @Configuration} stereotype.
+	 *
 	 * @since 5.2
 	 */
 	boolean proxyBeanMethods() default true;
-
-	/**
-	 * Specify whether {@code @Bean} methods need to have unique method names,
-	 * raising an exception otherwise in order to prevent accidental overloading.
-	 * <p>The default is {@code true}, preventing accidental method overloads which
-	 * get interpreted as overloaded factory methods for the same bean definition
-	 * (as opposed to separate bean definitions with individual conditions etc).
-	 * Switch this flag to {@code false} in order to allow for method overloading
-	 * according to those semantics, accepting the risk for accidental overlaps.
-	 * @since 6.0
-	 */
-	boolean enforceUniqueMethods() default true;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.core.codec;
 
-import java.util.Map;
-
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.MimeType;
+import reactor.core.publisher.Flux;
+
+import java.util.Map;
 
 /**
  * Abstract base class for {@link org.springframework.core.codec.Encoder}
@@ -51,7 +50,7 @@ public abstract class AbstractSingleValueEncoder<T> extends AbstractEncoder<T> {
 		return Flux.from(inputStream)
 				.take(1)
 				.concatMap(value -> encode(value, bufferFactory, elementType, mimeType, hints))
-				.doOnDiscard(DataBuffer.class, DataBufferUtils::release);
+				.doOnDiscard(PooledDataBuffer.class, PooledDataBuffer::release);
 	}
 
 	/**

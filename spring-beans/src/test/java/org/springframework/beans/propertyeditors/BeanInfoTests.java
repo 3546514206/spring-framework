@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.beans.propertyeditors;
 
-import java.beans.IntrospectionException;
-import java.beans.PropertyDescriptor;
-import java.beans.SimpleBeanInfo;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.util.Assert;
+
+import java.beans.IntrospectionException;
+import java.beans.PropertyDescriptor;
+import java.beans.SimpleBeanInfo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,18 +32,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @since 06.03.2006
  */
-class BeanInfoTests {
+public class BeanInfoTests {
 
 	@Test
-	void testComplexObject() {
+	public void testComplexObject() {
 		ValueBean bean = new ValueBean();
 		BeanWrapper bw = new BeanWrapperImpl(bean);
-		Integer value = 1;
+		Integer value = new Integer(1);
 
 		bw.setPropertyValue("value", value);
 		assertThat(value).as("value not set correctly").isEqualTo(bean.getValue());
 
-		value = 2;
+		value = new Integer(2);
 		bw.setPropertyValue("value", value.toString());
 		assertThat(value).as("value not converted").isEqualTo(bean.getValue());
 

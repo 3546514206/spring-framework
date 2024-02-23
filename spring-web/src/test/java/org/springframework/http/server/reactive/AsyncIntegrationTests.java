@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package org.springframework.http.server.reactive;
 
-import java.net.URI;
-import java.time.Duration;
-
+import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
+import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+import java.net.URI;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,6 +40,8 @@ class AsyncIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 
 	private final Scheduler asyncGroup = Schedulers.parallel();
 
+	private final DataBufferFactory dataBufferFactory = new DefaultDataBufferFactory();
+
 
 	@Override
 	protected AsyncHandler createHttpHandler() {
@@ -51,7 +52,7 @@ class AsyncIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 	void basicTest(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		URI url = URI.create("http://localhost:" + port);
+		URI url = new URI("http://localhost:" + port);
 		ResponseEntity<String> response = new RestTemplate().exchange(RequestEntity.get(url).build(), String.class);
 
 		assertThat(response.getBody()).isEqualTo("hello");
@@ -61,13 +62,11 @@ class AsyncIntegrationTests extends AbstractHttpHandlerIntegrationTests {
 	private class AsyncHandler implements HttpHandler {
 
 		@Override
-		@SuppressWarnings("deprecation")
 		public Mono<Void> handle(ServerHttpRequest request, ServerHttpResponse response) {
 			return response.writeWith(Flux.just("h", "e", "l", "l", "o")
 										.delayElements(Duration.ofMillis(100))
 										.publishOn(asyncGroup)
-					.collect(DefaultDataBufferFactory.sharedInstance::allocateBuffer,
-							(buffer, str) -> buffer.write(str.getBytes())));
+					.collect(dataBufferFactory::allocateBuffer, (buffer, str) -> buffer.write(str.getBytes())));
 		}
 	}
 

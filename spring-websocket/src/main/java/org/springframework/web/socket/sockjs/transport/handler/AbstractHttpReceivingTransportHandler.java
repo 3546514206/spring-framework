@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,7 @@
 
 package org.springframework.web.socket.sockjs.transport.handler;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -31,6 +26,10 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.sockjs.SockJsException;
 import org.springframework.web.socket.sockjs.transport.SockJsSession;
 import org.springframework.web.socket.sockjs.transport.session.AbstractHttpSockJsSession;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * Base class for HTTP transport handlers that receive messages via HTTP POST.
@@ -61,19 +60,16 @@ public abstract class AbstractHttpReceivingTransportHandler extends AbstractTran
 		String[] messages;
 		try {
 			messages = readMessages(request);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			logger.error("Failed to read message", ex);
 			if (ex.getClass().getName().contains("Mapping")) {
 				// e.g. Jackson's JsonMappingException, indicating an incomplete payload
 				handleReadError(response, "Payload expected.", sockJsSession.getId());
-			}
-			else {
+			} else {
 				handleReadError(response, "Broken JSON encoding.", sockJsSession.getId());
 			}
 			return;
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			logger.error("Failed to read message", ex);
 			handleReadError(response, "Failed to read message(s)", sockJsSession.getId());
 			return;
@@ -83,7 +79,7 @@ public abstract class AbstractHttpReceivingTransportHandler extends AbstractTran
 			return;
 		}
 		if (logger.isTraceEnabled()) {
-			logger.trace("Received message(s): " + Arrays.toString(messages));
+			logger.trace("Received message(s): " + Arrays.asList(messages));
 		}
 		response.setStatusCode(getResponseStatus());
 		response.getHeaders().setContentType(new MediaType("text", "plain", StandardCharsets.UTF_8));
@@ -105,6 +101,6 @@ public abstract class AbstractHttpReceivingTransportHandler extends AbstractTran
 	@Nullable
 	protected abstract String[] readMessages(ServerHttpRequest request) throws IOException;
 
-	protected abstract HttpStatusCode getResponseStatus();
+	protected abstract HttpStatus getResponseStatus();
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package org.springframework.jca.support;
 
-import jakarta.resource.spi.ConnectionManager;
-import jakarta.resource.spi.ManagedConnectionFactory;
+import javax.resource.spi.ConnectionManager;
+import javax.resource.spi.ManagedConnectionFactory;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,35 +28,35 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link LocalConnectionFactoryBean}.
+ * Unit tests for the {@link LocalConnectionFactoryBean} class.
  *
  * @author Rick Evans
  * @author Chris Beams
  */
-class LocalConnectionFactoryBeanTests {
+public class LocalConnectionFactoryBeanTests {
 
 	@Test
-	void testManagedConnectionFactoryIsRequired() {
+	public void testManagedConnectionFactoryIsRequired() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(
 				new LocalConnectionFactoryBean()::afterPropertiesSet);
 	}
 
 	@Test
-	void testIsSingleton() {
+	public void testIsSingleton() throws Exception {
 		LocalConnectionFactoryBean factory = new LocalConnectionFactoryBean();
 		assertThat(factory.isSingleton()).isTrue();
 	}
 
 	@Test
-	void testGetObjectTypeIsNullIfConnectionFactoryHasNotBeenConfigured() {
+	public void testGetObjectTypeIsNullIfConnectionFactoryHasNotBeenConfigured() throws Exception {
 		LocalConnectionFactoryBean factory = new LocalConnectionFactoryBean();
 		assertThat(factory.getObjectType()).isNull();
 	}
 
 	@Test
-	void testCreatesVanillaConnectionFactoryIfNoConnectionManagerHasBeenConfigured() throws Exception {
+	public void testCreatesVanillaConnectionFactoryIfNoConnectionManagerHasBeenConfigured() throws Exception {
 		final Object CONNECTION_FACTORY = new Object();
-		ManagedConnectionFactory managedConnectionFactory = mock();
+		ManagedConnectionFactory managedConnectionFactory = mock(ManagedConnectionFactory.class);
 		given(managedConnectionFactory.createConnectionFactory()).willReturn(CONNECTION_FACTORY);
 		LocalConnectionFactoryBean factory = new LocalConnectionFactoryBean();
 		factory.setManagedConnectionFactory(managedConnectionFactory);
@@ -64,9 +65,9 @@ class LocalConnectionFactoryBeanTests {
 	}
 
 	@Test
-	void testCreatesManagedConnectionFactoryIfAConnectionManagerHasBeenConfigured() throws Exception {
-		ManagedConnectionFactory managedConnectionFactory = mock();
-		ConnectionManager connectionManager = mock();
+	public void testCreatesManagedConnectionFactoryIfAConnectionManagerHasBeenConfigured() throws Exception {
+		ManagedConnectionFactory managedConnectionFactory = mock(ManagedConnectionFactory.class);
+		ConnectionManager connectionManager = mock(ConnectionManager.class);
 		LocalConnectionFactoryBean factory = new LocalConnectionFactoryBean();
 		factory.setManagedConnectionFactory(managedConnectionFactory);
 		factory.setConnectionManager(connectionManager);

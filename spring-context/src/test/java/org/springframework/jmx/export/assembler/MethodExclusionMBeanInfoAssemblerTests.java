@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rick Evans
  * @author Chris Beams
  */
-class MethodExclusionMBeanInfoAssemblerTests extends AbstractJmxAssemblerTests {
+public class MethodExclusionMBeanInfoAssemblerTests extends AbstractJmxAssemblerTests {
 
 	private static final String OBJECT_NAME = "bean:name=testBean5";
 
@@ -66,7 +66,7 @@ class MethodExclusionMBeanInfoAssemblerTests extends AbstractJmxAssemblerTests {
 	}
 
 	@Test
-	void testSupermanIsReadOnly() throws Exception {
+	public void testSupermanIsReadOnly() throws Exception {
 		ModelMBeanInfo info = getMBeanInfoFromAssembler();
 		ModelMBeanAttributeInfo attr = info.getAttribute("Superman");
 
@@ -78,7 +78,7 @@ class MethodExclusionMBeanInfoAssemblerTests extends AbstractJmxAssemblerTests {
 	 * https://opensource.atlassian.com/projects/spring/browse/SPR-2754
 	 */
 	@Test
-	void testIsNotIgnoredDoesntIgnoreUnspecifiedBeanMethods() throws Exception {
+	public void testIsNotIgnoredDoesntIgnoreUnspecifiedBeanMethods() throws Exception {
 		final String beanKey = "myTestBean";
 		MethodExclusionMBeanInfoAssembler assembler = new MethodExclusionMBeanInfoAssembler();
 		Properties ignored = new Properties();

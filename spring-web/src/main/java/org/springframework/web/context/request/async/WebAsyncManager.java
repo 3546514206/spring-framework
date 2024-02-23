@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@
 
 package org.springframework.web.context.request.async;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.SyncTaskExecutor;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.async.DeferredResult.DeferredResultHandler;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-
-import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.async.DeferredResult.DeferredResultHandler;
-import org.springframework.web.util.DisconnectedClientHelper;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * The central class for managing asynchronous request processing, mainly intended
@@ -51,7 +51,6 @@ import org.springframework.web.util.DisconnectedClientHelper;
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.2
  * @see org.springframework.web.context.request.AsyncWebRequestInterceptor
  * @see org.springframework.web.servlet.AsyncHandlerInterceptor
@@ -67,40 +66,22 @@ public final class WebAsyncManager {
 
 	private static final Log logger = LogFactory.getLog(WebAsyncManager.class);
 
-	/**
-	 * Log category to use for network failure after a client has gone away.
-	 * @see DisconnectedClientHelper
-	 */
-	private static final String DISCONNECTED_CLIENT_LOG_CATEGORY =
-			"org.springframework.web.server.DisconnectedClient";
-
-	private static final DisconnectedClientHelper disconnectedClientHelper =
-			new DisconnectedClientHelper(DISCONNECTED_CLIENT_LOG_CATEGORY);
-
 	private static final CallableProcessingInterceptor timeoutCallableInterceptor =
 			new TimeoutCallableProcessingInterceptor();
 
 	private static final DeferredResultProcessingInterceptor timeoutDeferredResultInterceptor =
 			new TimeoutDeferredResultProcessingInterceptor();
 
+	private static Boolean taskExecutorWarning = true;
 
-	@Nullable
+
 	private AsyncWebRequest asyncWebRequest;
 
 	private AsyncTaskExecutor taskExecutor = DEFAULT_TASK_EXECUTOR;
 
-	@Nullable
 	private volatile Object concurrentResult = RESULT_NONE;
 
-	@Nullable
 	private volatile Object[] concurrentResultContext;
-
-	/*
-	 * Whether the concurrentResult is an error. If such errors remain unhandled, some
-	 * Servlet containers will call AsyncListener#onError at the end, after the ASYNC
-	 * and/or the ERROR dispatch (Boot's case), and we need to ignore those.
-	 */
-	private volatile boolean errorHandlingInProgress;
 
 	private final Map<Object, CallableProcessingInterceptor> callableInterceptors = new LinkedHashMap<>();
 
@@ -109,7 +90,7 @@ public final class WebAsyncManager {
 
 	/**
 	 * Package-private constructor.
-	 * @see WebAsyncUtils#getAsyncManager(jakarta.servlet.ServletRequest)
+	 * @see WebAsyncUtils#getAsyncManager(javax.servlet.ServletRequest)
 	 * @see WebAsyncUtils#getAsyncManager(org.springframework.web.context.request.WebRequest)
 	 */
 	WebAsyncManager() {
@@ -166,7 +147,6 @@ public final class WebAsyncManager {
 	 * concurrent handling raised one.
 	 * @see #clearConcurrentResult()
 	 */
-	@Nullable
 	public Object getConcurrentResult() {
 		return this.concurrentResult;
 	}
@@ -176,7 +156,6 @@ public final class WebAsyncManager {
 	 * concurrent handling.
 	 * @see #clearConcurrentResult()
 	 */
-	@Nullable
 	public Object[] getConcurrentResultContext() {
 		return this.concurrentResultContext;
 	}
@@ -208,7 +187,7 @@ public final class WebAsyncManager {
 	 */
 	public void registerCallableInterceptor(Object key, CallableProcessingInterceptor interceptor) {
 		Assert.notNull(key, "Key is required");
-		Assert.notNull(interceptor, "CallableProcessingInterceptor is required");
+		Assert.notNull(interceptor, "CallableProcessingInterceptor  is required");
 		this.callableInterceptors.put(key, interceptor);
 	}
 
@@ -303,6 +282,9 @@ public final class WebAsyncManager {
 		if (executor != null) {
 			this.taskExecutor = executor;
 		}
+		else {
+			logExecutorWarning();
+		}
 
 		List<CallableProcessingInterceptor> interceptors = new ArrayList<>();
 		interceptors.add(webAsyncTask.getInterceptor());
@@ -323,14 +305,12 @@ public final class WebAsyncManager {
 		});
 
 		this.asyncWebRequest.addErrorHandler(ex -> {
-			if (!this.errorHandlingInProgress) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Async request error for " + formatRequestUri() + ": " + ex);
-				}
-				Object result = interceptorChain.triggerAfterError(this.asyncWebRequest, callable, ex);
-				result = (result != CallableProcessingInterceptor.RESULT_NONE ? result : ex);
-				setConcurrentResultAndDispatch(result);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Async request error for " + formatRequestUri() + ": " + ex);
 			}
+			Object result = interceptorChain.triggerAfterError(this.asyncWebRequest, callable, ex);
+			result = (result != CallableProcessingInterceptor.RESULT_NONE ? result : ex);
+			setConcurrentResultAndDispatch(result);
 		});
 
 		this.asyncWebRequest.addCompletionHandler(() ->
@@ -355,9 +335,30 @@ public final class WebAsyncManager {
 			});
 			interceptorChain.setTaskFuture(future);
 		}
-		catch (Throwable ex) {
+		catch (RejectedExecutionException ex) {
 			Object result = interceptorChain.applyPostProcess(this.asyncWebRequest, callable, ex);
 			setConcurrentResultAndDispatch(result);
+			throw ex;
+		}
+	}
+
+	private void logExecutorWarning() {
+		if (taskExecutorWarning && logger.isWarnEnabled()) {
+			synchronized (DEFAULT_TASK_EXECUTOR) {
+				AsyncTaskExecutor executor = this.taskExecutor;
+				if (taskExecutorWarning &&
+						(executor instanceof SimpleAsyncTaskExecutor || executor instanceof SyncTaskExecutor)) {
+					String executorTypeName = executor.getClass().getSimpleName();
+					logger.warn("\n!!!\n" +
+							"An Executor is required to handle java.util.concurrent.Callable return values.\n" +
+							"Please, configure a TaskExecutor in the MVC config under \"async support\".\n" +
+							"The " + executorTypeName + " currently in use is not suitable under load.\n" +
+							"-------------------------------\n" +
+							"Request URI: '" + formatRequestUri() + "'\n" +
+							"!!!");
+					taskExecutorWarning = false;
+				}
+			}
 		}
 	}
 
@@ -366,13 +367,12 @@ public final class WebAsyncManager {
 		return request != null ? request.getRequestURI() : "servlet container";
 	}
 
-	private void setConcurrentResultAndDispatch(@Nullable Object result) {
+	private void setConcurrentResultAndDispatch(Object result) {
 		synchronized (WebAsyncManager.this) {
 			if (this.concurrentResult != RESULT_NONE) {
 				return;
 			}
 			this.concurrentResult = result;
-			this.errorHandlingInProgress = (result instanceof Throwable);
 		}
 
 		if (this.asyncWebRequest.isAsyncComplete()) {
@@ -382,13 +382,9 @@ public final class WebAsyncManager {
 			return;
 		}
 
-		if (result instanceof Exception ex && disconnectedClientHelper.checkAndLogClientDisconnectedException(ex)) {
-			return;
-		}
-
 		if (logger.isDebugEnabled()) {
-			logger.debug("Async " + (this.errorHandlingInProgress ? "error" : "result set") +
-					", dispatch to " + formatRequestUri());
+			boolean isError = result instanceof Throwable;
+			logger.debug("Async " + (isError ? "error" : "result set") + ", dispatch to " + formatRequestUri());
 		}
 		this.asyncWebRequest.dispatch();
 	}
@@ -435,16 +431,13 @@ public final class WebAsyncManager {
 		});
 
 		this.asyncWebRequest.addErrorHandler(ex -> {
-			if (!this.errorHandlingInProgress) {
-				try {
-					if (!interceptorChain.triggerAfterError(this.asyncWebRequest, deferredResult, ex)) {
-						return;
-					}
-					deferredResult.setErrorResult(ex);
+			try {
+				if (!interceptorChain.triggerAfterError(this.asyncWebRequest, deferredResult, ex)) {
+					return;
 				}
-				catch (Throwable interceptorEx) {
-					setConcurrentResultAndDispatch(interceptorEx);
-				}
+				deferredResult.setErrorResult(ex);
+			} catch (Throwable interceptorEx) {
+				setConcurrentResultAndDispatch(interceptorEx);
 			}
 		});
 
@@ -470,7 +463,6 @@ public final class WebAsyncManager {
 		synchronized (WebAsyncManager.this) {
 			this.concurrentResult = RESULT_NONE;
 			this.concurrentResultContext = processingContext;
-			this.errorHandlingInProgress = false;
 		}
 		this.asyncWebRequest.startAsync();
 

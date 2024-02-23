@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+
+
+        http://www.springframework.org/schema/aop
+        https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+	<!--spring中使用动态代理-->
+	<!--第一步：注册bean-->
+	<bean id="bizService" class="edu.zjnu.xml.proxySample.BizService"/>
+	<bean id="beforeLog" class="edu.zjnu.xml.proxySample.BeforeLog"/>
+	<bean id="afterLog" class="edu.zjnu.xml.proxySample.AfterLog"/>
+
+	<!--
+	第二步：导入AOP的约束,
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	http://www.springframework.org/schema/aop
+	https://www.springframework.org/schema/aop/spring-aop.xsd
+	第三步：
+	配置AOP
+		1、<aop:point /> 定位切入点(在哪个地方执行)
+		-> id 唯一标记
+		-> "execution()" 要执行的位置
+		-> * 任意
+		-> * 类
+		-> .* 类下的所有方法
+		-> .. 可以有任意参数
+		->
+		2、<aop:advisor /> 环绕：在哪个类中使用
+		-> advice-ref: 执行哪一个环绕
+		-> pointcut-ref: 引用哪个切入点
+	-->
+	<aop:config>
+		<aop:pointcut id="bizServicePoint" expression="execution(* edu.zjnu.xml.proxySample.BizService.*(..))"/>
+		<!--执行环绕：把Log类切入到UserServiceImp类的方法下边 -->
+		<aop:advisor advice-ref="beforeLog" pointcut-ref="bizServicePoint"/>
+		<aop:advisor advice-ref="afterLog" pointcut-ref="bizServicePoint"/>
+	</aop:config>
+
+</beans>

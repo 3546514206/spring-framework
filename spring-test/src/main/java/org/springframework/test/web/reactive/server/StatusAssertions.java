@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,19 @@
 
 package org.springframework.test.web.reactive.server;
 
-import java.util.function.Consumer;
-
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.test.util.AssertionErrors;
+
+import java.util.function.Consumer;
 
 /**
  * Assertions on the response status.
  *
  * @author Rossen Stoyanchev
- * @since 5.0
  * @see WebTestClient.ResponseSpec#expectStatus()
+ * @since 5.0
  */
 public class StatusAssertions {
 
@@ -46,19 +44,19 @@ public class StatusAssertions {
 
 
 	/**
-	 * Assert the response status as an {@link HttpStatusCode}.
+	 * Assert the response status as an {@link HttpStatus}.
 	 */
-	public WebTestClient.ResponseSpec isEqualTo(HttpStatusCode status) {
-		HttpStatusCode actual = this.exchangeResult.getStatus();
-		this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.assertEquals("Status", status, actual));
-		return this.responseSpec;
+	public WebTestClient.ResponseSpec isEqualTo(HttpStatus status) {
+		return isEqualTo(status.value());
 	}
 
 	/**
 	 * Assert the response status as an integer.
 	 */
 	public WebTestClient.ResponseSpec isEqualTo(int status) {
-		return isEqualTo(HttpStatusCode.valueOf(status));
+		int actual = this.exchangeResult.getRawStatusCode();
+		this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.assertEquals("Status", status, actual));
+		return this.responseSpec;
 	}
 
 	/**
@@ -72,7 +70,8 @@ public class StatusAssertions {
 	 * Assert the response status code is {@code HttpStatus.CREATED} (201).
 	 */
 	public WebTestClient.ResponseSpec isCreated() {
-		return assertStatusAndReturn(HttpStatus.CREATED);
+		HttpStatus expected = HttpStatus.CREATED;
+		return assertStatusAndReturn(expected);
 	}
 
 	/**
@@ -157,21 +156,11 @@ public class StatusAssertions {
 	 * Assert the response error message.
 	 */
 	public WebTestClient.ResponseSpec reasonEquals(String reason) {
-		String actual = getReasonPhrase(this.exchangeResult.getStatus());
-		this.exchangeResult.assertWithDiagnostics(() ->
-				AssertionErrors.assertEquals("Response status reason", reason, actual));
+		String actual = this.exchangeResult.getStatus().getReasonPhrase();
+		String message = "Response status reason";
+		this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.assertEquals(message, reason, actual));
 		return this.responseSpec;
 	}
-
-	private static String getReasonPhrase(HttpStatusCode statusCode) {
-		if (statusCode instanceof HttpStatus status) {
-			return status.getReasonPhrase();
-		}
-		else {
-			return "";
-		}
-	}
-
 
 	/**
 	 * Assert the response status code is in the 1xx range.
@@ -205,7 +194,8 @@ public class StatusAssertions {
 	 * Assert the response status code is in the 5xx range.
 	 */
 	public WebTestClient.ResponseSpec is5xxServerError() {
-		return assertSeriesAndReturn(HttpStatus.Series.SERVER_ERROR);
+		HttpStatus.Series expected = HttpStatus.Series.SERVER_ERROR;
+		return assertSeriesAndReturn(expected);
 	}
 
 	/**
@@ -213,35 +203,37 @@ public class StatusAssertions {
 	 * @param matcher the matcher to use
 	 * @since 5.1
 	 */
-	public WebTestClient.ResponseSpec value(Matcher<? super Integer> matcher) {
-		int actual = this.exchangeResult.getStatus().value();
-		this.exchangeResult.assertWithDiagnostics(() -> MatcherAssert.assertThat("Response status", actual, matcher));
+	public WebTestClient.ResponseSpec value(Matcher<Integer> matcher) {
+		int value = this.exchangeResult.getStatus().value();
+		this.exchangeResult.assertWithDiagnostics(() -> MatcherAssert.assertThat("Response status", value, matcher));
 		return this.responseSpec;
 	}
 
 	/**
-	 * Consume the response status value as an integer.
-	 * @param consumer the consumer to use
+	 * Match the response status value with a Hamcrest matcher.
+	 *
+	 * @param consumer the matcher to use
 	 * @since 5.1
 	 */
 	public WebTestClient.ResponseSpec value(Consumer<Integer> consumer) {
-		int actual = this.exchangeResult.getStatus().value();
-		this.exchangeResult.assertWithDiagnostics(() -> consumer.accept(actual));
+		int value = this.exchangeResult.getStatus().value();
+		this.exchangeResult.assertWithDiagnostics(() -> consumer.accept(value));
 		return this.responseSpec;
 	}
 
 
-	private WebTestClient.ResponseSpec assertStatusAndReturn(HttpStatusCode expected) {
-		HttpStatusCode actual = this.exchangeResult.getStatus();
+	private WebTestClient.ResponseSpec assertStatusAndReturn(HttpStatus expected) {
+		HttpStatus actual = this.exchangeResult.getStatus();
 		this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.assertEquals("Status", expected, actual));
 		return this.responseSpec;
 	}
 
 	private WebTestClient.ResponseSpec assertSeriesAndReturn(HttpStatus.Series expected) {
-		HttpStatusCode status = this.exchangeResult.getStatus();
-		HttpStatus.Series series = HttpStatus.Series.resolve(status.value());
-		this.exchangeResult.assertWithDiagnostics(() ->
-				AssertionErrors.assertEquals("Range for response status value " + status, expected, series));
+		HttpStatus status = this.exchangeResult.getStatus();
+		this.exchangeResult.assertWithDiagnostics(() -> {
+			String message = "Range for response status value " + status;
+			AssertionErrors.assertEquals(message, expected, status.series());
+		});
 		return this.responseSpec;
 	}
 

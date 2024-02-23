@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
-import java.util.Objects;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
@@ -113,7 +112,7 @@ public class InjectionPoint {
 	 * @since 5.0
 	 */
 	protected final MethodParameter obtainMethodParameter() {
-		Assert.state(this.methodParameter != null, "MethodParameter is not available");
+		Assert.state(this.methodParameter != null, "Neither Field nor MethodParameter");
 		return this.methodParameter;
 	}
 
@@ -191,7 +190,7 @@ public class InjectionPoint {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.field, this.methodParameter);
+		return (this.field != null ? this.field.hashCode() : ObjectUtils.nullSafeHashCode(this.methodParameter));
 	}
 
 	@Override

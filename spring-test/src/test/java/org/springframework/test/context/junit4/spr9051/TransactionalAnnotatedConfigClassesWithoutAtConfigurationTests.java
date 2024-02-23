@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 
 package org.springframework.test.context.junit4.spr9051;
 
-import javax.sql.DataSource;
-
 import org.junit.Before;
-
-import org.springframework.beans.testfixture.beans.Employee;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -29,7 +25,10 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.transaction.AfterTransaction;
 import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
+import org.springframework.tests.sample.beans.Employee;
 import org.springframework.transaction.PlatformTransactionManager;
+
+import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -104,7 +103,7 @@ public class TransactionalAnnotatedConfigClassesWithoutAtConfigurationTests exte
 
 
 	@Before
-	public void compareDataSources() {
+	public void compareDataSources() throws Exception {
 		// NOTE: the two DataSource instances are NOT the same!
 		assertThat(dataSourceViaInjection).isNotSameAs(dataSourceFromTxManager);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,22 +21,22 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link PropertyAccessorUtils}.
+ * Unit tests for {@link PropertyAccessorUtils}.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class PropertyAccessorUtilsTests {
+public class PropertyAccessorUtilsTests {
 
 	@Test
-	void getPropertyName() {
-		assertThat(PropertyAccessorUtils.getPropertyName("")).isEmpty();
-		assertThat(PropertyAccessorUtils.getPropertyName("[user]")).isEmpty();
+	public void getPropertyName() {
+		assertThat(PropertyAccessorUtils.getPropertyName("")).isEqualTo("");
+		assertThat(PropertyAccessorUtils.getPropertyName("[user]")).isEqualTo("");
 		assertThat(PropertyAccessorUtils.getPropertyName("user")).isEqualTo("user");
 	}
 
 	@Test
-	void isNestedOrIndexedProperty() {
+	public void isNestedOrIndexedProperty() {
 		assertThat(PropertyAccessorUtils.isNestedOrIndexedProperty(null)).isFalse();
 		assertThat(PropertyAccessorUtils.isNestedOrIndexedProperty("")).isFalse();
 		assertThat(PropertyAccessorUtils.isNestedOrIndexedProperty("user")).isFalse();
@@ -46,19 +46,19 @@ class PropertyAccessorUtilsTests {
 	}
 
 	@Test
-	void getFirstNestedPropertySeparatorIndex() {
+	public void getFirstNestedPropertySeparatorIndex() {
 		assertThat(PropertyAccessorUtils.getFirstNestedPropertySeparatorIndex("[user]")).isEqualTo(-1);
 		assertThat(PropertyAccessorUtils.getFirstNestedPropertySeparatorIndex("user.name")).isEqualTo(4);
 	}
 
 	@Test
-	void getLastNestedPropertySeparatorIndex() {
+	public void getLastNestedPropertySeparatorIndex() {
 		assertThat(PropertyAccessorUtils.getLastNestedPropertySeparatorIndex("[user]")).isEqualTo(-1);
 		assertThat(PropertyAccessorUtils.getLastNestedPropertySeparatorIndex("user.address.street")).isEqualTo(12);
 	}
 
 	@Test
-	void matchesProperty() {
+	public void matchesProperty() {
 		assertThat(PropertyAccessorUtils.matchesProperty("user", "email")).isFalse();
 		assertThat(PropertyAccessorUtils.matchesProperty("username", "user")).isFalse();
 		assertThat(PropertyAccessorUtils.matchesProperty("admin[user]", "user")).isFalse();
@@ -68,8 +68,8 @@ class PropertyAccessorUtilsTests {
 	}
 
 	@Test
-	void canonicalPropertyName() {
-		assertThat(PropertyAccessorUtils.canonicalPropertyName(null)).isEmpty();
+	public void canonicalPropertyName() {
+		assertThat(PropertyAccessorUtils.canonicalPropertyName(null)).isEqualTo("");
 		assertThat(PropertyAccessorUtils.canonicalPropertyName("map")).isEqualTo("map");
 		assertThat(PropertyAccessorUtils.canonicalPropertyName("map[key1]")).isEqualTo("map[key1]");
 		assertThat(PropertyAccessorUtils.canonicalPropertyName("map['key1']")).isEqualTo("map[key1]");
@@ -82,7 +82,7 @@ class PropertyAccessorUtilsTests {
 	}
 
 	@Test
-	void canonicalPropertyNames() {
+	public void canonicalPropertyNames() {
 		assertThat(PropertyAccessorUtils.canonicalPropertyNames(null)).isNull();
 
 		String[] original =

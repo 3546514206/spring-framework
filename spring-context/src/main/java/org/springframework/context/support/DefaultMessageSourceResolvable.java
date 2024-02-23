@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -171,15 +171,24 @@ public class DefaultMessageSourceResolvable implements MessageSourceResolvable, 
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof MessageSourceResolvable that &&
-				ObjectUtils.nullSafeEquals(getCodes(), that.getCodes()) &&
-				ObjectUtils.nullSafeEquals(getArguments(), that.getArguments()) &&
-				ObjectUtils.nullSafeEquals(getDefaultMessage(), that.getDefaultMessage())));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof MessageSourceResolvable)) {
+			return false;
+		}
+		MessageSourceResolvable otherResolvable = (MessageSourceResolvable) other;
+		return (ObjectUtils.nullSafeEquals(getCodes(), otherResolvable.getCodes()) &&
+				ObjectUtils.nullSafeEquals(getArguments(), otherResolvable.getArguments()) &&
+				ObjectUtils.nullSafeEquals(getDefaultMessage(), otherResolvable.getDefaultMessage()));
 	}
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHash(getCode(), getArguments(), getDefaultMessage());
+		int hashCode = ObjectUtils.nullSafeHashCode(getCodes());
+		hashCode = 29 * hashCode + ObjectUtils.nullSafeHashCode(getArguments());
+		hashCode = 29 * hashCode + ObjectUtils.nullSafeHashCode(getDefaultMessage());
+		return hashCode;
 	}
 
 }

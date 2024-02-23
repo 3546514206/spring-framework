@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package org.springframework.web.context.request;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.StaticWebApplicationContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+
+import javax.servlet.http.HttpServletRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -33,10 +33,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
-class RequestAndSessionScopedBeanTests {
+public class RequestAndSessionScopedBeanTests {
 
 	@Test
-	void testPutBeanInRequest() {
+	@SuppressWarnings("resource")
+	public void testPutBeanInRequest() throws Exception {
 		String targetBeanName = "target";
 
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
@@ -70,7 +71,8 @@ class RequestAndSessionScopedBeanTests {
 	}
 
 	@Test
-	void testPutBeanInSession() {
+	@SuppressWarnings("resource")
+	public void testPutBeanInSession() throws Exception {
 		String targetBeanName = "target";
 		HttpServletRequest request = new MockHttpServletRequest();
 		RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));

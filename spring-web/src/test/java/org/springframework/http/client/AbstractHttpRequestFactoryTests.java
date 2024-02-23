@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,23 +40,23 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 /**
  * @author Arjen Poutsma
  */
-abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTests {
+public abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTests {
 
 	protected ClientHttpRequestFactory factory;
 
 
 	@BeforeEach
-	final void createFactory() throws Exception {
+	public final void createFactory() throws Exception {
 		factory = createRequestFactory();
-		if (factory instanceof InitializingBean initializingBean) {
-			initializingBean.afterPropertiesSet();
+		if (factory instanceof InitializingBean) {
+			((InitializingBean) factory).afterPropertiesSet();
 		}
 	}
 
 	@AfterEach
-	final void destroyFactory() throws Exception {
-		if (factory instanceof DisposableBean disposableBean) {
-			disposableBean.destroy();
+	public final void destroyFactory() throws Exception {
+		if (factory instanceof DisposableBean) {
+			((DisposableBean) factory).destroy();
 		}
 	}
 
@@ -65,8 +65,8 @@ abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTest
 
 
 	@Test
-	void status() throws Exception {
-		URI uri = URI.create(baseUrl + "/status/notfound");
+	public void status() throws Exception {
+		URI uri = new URI(baseUrl + "/status/notfound");
 		ClientHttpRequest request = factory.createRequest(uri, HttpMethod.GET);
 		assertThat(request.getMethod()).as("Invalid HTTP method").isEqualTo(HttpMethod.GET);
 		assertThat(request.getURI()).as("Invalid HTTP URI").isEqualTo(uri);
@@ -77,8 +77,8 @@ abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTest
 	}
 
 	@Test
-	void echo() throws Exception {
-		ClientHttpRequest request = factory.createRequest(URI.create(baseUrl + "/echo"), HttpMethod.PUT);
+	public void echo() throws Exception {
+		ClientHttpRequest request = factory.createRequest(new URI(baseUrl + "/echo"), HttpMethod.PUT);
 		assertThat(request.getMethod()).as("Invalid HTTP method").isEqualTo(HttpMethod.PUT);
 
 		String headerName = "MyHeader";
@@ -89,7 +89,8 @@ abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTest
 		final byte[] body = "Hello World".getBytes(StandardCharsets.UTF_8);
 		request.getHeaders().setContentLength(body.length);
 
-		if (request instanceof StreamingHttpOutputMessage streamingRequest) {
+		if (request instanceof StreamingHttpOutputMessage) {
+			StreamingHttpOutputMessage streamingRequest = (StreamingHttpOutputMessage) request;
 			streamingRequest.setBody(outputStream -> StreamUtils.copy(body, outputStream));
 		}
 		else {
@@ -98,56 +99,52 @@ abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTest
 
 		try (ClientHttpResponse response = request.execute()) {
 			assertThat(response.getStatusCode()).as("Invalid status code").isEqualTo(HttpStatus.OK);
-			assertThat(response.getHeaders()).as("Header not found").containsKey(headerName);
-			assertThat(response.getHeaders()).as("Header value not found")
-					.containsEntry(headerName, Arrays.asList(headerValue1, headerValue2));
+			assertThat(response.getHeaders().containsKey(headerName)).as("Header not found").isTrue();
+			assertThat(response.getHeaders().get(headerName)).as("Header value not found").isEqualTo(Arrays.asList(headerValue1, headerValue2));
 			byte[] result = FileCopyUtils.copyToByteArray(response.getBody());
 			assertThat(Arrays.equals(body, result)).as("Invalid body").isTrue();
 		}
 	}
 
 	@Test
-	void multipleWrites() throws Exception {
-		ClientHttpRequest request = factory.createRequest(URI.create(baseUrl + "/echo"), HttpMethod.POST);
+	public void multipleWrites() throws Exception {
+		ClientHttpRequest request = factory.createRequest(new URI(baseUrl + "/echo"), HttpMethod.POST);
 
 		final byte[] body = "Hello World".getBytes(StandardCharsets.UTF_8);
-		request.getHeaders().setContentLength(body.length);
-		if (request instanceof StreamingHttpOutputMessage streamingRequest) {
-			streamingRequest.setBody(outputStream -> StreamUtils.copy(body, outputStream));
+		if (request instanceof StreamingHttpOutputMessage) {
+			StreamingHttpOutputMessage streamingRequest = (StreamingHttpOutputMessage) request;
+			streamingRequest.setBody(outputStream -> {
+				StreamUtils.copy(body, outputStream);
+				outputStream.flush();
+				outputStream.close();
+			});
 		}
 		else {
 			StreamUtils.copy(body, request.getBody());
 		}
 
-		try (ClientHttpResponse response = request.execute()) {
-			assertThatIllegalStateException().isThrownBy(() ->
-					FileCopyUtils.copy(body, request.getBody()));
-			assertThat(response.getStatusCode()).as("Invalid status code").isEqualTo(HttpStatus.OK);
-		}
+		request.execute();
+		assertThatIllegalStateException().isThrownBy(() ->
+				FileCopyUtils.copy(body, request.getBody()));
 	}
 
 	@Test
-	void headersAfterExecute() throws Exception {
-		ClientHttpRequest request = factory.createRequest(URI.create(baseUrl + "/status/ok"), HttpMethod.POST);
+	@SuppressWarnings("try")
+	public void headersAfterExecute() throws Exception {
+		ClientHttpRequest request = factory.createRequest(new URI(baseUrl + "/status/ok"), HttpMethod.POST);
 
 		request.getHeaders().add("MyHeader", "value");
 		byte[] body = "Hello World".getBytes(StandardCharsets.UTF_8);
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> {
-				if (request instanceof StreamingHttpOutputMessage streamingRequest) {
-					streamingRequest.setBody(outputStream -> FileCopyUtils.copy(body, outputStream));
-				}
-				else {
-					FileCopyUtils.copy(body, request.getBody());
-				}
+				FileCopyUtils.copy(body, request.getBody());
 				try (ClientHttpResponse response = request.execute()) {
-					assertThat(response).isNotNull();
 					request.getHeaders().add("MyHeader", "value");
 				}
 		});
 	}
 
 	@Test
-	void httpMethods() throws Exception {
+	public void httpMethods() throws Exception {
 		assertHttpMethod("get", HttpMethod.GET);
 		assertHttpMethod("head", HttpMethod.HEAD);
 		assertHttpMethod("post", HttpMethod.POST);
@@ -157,25 +154,32 @@ abstract class AbstractHttpRequestFactoryTests extends AbstractMockWebServerTest
 	}
 
 	protected void assertHttpMethod(String path, HttpMethod method) throws Exception {
-		ClientHttpRequest request = factory.createRequest(URI.create(baseUrl + "/methods/" + path), method);
-		if (method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.PATCH) {
-			if (request instanceof StreamingHttpOutputMessage streamingRequest) {
-				streamingRequest.setBody(outputStream -> outputStream.write(32));
+		ClientHttpResponse response = null;
+		try {
+			ClientHttpRequest request = factory.createRequest(new URI(baseUrl + "/methods/" + path), method);
+			if (method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.PATCH) {
+				// requires a body
+				try {
+					request.getBody().write(32);
+				}
+				catch (UnsupportedOperationException ex) {
+					// probably a streaming request - let's simply ignore it
+				}
 			}
-			else {
-				request.getBody().write(32);
-			}
-		}
-
-		try (ClientHttpResponse response = request.execute()) {
+			response = request.execute();
 			assertThat(response.getStatusCode()).as("Invalid response status").isEqualTo(HttpStatus.OK);
 			assertThat(request.getMethod().name()).as("Invalid method").isEqualTo(path.toUpperCase(Locale.ENGLISH));
+		}
+		finally {
+			if (response != null) {
+				response.close();
+			}
 		}
 	}
 
 	@Test
-	void queryParameters() throws Exception {
-		URI uri = URI.create(baseUrl + "/params?param1=value&param2=value1&param2=value2");
+	public void queryParameters() throws Exception {
+		URI uri = new URI(baseUrl + "/params?param1=value&param2=value1&param2=value2");
 		ClientHttpRequest request = factory.createRequest(uri, HttpMethod.GET);
 
 		try (ClientHttpResponse response = request.execute()) {

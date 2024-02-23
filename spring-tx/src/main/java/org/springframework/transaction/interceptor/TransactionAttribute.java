@@ -16,8 +16,6 @@
 
 package org.springframework.transaction.interceptor;
 
-import java.util.Collection;
-
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.TransactionDefinition;
 
@@ -28,7 +26,6 @@ import org.springframework.transaction.TransactionDefinition;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @author Mark Paluch
  * @since 16.03.2003
  * @see DefaultTransactionAttribute
  * @see RuleBasedTransactionAttribute
@@ -43,14 +40,6 @@ public interface TransactionAttribute extends TransactionDefinition {
 	 */
 	@Nullable
 	String getQualifier();
-
-	/**
-	 * Return labels associated with this transaction attribute.
-	 * <p>This may be used for applying specific transactional behavior
-	 * or follow a purely descriptive nature.
-	 * @since 5.3
-	 */
-	Collection<String> getLabels();
 
 	/**
 	 * Should we roll back on the given exception?

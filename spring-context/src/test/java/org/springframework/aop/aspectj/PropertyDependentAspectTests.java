@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,25 +36,29 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class PropertyDependentAspectTests {
+@SuppressWarnings("resource")
+public class PropertyDependentAspectTests {
 
 	@Test
-	void propertyDependentAspectWithPropertyDeclaredBeforeAdvice() {
+	public void propertyDependentAspectWithPropertyDeclaredBeforeAdvice()
+			throws Exception {
 		checkXmlAspect(getClass().getSimpleName() + "-before.xml");
 	}
 
 	@Test
-	void propertyDependentAspectWithPropertyDeclaredAfterAdvice() {
+	public void propertyDependentAspectWithPropertyDeclaredAfterAdvice() throws Exception {
 		checkXmlAspect(getClass().getSimpleName() + "-after.xml");
 	}
 
 	@Test
-	void propertyDependentAtAspectJAspectWithPropertyDeclaredBeforeAdvice() {
+	public void propertyDependentAtAspectJAspectWithPropertyDeclaredBeforeAdvice()
+			throws Exception {
 		checkAtAspectJAspect(getClass().getSimpleName() + "-atAspectJ-before.xml");
 	}
 
 	@Test
-	void propertyDependentAtAspectJAspectWithPropertyDeclaredAfterAdvice() {
+	public void propertyDependentAtAspectJAspectWithPropertyDeclaredAfterAdvice()
+			throws Exception {
 		checkAtAspectJAspect(getClass().getSimpleName() + "-atAspectJ-after.xml");
 	}
 
@@ -129,7 +133,7 @@ class JoinPointMonitorAtAspectJAspect {
 	int aroundExecutions;
 
 	@Before("execution(* increment*())")
-	void before() {
+	public void before() {
 		beforeExecutions++;
 	}
 

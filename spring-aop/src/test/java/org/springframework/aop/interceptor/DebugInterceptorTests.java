@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,18 +30,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link DebugInterceptor}.
+ * Unit tests for the {@link DebugInterceptor} class.
  *
  * @author Rick Evans
  * @author Chris Beams
  */
-class DebugInterceptorTests {
+public class DebugInterceptorTests {
 
 	@Test
-	void testSunnyDayPathLogsCorrectly() throws Throwable {
-		MethodInvocation methodInvocation = mock();
+	public void testSunnyDayPathLogsCorrectly() throws Throwable {
 
-		Log log = mock();
+		MethodInvocation methodInvocation = mock(MethodInvocation.class);
+
+		Log log = mock(Log.class);
 		given(log.isTraceEnabled()).willReturn(true);
 
 		DebugInterceptor interceptor = new StubDebugInterceptor(log);
@@ -52,13 +53,14 @@ class DebugInterceptorTests {
 	}
 
 	@Test
-	void testExceptionPathStillLogsCorrectly() throws Throwable {
-		MethodInvocation methodInvocation = mock();
+	public void testExceptionPathStillLogsCorrectly() throws Throwable {
+
+		MethodInvocation methodInvocation = mock(MethodInvocation.class);
 
 		IllegalArgumentException exception = new IllegalArgumentException();
 		given(methodInvocation.proceed()).willThrow(exception);
 
-		Log log = mock();
+		Log log = mock(Log.class);
 		given(log.isTraceEnabled()).willReturn(true);
 
 		DebugInterceptor interceptor = new StubDebugInterceptor(log);

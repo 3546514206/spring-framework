@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.test.web.client.samples.matchers;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -50,7 +51,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @see org.springframework.test.web.client.match.JsonPathRequestMatchers
  * @see org.springframework.test.web.client.match.JsonPathRequestMatchersTests
  */
-class JsonPathRequestMatchersIntegrationTests {
+public class JsonPathRequestMatchersIntegrationTests {
 
 	private static final MultiValueMap<String, Person> people = new LinkedMultiValueMap<>();
 
@@ -71,7 +72,7 @@ class JsonPathRequestMatchersIntegrationTests {
 
 
 	@Test
-	void exists() {
+	public void exists() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0]").exists())
@@ -84,7 +85,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void doesNotExist() {
+	public void doesNotExist() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[?(@.name == 'Edvard Grieeeeeeg')]").doesNotExist())
@@ -96,7 +97,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void value() {
+	public void value() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0].name").value("Johann Sebastian Bach"))
@@ -107,7 +108,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void hamcrestMatchers() {
+	public void hamcrestMatchers() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0].name").value(equalTo("Johann Sebastian Bach")))
@@ -123,7 +124,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void hamcrestMatchersWithParameterizedJsonPaths() {
+	public void hamcrestMatchersWithParameterizedJsonPaths() throws Exception {
 		String composerName = "$.composers[%s].name";
 		String performerName = "$.performers[%s].name";
 
@@ -139,7 +140,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void isArray() {
+	public void isArray() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers").isArray())
@@ -149,7 +150,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void isString() {
+	public void isString() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0].name").isString())
@@ -159,7 +160,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void isNumber() {
+	public void isNumber() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0].someDouble").isNumber())
@@ -169,7 +170,7 @@ class JsonPathRequestMatchersIntegrationTests {
 	}
 
 	@Test
-	void isBoolean() {
+	public void isBoolean() throws Exception {
 		this.mockServer.expect(requestTo("/composers"))
 			.andExpect(content().contentType("application/json"))
 			.andExpect(jsonPath("$.composers[0].someBoolean").isBoolean())
@@ -178,8 +179,8 @@ class JsonPathRequestMatchersIntegrationTests {
 		executeAndVerify();
 	}
 
-	private void executeAndVerify() {
-		this.restTemplate.put(URI.create("/composers"), people);
+	private void executeAndVerify() throws URISyntaxException {
+		this.restTemplate.put(new URI("/composers"), people);
 		this.mockServer.verify();
 	}
 

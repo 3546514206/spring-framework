@@ -161,8 +161,9 @@ class XMLEventStreamWriter implements XMLStreamWriter {
 	public void writeEndElement() throws XMLStreamException {
 		closeEmptyElementIfNecessary();
 		int last = this.endElements.size() - 1;
-		EndElement lastEndElement = this.endElements.remove(last);
+		EndElement lastEndElement = this.endElements.get(last);
 		this.eventWriter.add(lastEndElement);
+		this.endElements.remove(last);
 	}
 
 	@Override

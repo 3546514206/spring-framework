@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Mark Fisher
  * @author Chris Beams
  */
-class ApplicationContextLifecycleTests {
+public class ApplicationContextLifecycleTests {
 
 	@Test
-	void beansStart() {
+	public void testBeansStart() {
 		AbstractApplicationContext context = new ClassPathXmlApplicationContext("lifecycleTests.xml", getClass());
 		context.start();
 		LifecycleTestBean bean1 = (LifecycleTestBean) context.getBean("bean1");
@@ -39,11 +39,10 @@ class ApplicationContextLifecycleTests {
 		assertThat(bean2.isRunning()).as(error).isTrue();
 		assertThat(bean3.isRunning()).as(error).isTrue();
 		assertThat(bean4.isRunning()).as(error).isTrue();
-		context.close();
 	}
 
 	@Test
-	void beansStop() {
+	public void testBeansStop() {
 		AbstractApplicationContext context = new ClassPathXmlApplicationContext("lifecycleTests.xml", getClass());
 		context.start();
 		LifecycleTestBean bean1 = (LifecycleTestBean) context.getBean("bean1");
@@ -61,11 +60,10 @@ class ApplicationContextLifecycleTests {
 		assertThat(bean2.isRunning()).as(stopError).isFalse();
 		assertThat(bean3.isRunning()).as(stopError).isFalse();
 		assertThat(bean4.isRunning()).as(stopError).isFalse();
-		context.close();
 	}
 
 	@Test
-	void startOrder() {
+	public void testStartOrder() {
 		AbstractApplicationContext context = new ClassPathXmlApplicationContext("lifecycleTests.xml", getClass());
 		context.start();
 		LifecycleTestBean bean1 = (LifecycleTestBean) context.getBean("bean1");
@@ -73,19 +71,18 @@ class ApplicationContextLifecycleTests {
 		LifecycleTestBean bean3 = (LifecycleTestBean) context.getBean("bean3");
 		LifecycleTestBean bean4 = (LifecycleTestBean) context.getBean("bean4");
 		String notStartedError = "bean was not started";
-		assertThat(bean1.getStartOrder()).as(notStartedError).isGreaterThan(0);
-		assertThat(bean2.getStartOrder()).as(notStartedError).isGreaterThan(0);
-		assertThat(bean3.getStartOrder()).as(notStartedError).isGreaterThan(0);
-		assertThat(bean4.getStartOrder()).as(notStartedError).isGreaterThan(0);
+		assertThat(bean1.getStartOrder() > 0).as(notStartedError).isTrue();
+		assertThat(bean2.getStartOrder() > 0).as(notStartedError).isTrue();
+		assertThat(bean3.getStartOrder() > 0).as(notStartedError).isTrue();
+		assertThat(bean4.getStartOrder() > 0).as(notStartedError).isTrue();
 		String orderError = "dependent bean must start after the bean it depends on";
-		assertThat(bean2.getStartOrder()).as(orderError).isGreaterThan(bean1.getStartOrder());
-		assertThat(bean3.getStartOrder()).as(orderError).isGreaterThan(bean2.getStartOrder());
-		assertThat(bean4.getStartOrder()).as(orderError).isGreaterThan(bean2.getStartOrder());
-		context.close();
+		assertThat(bean2.getStartOrder() > bean1.getStartOrder()).as(orderError).isTrue();
+		assertThat(bean3.getStartOrder() > bean2.getStartOrder()).as(orderError).isTrue();
+		assertThat(bean4.getStartOrder() > bean2.getStartOrder()).as(orderError).isTrue();
 	}
 
 	@Test
-	void stopOrder() {
+	public void testStopOrder() {
 		AbstractApplicationContext context = new ClassPathXmlApplicationContext("lifecycleTests.xml", getClass());
 		context.start();
 		context.stop();
@@ -94,15 +91,14 @@ class ApplicationContextLifecycleTests {
 		LifecycleTestBean bean3 = (LifecycleTestBean) context.getBean("bean3");
 		LifecycleTestBean bean4 = (LifecycleTestBean) context.getBean("bean4");
 		String notStoppedError = "bean was not stopped";
-		assertThat(bean1.getStopOrder()).as(notStoppedError).isGreaterThan(0);
-		assertThat(bean2.getStopOrder()).as(notStoppedError).isGreaterThan(0);
-		assertThat(bean3.getStopOrder()).as(notStoppedError).isGreaterThan(0);
-		assertThat(bean4.getStopOrder()).as(notStoppedError).isGreaterThan(0);
+		assertThat(bean1.getStopOrder() > 0).as(notStoppedError).isTrue();
+		assertThat(bean2.getStopOrder() > 0).as(notStoppedError).isTrue();
+		assertThat(bean3.getStopOrder() > 0).as(notStoppedError).isTrue();
+		assertThat(bean4.getStopOrder() > 0).as(notStoppedError).isTrue();
 		String orderError = "dependent bean must stop before the bean it depends on";
-		assertThat(bean2.getStopOrder()).as(orderError).isLessThan(bean1.getStopOrder());
-		assertThat(bean3.getStopOrder()).as(orderError).isLessThan(bean2.getStopOrder());
-		assertThat(bean4.getStopOrder()).as(orderError).isLessThan(bean2.getStopOrder());
-		context.close();
+		assertThat(bean2.getStopOrder() < bean1.getStopOrder()).as(orderError).isTrue();
+		assertThat(bean3.getStopOrder() < bean2.getStopOrder()).as(orderError).isTrue();
+		assertThat(bean4.getStopOrder() < bean2.getStopOrder()).as(orderError).isTrue();
 	}
 
 }

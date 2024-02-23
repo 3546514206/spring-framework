@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.mock;
  * @author Kazuki Shimizu
  * @since 5.0.4
  */
-class SingleColumnRowMapperTests {
+public class SingleColumnRowMapperTests {
 
 	@Test  // SPR-16483
 	public void useDefaultConversionService() throws SQLException {
@@ -47,8 +47,8 @@ class SingleColumnRowMapperTests {
 
 		SingleColumnRowMapper<LocalDateTime> rowMapper = SingleColumnRowMapper.newInstance(LocalDateTime.class);
 
-		ResultSet resultSet = mock();
-		ResultSetMetaData metaData = mock();
+		ResultSet resultSet = mock(ResultSet.class);
+		ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 		given(metaData.getColumnCount()).willReturn(1);
 		given(resultSet.getMetaData()).willReturn(metaData);
 		given(resultSet.getObject(1, LocalDateTime.class))
@@ -70,8 +70,8 @@ class SingleColumnRowMapperTests {
 		SingleColumnRowMapper<MyLocalDateTime> rowMapper =
 				SingleColumnRowMapper.newInstance(MyLocalDateTime.class, myConversionService);
 
-		ResultSet resultSet = mock();
-		ResultSetMetaData metaData = mock();
+		ResultSet resultSet = mock(ResultSet.class);
+		ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 		given(metaData.getColumnCount()).willReturn(1);
 		given(resultSet.getMetaData()).willReturn(metaData);
 		given(resultSet.getObject(1, MyLocalDateTime.class))
@@ -89,8 +89,8 @@ class SingleColumnRowMapperTests {
 		SingleColumnRowMapper<LocalDateTime> rowMapper =
 				SingleColumnRowMapper.newInstance(LocalDateTime.class, null);
 
-		ResultSet resultSet = mock();
-		ResultSetMetaData metaData = mock();
+		ResultSet resultSet = mock(ResultSet.class);
+		ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 		given(metaData.getColumnCount()).willReturn(1);
 		given(resultSet.getMetaData()).willReturn(metaData);
 		given(resultSet.getObject(1, LocalDateTime.class))

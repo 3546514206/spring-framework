@@ -16,9 +16,9 @@
 
 package org.springframework.jdbc.core;
 
-import java.sql.ResultSet;
-
 import org.springframework.lang.Nullable;
+
+import java.sql.ResultSet;
 
 /**
  * Subclass of {@link SqlParameter} to represent an output parameter.
@@ -40,7 +40,8 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 *
+	 * @param name    name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 */
 	public SqlOutParameter(String name, int sqlType) {
@@ -49,7 +50,7 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 * @param name name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 * @param scale the number of digits after the decimal point
 	 * (for DECIMAL and NUMERIC types)
@@ -60,7 +61,7 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 * @param name name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 * @param typeName the type name of the parameter (optional)
 	 */
@@ -70,7 +71,7 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 * @param name name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 * @param typeName the type name of the parameter (optional)
 	 * @param sqlReturnType custom value handler for complex type (optional)
@@ -82,7 +83,7 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 * @param name name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 * @param rse the {@link ResultSetExtractor} to use for parsing the {@link ResultSet}
 	 */
@@ -92,7 +93,7 @@ public class SqlOutParameter extends ResultSetSupportingSqlParameter {
 
 	/**
 	 * Create a new SqlOutParameter.
-	 * @param name the name of the parameter, as used in input and output maps
+	 * @param name name of the parameter, as used in input and output maps
 	 * @param sqlType the parameter SQL type according to {@code java.sql.Types}
 	 * @param rch the {@link RowCallbackHandler} to use for parsing the {@link ResultSet}
 	 */

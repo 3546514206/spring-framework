@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 package org.springframework.test.context.web;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +47,7 @@ class RequestAndSessionScopedBeansWacTests {
 
 
 	@Test
-	void requestScope() {
+	void requestScope() throws Exception {
 		String beanName = "requestScopedTestBean";
 		String contextPath = "/path";
 
@@ -63,7 +62,7 @@ class RequestAndSessionScopedBeansWacTests {
 	}
 
 	@Test
-	void sessionScope() {
+	void sessionScope() throws Exception {
 		String beanName = "sessionScopedTestBean";
 
 		assertThat(session.getAttribute(beanName)).isNull();

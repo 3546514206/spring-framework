@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import jakarta.xml.bind.annotation.XmlAccessType;
-import jakarta.xml.bind.annotation.XmlAccessorType;
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpHeaders;
@@ -40,13 +41,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static org.hamcrest.Matchers.startsWith;
 
+
+
 /**
  * Samples of tests using {@link WebTestClient} with XML content.
  *
  * @author Eric Deandrea
  * @since 5.1
  */
-class XmlContentTests {
+public class XmlContentTests {
 
 	private static final String persons_XML =
 			"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
@@ -61,7 +64,7 @@ class XmlContentTests {
 
 
 	@Test
-	void xmlContent() {
+	public void xmlContent() {
 		this.client.get().uri("/persons")
 				.accept(MediaType.APPLICATION_XML)
 				.exchange()
@@ -70,7 +73,7 @@ class XmlContentTests {
 	}
 
 	@Test
-	void xpathIsEqualTo() {
+	public void xpathIsEqualTo() {
 		this.client.get().uri("/persons")
 				.accept(MediaType.APPLICATION_XML)
 				.exchange()
@@ -86,7 +89,7 @@ class XmlContentTests {
 	}
 
 	@Test
-	void xpathMatches() {
+	public void xpathMatches() {
 		this.client.get().uri("/persons")
 				.accept(MediaType.APPLICATION_XML)
 				.exchange()
@@ -96,7 +99,7 @@ class XmlContentTests {
 	}
 
 	@Test
-	void xpathContainsSubstringViaRegex() {
+	public void xpathContainsSubstringViaRegex() {
 		this.client.get().uri("/persons/John")
 				.accept(MediaType.APPLICATION_XML)
 				.exchange()
@@ -106,7 +109,8 @@ class XmlContentTests {
 	}
 
 	@Test
-	void postXmlContent() {
+	public void postXmlContent() {
+
 		String content =
 				"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
 				"<person><name>John</name></person>";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,17 +24,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rick Evans
  * @author Chris Beams
  */
-class NullSourceExtractorTests {
+public class NullSourceExtractorTests {
 
 	@Test
-	void testPassThroughContract() {
-		Object source = new Object();
+	public void testPassThroughContract() throws Exception {
+		Object source  = new Object();
 		Object extractedSource = new NullSourceExtractor().extractSource(source, null);
 		assertThat(extractedSource).as("The contract of NullSourceExtractor states that the extraction *always* return null").isNull();
 	}
 
 	@Test
-	void testPassThroughContractEvenWithNull() {
+	public void testPassThroughContractEvenWithNull() throws Exception {
 		Object extractedSource = new NullSourceExtractor().extractSource(null, null);
 		assertThat(extractedSource).as("The contract of NullSourceExtractor states that the extraction *always* return null").isNull();
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,10 @@
 
 package org.springframework.cache.config;
 
-import java.util.Objects;
-
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Copy of the shared {@code TestEntity}: necessary
- * due to issues with Gradle test fixtures and AspectJ configuration
- * in the Gradle build.
- *
- * <p>Simple test entity for use with caching tests.
+ * Simple test entity for use with caching tests.
  *
  * @author Michael Plod
  */
@@ -44,15 +37,21 @@ public class TestEntity {
 
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(this.id);
+		return ObjectUtils.nullSafeHashCode(this.id);
 	}
 
 	@Override
-	public boolean equals(@Nullable Object obj) {
+	public boolean equals(Object obj) {
 		if (obj == this) {
 			return true;
 		}
-		return (obj instanceof TestEntity that && ObjectUtils.nullSafeEquals(this.id, that.id));
+		if (obj == null) {
+			return false;
+		}
+		if (obj instanceof TestEntity) {
+			return ObjectUtils.nullSafeEquals(this.id, ((TestEntity) obj).id);
+		}
+		return false;
 	}
 
 }

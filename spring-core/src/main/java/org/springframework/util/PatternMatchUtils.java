@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package org.springframework.util;
 import org.springframework.lang.Nullable;
 
 /**
- * Utility methods for simple pattern matching, in particular for Spring's typical
- * {@code xxx*}, {@code *xxx}, {@code *xxx*}, and {@code xxx*yyy} pattern styles.
+ * Utility methods for simple pattern matching, in particular for
+ * Spring's typical "xxx*", "*xxx" and "*xxx*" pattern styles.
  *
  * @author Juergen Hoeller
  * @since 2.0
@@ -28,10 +28,9 @@ import org.springframework.lang.Nullable;
 public abstract class PatternMatchUtils {
 
 	/**
-	 * Match a String against the given pattern, supporting direct equality as
-	 * well as the following simple pattern styles: {@code xxx*}, {@code *xxx},
-	 * {@code *xxx*}, and {@code xxx*yyy} (with an arbitrary number of pattern parts).
-	 * <p>Returns {@code false} if the supplied String or pattern is {@code null}.
+	 * Match a String against the given pattern, supporting the following simple
+	 * pattern styles: "xxx*", "*xxx", "*xxx*" and "xxx*yyy" matches (with an
+	 * arbitrary number of pattern parts), as well as direct equality.
 	 * @param pattern the pattern to match against
 	 * @param str the String to match
 	 * @return whether the String matches the given pattern
@@ -69,21 +68,19 @@ public abstract class PatternMatchUtils {
 		}
 
 		return (str.length() >= firstIndex &&
-				pattern.startsWith(str.substring(0, firstIndex)) &&
+				pattern.substring(0, firstIndex).equals(str.substring(0, firstIndex)) &&
 				simpleMatch(pattern.substring(firstIndex), str.substring(firstIndex)));
 	}
 
 	/**
-	 * Match a String against the given patterns, supporting direct equality as
-	 * well as the following simple pattern styles: {@code xxx*}, {@code *xxx},
-	 * {@code *xxx*}, and {@code xxx*yyy} (with an arbitrary number of pattern parts).
-	 * <p>Returns {@code false} if the supplied String is {@code null} or if the
-	 * supplied patterns array is {@code null} or empty.
+	 * Match a String against the given patterns, supporting the following simple
+	 * pattern styles: "xxx*", "*xxx", "*xxx*" and "xxx*yyy" matches (with an
+	 * arbitrary number of pattern parts), as well as direct equality.
 	 * @param patterns the patterns to match against
 	 * @param str the String to match
 	 * @return whether the String matches any of the given patterns
 	 */
-	public static boolean simpleMatch(@Nullable String[] patterns, @Nullable String str) {
+	public static boolean simpleMatch(@Nullable String[] patterns, String str) {
 		if (patterns != null) {
 			for (String pattern : patterns) {
 				if (simpleMatch(pattern, str)) {

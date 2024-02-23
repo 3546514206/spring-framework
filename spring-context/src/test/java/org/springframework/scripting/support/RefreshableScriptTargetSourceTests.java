@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,20 @@ package org.springframework.scripting.support;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.BeanFactory;
+
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.Mockito.mock;
 
 /**
  * @author Rick Evans
  */
-class RefreshableScriptTargetSourceTests {
+public class RefreshableScriptTargetSourceTests {
 
 	@Test
-	void createWithNullScriptSource() {
+	public void createWithNullScriptSource() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
-				new RefreshableScriptTargetSource(mock(), "a.bean", null, null, false));
+				new RefreshableScriptTargetSource(mock(BeanFactory.class), "a.bean", null, null, false));
 	}
 
 }

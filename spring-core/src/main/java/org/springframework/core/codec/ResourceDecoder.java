@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,7 @@
 
 package org.springframework.core.codec;
 
-import java.io.ByteArrayInputStream;
-import java.util.Map;
-
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamResource;
@@ -31,6 +26,10 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.Flux;
+
+import java.io.ByteArrayInputStream;
+import java.util.Map;
 
 /**
  * Decoder for {@link Resource Resources}.
@@ -42,7 +41,7 @@ import org.springframework.util.MimeTypeUtils;
 public class ResourceDecoder extends AbstractDataBufferDecoder<Resource> {
 
 	/** Name of hint with a filename for the resource(e.g. from "Content-Disposition" HTTP header). */
-	public static final String FILENAME_HINT = ResourceDecoder.class.getName() + ".filename";
+	public static String FILENAME_HINT = ResourceDecoder.class.getName() + ".filename";
 
 
 	public ResourceDecoder() {
@@ -76,16 +75,12 @@ public class ResourceDecoder extends AbstractDataBufferDecoder<Resource> {
 		}
 
 		Class<?> clazz = elementType.toClass();
-		String filename = (hints != null ? (String) hints.get(FILENAME_HINT) : null);
+		String filename = hints != null ? (String) hints.get(FILENAME_HINT) : null;
 		if (clazz == InputStreamResource.class) {
 			return new InputStreamResource(new ByteArrayInputStream(bytes)) {
 				@Override
 				public String getFilename() {
 					return filename;
-				}
-				@Override
-				public long contentLength() {
-					return bytes.length;
 				}
 			};
 		}

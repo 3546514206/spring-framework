@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,13 @@
 package org.springframework.core.env;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -79,20 +78,15 @@ public class CompositePropertySource extends EnumerablePropertySource<Object> {
 
 	@Override
 	public String[] getPropertyNames() {
-		List<String[]> namesList = new ArrayList<>(this.propertySources.size());
-		int total = 0;
+		Set<String> names = new LinkedHashSet<>();
 		for (PropertySource<?> propertySource : this.propertySources) {
-			if (!(propertySource instanceof EnumerablePropertySource<?> enumerablePropertySource)) {
+			if (!(propertySource instanceof EnumerablePropertySource)) {
 				throw new IllegalStateException(
 						"Failed to enumerate property names due to non-enumerable property source: " + propertySource);
 			}
-			String[] names = enumerablePropertySource.getPropertyNames();
-			namesList.add(names);
-			total += names.length;
+			names.addAll(Arrays.asList(((EnumerablePropertySource<?>) propertySource).getPropertyNames()));
 		}
-		Set<String> allNames = CollectionUtils.newLinkedHashSet(total);
-		namesList.forEach(names -> Collections.addAll(allNames, names));
-		return StringUtils.toStringArray(allNames);
+		return StringUtils.toStringArray(names);
 	}
 
 

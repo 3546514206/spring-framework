@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@
 
 package org.springframework.core.codec;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
+import org.springframework.core.ResolvableType;
+import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
 
-import org.springframework.core.ResolvableType;
-import org.springframework.core.testfixture.codec.AbstractEncoderTests;
-import org.springframework.util.MimeTypeUtils;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,7 +41,7 @@ class ByteBufferEncoderTests extends AbstractEncoderTests<ByteBufferEncoder> {
 
 	@Override
 	@Test
-	protected void canEncode() {
+	public void canEncode() {
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(ByteBuffer.class),
 				MimeTypeUtils.TEXT_PLAIN)).isTrue();
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(Integer.class),
@@ -57,7 +55,7 @@ class ByteBufferEncoderTests extends AbstractEncoderTests<ByteBufferEncoder> {
 
 	@Override
 	@Test
-	protected void encode() {
+	public void encode() {
 		Flux<ByteBuffer> input = Flux.just(this.fooBytes, this.barBytes)
 				.map(ByteBuffer::wrap);
 

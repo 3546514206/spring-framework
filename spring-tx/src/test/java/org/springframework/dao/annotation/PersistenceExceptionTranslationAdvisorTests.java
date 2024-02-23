@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,18 +21,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import jakarta.persistence.PersistenceException;
+import javax.persistence.PersistenceException;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.support.MapPersistenceExceptionTranslator;
+import org.springframework.dao.support.DataAccessUtilsTests.MapPersistenceExceptionTranslator;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.stereotype.Repository;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatRuntimeException;
 
 /**
  * Tests for PersistenceExceptionTranslationAdvisor's exception translation, as applied by
@@ -41,11 +41,11 @@ import static org.assertj.core.api.Assertions.assertThatRuntimeException;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
-class PersistenceExceptionTranslationAdvisorTests {
+public class PersistenceExceptionTranslationAdvisorTests {
 
-	private final RuntimeException doNotTranslate = new RuntimeException();
+	private RuntimeException doNotTranslate = new RuntimeException();
 
-	private final PersistenceException persistenceException1 = new PersistenceException();
+	private PersistenceException persistenceException1 = new PersistenceException();
 
 	protected RepositoryInterface createProxy(RepositoryInterfaceImpl target) {
 		MapPersistenceExceptionTranslator mpet = new MapPersistenceExceptionTranslator();
@@ -61,7 +61,7 @@ class PersistenceExceptionTranslationAdvisorTests {
 	}
 
 	@Test
-	void noTranslationNeeded() {
+	public void noTranslationNeeded() {
 		RepositoryInterfaceImpl target = new RepositoryInterfaceImpl();
 		RepositoryInterface ri = createProxy(target);
 
@@ -69,16 +69,16 @@ class PersistenceExceptionTranslationAdvisorTests {
 		ri.throwsPersistenceException();
 
 		target.setBehavior(persistenceException1);
-		assertThatRuntimeException()
-			.isThrownBy(ri::noThrowsClause)
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(
+				ri::noThrowsClause)
 			.isSameAs(persistenceException1);
-		assertThatRuntimeException()
-			.isThrownBy(ri::throwsPersistenceException)
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(
+				ri::throwsPersistenceException)
 			.isSameAs(persistenceException1);
 	}
 
 	@Test
-	void translationNotNeededForTheseExceptions() {
+	public void translationNotNeededForTheseExceptions() {
 		RepositoryInterfaceImpl target = new StereotypedRepositoryInterfaceImpl();
 		RepositoryInterface ri = createProxy(target);
 
@@ -86,36 +86,36 @@ class PersistenceExceptionTranslationAdvisorTests {
 		ri.throwsPersistenceException();
 
 		target.setBehavior(doNotTranslate);
-		assertThatRuntimeException()
-			.isThrownBy(ri::noThrowsClause)
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(
+				ri::noThrowsClause)
 			.isSameAs(doNotTranslate);
-		assertThatRuntimeException()
-			.isThrownBy(ri::throwsPersistenceException)
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(
+				ri::throwsPersistenceException)
 			.isSameAs(doNotTranslate);
 	}
 
 	@Test
-	void translationNeededForTheseExceptions() {
+	public void translationNeededForTheseExceptions() {
 		doTestTranslationNeededForTheseExceptions(new StereotypedRepositoryInterfaceImpl());
 	}
 
 	@Test
-	void translationNeededForTheseExceptionsOnSuperclass() {
+	public void translationNeededForTheseExceptionsOnSuperclass() {
 		doTestTranslationNeededForTheseExceptions(new MyStereotypedRepositoryInterfaceImpl());
 	}
 
 	@Test
-	void translationNeededForTheseExceptionsWithCustomStereotype() {
+	public void translationNeededForTheseExceptionsWithCustomStereotype() {
 		doTestTranslationNeededForTheseExceptions(new CustomStereotypedRepositoryInterfaceImpl());
 	}
 
 	@Test
-	void translationNeededForTheseExceptionsOnInterface() {
+	public void translationNeededForTheseExceptionsOnInterface() {
 		doTestTranslationNeededForTheseExceptions(new MyInterfaceStereotypedRepositoryInterfaceImpl());
 	}
 
 	@Test
-	void translationNeededForTheseExceptionsOnInheritedInterface() {
+	public void translationNeededForTheseExceptionsOnInheritedInterface() {
 		doTestTranslationNeededForTheseExceptions(new MyInterfaceInheritedStereotypedRepositoryInterfaceImpl());
 	}
 
@@ -123,12 +123,12 @@ class PersistenceExceptionTranslationAdvisorTests {
 		RepositoryInterface ri = createProxy(target);
 
 		target.setBehavior(persistenceException1);
-		assertThatExceptionOfType(DataAccessException.class)
-			.isThrownBy(ri::noThrowsClause)
+		assertThatExceptionOfType(DataAccessException.class).isThrownBy(
+				ri::noThrowsClause)
 			.withCause(persistenceException1);
 
-		assertThatExceptionOfType(PersistenceException.class)
-			.isThrownBy(ri::throwsPersistenceException)
+		assertThatExceptionOfType(PersistenceException.class).isThrownBy(
+				ri::throwsPersistenceException)
 			.isSameAs(persistenceException1);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,6 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.util.Optional;
-
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +36,11 @@ import org.springframework.web.reactive.config.ViewResolverRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.result.view.freemarker.FreeMarkerConfigurer;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,7 +53,10 @@ class RequestMappingViewResolutionIntegrationTests extends AbstractRequestMappin
 
 	@Override
 	protected ApplicationContext initApplicationContext() {
-		return new AnnotationConfigApplicationContext(WebConfig.class);
+		AnnotationConfigApplicationContext wac = new AnnotationConfigApplicationContext();
+		wac.register(WebConfig.class);
+		wac.refresh();
+		return wac;
 	}
 
 
@@ -69,7 +72,7 @@ class RequestMappingViewResolutionIntegrationTests extends AbstractRequestMappin
 	void etagCheckWithNotModifiedResponse(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		URI uri = URI.create("http://localhost:" + this.port + "/html");
+		URI uri = new URI("http://localhost:" + this.port + "/html");
 		RequestEntity<Void> request = RequestEntity.get(uri).ifNoneMatch("\"deadb33f8badf00d\"").build();
 		ResponseEntity<String> response = getRestTemplate().exchange(request, String.class);
 
@@ -89,7 +92,7 @@ class RequestMappingViewResolutionIntegrationTests extends AbstractRequestMappin
 			}
 		};
 
-		URI uri = URI.create("http://localhost:" + this.port + "/redirect");
+		URI uri = new URI("http://localhost:" + this.port + "/redirect");
 		RequestEntity<Void> request = RequestEntity.get(uri).accept(MediaType.ALL).build();
 		ResponseEntity<Void> response = new RestTemplate(factory).exchange(request, Void.class);
 

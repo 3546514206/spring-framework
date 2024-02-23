@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Andy Wilkinson
  */
-class ImportVersusDirectRegistrationTests {
+public class ImportVersusDirectRegistrationTests {
 
 	@Test
-	void thingIsNotAvailableWhenOuterConfigurationIsRegisteredDirectly() {
+	public void thingIsNotAvailableWhenOuterConfigurationIsRegisteredDirectly() {
 		try (AnnotationConfigApplicationContext directRegistration = new AnnotationConfigApplicationContext()) {
 			directRegistration.register(AccidentalLiteConfiguration.class);
 			directRegistration.refresh();
@@ -39,7 +39,7 @@ class ImportVersusDirectRegistrationTests {
 	}
 
 	@Test
-	void thingIsNotAvailableWhenOuterConfigurationIsRegisteredWithClassName() {
+	public void thingIsNotAvailableWhenOuterConfigurationIsRegisteredWithClassName() {
 		try (AnnotationConfigApplicationContext directRegistration = new AnnotationConfigApplicationContext()) {
 			directRegistration.registerBeanDefinition("config",
 					new RootBeanDefinition(AccidentalLiteConfiguration.class.getName()));
@@ -50,7 +50,7 @@ class ImportVersusDirectRegistrationTests {
 	}
 
 	@Test
-	void thingIsNotAvailableWhenOuterConfigurationIsImported() {
+	public void thingIsNotAvailableWhenOuterConfigurationIsImported() {
 		try (AnnotationConfigApplicationContext viaImport = new AnnotationConfigApplicationContext()) {
 			viaImport.register(Importer.class);
 			viaImport.refresh();

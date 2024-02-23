@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,20 +28,20 @@ import org.springframework.expression.spel.support.StandardTypeConverter;
  * @author Andy Clement
  * @author Oliver Becker
  */
-class BooleanExpressionTests extends AbstractExpressionTests {
+public class BooleanExpressionTests extends AbstractExpressionTests {
 
 	@Test
-	void testBooleanTrue() {
+	public void testBooleanTrue() {
 		evaluate("true", Boolean.TRUE, Boolean.class);
 	}
 
 	@Test
-	void testBooleanFalse() {
+	public void testBooleanFalse() {
 		evaluate("false", Boolean.FALSE, Boolean.class);
 	}
 
 	@Test
-	void testOr() {
+	public void testOr() {
 		evaluate("false or false", Boolean.FALSE, Boolean.class);
 		evaluate("false or true", Boolean.TRUE, Boolean.class);
 		evaluate("true or false", Boolean.TRUE, Boolean.class);
@@ -49,7 +49,7 @@ class BooleanExpressionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testAnd() {
+	public void testAnd() {
 		evaluate("false and false", Boolean.FALSE, Boolean.class);
 		evaluate("false and true", Boolean.FALSE, Boolean.class);
 		evaluate("true and false", Boolean.FALSE, Boolean.class);
@@ -57,7 +57,7 @@ class BooleanExpressionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testNot() {
+	public void testNot() {
 		evaluate("!false", Boolean.TRUE, Boolean.class);
 		evaluate("!true", Boolean.FALSE, Boolean.class);
 
@@ -66,21 +66,21 @@ class BooleanExpressionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testCombinations01() {
+	public void testCombinations01() {
 		evaluate("false and false or true", Boolean.TRUE, Boolean.class);
 		evaluate("true and false or true", Boolean.TRUE, Boolean.class);
 		evaluate("true and false or false", Boolean.FALSE, Boolean.class);
 	}
 
 	@Test
-	void testWritability() {
+	public void testWritability() {
 		evaluate("true and true", Boolean.TRUE, Boolean.class, false);
 		evaluate("true or true", Boolean.TRUE, Boolean.class, false);
 		evaluate("!false", Boolean.TRUE, Boolean.class, false);
 	}
 
 	@Test
-	void testBooleanErrors01() {
+	public void testBooleanErrors01() {
 		evaluateAndCheckError("1.0 or false", SpelMessage.TYPE_CONVERSION_ERROR, 0);
 		evaluateAndCheckError("false or 39.4", SpelMessage.TYPE_CONVERSION_ERROR, 9);
 		evaluateAndCheckError("true and 'hello'", SpelMessage.TYPE_CONVERSION_ERROR, 9);
@@ -90,7 +90,7 @@ class BooleanExpressionTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void testConvertAndHandleNull() { // SPR-9445
+	public void testConvertAndHandleNull() { // SPR-9445
 		// without null conversion
 		evaluateAndCheckError("null or true", SpelMessage.TYPE_CONVERSION_ERROR, 0, "null", "boolean");
 		evaluateAndCheckError("null and true", SpelMessage.TYPE_CONVERSION_ERROR, 0, "null", "boolean");

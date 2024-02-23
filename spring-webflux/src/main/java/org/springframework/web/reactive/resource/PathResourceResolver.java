@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 package org.springframework.web.reactive.resource;
 
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.core.log.LogFormatUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.UriUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A simple {@code ResourceResolver} that tries to find a resource under the given
@@ -42,7 +41,6 @@ import org.springframework.web.util.UriUtils;
  * expected to be configured at the end in a chain of resolvers.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
  * @since 5.0
  */
 public class PathResourceResolver extends AbstractResourceResolver {
@@ -52,7 +50,7 @@ public class PathResourceResolver extends AbstractResourceResolver {
 
 
 	/**
-	 * By default, when a Resource is found, the path of the resolved resource is
+	 * By default when a Resource is found, the path of the resolved resource is
 	 * compared to ensure it's under the input location where it was found.
 	 * However sometimes that may not be the case, e.g. when
 	 * {@link CssLinkResourceTransformer}
@@ -111,7 +109,7 @@ public class PathResourceResolver extends AbstractResourceResolver {
 	 */
 	protected Mono<Resource> getResource(String resourcePath, Resource location) {
 		try {
-			if (!(location instanceof UrlResource)) {
+			if (location instanceof ClassPathResource) {
 				resourcePath = UriUtils.decode(resourcePath, StandardCharsets.UTF_8);
 			}
 			Resource resource = location.createRelative(resourcePath);
@@ -120,12 +118,11 @@ public class PathResourceResolver extends AbstractResourceResolver {
 					return Mono.just(resource);
 				}
 				else if (logger.isWarnEnabled()) {
-					Resource[] allowed = getAllowedLocations();
-					logger.warn(LogFormatUtils.formatValue(
-							"Resource path \"" + resourcePath + "\" was successfully resolved " +
-									"but resource \"" + resource + "\" is neither under the " +
-									"current location \"" + location + "\" nor under any of the " +
-									"allowed locations " + (allowed != null ? Arrays.asList(allowed) : "[]"), -1, true));
+					Resource[] allowedLocations = getAllowedLocations();
+					logger.warn("Resource path \"" + resourcePath + "\" was successfully resolved " +
+							"but resource \"" + resource.getURL() + "\" is neither under the " +
+							"current location \"" + location.getURL() + "\" nor under any of the " +
+							"allowed locations " + (allowedLocations != null ? Arrays.asList(allowedLocations) : "[]"));
 				}
 			}
 			return Mono.empty();
@@ -146,12 +143,12 @@ public class PathResourceResolver extends AbstractResourceResolver {
 
 	/**
 	 * Perform additional checks on a resolved resource beyond checking whether the
-	 * resource exists and is readable. The default implementation also verifies
+	 * resources exists and is readable. The default implementation also verifies
 	 * the resource is either under the location relative to which it was found or
 	 * is under one of the {@link #setAllowedLocations allowed locations}.
 	 * @param resource the resource to check
 	 * @param location the location relative to which the resource was found
-	 * @return "true" if resource is in a valid location, "false" otherwise
+	 * @return "true" if resource is in a valid location, "false" otherwise.
 	 */
 	protected boolean checkResource(Resource resource, Resource location) throws IOException {
 		if (isResourceUnderLocation(resource, location)) {
@@ -179,8 +176,8 @@ public class PathResourceResolver extends AbstractResourceResolver {
 			resourcePath = resource.getURL().toExternalForm();
 			locationPath = StringUtils.cleanPath(location.getURL().toString());
 		}
-		else if (resource instanceof ClassPathResource classPathResource) {
-			resourcePath = classPathResource.getPath();
+		else if (resource instanceof ClassPathResource) {
+			resourcePath = ((ClassPathResource) resource).getPath();
 			locationPath = StringUtils.cleanPath(((ClassPathResource) location).getPath());
 		}
 		else {
@@ -199,15 +196,17 @@ public class PathResourceResolver extends AbstractResourceResolver {
 		if (resourcePath.contains("%")) {
 			// Use URLDecoder (vs UriUtils) to preserve potentially decoded UTF-8 chars...
 			try {
-				String decodedPath = URLDecoder.decode(resourcePath, StandardCharsets.UTF_8);
+				String decodedPath = URLDecoder.decode(resourcePath, "UTF-8");
 				if (decodedPath.contains("../") || decodedPath.contains("..\\")) {
-					logger.warn(LogFormatUtils.formatValue(
-							"Resolved resource path contains encoded \"../\" or \"..\\\": " + resourcePath, -1, true));
+					logger.warn("Resolved resource path contains encoded \"../\" or \"..\\\": " + resourcePath);
 					return true;
 				}
 			}
 			catch (IllegalArgumentException ex) {
 				// May not be possible to decode...
+			}
+			catch (UnsupportedEncodingException ex) {
+				// Should never happen...
 			}
 		}
 		return false;

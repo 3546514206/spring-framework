@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,18 @@
 
 package org.springframework.web.servlet.mvc.condition;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.cors.CorsUtils;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
- * A logical conjunction ({@code ' && '}) request condition that matches a request against
+ * A logical conjunction (' && ') request condition that matches a request against
  * a set of header expressions with syntax defined in {@link RequestMapping#headers()}.
  *
  * <p>Expressions passed to the constructor with header names 'Accept' or
@@ -53,32 +50,30 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 * Create a new instance from the given header expressions. Expressions with
 	 * header names 'Accept' or 'Content-Type' are ignored. See {@link ConsumesRequestCondition}
 	 * and {@link ProducesRequestCondition} for those.
+	 *
 	 * @param headers media type expressions with syntax defined in {@link RequestMapping#headers()};
-	 * if 0, the condition will match to every request
+	 *                if 0, the condition will match to every request
 	 */
 	public HeadersRequestCondition(String... headers) {
-		this.expressions = parseExpressions(headers);
-	}
-
-	private static Set<HeaderExpression> parseExpressions(String... headers) {
-		Set<HeaderExpression> result = null;
-		if (!ObjectUtils.isEmpty(headers)) {
-			for (String header : headers) {
-				HeaderExpression expr = new HeaderExpression(header);
-				if ("Accept".equalsIgnoreCase(expr.name) || "Content-Type".equalsIgnoreCase(expr.name)) {
-					continue;
-				}
-				result = (result != null ? result : CollectionUtils.newLinkedHashSet(headers.length));
-				result.add(expr);
-			}
-		}
-		return (result != null ? result : Collections.emptySet());
+		this(parseExpressions(headers));
 	}
 
 	private HeadersRequestCondition(Set<HeaderExpression> conditions) {
 		this.expressions = conditions;
 	}
 
+
+	private static Set<HeaderExpression> parseExpressions(String... headers) {
+		Set<HeaderExpression> expressions = new LinkedHashSet<>();
+		for (String header : headers) {
+			HeaderExpression expr = new HeaderExpression(header);
+			if ("Accept".equalsIgnoreCase(expr.name) || "Content-Type".equalsIgnoreCase(expr.name)) {
+				continue;
+			}
+			expressions.add(expr);
+		}
+		return expressions;
+	}
 
 	/**
 	 * Return the contained request header expressions.
@@ -103,15 +98,6 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 */
 	@Override
 	public HeadersRequestCondition combine(HeadersRequestCondition other) {
-		if (isEmpty() && other.isEmpty()) {
-			return this;
-		}
-		else if (other.isEmpty()) {
-			return this;
-		}
-		else if (isEmpty()) {
-			return other;
-		}
 		Set<HeaderExpression> set = new LinkedHashSet<>(this.expressions);
 		set.addAll(other.expressions);
 		return new HeadersRequestCondition(set);
@@ -171,7 +157,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 */
 	static class HeaderExpression extends AbstractNameValueExpression<String> {
 
-		HeaderExpression(String expression) {
+		public HeaderExpression(String expression) {
 			super(expression);
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -35,9 +34,6 @@ import org.springframework.util.ClassUtils;
  * @since 5.2
  */
 @DisplayName("Explicit properties file in @TestPropertySource")
-// Since Spring test's AOT processing support does not invoke test lifecycle methods such
-// as @BeforeAll/@AfterAll, this test class simply is not supported for AOT processing.
-@DisabledInAotMode
 class ExplicitPropertiesFileTestPropertySourceTests {
 
 	static final String CURRENT_TEST_PACKAGE = "current.test.package";
@@ -62,7 +58,7 @@ class ExplicitPropertiesFileTestPropertySourceTests {
 		@Nested
 		@DisplayName("with absolute path")
 		@TestPropertySource("/org/springframework/test/context/env/explicit.properties")
-		class AbsolutePathTests extends AbstractExplicitPropertiesFileTests {
+		class AbsolutePathPathTests extends AbstractExplicitPropertiesFileTests {
 		}
 
 		@Nested

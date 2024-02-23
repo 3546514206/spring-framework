@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests regarding overloading and overriding of bean methods.
- *
- * <p>Related to SPR-6618.
+ * Related to SPR-6618.
  *
  * @author Chris Beams
  * @author Phillip Webb
@@ -40,151 +39,115 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class BeanMethodPolymorphismTests {
 
 	@Test
-	void beanMethodDetectedOnSuperClass() {
+	public void beanMethodDetectedOnSuperClass() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(Config.class);
-
-		assertThat(ctx.getBean("testBean", BaseTestBean.class)).isNotNull();
+		ctx.getBean("testBean", TestBean.class);
 	}
 
 	@Test
-	void beanMethodOverriding() {
+	public void beanMethodOverriding() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(OverridingConfig.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-		assertThat(ctx.getBean("testBean", BaseTestBean.class).toString()).isEqualTo("overridden");
+		assertThat(ctx.getBean("testBean", TestBean.class).toString()).isEqualTo("overridden");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverridingOnASM() {
+	public void beanMethodOverridingOnASM() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.registerBeanDefinition("config", new RootBeanDefinition(OverridingConfig.class.getName()));
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-		assertThat(ctx.getBean("testBean", BaseTestBean.class).toString()).isEqualTo("overridden");
+		assertThat(ctx.getBean("testBean", TestBean.class).toString()).isEqualTo("overridden");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverridingWithDifferentBeanName() {
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
-		ctx.register(OverridingConfigWithDifferentBeanName.class);
-		ctx.setAllowBeanDefinitionOverriding(false);
-		ctx.refresh();
-
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("myTestBean")).isFalse();
-		assertThat(ctx.getBean("myTestBean", BaseTestBean.class).toString()).isEqualTo("overridden");
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("myTestBean")).isTrue();
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-	}
-
-	@Test
-	void beanMethodOverridingWithDifferentBeanNameOnASM() {
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
-		ctx.registerBeanDefinition("config", new RootBeanDefinition(OverridingConfigWithDifferentBeanName.class.getName()));
-		ctx.setAllowBeanDefinitionOverriding(false);
-		ctx.refresh();
-
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("myTestBean")).isFalse();
-		assertThat(ctx.getBean("myTestBean", BaseTestBean.class).toString()).isEqualTo("overridden");
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("myTestBean")).isTrue();
-		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-	}
-
-	@Test
-	void beanMethodOverridingWithNarrowedReturnType() {
+	public void beanMethodOverridingWithNarrowedReturnType() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(NarrowedOverridingConfig.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-		assertThat(ctx.getBean("testBean", BaseTestBean.class).toString()).isEqualTo("overridden");
+		assertThat(ctx.getBean("testBean", TestBean.class).toString()).isEqualTo("overridden");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverridingWithNarrowedReturnTypeOnASM() {
+	public void beanMethodOverridingWithNarrowedReturnTypeOnASM() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.registerBeanDefinition("config", new RootBeanDefinition(NarrowedOverridingConfig.class.getName()));
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isFalse();
-		assertThat(ctx.getBean("testBean", BaseTestBean.class).toString()).isEqualTo("overridden");
+		assertThat(ctx.getBean("testBean", TestBean.class).toString()).isEqualTo("overridden");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("testBean")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverloadingWithoutInheritance() {
+	public void beanMethodOverloadingWithoutInheritance() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConfigWithOverloading.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getBean(String.class)).isEqualTo("regular");
 	}
 
 	@Test
-	void beanMethodOverloadingWithoutInheritanceAndExtraDependency() {
+	public void beanMethodOverloadingWithoutInheritanceAndExtraDependency() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConfigWithOverloading.class);
 		ctx.getDefaultListableBeanFactory().registerSingleton("anInt", 5);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getBean(String.class)).isEqualTo("overloaded5");
 	}
 
 	@Test
-	void beanMethodOverloadingWithAdditionalMetadata() {
+	public void beanMethodOverloadingWithAdditionalMetadata() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConfigWithOverloadingAndAdditionalMetadata.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isFalse();
 		assertThat(ctx.getBean(String.class)).isEqualTo("regular");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverloadingWithAdditionalMetadataButOtherMethodExecuted() {
+	public void beanMethodOverloadingWithAdditionalMetadataButOtherMethodExecuted() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(ConfigWithOverloadingAndAdditionalMetadata.class);
 		ctx.getDefaultListableBeanFactory().registerSingleton("anInt", 5);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isFalse();
 		assertThat(ctx.getBean(String.class)).isEqualTo("overloaded5");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isTrue();
 	}
 
 	@Test
-	void beanMethodOverloadingWithInheritance() {
+	public void beanMethodOverloadingWithInheritance() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(SubConfig.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isFalse();
 		assertThat(ctx.getBean(String.class)).isEqualTo("overloaded5");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isTrue();
 	}
 
-	@Test  // SPR-11025
-	void beanMethodOverloadingWithInheritanceAndList() {
+	// SPR-11025
+	@Test
+	public void beanMethodOverloadingWithInheritanceAndList() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(SubConfigWithList.class);
 		ctx.setAllowBeanDefinitionOverriding(false);
 		ctx.refresh();
-
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isFalse();
 		assertThat(ctx.getBean(String.class)).isEqualTo("overloaded5");
 		assertThat(ctx.getDefaultListableBeanFactory().containsSingleton("aString")).isTrue();
@@ -196,28 +159,19 @@ public class BeanMethodPolymorphismTests {
 	 * so it's referred to here as 'shadowing' to distinguish the difference.
 	 */
 	@Test
-	void beanMethodShadowing() {
+	public void beanMethodShadowing() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(ShadowConfig.class);
-
 		assertThat(ctx.getBean(String.class)).isEqualTo("shadow");
 	}
 
 	@Test
-	void beanMethodThroughAopProxy() {
+	public void beanMethodThroughAopProxy() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config.class);
 		ctx.register(AnnotationAwareAspectJAutoProxyCreator.class);
 		ctx.register(TestAdvisor.class);
 		ctx.refresh();
-		ctx.getBean("testBean", BaseTestBean.class);
-	}
-
-
-	static class BaseTestBean {
-	}
-
-
-	static class ExtendedTestBean extends BaseTestBean {
+		ctx.getBean("testBean", TestBean.class);
 	}
 
 
@@ -225,8 +179,8 @@ public class BeanMethodPolymorphismTests {
 	static class BaseConfig {
 
 		@Bean
-		public BaseTestBean testBean() {
-			return new BaseTestBean();
+		public TestBean testBean() {
+			return new TestBean();
 		}
 	}
 
@@ -241,8 +195,8 @@ public class BeanMethodPolymorphismTests {
 
 		@Bean @Lazy
 		@Override
-		public BaseTestBean testBean() {
-			return new BaseTestBean() {
+		public TestBean testBean() {
+			return new TestBean() {
 				@Override
 				public String toString() {
 					return "overridden";
@@ -252,19 +206,7 @@ public class BeanMethodPolymorphismTests {
 	}
 
 
-	@Configuration
-	static class OverridingConfigWithDifferentBeanName extends BaseConfig {
-
-		@Bean("myTestBean") @Lazy
-		@Override
-		public BaseTestBean testBean() {
-			return new BaseTestBean() {
-				@Override
-				public String toString() {
-					return "overridden";
-				}
-			};
-		}
+	static class ExtendedTestBean extends TestBean {
 	}
 
 
@@ -284,7 +226,7 @@ public class BeanMethodPolymorphismTests {
 	}
 
 
-	@Configuration(enforceUniqueMethods = false)
+	@Configuration
 	static class ConfigWithOverloading {
 
 		@Bean
@@ -299,7 +241,7 @@ public class BeanMethodPolymorphismTests {
 	}
 
 
-	@Configuration(enforceUniqueMethods = false)
+	@Configuration
 	static class ConfigWithOverloadingAndAdditionalMetadata {
 
 		@Bean @Lazy

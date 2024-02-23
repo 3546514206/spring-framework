@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,43 +16,33 @@
 
 package org.springframework.mock.web;
 
-import java.time.DateTimeException;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-
-import jakarta.servlet.http.Cookie;
-
-import org.springframework.core.style.ToStringCreator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import javax.servlet.http.Cookie;
 
 /**
  * Extension of {@code Cookie} with extra attributes, as defined in
  * <a href="https://tools.ietf.org/html/rfc6265">RFC 6265</a>.
  *
- * <p>As of Spring 6.0, this set of mocks is designed on a Servlet 6.0 baseline.
- *
  * @author Vedran Pavic
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 5.1
  */
-@SuppressWarnings("removal")
 public class MockCookie extends Cookie {
 
 	private static final long serialVersionUID = 4312531139502726325L;
 
-	private static final String SAME_SITE = "SameSite";
-	private static final String EXPIRES = "Expires";
 
 	@Nullable
-	private ZonedDateTime expires;
+	private String sameSite;
 
 
 	/**
-	 * Construct a new {@link MockCookie} with the supplied name and value.
-	 * @param name the name
+	 * Constructor with the cookie name and value.
+	 *
+	 * @param name  the name
 	 * @param value the value
 	 * @see Cookie#Cookie(String, String)
 	 */
@@ -61,45 +51,7 @@ public class MockCookie extends Cookie {
 	}
 
 	/**
-	 * Set the "Expires" attribute for this cookie.
-	 * @since 5.1.11
-	 */
-	public void setExpires(@Nullable ZonedDateTime expires) {
-		setAttribute(EXPIRES, (expires != null ? expires.format(DateTimeFormatter.RFC_1123_DATE_TIME) : null));
-	}
-
-	/**
-	 * Get the "Expires" attribute for this cookie.
-	 * @return the "Expires" attribute for this cookie, or {@code null} if not set
-	 * @since 5.1.11
-	 */
-	@Nullable
-	public ZonedDateTime getExpires() {
-		return this.expires;
-	}
-
-	/**
-	 * Set the "SameSite" attribute for this cookie.
-	 * <p>This limits the scope of the cookie such that it will only be attached
-	 * to same-site requests if the supplied value is {@code "Strict"} or cross-site
-	 * requests if the supplied value is {@code "Lax"}.
-	 * @see <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis#section-4.1.2.7">RFC6265 bis</a>
-	 */
-	public void setSameSite(@Nullable String sameSite) {
-		setAttribute(SAME_SITE, sameSite);
-	}
-
-	/**
-	 * Get the "SameSite" attribute for this cookie.
-	 * @return the "SameSite" attribute for this cookie, or {@code null} if not set
-	 */
-	@Nullable
-	public String getSameSite() {
-		return getAttribute(SAME_SITE);
-	}
-
-	/**
-	 * Factory method that parses the value of the supplied "Set-Cookie" header.
+	 * Factory method that parses the value of a "Set-Cookie" header.
 	 * @param setCookieHeader the "Set-Cookie" value; never {@code null} or empty
 	 * @return the created cookie
 	 */
@@ -118,36 +70,39 @@ public class MockCookie extends Cookie {
 		for (String attribute : attributes) {
 			if (StringUtils.startsWithIgnoreCase(attribute, "Domain")) {
 				cookie.setDomain(extractAttributeValue(attribute, setCookieHeader));
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, "Max-Age")) {
+			} else if (StringUtils.startsWithIgnoreCase(attribute, "Max-Age")) {
 				cookie.setMaxAge(Integer.parseInt(extractAttributeValue(attribute, setCookieHeader)));
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, EXPIRES)) {
-				try {
-					cookie.setExpires(ZonedDateTime.parse(extractAttributeValue(attribute, setCookieHeader),
-							DateTimeFormatter.RFC_1123_DATE_TIME));
-				}
-				catch (DateTimeException ex) {
-					// ignore invalid date formats
-				}
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, "Path")) {
+			} else if (StringUtils.startsWithIgnoreCase(attribute, "Path")) {
 				cookie.setPath(extractAttributeValue(attribute, setCookieHeader));
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, "Secure")) {
+			} else if (StringUtils.startsWithIgnoreCase(attribute, "Secure")) {
 				cookie.setSecure(true);
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, "HttpOnly")) {
+			} else if (StringUtils.startsWithIgnoreCase(attribute, "HttpOnly")) {
 				cookie.setHttpOnly(true);
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, SAME_SITE)) {
+			} else if (StringUtils.startsWithIgnoreCase(attribute, "SameSite")) {
 				cookie.setSameSite(extractAttributeValue(attribute, setCookieHeader));
-			}
-			else if (StringUtils.startsWithIgnoreCase(attribute, "Comment")) {
-				cookie.setComment(extractAttributeValue(attribute, setCookieHeader));
 			}
 		}
 		return cookie;
+	}
+
+	/**
+	 * Return the "SameSite" attribute, or {@code null} if not set.
+	 */
+	@Nullable
+	public String getSameSite() {
+		return this.sameSite;
+	}
+
+	/**
+	 * Add the "SameSite" attribute to the cookie.
+	 * <p>This limits the scope of the cookie such that it will only be attached
+	 * to same site requests if {@code "Strict"} or cross-site requests if
+	 * {@code "Lax"}.
+	 *
+	 * @see <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis#section-4.1.2.7">RFC6265 bis</a>
+	 */
+	public void setSameSite(@Nullable String sameSite) {
+		this.sameSite = sameSite;
 	}
 
 	private static String extractAttributeValue(String attribute, String header) {
@@ -155,31 +110,6 @@ public class MockCookie extends Cookie {
 		Assert.isTrue(nameAndValue.length == 2,
 				() -> "No value in attribute '" + nameAndValue[0] + "' for Set-Cookie header '" + header + "'");
 		return nameAndValue[1];
-	}
-
-	@Override
-	public void setAttribute(String name, @Nullable String value) {
-		if (EXPIRES.equalsIgnoreCase(name)) {
-			this.expires = (value != null ? ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME) : null);
-		}
-		super.setAttribute(name, value);
-	}
-
-	@Override
-	public String toString() {
-		return new ToStringCreator(this)
-				.append("name", getName())
-				.append("value", getValue())
-				.append("Path", getPath())
-				.append("Domain", getDomain())
-				.append("Version", getVersion())
-				.append("Comment", getComment())
-				.append("Secure", getSecure())
-				.append("HttpOnly", isHttpOnly())
-				.append(SAME_SITE, getSameSite())
-				.append("Max-Age", getMaxAge())
-				.append(EXPIRES, getAttribute(EXPIRES))
-				.toString();
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.springframework.jms.core;
 
-import io.micrometer.jakarta9.instrument.jms.JmsInstrumentation;
-import io.micrometer.observation.ObservationRegistry;
-import jakarta.jms.Connection;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.DeliveryMode;
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.Message;
-import jakarta.jms.MessageConsumer;
-import jakarta.jms.MessageProducer;
-import jakarta.jms.Queue;
-import jakarta.jms.QueueBrowser;
-import jakarta.jms.Session;
-import jakarta.jms.TemporaryQueue;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.DeliveryMode;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
+import javax.jms.Queue;
+import javax.jms.QueueBrowser;
+import javax.jms.Session;
+import javax.jms.TemporaryQueue;
 
 import org.springframework.jms.JmsException;
 import org.springframework.jms.connection.ConnectionFactoryUtils;
@@ -42,7 +40,6 @@ import org.springframework.jms.support.destination.JmsDestinationAccessor;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 /**
  * Helper class that simplifies synchronous JMS access code.
@@ -53,7 +50,7 @@ import org.springframework.util.ClassUtils;
  * domain.
  *
  * <p>Default settings for JMS Sessions are "not transacted" and "auto-acknowledge".
- * As defined by the Jakarta EE specification, the transaction and acknowledgement
+ * As defined by the Java EE specification, the transaction and acknowledgement
  * parameters are ignored when a JMS Session is created inside an active
  * transaction, no matter if a JTA transaction or a Spring-managed transaction.
  * To configure them for native JMS usage, specify appropriate values for
@@ -73,7 +70,7 @@ import org.springframework.util.ClassUtils;
  * {@link org.springframework.jms.connection.SingleConnectionFactory} as a
  * decorator for your target {@code ConnectionFactory}, reusing a single
  * JMS Connection in a thread-safe fashion; this is often good enough for the
- * purpose of sending messages via this template. In a Jakarta EE environment,
+ * purpose of sending messages via this template. In a Java EE environment,
  * make sure that the {@code ConnectionFactory} is obtained from the
  * application's environment naming context via JNDI; application servers
  * typically expose pooled, transaction-aware factories there.
@@ -81,19 +78,15 @@ import org.springframework.util.ClassUtils;
  * @author Mark Pollack
  * @author Juergen Hoeller
  * @author Stephane Nicoll
- * @author Brian Clozel
  * @since 1.1
  * @see #setConnectionFactory
  * @see #setPubSubDomain
  * @see #setDestinationResolver
  * @see #setMessageConverter
- * @see jakarta.jms.MessageProducer
- * @see jakarta.jms.MessageConsumer
+ * @see javax.jms.MessageProducer
+ * @see javax.jms.MessageConsumer
  */
 public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations {
-
-	private static final boolean micrometerJakartaPresent = ClassUtils.isPresent(
-			"io.micrometer.jakarta9.instrument.jms.JmsInstrumentation", JmsTemplate.class.getClassLoader());
 
 	/** Internal ResourceFactory adapter for interacting with ConnectionFactoryUtils. */
 	private final JmsTemplateResourceFactory transactionalResourceFactory = new JmsTemplateResourceFactory();
@@ -124,9 +117,6 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	private int priority = Message.DEFAULT_PRIORITY;
 
 	private long timeToLive = Message.DEFAULT_TIME_TO_LIVE;
-
-	@Nullable
-	private ObservationRegistry observationRegistry;
 
 
 	/**
@@ -183,20 +173,17 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 */
 	@Nullable
 	public Destination getDefaultDestination() {
-		return (this.defaultDestination instanceof Destination dest ? dest : null);
+		return (this.defaultDestination instanceof Destination ? (Destination) this.defaultDestination : null);
 	}
 
 	@Nullable
 	private Queue getDefaultQueue() {
 		Destination defaultDestination = getDefaultDestination();
-		if (defaultDestination == null) {
-			return null;
-		}
-		if (!(defaultDestination instanceof Queue queue)) {
+		if (defaultDestination != null && !(defaultDestination instanceof Queue)) {
 			throw new IllegalStateException(
 					"'defaultDestination' does not correspond to a Queue. Check configuration of JmsTemplate.");
 		}
-		return queue;
+		return (Queue) defaultDestination;
 	}
 
 	/**
@@ -208,7 +195,7 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * @see #convertAndSend(Object)
 	 * @see #convertAndSend(Object, MessagePostProcessor)
 	 * @see #setDestinationResolver
-	 * @see #setDefaultDestination(jakarta.jms.Destination)
+	 * @see #setDefaultDestination(javax.jms.Destination)
 	 */
 	public void setDefaultDestinationName(@Nullable String destinationName) {
 		this.defaultDestination = destinationName;
@@ -220,7 +207,7 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 */
 	@Nullable
 	public String getDefaultDestinationName() {
-		return (this.defaultDestination instanceof String name ? name : null);
+		return (this.defaultDestination instanceof String ? (String) this.defaultDestination : null);
 	}
 
 	private String getRequiredDefaultDestinationName() throws IllegalStateException {
@@ -267,7 +254,7 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * Set whether message IDs are enabled. Default is "true".
 	 * <p>This is only a hint to the JMS producer.
 	 * See the JMS javadocs for details.
-	 * @see jakarta.jms.MessageProducer#setDisableMessageID
+	 * @see javax.jms.MessageProducer#setDisableMessageID
 	 */
 	public void setMessageIdEnabled(boolean messageIdEnabled) {
 		this.messageIdEnabled = messageIdEnabled;
@@ -284,7 +271,7 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * Set whether message timestamps are enabled. Default is "true".
 	 * <p>This is only a hint to the JMS producer.
 	 * See the JMS javadocs for details.
-	 * @see jakarta.jms.MessageProducer#setDisableMessageTimestamp
+	 * @see javax.jms.MessageProducer#setDisableMessageTimestamp
 	 */
 	public void setMessageTimestampEnabled(boolean messageTimestampEnabled) {
 		this.messageTimestampEnabled = messageTimestampEnabled;
@@ -300,7 +287,7 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	/**
 	 * Set whether to inhibit the delivery of messages published by its own connection.
 	 * Default is "false".
-	 * @see jakarta.jms.Session#createConsumer(jakarta.jms.Destination, String, boolean)
+	 * @see javax.jms.Session#createConsumer(javax.jms.Destination, String, boolean)
 	 */
 	public void setPubSubNoLocal(boolean pubSubNoLocal) {
 		this.pubSubNoLocal = pubSubNoLocal;
@@ -321,9 +308,9 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * to indicate that a receive operation should check if a message is
 	 * immediately available without blocking.
 	 * @see #receiveFromConsumer(MessageConsumer, long)
-	 * @see jakarta.jms.MessageConsumer#receive(long)
-	 * @see jakarta.jms.MessageConsumer#receiveNoWait()
-	 * @see jakarta.jms.MessageConsumer#receive()
+	 * @see javax.jms.MessageConsumer#receive(long)
+	 * @see javax.jms.MessageConsumer#receiveNoWait()
+	 * @see javax.jms.MessageConsumer#receive()
 	 */
 	public void setReceiveTimeout(long receiveTimeout) {
 		this.receiveTimeout = receiveTimeout;
@@ -401,8 +388,8 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * mode accordingly, to either "PERSISTENT" (2) or "NON_PERSISTENT" (1).
 	 * <p>Default is "true" a.k.a. delivery mode "PERSISTENT".
 	 * @see #setDeliveryMode(int)
-	 * @see jakarta.jms.DeliveryMode#PERSISTENT
-	 * @see jakarta.jms.DeliveryMode#NON_PERSISTENT
+	 * @see javax.jms.DeliveryMode#PERSISTENT
+	 * @see javax.jms.DeliveryMode#NON_PERSISTENT
 	 */
 	public void setDeliveryPersistent(boolean deliveryPersistent) {
 		this.deliveryMode = (deliveryPersistent ? DeliveryMode.PERSISTENT : DeliveryMode.NON_PERSISTENT);
@@ -415,10 +402,10 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * this is only used when "isExplicitQosEnabled" equals "true".
 	 * @param deliveryMode the delivery mode to use
 	 * @see #isExplicitQosEnabled
-	 * @see jakarta.jms.DeliveryMode#PERSISTENT
-	 * @see jakarta.jms.DeliveryMode#NON_PERSISTENT
-	 * @see jakarta.jms.Message#DEFAULT_DELIVERY_MODE
-	 * @see jakarta.jms.MessageProducer#send(jakarta.jms.Message, int, int, long)
+	 * @see javax.jms.DeliveryMode#PERSISTENT
+	 * @see javax.jms.DeliveryMode#NON_PERSISTENT
+	 * @see javax.jms.Message#DEFAULT_DELIVERY_MODE
+	 * @see javax.jms.MessageProducer#send(javax.jms.Message, int, int, long)
 	 */
 	public void setDeliveryMode(int deliveryMode) {
 		this.deliveryMode = deliveryMode;
@@ -436,8 +423,8 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * <p>Since a default value may be defined administratively,
 	 * this is only used when "isExplicitQosEnabled" equals "true".
 	 * @see #isExplicitQosEnabled
-	 * @see jakarta.jms.Message#DEFAULT_PRIORITY
-	 * @see jakarta.jms.MessageProducer#send(jakarta.jms.Message, int, int, long)
+	 * @see javax.jms.Message#DEFAULT_PRIORITY
+	 * @see javax.jms.MessageProducer#send(javax.jms.Message, int, int, long)
 	 */
 	public void setPriority(int priority) {
 		this.priority = priority;
@@ -456,8 +443,8 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * this is only used when "isExplicitQosEnabled" equals "true".
 	 * @param timeToLive the message's lifetime (in milliseconds)
 	 * @see #isExplicitQosEnabled
-	 * @see jakarta.jms.Message#DEFAULT_TIME_TO_LIVE
-	 * @see jakarta.jms.MessageProducer#send(jakarta.jms.Message, int, int, long)
+	 * @see javax.jms.Message#DEFAULT_TIME_TO_LIVE
+	 * @see javax.jms.MessageProducer#send(javax.jms.Message, int, int, long)
 	 */
 	public void setTimeToLive(long timeToLive) {
 		this.timeToLive = timeToLive;
@@ -470,15 +457,6 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 		return this.timeToLive;
 	}
 
-	/**
-	 * Configure the {@link ObservationRegistry} to use for recording JMS observations.
-	 * @param observationRegistry the observation registry to use.
-	 * @since 6.1
-	 * @see io.micrometer.jakarta9.instrument.jms.JmsInstrumentation
-	 */
-	public void setObservationRegistry(ObservationRegistry observationRegistry) {
-		this.observationRegistry = observationRegistry;
-	}
 
 	//---------------------------------------------------------------------------------------
 	// JmsOperations execute methods
@@ -504,7 +482,6 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 	 * @see #execute(SessionCallback)
 	 * @see #receive
 	 */
-	@SuppressWarnings("resource")
 	@Nullable
 	public <T> T execute(SessionCallback<T> action, boolean startConnection) throws JmsException {
 		Assert.notNull(action, "Callback object must not be null");
@@ -523,9 +500,6 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 			}
 			if (logger.isDebugEnabled()) {
 				logger.debug("Executing callback on JMS Session: " + sessionToUse);
-			}
-			if (micrometerJakartaPresent && this.observationRegistry != null) {
-				sessionToUse = MicrometerInstrumentation.instrumentSession(sessionToUse, this.observationRegistry);
 			}
 			return action.doInJms(sessionToUse);
 		}
@@ -1215,14 +1189,6 @@ public class JmsTemplate extends JmsDestinationAccessor implements JmsOperations
 		public boolean isSynchedLocalTransactionAllowed() {
 			return JmsTemplate.this.isSessionTransacted();
 		}
-	}
-
-	private abstract static class MicrometerInstrumentation {
-
-		static Session instrumentSession(Session session, ObservationRegistry registry) {
-			return JmsInstrumentation.instrumentSession(session, registry);
-		}
-
 	}
 
 }

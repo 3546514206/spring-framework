@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link AnnotationAttributes}.
+ * Unit tests for {@link AnnotationAttributes}.
  *
  * @author Chris Beams
  * @author Sam Brannen
@@ -60,8 +60,8 @@ class AnnotationAttributesTests {
 
 		assertThat(attributes.getString("name")).isEqualTo("dave");
 		assertThat(attributes.getStringArray("names")).isEqualTo(new String[] {"dave", "frank", "hal"});
-		assertThat(attributes.getBoolean("bool1")).isTrue();
-		assertThat(attributes.getBoolean("bool2")).isFalse();
+		assertThat(attributes.getBoolean("bool1")).isEqualTo(true);
+		assertThat(attributes.getBoolean("bool2")).isEqualTo(false);
 		assertThat(attributes.<Color>getEnum("color")).isEqualTo(Color.RED);
 		assertThat(attributes.getClass("class").equals(Integer.class)).isTrue();
 		assertThat(attributes.getClassArray("classes")).isEqualTo(new Class<?>[] {Number.class, Short.class, Integer.class});
@@ -72,7 +72,7 @@ class AnnotationAttributesTests {
 	}
 
 	@Test
-	void unresolvableClassWithClassNotFoundException() {
+	void unresolvableClassWithClassNotFoundException() throws Exception {
 		attributes.put("unresolvableClass", new ClassNotFoundException("myclass"));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> attributes.getClass("unresolvableClass"))
@@ -81,7 +81,7 @@ class AnnotationAttributesTests {
 	}
 
 	@Test
-	void unresolvableClassWithLinkageError() {
+	void unresolvableClassWithLinkageError() throws Exception {
 		attributes.put("unresolvableClass", new LinkageError("myclass"));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> attributes.getClass("unresolvableClass"))
@@ -90,7 +90,7 @@ class AnnotationAttributesTests {
 	}
 
 	@Test
-	void singleElementToSingleElementArrayConversionSupport() {
+	void singleElementToSingleElementArrayConversionSupport() throws Exception {
 		Filter filter = FilteredClass.class.getAnnotation(Filter.class);
 
 		AnnotationAttributes nestedAttributes = new AnnotationAttributes();
@@ -108,17 +108,17 @@ class AnnotationAttributesTests {
 
 		AnnotationAttributes[] array = attributes.getAnnotationArray("nestedAttributes");
 		assertThat(array).isNotNull();
-		assertThat(array).hasSize(1);
+		assertThat(array.length).isEqualTo(1);
 		assertThat(array[0].getString("name")).isEqualTo("Dilbert");
 
 		Filter[] filters = attributes.getAnnotationArray("filters", Filter.class);
 		assertThat(filters).isNotNull();
-		assertThat(filters).hasSize(1);
+		assertThat(filters.length).isEqualTo(1);
 		assertThat(filters[0].pattern()).isEqualTo("foo");
 	}
 
 	@Test
-	void nestedAnnotations() {
+	void nestedAnnotations() throws Exception {
 		Filter filter = FilteredClass.class.getAnnotation(Filter.class);
 
 		attributes.put("filter", filter);
@@ -130,7 +130,7 @@ class AnnotationAttributesTests {
 
 		Filter[] retrievedFilters = attributes.getAnnotationArray("filters", Filter.class);
 		assertThat(retrievedFilters).isNotNull();
-		assertThat(retrievedFilters).hasSize(2);
+		assertThat(retrievedFilters.length).isEqualTo(2);
 		assertThat(retrievedFilters[1].pattern()).isEqualTo("foo");
 	}
 

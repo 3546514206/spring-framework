@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package org.springframework.mock.web;
 
-import jakarta.servlet.jsp.PageContext;
+import javax.servlet.jsp.PageContext;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for the {@code MockPageContext} class.
+ * Unit tests for the {@code MockPageContext} class.
  *
  * @author Rick Evans
  */
@@ -35,7 +36,7 @@ class MockPageContextTests {
 	private final MockPageContext ctx = new MockPageContext();
 
 	@Test
-	void setAttributeWithNoScopeUsesPageScope() {
+	void setAttributeWithNoScopeUsesPageScope() throws Exception {
 		ctx.setAttribute(key, value);
 		assertThat(ctx.getAttribute(key, PageContext.PAGE_SCOPE)).isEqualTo(value);
 		assertThat(ctx.getAttribute(key, PageContext.APPLICATION_SCOPE)).isNull();
@@ -44,7 +45,7 @@ class MockPageContextTests {
 	}
 
 	@Test
-	void removeAttributeWithNoScopeSpecifiedRemovesValueFromAllScopes() {
+	void removeAttributeWithNoScopeSpecifiedRemovesValueFromAllScopes() throws Exception {
 		ctx.setAttribute(key, value, PageContext.APPLICATION_SCOPE);
 		ctx.removeAttribute(key);
 

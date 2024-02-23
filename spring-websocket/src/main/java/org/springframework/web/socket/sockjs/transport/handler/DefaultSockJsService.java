@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import jakarta.servlet.ServletContext;
+import javax.servlet.ServletContext;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -103,10 +104,9 @@ public class DefaultSockJsService extends TransportHandlingSockJsService impleme
 	@Override
 	public void setServletContext(ServletContext servletContext) {
 		for (TransportHandler handler : getTransportHandlers().values()) {
-			if (handler instanceof ServletContextAware servletContextAware) {
-				servletContextAware.setServletContext(servletContext);
+			if (handler instanceof ServletContextAware) {
+				((ServletContextAware) handler).setServletContext(servletContext);
 			}
 		}
 	}
-
 }

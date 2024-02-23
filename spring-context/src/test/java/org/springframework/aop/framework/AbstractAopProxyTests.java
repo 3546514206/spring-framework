@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,68 +16,46 @@
 
 package org.springframework.aop.framework;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.rmi.MarshalException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.aop.Advisor;
-import org.springframework.aop.AfterReturningAdvice;
-import org.springframework.aop.DynamicIntroductionAdvice;
-import org.springframework.aop.MethodBeforeAdvice;
-import org.springframework.aop.TargetSource;
-import org.springframework.aop.ThrowsAdvice;
+import org.springframework.aop.*;
 import org.springframework.aop.interceptor.DebugInterceptor;
 import org.springframework.aop.interceptor.ExposeInvocationInterceptor;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.aop.support.DefaultIntroductionAdvisor;
-import org.springframework.aop.support.DefaultPointcutAdvisor;
-import org.springframework.aop.support.DelegatingIntroductionInterceptor;
-import org.springframework.aop.support.DynamicMethodMatcherPointcut;
-import org.springframework.aop.support.NameMatchMethodPointcut;
-import org.springframework.aop.support.Pointcuts;
-import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
+import org.springframework.aop.support.*;
 import org.springframework.aop.target.HotSwappableTargetSource;
 import org.springframework.aop.target.SingletonTargetSource;
-import org.springframework.aop.testfixture.advice.CountingAfterReturningAdvice;
-import org.springframework.aop.testfixture.advice.CountingBeforeAdvice;
-import org.springframework.aop.testfixture.advice.MethodCounter;
-import org.springframework.aop.testfixture.advice.MyThrowsHandler;
-import org.springframework.aop.testfixture.interceptor.NopInterceptor;
-import org.springframework.aop.testfixture.interceptor.SerializableNopInterceptor;
-import org.springframework.aop.testfixture.interceptor.TimestampIntroductionInterceptor;
-import org.springframework.aop.testfixture.mixin.LockMixin;
-import org.springframework.aop.testfixture.mixin.LockMixinAdvisor;
-import org.springframework.aop.testfixture.mixin.Lockable;
-import org.springframework.aop.testfixture.mixin.LockedException;
-import org.springframework.beans.testfixture.beans.IOther;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.Person;
-import org.springframework.beans.testfixture.beans.SerializablePerson;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.core.testfixture.TimeStamped;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
 import org.springframework.lang.Nullable;
+import org.springframework.tests.EnabledForTestGroups;
+import org.springframework.tests.TestGroup;
+import org.springframework.tests.TimeStamped;
+import org.springframework.tests.aop.advice.CountingAfterReturningAdvice;
+import org.springframework.tests.aop.advice.CountingBeforeAdvice;
+import org.springframework.tests.aop.advice.MethodCounter;
+import org.springframework.tests.aop.advice.MyThrowsHandler;
+import org.springframework.tests.aop.interceptor.NopInterceptor;
+import org.springframework.tests.aop.interceptor.SerializableNopInterceptor;
+import org.springframework.tests.aop.interceptor.TimestampIntroductionInterceptor;
+import org.springframework.tests.sample.beans.*;
+import org.springframework.util.SerializationTestUtils;
+import org.springframework.util.StopWatch;
+import test.mixin.LockMixin;
+import test.mixin.LockMixinAdvisor;
+import test.mixin.Lockable;
+import test.mixin.LockedException;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.assertj.core.api.Assertions.assertThatRuntimeException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.rmi.MarshalException;
+import java.sql.SQLException;
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Rod Johnson
@@ -85,7 +63,7 @@ import static org.assertj.core.api.Assertions.assertThatRuntimeException;
  * @author Chris Beams
  * @since 13.03.2003
  */
-abstract class AbstractAopProxyTests {
+public abstract class AbstractAopProxyTests {
 
 	protected final MockTargetSource mockTargetSource = new MockTargetSource();
 
@@ -96,12 +74,12 @@ abstract class AbstractAopProxyTests {
 	 * to ensure that it was used appropriately by code.
 	 */
 	@BeforeEach
-	void reset() {
+	public void setUp() {
 		mockTargetSource.reset();
 	}
 
 	@AfterEach
-	void verify() {
+	public void tearDown() {
 		mockTargetSource.verify();
 	}
 
@@ -121,11 +99,21 @@ abstract class AbstractAopProxyTests {
 	}
 
 
+	@Test
+	public void testNoInterceptorsAndNoTarget() {
+		assertThatExceptionOfType(AopConfigException.class).isThrownBy(() -> {
+				AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
+				//Add no interceptors
+				AopProxy aop = createAopProxy(pc);
+				aop.getProxy();
+		});
+	}
+
 	/**
 	 * Simple test that if we set values we can get them out again.
 	 */
 	@Test
-	void valuesStick() {
+	public void testValuesStick() {
 		int age1 = 33;
 		int age2 = 37;
 		String name = "tony";
@@ -145,8 +133,38 @@ abstract class AbstractAopProxyTests {
 		assertThat(tb.getName()).isEqualTo(name);
 	}
 
+	/**
+	 * This is primarily a test for the efficiency of our
+	 * usage of CGLIB. If we create too many classes with
+	 * CGLIB this will be slow or will run out of memory.
+	 */
 	@Test
-	void serializationAdviceAndTargetNotSerializable() throws Exception {
+	@EnabledForTestGroups(TestGroup.PERFORMANCE)
+	public void testManyProxies() {
+		int howMany = 10000;
+		StopWatch sw = new StopWatch();
+		sw.start("Create " + howMany + " proxies");
+		testManyProxies(howMany);
+		sw.stop();
+		assertThat(sw.getTotalTimeMillis() < 5000).as("Proxy creation was too slow").isTrue();
+	}
+
+	private void testManyProxies(int howMany) {
+		int age1 = 33;
+		TestBean target1 = new TestBean();
+		target1.setAge(age1);
+		ProxyFactory pf1 = new ProxyFactory(target1);
+		pf1.addAdvice(new NopInterceptor());
+		pf1.addAdvice(new NopInterceptor());
+		ITestBean[] proxies = new ITestBean[howMany];
+		for (int i = 0; i < howMany; i++) {
+			proxies[i] = (ITestBean) createAopProxy(pf1).getProxy();
+			assertThat(proxies[i].getAge()).isEqualTo(age1);
+		}
+	}
+
+	@Test
+	public void testSerializationAdviceAndTargetNotSerializable() throws Exception {
 		TestBean tb = new TestBean();
 		assertThat(SerializationTestUtils.isSerializable(tb)).isFalse();
 
@@ -159,7 +177,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void serializationAdviceNotSerializable() throws Exception {
+	public void testSerializationAdviceNotSerializable() throws Exception {
 		SerializablePerson sp = new SerializablePerson();
 		assertThat(SerializationTestUtils.isSerializable(sp)).isTrue();
 
@@ -175,7 +193,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void serializableTargetAndAdvice() throws Throwable {
+	public void testSerializableTargetAndAdvice() throws Throwable {
 		SerializablePerson personTarget = new SerializablePerson();
 		personTarget.setName("jim");
 		personTarget.setAge(26);
@@ -194,17 +212,17 @@ abstract class AbstractAopProxyTests {
 		Person p = (Person) createAopProxy(pf).getProxy();
 
 		p.echo(null);
-		assertThat(cta.getCalls()).isZero();
+		assertThat(cta.getCalls()).isEqualTo(0);
 		try {
 			p.echo(new IOException());
 		}
 		catch (IOException ex) {
 			/* expected */
 		}
-		assertThat(cta.getCalls()).isOne();
+		assertThat(cta.getCalls()).isEqualTo(1);
 
 		// Will throw exception if it fails
-		Person p2 = SerializationTestUtils.serializeAndDeserialize(p);
+		Person p2 = (Person) SerializationTestUtils.serializeAndDeserialize(p);
 		assertThat(p2).isNotSameAs(p);
 		assertThat(p2.getName()).isEqualTo(p.getName());
 		assertThat(p2.getAge()).isEqualTo(p.getAge());
@@ -213,7 +231,7 @@ abstract class AbstractAopProxyTests {
 		Advised a1 = (Advised) p;
 		Advised a2 = (Advised) p2;
 		// Check we can manipulate state of p2
-		assertThat(a2.getAdvisors()).hasSameSizeAs(a1.getAdvisors());
+		assertThat(a2.getAdvisors().length).isEqualTo(a1.getAdvisors().length);
 
 		// This should work as SerializablePerson is equal
 		assertThat(p2).as("Proxies should be equal, even after one was serialized").isEqualTo(p);
@@ -245,7 +263,7 @@ abstract class AbstractAopProxyTests {
 	 * Check also proxy exposure.
 	 */
 	@Test
-	void oneAdvisedObjectCallsAnother() {
+	public void testOneAdvisedObjectCallsAnother() {
 		int age1 = 33;
 		int age2 = 37;
 
@@ -290,7 +308,7 @@ abstract class AbstractAopProxyTests {
 
 
 	@Test
-	void reentrance() {
+	public void testReentrance() {
 		int age1 = 33;
 
 		TestBean target1 = new TestBean();
@@ -314,7 +332,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void targetCanGetProxy() {
+	public void testTargetCanGetProxy() {
 		NopInterceptor di = new NopInterceptor();
 		INeedsToSeeProxy target = new TargetChecker();
 		ProxyFactory proxyFactory = new ProxyFactory(target);
@@ -338,38 +356,42 @@ abstract class AbstractAopProxyTests {
 
 	@Test
 	// Should fail to get proxy as exposeProxy wasn't set to true
-	public void targetCantGetProxyByDefault() {
+	public void testTargetCantGetProxyByDefault() {
 		NeedsToSeeProxy et = new NeedsToSeeProxy();
 		ProxyFactory pf1 = new ProxyFactory(et);
 		assertThat(pf1.isExposeProxy()).isFalse();
 		INeedsToSeeProxy proxied = (INeedsToSeeProxy) createProxy(pf1);
-		assertThatIllegalStateException().isThrownBy(proxied::incrementViaProxy);
+		assertThatIllegalStateException().isThrownBy(() ->
+				proxied.incrementViaProxy());
 	}
 
 	@Test
-	void context() {
+	public void testContext() throws Throwable {
 		testContext(true);
 	}
 
 	@Test
-	void noContext() {
+	public void testNoContext() throws Throwable {
 		testContext(false);
 	}
 
 	/**
 	 * @param context if true, want context
 	 */
-	private void testContext(final boolean context) {
+	private void testContext(final boolean context) throws Throwable {
 		final String s = "foo";
 		// Test return value
-		MethodInterceptor mi = invocation -> {
-			if (!context) {
-				assertNoInvocationContext();
+		MethodInterceptor mi = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation invocation) throws Throwable {
+				if (!context) {
+					assertNoInvocationContext();
+				}
+				else {
+					assertThat(ExposeInvocationInterceptor.currentInvocation()).as("have context").isNotNull();
+				}
+				return s;
 			}
-			else {
-				assertThat(ExposeInvocationInterceptor.currentInvocation()).as("have context").isNotNull();
-			}
-			return s;
 		};
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		if (context) {
@@ -393,7 +415,7 @@ abstract class AbstractAopProxyTests {
 	 * target returns {@code this}
 	 */
 	@Test
-	void targetReturnsThis() {
+	public void testTargetReturnsThis() throws Throwable {
 		// Test return value
 		TestBean raw = new OwnSpouse();
 
@@ -406,11 +428,14 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void declaredException() {
+	public void testDeclaredException() throws Throwable {
 		final Exception expectedException = new Exception();
 		// Test return value
-		MethodInterceptor mi = invocation -> {
-			throw expectedException;
+		MethodInterceptor mi = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation invocation) throws Throwable {
+				throw expectedException;
+			}
 		};
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		pc.addAdvice(ExposeInvocationInterceptor.INSTANCE);
@@ -421,7 +446,7 @@ abstract class AbstractAopProxyTests {
 		pc.setTargetSource(mockTargetSource);
 		AopProxy aop = createAopProxy(pc);
 
-		assertThatException().isThrownBy(() -> {
+		assertThatExceptionOfType(Exception.class).isThrownBy(() -> {
 				ITestBean tb = (ITestBean) aop.getProxy();
 				// Note: exception param below isn't used
 				tb.exceptional(expectedException);
@@ -434,11 +459,14 @@ abstract class AbstractAopProxyTests {
 	 * org.springframework.cglib UndeclaredThrowableException
 	 */
 	@Test
-	void undeclaredCheckedException() {
+	public void testUndeclaredCheckedException() throws Throwable {
 		final Exception unexpectedException = new Exception();
 		// Test return value
-		MethodInterceptor mi = invocation -> {
-			throw unexpectedException;
+		MethodInterceptor mi = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation invocation) throws Throwable {
+				throw unexpectedException;
+			}
 		};
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		pc.addAdvice(ExposeInvocationInterceptor.INSTANCE);
@@ -449,16 +477,20 @@ abstract class AbstractAopProxyTests {
 		AopProxy aop = createAopProxy(pc);
 		ITestBean tb = (ITestBean) aop.getProxy();
 
-		assertThatExceptionOfType(UndeclaredThrowableException.class).isThrownBy(tb::getAge)
+		assertThatExceptionOfType(UndeclaredThrowableException.class).isThrownBy(
+				tb::getAge)
 			.satisfies(ex -> assertThat(ex.getUndeclaredThrowable()).isEqualTo(unexpectedException));
 	}
 
 	@Test
-	void undeclaredUncheckedException() {
+	public void testUndeclaredUncheckedException() throws Throwable {
 		final RuntimeException unexpectedException = new RuntimeException();
 		// Test return value
-		MethodInterceptor mi = invocation -> {
-			throw unexpectedException;
+		MethodInterceptor mi = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation invocation) throws Throwable {
+				throw unexpectedException;
+			}
 		};
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		pc.addAdvice(ExposeInvocationInterceptor.INSTANCE);
@@ -469,8 +501,8 @@ abstract class AbstractAopProxyTests {
 		AopProxy aop = createAopProxy(pc);
 		ITestBean tb = (ITestBean) aop.getProxy();
 
-		assertThatRuntimeException()
-			.isThrownBy(tb::getAge)
+		assertThatExceptionOfType(RuntimeException.class).isThrownBy(
+				tb::getAge)
 			.matches(unexpectedException::equals);
 	}
 
@@ -480,7 +512,7 @@ abstract class AbstractAopProxyTests {
 	 * so as to guarantee a consistent programming model.
 	 */
 	@Test
-	void targetCanGetInvocationEvenIfNoAdviceChain() {
+	public void testTargetCanGetInvocationEvenIfNoAdviceChain() throws Throwable {
 		NeedsToSeeProxy target = new NeedsToSeeProxy();
 		AdvisedSupport pc = new AdvisedSupport(INeedsToSeeProxy.class);
 		pc.setTarget(target);
@@ -494,7 +526,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void targetCanGetInvocation() {
+	public void testTargetCanGetInvocation() throws Throwable {
 		final InvocationCheckExposedInvocationTestBean expectedTarget = new InvocationCheckExposedInvocationTestBean();
 
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class, IOther.class);
@@ -527,7 +559,7 @@ abstract class AbstractAopProxyTests {
 	 * Test stateful interceptor
 	 */
 	@Test
-	void mixinWithIntroductionAdvisor() {
+	public void testMixinWithIntroductionAdvisor() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -538,7 +570,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void mixinWithIntroductionInfo() {
+	public void testMixinWithIntroductionInfo() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -560,7 +592,8 @@ abstract class AbstractAopProxyTests {
 		lockable.lock();
 
 		assertThat(itb.getAge()).isEqualTo(newAge);
-		assertThatExceptionOfType(LockedException.class).isThrownBy(() -> itb.setAge(1));
+		assertThatExceptionOfType(LockedException.class).isThrownBy(() ->
+				itb.setAge(1));
 		assertThat(itb.getAge()).isEqualTo(newAge);
 
 		// Unlock
@@ -571,7 +604,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void replaceArgument() {
+	public void testReplaceArgument() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -588,11 +621,11 @@ abstract class AbstractAopProxyTests {
 
 		t.setName(null);
 		// Null replacement magic should work
-		assertThat(t.getName()).isEmpty();
+		assertThat(t.getName()).isEqualTo("");
 	}
 
 	@Test
-	void canCastProxyToProxyConfig() {
+	public void testCanCastProxyToProxyConfig() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory(tb);
 		NopInterceptor di = new NopInterceptor();
@@ -605,7 +638,7 @@ abstract class AbstractAopProxyTests {
 		assertThat(di.getCount()).isEqualTo(2);
 
 		Advised advised = (Advised) t;
-		assertThat(advised.getAdvisors()).as("Have 1 advisor").hasSize(1);
+		assertThat(advised.getAdvisors().length).as("Have 1 advisor").isEqualTo(1);
 		assertThat(advised.getAdvisors()[0].getAdvice()).isEqualTo(di);
 		NopInterceptor di2 = new NopInterceptor();
 		advised.addAdvice(1, di2);
@@ -628,7 +661,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void adviceImplementsIntroductionInfo() {
+	public void testAdviceImplementsIntroductionInfo() throws Throwable {
 		TestBean tb = new TestBean();
 		String name = "tony";
 		tb.setName(name);
@@ -636,7 +669,12 @@ abstract class AbstractAopProxyTests {
 		NopInterceptor di = new NopInterceptor();
 		pc.addAdvice(di);
 		final long ts = 37;
-		pc.addAdvice(new DelegatingIntroductionInterceptor((TimeStamped) () -> ts));
+		pc.addAdvice(new DelegatingIntroductionInterceptor(new TimeStamped() {
+			@Override
+			public long getTimeStamp() {
+				return ts;
+			}
+		}));
 
 		ITestBean proxied = (ITestBean) createProxy(pc);
 		assertThat(proxied.getName()).isEqualTo(name);
@@ -645,7 +683,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void cannotAddDynamicIntroductionAdviceExceptInIntroductionAdvice() {
+	public void testCannotAddDynamicIntroductionAdviceExceptInIntroductionAdvice() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -658,12 +696,12 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void rejectsBogusDynamicIntroductionAdviceWithNoAdapter() {
+	public void testRejectsBogusDynamicIntroductionAdviceWithNoAdapter() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
 		pc.addAdvisor(new DefaultIntroductionAdvisor(new DummyIntroductionAdviceImpl(), Comparable.class));
-		assertThatException().isThrownBy(() -> {
+		assertThatExceptionOfType(Exception.class).isThrownBy(() -> {
 			// TODO May fail on either call: may want to tighten up definition
 			ITestBean proxied = (ITestBean) createProxy(pc);
 			proxied.getName();
@@ -679,7 +717,7 @@ abstract class AbstractAopProxyTests {
 	 * that are unsupported by the IntroductionInterceptor.
 	 */
 	@Test
-	void cannotAddIntroductionAdviceWithUnimplementedInterface() {
+	public void testCannotAddIntroductionAdviceWithUnimplementedInterface() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -695,7 +733,7 @@ abstract class AbstractAopProxyTests {
 	 * as it's constrained by the interface.
 	 */
 	@Test
-	void introductionThrowsUncheckedException() {
+	public void testIntroductionThrowsUncheckedException() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -703,7 +741,7 @@ abstract class AbstractAopProxyTests {
 		@SuppressWarnings("serial")
 		class MyDi extends DelegatingIntroductionInterceptor implements TimeStamped {
 			/**
-			 * @see org.springframework.core.testfixture.TimeStamped#getTimeStamp()
+			 * @see test.util.TimeStamped#getTimeStamp()
 			 */
 			@Override
 			public long getTimeStamp() {
@@ -713,14 +751,15 @@ abstract class AbstractAopProxyTests {
 		pc.addAdvisor(new DefaultIntroductionAdvisor(new MyDi()));
 
 		TimeStamped ts = (TimeStamped) createProxy(pc);
-		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(ts::getTimeStamp);
+		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(
+				ts::getTimeStamp);
 	}
 
 	/**
 	 * Should only be able to introduce interfaces, not classes.
 	 */
 	@Test
-	void cannotAddIntroductionAdviceToIntroduceClass() {
+	public void testCannotAddIntroductionAdviceToIntroduceClass() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -733,7 +772,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void cannotAddInterceptorWhenFrozen() {
+	public void testCannotAddInterceptorWhenFrozen() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -741,19 +780,19 @@ abstract class AbstractAopProxyTests {
 		pc.addAdvice(new NopInterceptor());
 		ITestBean proxied = (ITestBean) createProxy(pc);
 		pc.setFrozen(true);
-		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to add interceptor when frozen")
-			.isThrownBy(() -> pc.addAdvice(0, new NopInterceptor()))
+		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to add interceptor when frozen").isThrownBy(() ->
+				pc.addAdvice(0, new NopInterceptor()))
 			.withMessageContaining("frozen");
 		// Check it still works: proxy factory state shouldn't have been corrupted
 		assertThat(proxied.getAge()).isEqualTo(target.getAge());
-		assertThat(((Advised) proxied).getAdvisors()).hasSize(1);
+		assertThat(((Advised) proxied).getAdvisors().length).isEqualTo(1);
 	}
 
 	/**
 	 * Check that casting to Advised can't get around advice freeze.
 	 */
 	@Test
-	void cannotAddAdvisorWhenFrozenUsingCast() {
+	public void testCannotAddAdvisorWhenFrozenUsingCast() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -764,16 +803,16 @@ abstract class AbstractAopProxyTests {
 		Advised advised = (Advised) proxied;
 
 		assertThat(pc.isFrozen()).isTrue();
-		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to add Advisor when frozen")
-			.isThrownBy(() -> advised.addAdvisor(new DefaultPointcutAdvisor(new NopInterceptor())))
+		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to add Advisor when frozen").isThrownBy(() ->
+				advised.addAdvisor(new DefaultPointcutAdvisor(new NopInterceptor())))
 			.withMessageContaining("frozen");
 		// Check it still works: proxy factory state shouldn't have been corrupted
 		assertThat(proxied.getAge()).isEqualTo(target.getAge());
-		assertThat(advised.getAdvisors()).hasSize(1);
+		assertThat(advised.getAdvisors().length).isEqualTo(1);
 	}
 
 	@Test
-	void cannotRemoveAdvisorWhenFrozen() {
+	public void testCannotRemoveAdvisorWhenFrozen() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 		ProxyFactory pc = new ProxyFactory(target);
@@ -784,21 +823,21 @@ abstract class AbstractAopProxyTests {
 		Advised advised = (Advised) proxied;
 
 		assertThat(pc.isFrozen()).isTrue();
-		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to remove Advisor when frozen")
-			.isThrownBy(() -> advised.removeAdvisor(0))
+		assertThatExceptionOfType(AopConfigException.class).as("Shouldn't be able to remove Advisor when frozen").isThrownBy(() ->
+				advised.removeAdvisor(0))
 			.withMessageContaining("frozen");
 		// Didn't get removed
-		assertThat(advised.getAdvisors()).hasSize(1);
+		assertThat(advised.getAdvisors().length).isEqualTo(1);
 		pc.setFrozen(false);
 		// Can now remove it
 		advised.removeAdvisor(0);
 		// Check it still works: proxy factory state shouldn't have been corrupted
 		assertThat(proxied.getAge()).isEqualTo(target.getAge());
-		assertThat(advised.getAdvisors()).isEmpty();
+		assertThat(advised.getAdvisors().length).isEqualTo(0);
 	}
 
 	@Test
-	void useAsHashKey() {
+	public void testUseAsHashKey() {
 		TestBean target1 = new TestBean();
 		ProxyFactory pf1 = new ProxyFactory(target1);
 		pf1.addAdvice(new NopInterceptor());
@@ -812,7 +851,7 @@ abstract class AbstractAopProxyTests {
 		HashMap<ITestBean, Object> h = new HashMap<>();
 		Object value1 = "foo";
 		Object value2 = "bar";
-		assertThat(h).doesNotContainKey(proxy1);
+		assertThat(h.get(proxy1)).isNull();
 		h.put(proxy1, value1);
 		h.put(proxy2, value2);
 		assertThat(value1).isEqualTo(h.get(proxy1));
@@ -823,7 +862,7 @@ abstract class AbstractAopProxyTests {
 	 * Check that the string is informative.
 	 */
 	@Test
-	void proxyConfigString() {
+	public void testProxyConfigString() {
 		TestBean target = new TestBean();
 		ProxyFactory pc = new ProxyFactory(target);
 		pc.setInterfaces(ITestBean.class);
@@ -834,12 +873,12 @@ abstract class AbstractAopProxyTests {
 		ITestBean proxied = (ITestBean) createProxy(pc);
 
 		String proxyConfigString = ((Advised) proxied).toProxyConfigString();
-		assertThat(proxyConfigString).contains(advisor.toString());
-		assertThat(proxyConfigString).contains("1 interface");
+		assertThat(proxyConfigString.contains(advisor.toString())).isTrue();
+		assertThat(proxyConfigString.contains("1 interface")).isTrue();
 	}
 
 	@Test
-	void canPreventCastToAdvisedUsingOpaque() {
+	public void testCanPreventCastToAdvisedUsingOpaque() {
 		TestBean target = new TestBean();
 		ProxyFactory pc = new ProxyFactory(target);
 		pc.setInterfaces(ITestBean.class);
@@ -860,7 +899,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void adviceSupportListeners() {
+	public void testAdviceSupportListeners() throws Throwable {
 		TestBean target = new TestBean();
 		target.setAge(21);
 
@@ -899,7 +938,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void existingProxyChangesTarget() {
+	public void testExistingProxyChangesTarget() throws Throwable {
 		TestBean tb1 = new TestBean();
 		tb1.setAge(33);
 
@@ -912,24 +951,24 @@ abstract class AbstractAopProxyTests {
 		NopInterceptor nop = new NopInterceptor();
 		pc.addAdvice(nop);
 		ITestBean proxy = (ITestBean) createProxy(pc);
-		assertThat(nop.getCount()).isZero();
+		assertThat(0).isEqualTo(nop.getCount());
 		assertThat(proxy.getAge()).isEqualTo(tb1.getAge());
-		assertThat(nop.getCount()).isOne();
+		assertThat(1).isEqualTo(nop.getCount());
 		// Change to a new static target
 		pc.setTarget(tb2);
 		assertThat(proxy.getAge()).isEqualTo(tb2.getAge());
-		assertThat(nop.getCount()).isEqualTo(2);
+		assertThat(2).isEqualTo(nop.getCount());
 
 		// Change to a new dynamic target
 		HotSwappableTargetSource hts = new HotSwappableTargetSource(tb3);
 		pc.setTargetSource(hts);
 		assertThat(proxy.getAge()).isEqualTo(tb3.getAge());
-		assertThat(nop.getCount()).isEqualTo(3);
+		assertThat(3).isEqualTo(nop.getCount());
 		hts.swap(tb1);
 		assertThat(proxy.getAge()).isEqualTo(tb1.getAge());
 		tb1.setName("Colin");
 		assertThat(proxy.getName()).isEqualTo(tb1.getName());
-		assertThat(nop.getCount()).isEqualTo(5);
+		assertThat(5).isEqualTo(nop.getCount());
 
 		// Change back, relying on casting to Advised
 		Advised advised = (Advised) proxy;
@@ -942,7 +981,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void dynamicMethodPointcutThatAlwaysAppliesStatically() {
+	public void testDynamicMethodPointcutThatAlwaysAppliesStatically() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -959,7 +998,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void dynamicMethodPointcutThatAppliesStaticallyOnlyToSetters() {
+	public void testDynamicMethodPointcutThatAppliesStaticallyOnlyToSetters() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -982,7 +1021,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void staticMethodPointcut() {
+	public void testStaticMethodPointcut() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory();
 		pc.addInterface(ITestBean.class);
@@ -991,12 +1030,12 @@ abstract class AbstractAopProxyTests {
 		pc.addAdvisor(sp);
 		pc.setTarget(tb);
 		ITestBean it = (ITestBean) createProxy(pc);
-		assertThat(di.getCount()).isEqualTo(0);
+		assertThat(0).isEqualTo(di.getCount());
 		it.getAge();
-		assertThat(di.getCount()).isEqualTo(1);
+		assertThat(1).isEqualTo(di.getCount());
 		it.setAge(11);
-		assertThat(it.getAge()).isEqualTo(11);
-		assertThat(di.getCount()).isEqualTo(2);
+		assertThat(11).isEqualTo(it.getAge());
+		assertThat(2).isEqualTo(di.getCount());
 	}
 
 	/**
@@ -1004,19 +1043,22 @@ abstract class AbstractAopProxyTests {
 	 * We can do this if we clone the invocation.
 	 */
 	@Test
-	void cloneInvocationToProceedThreeTimes() {
+	public void testCloneInvocationToProceedThreeTimes() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory(tb);
 		pc.addInterface(ITestBean.class);
 
-		MethodInterceptor twoBirthdayInterceptor = mi -> {
-			// Clone the invocation to proceed three times
-			// "The Moor's Last Sigh": this technology can cause premature aging
-			MethodInvocation clone1 = ((ReflectiveMethodInvocation) mi).invocableClone();
-			MethodInvocation clone2 = ((ReflectiveMethodInvocation) mi).invocableClone();
-			clone1.proceed();
-			clone2.proceed();
-			return mi.proceed();
+		MethodInterceptor twoBirthdayInterceptor = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation mi) throws Throwable {
+				// Clone the invocation to proceed three times
+				// "The Moor's Last Sigh": this technology can cause premature aging
+				MethodInvocation clone1 = ((ReflectiveMethodInvocation) mi).invocableClone();
+				MethodInvocation clone2 = ((ReflectiveMethodInvocation) mi).invocableClone();
+				clone1.proceed();
+				clone2.proceed();
+				return mi.proceed();
+			}
 		};
 		@SuppressWarnings("serial")
 		StaticMethodMatcherPointcutAdvisor advisor = new StaticMethodMatcherPointcutAdvisor(twoBirthdayInterceptor) {
@@ -1041,22 +1083,28 @@ abstract class AbstractAopProxyTests {
 	 * We want to change the arguments on a clone: it shouldn't affect the original.
 	 */
 	@Test
-	void canChangeArgumentsIndependentlyOnClonedInvocation() {
+	public void testCanChangeArgumentsIndependentlyOnClonedInvocation() throws Throwable {
 		TestBean tb = new TestBean();
 		ProxyFactory pc = new ProxyFactory(tb);
 		pc.addInterface(ITestBean.class);
 
-		MethodInterceptor nameReverter = mi -> {
-			MethodInvocation clone = ((ReflectiveMethodInvocation) mi).invocableClone();
-			String oldName = ((ITestBean) mi.getThis()).getName();
-			clone.getArguments()[0] = oldName;
-			// Original method invocation should be unaffected by changes to argument list of clone
-			mi.proceed();
-			return clone.proceed();
+		/**
+		 * Changes the name, then changes it back.
+		 */
+		MethodInterceptor nameReverter = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation mi) throws Throwable {
+				MethodInvocation clone = ((ReflectiveMethodInvocation) mi).invocableClone();
+				String oldName = ((ITestBean) mi.getThis()).getName();
+				clone.getArguments()[0] = oldName;
+				// Original method invocation should be unaffected by changes to argument list of clone
+				mi.proceed();
+				return clone.proceed();
+			}
 		};
 
 		class NameSaver implements MethodInterceptor {
-			private List<Object> names = new ArrayList<>();
+			private List<Object> names = new LinkedList<>();
 
 			@Override
 			public Object invoke(MethodInvocation mi) throws Throwable {
@@ -1080,12 +1128,14 @@ abstract class AbstractAopProxyTests {
 		it.setName(name2);
 		// NameReverter saved it back
 		assertThat(it.getName()).isEqualTo(name1);
-		assertThat(saver.names).containsExactly(name2, name1);
+		assertThat(saver.names.size()).isEqualTo(2);
+		assertThat(saver.names.get(0)).isEqualTo(name2);
+		assertThat(saver.names.get(1)).isEqualTo(name1);
 	}
 
 	@SuppressWarnings("serial")
 	@Test
-	void overloadedMethodsWithDifferentAdvice() {
+	public void testOverloadedMethodsWithDifferentAdvice() throws Throwable {
 		Overloads target = new Overloads();
 		ProxyFactory pc = new ProxyFactory(target);
 
@@ -1121,7 +1171,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void proxyIsBoundBeforeTargetSourceInvoked() {
+	public void testProxyIsBoundBeforeTargetSourceInvoked() {
 		final TestBean target = new TestBean();
 		ProxyFactory pf = new ProxyFactory(target);
 		pf.addAdvice(new DebugInterceptor());
@@ -1136,9 +1186,16 @@ abstract class AbstractAopProxyTests {
 				return TestBean.class;
 			}
 			@Override
-			public Object getTarget() {
+			public boolean isStatic() {
+				return false;
+			}
+			@Override
+			public Object getTarget() throws Exception {
 				assertThat(AopContext.currentProxy()).isEqualTo(proxy);
 				return target;
+			}
+			@Override
+			public void releaseTarget(Object target) throws Exception {
 			}
 		});
 
@@ -1147,7 +1204,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void equals() {
+	public void testEquals() {
 		IOther a = new AllInstancesAreEqual();
 		IOther b = new AllInstancesAreEqual();
 		NopInterceptor i1 = new NopInterceptor();
@@ -1159,12 +1216,12 @@ abstract class AbstractAopProxyTests {
 		IOther proxyA = (IOther) createProxy(pfa);
 		IOther proxyB = (IOther) createProxy(pfb);
 
-		assertThat(pfb.getAdvisors()).hasSameSizeAs(pfa.getAdvisors());
+		assertThat(pfb.getAdvisors().length).isEqualTo(pfa.getAdvisors().length);
 		assertThat(b).isEqualTo(a);
 		assertThat(i2).isEqualTo(i1);
 		assertThat(proxyB).isEqualTo(proxyA);
 		assertThat(proxyB.hashCode()).isEqualTo(proxyA.hashCode());
-		assertThat(proxyA).isNotEqualTo(a);
+		assertThat(proxyA.equals(a)).isFalse();
 
 		// Equality checks were handled by the proxy
 		assertThat(i1.getCount()).isEqualTo(0);
@@ -1173,11 +1230,11 @@ abstract class AbstractAopProxyTests {
 		// and won't think it's equal to B's NopInterceptor
 		proxyA.absquatulate();
 		assertThat(i1.getCount()).isEqualTo(1);
-		assertThat(proxyA).isNotEqualTo(proxyB);
+		assertThat(proxyA.equals(proxyB)).isFalse();
 	}
 
 	@Test
-	void beforeAdvisorIsInvoked() {
+	public void testBeforeAdvisorIsInvoked() {
 		CountingBeforeAdvice cba = new CountingBeforeAdvice();
 		@SuppressWarnings("serial")
 		Advisor matchesNoArgs = new StaticMethodMatcherPointcutAdvisor(cba) {
@@ -1206,7 +1263,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void userAttributes() {
+	public void testUserAttributes() throws Throwable {
 		class MapAwareMethodInterceptor implements MethodInterceptor {
 			private final Map<String, String> expectedValues;
 			private final Map<String, String> valuesToAdd;
@@ -1217,7 +1274,8 @@ abstract class AbstractAopProxyTests {
 			@Override
 			public Object invoke(MethodInvocation invocation) throws Throwable {
 				ReflectiveMethodInvocation rmi = (ReflectiveMethodInvocation) invocation;
-				for (Object key : rmi.getUserAttributes().keySet()) {
+				for (Iterator<String> it = rmi.getUserAttributes().keySet().iterator(); it.hasNext(); ){
+					Object key = it.next();
 					assertThat(rmi.getUserAttributes().get(key)).isEqualTo(expectedValues.get(key));
 				}
 				rmi.getUserAttributes().putAll(valuesToAdd);
@@ -1225,7 +1283,7 @@ abstract class AbstractAopProxyTests {
 			}
 		}
 		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
-		MapAwareMethodInterceptor mami1 = new MapAwareMethodInterceptor(new HashMap<>(), new HashMap<>());
+		MapAwareMethodInterceptor mami1 = new MapAwareMethodInterceptor(new HashMap<>(), new HashMap<String, String>());
 		Map<String, String> firstValuesToAdd = new HashMap<>();
 		firstValuesToAdd.put("test", "");
 		MapAwareMethodInterceptor mami2 = new MapAwareMethodInterceptor(new HashMap<>(), firstValuesToAdd);
@@ -1257,7 +1315,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void multiAdvice() {
+	public void testMultiAdvice() throws Throwable {
 		CountingMultiAdvice cca = new CountingMultiAdvice();
 		@SuppressWarnings("serial")
 		Advisor matchesNoArgs = new StaticMethodMatcherPointcutAdvisor(cca) {
@@ -1285,22 +1343,21 @@ abstract class AbstractAopProxyTests {
 		assertThat(cca.getCalls()).isEqualTo(2);
 		assertThat(proxied.getAge()).isEqualTo(26);
 		assertThat(cca.getCalls()).isEqualTo(4);
-		assertThatExceptionOfType(SpecializedUncheckedException.class).as("Should have thrown CannotGetJdbcConnectionException")
-			.isThrownBy(() -> proxied.exceptional(new SpecializedUncheckedException("foo", (SQLException)null)));
+		assertThatExceptionOfType(SpecializedUncheckedException.class).as("Should have thrown CannotGetJdbcConnectionException").isThrownBy(() ->
+				proxied.exceptional(new SpecializedUncheckedException("foo", (SQLException)null)));
 		assertThat(cca.getCalls()).isEqualTo(6);
 	}
 
 	@Test
-	void beforeAdviceThrowsException() {
+	public void testBeforeAdviceThrowsException() {
 		final RuntimeException rex = new RuntimeException();
 		@SuppressWarnings("serial")
 		CountingBeforeAdvice ba = new CountingBeforeAdvice() {
 			@Override
 			public void before(Method m, Object[] args, Object target) throws Throwable {
 				super.before(m, args, target);
-				if (m.getName().startsWith("set")) {
+				if (m.getName().startsWith("set"))
 					throw rex;
-				}
 			}
 		};
 
@@ -1320,8 +1377,8 @@ abstract class AbstractAopProxyTests {
 		assertThat(nop1.getCount()).isEqualTo(1);
 		assertThat(nop2.getCount()).isEqualTo(1);
 		// Will fail, after invoking Nop1
-		assertThatRuntimeException().as("before advice should have ended chain")
-			.isThrownBy(() -> proxied.setAge(26))
+		assertThatExceptionOfType(RuntimeException.class).as("before advice should have ended chain").isThrownBy(() ->
+				proxied.setAge(26))
 			.matches(rex::equals);
 		assertThat(ba.getCalls()).isEqualTo(2);
 		assertThat(nop1.getCount()).isEqualTo(2);
@@ -1333,12 +1390,12 @@ abstract class AbstractAopProxyTests {
 
 
 	@Test
-	void afterReturningAdvisorIsInvoked() {
+	public void testAfterReturningAdvisorIsInvoked() {
 		class SummingAfterAdvice implements AfterReturningAdvice {
 			public int sum;
 			@Override
-			public void afterReturning(@Nullable Object returnValue, Method m, Object[] args, @Nullable Object target) {
-				sum += (Integer) returnValue;
+			public void afterReturning(@Nullable Object returnValue, Method m, Object[] args, @Nullable Object target) throws Throwable {
+				sum += ((Integer) returnValue).intValue();
 			}
 		}
 		SummingAfterAdvice aa = new SummingAfterAdvice();
@@ -1370,7 +1427,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 	@Test
-	void afterReturningAdvisorIsNotInvokedOnException() {
+	public void testAfterReturningAdvisorIsNotInvokedOnException() {
 		CountingAfterReturningAdvice car = new CountingAfterReturningAdvice();
 		TestBean target = new TestBean();
 		ProxyFactory pf = new ProxyFactory(target);
@@ -1385,14 +1442,15 @@ abstract class AbstractAopProxyTests {
 		assertThat(car.getCalls()).isEqualTo(2);
 		Exception exc = new Exception();
 		// On exception it won't be invoked
-		assertThatExceptionOfType(Throwable.class).isThrownBy(() -> proxied.exceptional(exc))
+		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
+				proxied.exceptional(exc))
 			.satisfies(ex -> assertThat(ex).isSameAs(exc));
 		assertThat(car.getCalls()).isEqualTo(2);
 	}
 
 
 	@Test
-	void throwsAdvisorIsInvoked() {
+	public void testThrowsAdvisorIsInvoked() throws Throwable {
 		// Reacts to ServletException and RemoteException
 		MyThrowsHandler th = new MyThrowsHandler();
 		@SuppressWarnings("serial")
@@ -1415,17 +1473,18 @@ abstract class AbstractAopProxyTests {
 		assertThat(th.getCalls()).isEqualTo(0);
 		Exception ex = new Exception();
 		// Will be advised but doesn't match
-		assertThatException().isThrownBy(() -> proxied.echoException(1, ex))
+		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+				proxied.echoException(1, ex))
 			.matches(ex::equals);
 		FileNotFoundException fex = new FileNotFoundException();
-		assertThatExceptionOfType(FileNotFoundException.class)
-			.isThrownBy(() -> proxied.echoException(1, fex))
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() ->
+				proxied.echoException(1, fex))
 			.matches(fex::equals);
 		assertThat(th.getCalls("ioException")).isEqualTo(1);
 	}
 
 	@Test
-	void addThrowsAdviceWithoutAdvisor() {
+	public void testAddThrowsAdviceWithoutAdvisor() throws Throwable {
 		// Reacts to ServletException and RemoteException
 		MyThrowsHandler th = new MyThrowsHandler();
 
@@ -1440,12 +1499,14 @@ abstract class AbstractAopProxyTests {
 		assertThat(th.getCalls()).isEqualTo(0);
 		Exception ex = new Exception();
 		// Will be advised but doesn't match
-		assertThatException().isThrownBy(() -> proxied.echoException(1, ex))
+		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+				proxied.echoException(1, ex))
 			.matches(ex::equals);
 
 		// Subclass of RemoteException
 		MarshalException mex = new MarshalException("");
-		assertThatExceptionOfType(MarshalException.class).isThrownBy(() -> proxied.echoException(1, mex))
+		assertThatExceptionOfType(MarshalException.class).isThrownBy(() ->
+				proxied.echoException(1, mex))
 			.matches(mex::equals);
 
 		assertThat(th.getCalls("remoteException")).isEqualTo(1);
@@ -1511,10 +1572,13 @@ abstract class AbstractAopProxyTests {
 	@SuppressWarnings("serial")
 	protected static class StringSetterNullReplacementAdvice extends DefaultPointcutAdvisor {
 
-		private static MethodInterceptor cleaner = mi -> {
-			// We know it can only be invoked if there's a single parameter of type string
-			mi.getArguments()[0] = "";
-			return mi.proceed();
+		private static MethodInterceptor cleaner = new MethodInterceptor() {
+			@Override
+			public Object invoke(MethodInvocation mi) throws Throwable {
+				// We know it can only be invoked if there's a single parameter of type string
+				mi.getArguments()[0] = "";
+				return mi.proceed();
+			}
 		};
 
 		public StringSetterNullReplacementAdvice() {
@@ -1546,9 +1610,7 @@ abstract class AbstractAopProxyTests {
 				@Override
 				public boolean matches(Method m, @Nullable Class<?> targetClass, Object... args) {
 					boolean run = m.getName().contains(pattern);
-					if (run) {
-						++count;
-					}
+					if (run) ++count;
 					return run;
 				}
 			});
@@ -1567,9 +1629,7 @@ abstract class AbstractAopProxyTests {
 				@Override
 				public boolean matches(Method m, @Nullable Class<?> targetClass, Object... args) {
 					boolean run = m.getName().contains(pattern);
-					if (run) {
-						++count;
-					}
+					if (run) ++count;
 					return run;
 				}
 				@Override
@@ -1636,7 +1696,7 @@ abstract class AbstractAopProxyTests {
 	public static class AllInstancesAreEqual implements IOther {
 
 		@Override
-		public boolean equals(@Nullable Object other) {
+		public boolean equals(Object other) {
 			return (other instanceof AllInstancesAreEqual);
 		}
 
@@ -1745,7 +1805,7 @@ abstract class AbstractAopProxyTests {
 	}
 
 
-	public interface IOverloads {
+	public static interface IOverloads {
 
 		void overload();
 
@@ -1784,20 +1844,21 @@ abstract class AbstractAopProxyTests {
 			AfterReturningAdvice, ThrowsAdvice {
 
 		@Override
-		public void before(Method m, Object[] args, @Nullable Object target) {
+		public void before(Method m, Object[] args, @Nullable Object target) throws Throwable {
 			count(m);
 		}
 
 		@Override
-		public void afterReturning(@Nullable Object o, Method m, Object[] args, @Nullable Object target) {
+		public void afterReturning(@Nullable Object o, Method m, Object[] args, @Nullable Object target)
+				throws Throwable {
 			count(m);
 		}
 
-		public void afterThrowing(IOException ex) {
+		public void afterThrowing(IOException ex) throws Throwable {
 			count(IOException.class.getName());
 		}
 
-		public void afterThrowing(UncheckedException ex) {
+		public void afterThrowing(UncheckedException ex) throws Throwable {
 			count(UncheckedException.class.getName());
 		}
 
@@ -1807,11 +1868,11 @@ abstract class AbstractAopProxyTests {
 	@SuppressWarnings("serial")
 	public static class CountingThrowsAdvice extends MethodCounter implements ThrowsAdvice {
 
-		public void afterThrowing(IOException ex) {
+		public void afterThrowing(IOException ex) throws Throwable {
 			count(IOException.class.getName());
 		}
 
-		public void afterThrowing(UncheckedException ex) {
+		public void afterThrowing(UncheckedException ex) throws Throwable {
 			count(UncheckedException.class.getName());
 		}
 
@@ -1850,37 +1911,54 @@ abstract class AbstractAopProxyTests {
 			this.target = target;
 		}
 
+		/**
+		 * @see org.springframework.aop.TargetSource#getTargetClass()
+		 */
 		@Override
 		public Class<?> getTargetClass() {
 			return target.getClass();
 		}
 
+		/**
+		 * @see org.springframework.aop.TargetSource#getTarget()
+		 */
 		@Override
-		public Object getTarget() {
+		public Object getTarget() throws Exception {
 			++gets;
 			return target;
 		}
 
+		/**
+		 * @see org.springframework.aop.TargetSource#releaseTarget(java.lang.Object)
+		 */
 		@Override
-		public void releaseTarget(Object pTarget) {
-			if (pTarget != this.target) {
+		public void releaseTarget(Object pTarget) throws Exception {
+			if (pTarget != this.target)
 				throw new RuntimeException("Released wrong target");
-			}
 			++releases;
 		}
 
 		/**
-		 * Check that gets and releases match.
+		 * Check that gets and releases match
+		 *
 		 */
 		public void verify() {
-			if (gets != releases) {
+			if (gets != releases)
 				throw new RuntimeException("Expectation failed: " + gets + " gets and " + releases + " releases");
-			}
 		}
+
+		/**
+		 * @see org.springframework.aop.TargetSource#isStatic()
+		 */
+		@Override
+		public boolean isStatic() {
+			return false;
+		}
+
 	}
 
 
-	abstract static class ExposedInvocationTestBean extends TestBean {
+	static abstract class ExposedInvocationTestBean extends TestBean {
 
 		@Override
 		public String getName() {

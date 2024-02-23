@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.http.server.reactive;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.commons.logging.Log;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.publisher.Operators;
-
 import org.springframework.core.log.LogDelegateFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Operators;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Publisher returned from {@link ServerHttpResponse#writeWith(Publisher)}.
@@ -50,8 +49,6 @@ class WriteResultPublisher implements Publisher<Void> {
 
 	private final AtomicReference<State> state = new AtomicReference<>(State.UNSUBSCRIBED);
 
-	private final Runnable cancelTask;
-
 	@Nullable
 	private volatile Subscriber<? super Void> subscriber;
 
@@ -63,8 +60,7 @@ class WriteResultPublisher implements Publisher<Void> {
 	private final String logPrefix;
 
 
-	public WriteResultPublisher(String logPrefix, Runnable cancelTask) {
-		this.cancelTask = cancelTask;
+	public WriteResultPublisher(String logPrefix) {
 		this.logPrefix = logPrefix;
 	}
 
@@ -72,7 +68,7 @@ class WriteResultPublisher implements Publisher<Void> {
 	@Override
 	public final void subscribe(Subscriber<? super Void> subscriber) {
 		if (rsWriteResultLogger.isTraceEnabled()) {
-			rsWriteResultLogger.trace(this.logPrefix + "got subscriber " + subscriber);
+			rsWriteResultLogger.trace(this.logPrefix + this.state + " subscribe: " + subscriber);
 		}
 		this.state.get().subscribe(this, subscriber);
 	}
@@ -81,22 +77,20 @@ class WriteResultPublisher implements Publisher<Void> {
 	 * Invoke this to delegate a completion signal to the subscriber.
 	 */
 	public void publishComplete() {
-		State state = this.state.get();
 		if (rsWriteResultLogger.isTraceEnabled()) {
-			rsWriteResultLogger.trace(this.logPrefix + "completed [" + state + "]");
+			rsWriteResultLogger.trace(this.logPrefix + this.state + " publishComplete");
 		}
-		state.publishComplete(this);
+		this.state.get().publishComplete(this);
 	}
 
 	/**
 	 * Invoke this to delegate an error signal to the subscriber.
 	 */
 	public void publishError(Throwable t) {
-		State state = this.state.get();
 		if (rsWriteResultLogger.isTraceEnabled()) {
-			rsWriteResultLogger.trace(this.logPrefix + "failed: " + t + " [" + state + "]");
+			rsWriteResultLogger.trace(this.logPrefix + this.state + " publishError: " + t);
 		}
-		state.publishError(this, t);
+		this.state.get().publishError(this, t);
 	}
 
 	private boolean changeState(State oldState, State newState) {
@@ -119,22 +113,20 @@ class WriteResultPublisher implements Publisher<Void> {
 		@Override
 		public final void request(long n) {
 			if (rsWriteResultLogger.isTraceEnabled()) {
-				rsWriteResultLogger.trace(this.publisher.logPrefix +
-						"request " + (n != Long.MAX_VALUE ? n : "Long.MAX_VALUE"));
+				rsWriteResultLogger.trace(this.publisher.logPrefix + state() + " request: " + n);
 			}
-			getState().request(this.publisher, n);
+			state().request(this.publisher, n);
 		}
 
 		@Override
 		public final void cancel() {
-			State state = getState();
 			if (rsWriteResultLogger.isTraceEnabled()) {
-				rsWriteResultLogger.trace(this.publisher.logPrefix + "cancel [" + state + "]");
+				rsWriteResultLogger.trace(this.publisher.logPrefix + state() + " cancel");
 			}
-			state.cancel(this.publisher);
+			state().cancel(this.publisher);
 		}
 
-		private State getState() {
+		private State state() {
 			return this.publisher.state.get();
 		}
 	}
@@ -168,11 +160,11 @@ class WriteResultPublisher implements Publisher<Void> {
 					publisher.changeState(SUBSCRIBING, SUBSCRIBED);
 					// Now safe to check "beforeSubscribed" flags, they won't change once in NO_DEMAND
 					if (publisher.completedBeforeSubscribed) {
-						publisher.state.get().publishComplete(publisher);
+						publisher.publishComplete();
 					}
-					Throwable ex = publisher.errorBeforeSubscribed;
-					if (ex != null) {
-						publisher.state.get().publishError(publisher, ex);
+					Throwable publisherError = publisher.errorBeforeSubscribed;
+					if (publisherError != null) {
+						publisher.publishError(publisherError);
 					}
 				}
 				else {
@@ -182,16 +174,10 @@ class WriteResultPublisher implements Publisher<Void> {
 			@Override
 			void publishComplete(WriteResultPublisher publisher) {
 				publisher.completedBeforeSubscribed = true;
-				if(State.SUBSCRIBED == publisher.state.get()) {
-					publisher.state.get().publishComplete(publisher);
-				}
 			}
 			@Override
 			void publishError(WriteResultPublisher publisher, Throwable ex) {
 				publisher.errorBeforeSubscribed = ex;
-				if(State.SUBSCRIBED == publisher.state.get()) {
-					publisher.state.get().publishError(publisher, ex);
-				}
 			}
 		},
 
@@ -203,16 +189,10 @@ class WriteResultPublisher implements Publisher<Void> {
 			@Override
 			void publishComplete(WriteResultPublisher publisher) {
 				publisher.completedBeforeSubscribed = true;
-				if(State.SUBSCRIBED == publisher.state.get()) {
-					publisher.state.get().publishComplete(publisher);
-				}
 			}
 			@Override
 			void publishError(WriteResultPublisher publisher, Throwable ex) {
 				publisher.errorBeforeSubscribed = ex;
-				if(State.SUBSCRIBED == publisher.state.get()) {
-					publisher.state.get().publishError(publisher, ex);
-				}
 			}
 		},
 
@@ -251,10 +231,7 @@ class WriteResultPublisher implements Publisher<Void> {
 		}
 
 		void cancel(WriteResultPublisher publisher) {
-			if (publisher.changeState(this, COMPLETED)) {
-				publisher.cancelTask.run();
-			}
-			else {
+			if (!publisher.changeState(this, COMPLETED)) {
 				publisher.state.get().cancel(publisher);
 			}
 		}

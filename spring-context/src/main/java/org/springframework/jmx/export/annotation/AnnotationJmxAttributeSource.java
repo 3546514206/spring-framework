@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
 
 /**
- * Implementation of the {@link JmxAttributeSource} interface that
+ * Implementation of the {@code JmxAttributeSource} interface that
  * reads annotations and exposes the corresponding attributes.
  *
  * @author Rob Harrop
@@ -66,8 +66,8 @@ public class AnnotationJmxAttributeSource implements JmxAttributeSource, BeanFac
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (beanFactory instanceof ConfigurableBeanFactory cbf) {
-			this.embeddedValueResolver = new EmbeddedValueResolver(cbf);
+		if (beanFactory instanceof ConfigurableBeanFactory) {
+			this.embeddedValueResolver = new EmbeddedValueResolver((ConfigurableBeanFactory) beanFactory);
 		}
 	}
 
@@ -92,8 +92,8 @@ public class AnnotationJmxAttributeSource implements JmxAttributeSource, BeanFac
 		map.forEach((attrName, attrValue) -> {
 			if (!"value".equals(attrName)) {
 				Object value = attrValue;
-				if (this.embeddedValueResolver != null && value instanceof String text) {
-					value = this.embeddedValueResolver.resolveStringValue(text);
+				if (this.embeddedValueResolver != null && value instanceof String) {
+					value = this.embeddedValueResolver.resolveStringValue((String) value);
 				}
 				list.add(new PropertyValue(attrName, value));
 			}
@@ -117,7 +117,7 @@ public class AnnotationJmxAttributeSource implements JmxAttributeSource, BeanFac
 		pvs.removePropertyValue("defaultValue");
 		PropertyAccessorFactory.forBeanPropertyAccess(bean).setPropertyValues(pvs);
 		String defaultValue = (String) map.get("defaultValue");
-		if (!defaultValue.isEmpty()) {
+		if (defaultValue.length() > 0) {
 			bean.setDefaultValue(defaultValue);
 		}
 		return bean;

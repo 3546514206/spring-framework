@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,7 +33,7 @@ import org.springframework.lang.Nullable;
  * <p>Consider using Spring's Resource abstraction in the core package
  * for handling all kinds of file resources in a uniform manner.
  * {@link org.springframework.core.io.ResourceLoader}'s {@code getResource()}
- * method can resolve any location to an {@link org.springframework.core.io.Resource}
+ * method can resolve any location to a {@link org.springframework.core.io.Resource}
  * object, which in turn allows one to obtain a {@code java.io.File} in the
  * file system through its {@code getFile()} method.
  *
@@ -110,7 +109,7 @@ public abstract class ResourceUtils {
 			return true;
 		}
 		try {
-			toURL(resourceLocation);
+			new URL(resourceLocation);
 			return true;
 		}
 		catch (MalformedURLException ex) {
@@ -142,7 +141,7 @@ public abstract class ResourceUtils {
 		}
 		try {
 			// try URL
-			return toURL(resourceLocation);
+			return new URL(resourceLocation);
 		}
 		catch (MalformedURLException ex) {
 			// no URL -> treat as file path
@@ -182,7 +181,7 @@ public abstract class ResourceUtils {
 		}
 		try {
 			// try URL
-			return getFile(toURL(resourceLocation));
+			return getFile(new URL(resourceLocation));
 		}
 		catch (MalformedURLException ex) {
 			// no URL -> treat as file path
@@ -220,7 +219,6 @@ public abstract class ResourceUtils {
 					"because it does not reside in the file system: " + resourceUrl);
 		}
 		try {
-			// URI decoding for special characters such as spaces.
 			return new File(toURI(resourceUrl).getSchemeSpecificPart());
 		}
 		catch (URISyntaxException ex) {
@@ -276,9 +274,8 @@ public abstract class ResourceUtils {
 	}
 
 	/**
-	 * Determine whether the given URL points to a resource in a jar file
-	 * &mdash; for example, whether the URL has protocol "jar", "war, "zip",
-	 * "vfszip", or "wsjar".
+	 * Determine whether the given URL points to a resource in a jar file.
+	 * i.e. has protocol "jar", "war, ""zip", "vfszip" or "wsjar".
 	 * @param url the URL to check
 	 * @return whether the URL has been identified as a JAR URL
 	 */
@@ -314,7 +311,7 @@ public abstract class ResourceUtils {
 		if (separatorIndex != -1) {
 			String jarFile = urlFile.substring(0, separatorIndex);
 			try {
-				return toURL(jarFile);
+				return new URL(jarFile);
 			}
 			catch (MalformedURLException ex) {
 				// Probably no protocol in original jar URL, like "jar:C:/mypath/myjar.jar".
@@ -322,7 +319,7 @@ public abstract class ResourceUtils {
 				if (!jarFile.startsWith("/")) {
 					jarFile = "/" + jarFile;
 				}
-				return toURL(FILE_URL_PREFIX + jarFile);
+				return new URL(FILE_URL_PREFIX + jarFile);
 			}
 		}
 		else {
@@ -349,11 +346,11 @@ public abstract class ResourceUtils {
 			// Tomcat's "war:file:...mywar.war*/WEB-INF/lib/myjar.jar!/myentry.txt"
 			String warFile = urlFile.substring(0, endIndex);
 			if (URL_PROTOCOL_WAR.equals(jarUrl.getProtocol())) {
-				return toURL(warFile);
+				return new URL(warFile);
 			}
 			int startIndex = warFile.indexOf(WAR_URL_PREFIX);
 			if (startIndex != -1) {
-				return toURL(warFile.substring(startIndex + WAR_URL_PREFIX.length()));
+				return new URL(warFile.substring(startIndex + WAR_URL_PREFIX.length()));
 			}
 		}
 
@@ -385,52 +382,13 @@ public abstract class ResourceUtils {
 	}
 
 	/**
-	 * Create a URL instance for the given location String,
-	 * going through URI construction and then URL conversion.
-	 * @param location the location String to convert into a URL instance
-	 * @return the URL instance
-	 * @throws MalformedURLException if the location wasn't a valid URL
-	 * @since 6.0
-	 */
-	@SuppressWarnings("deprecation")  // on JDK 20
-	public static URL toURL(String location) throws MalformedURLException {
-		try {
-			// Prefer URI construction with toURL conversion (as of 6.1)
-			return toURI(StringUtils.cleanPath(location)).toURL();
-		}
-		catch (URISyntaxException | IllegalArgumentException ex) {
-			// Lenient fallback to deprecated (on JDK 20) URL constructor,
-			// e.g. for decoded location Strings with percent characters.
-			return new URL(location);
-		}
-	}
-
-	/**
-	 * Create a URL instance for the given root URL and relative path,
-	 * going through URI construction and then URL conversion.
-	 * @param root the root URL to start from
-	 * @param relativePath the relative path to apply
-	 * @return the relative URL instance
-	 * @throws MalformedURLException if the end result is not a valid URL
-	 * @since 6.0
-	 */
-	public static URL toRelativeURL(URL root, String relativePath) throws MalformedURLException {
-		// # can appear in filenames, java.net.URL should not treat it as a fragment
-		relativePath = StringUtils.replace(relativePath, "#", "%23");
-
-		return toURL(StringUtils.applyRelativePath(root.toString(), relativePath));
-	}
-
-	/**
 	 * Set the {@link URLConnection#setUseCaches "useCaches"} flag on the
-	 * given connection, preferring {@code false} but leaving the flag at
-	 * its JVM default value for jar resources (typically {@code true}).
+	 * given connection, preferring {@code false} but leaving the
+	 * flag at {@code true} for JNLP based resources.
 	 * @param con the URLConnection to set the flag on
 	 */
 	public static void useCachesIfNecessary(URLConnection con) {
-		if (!(con instanceof JarURLConnection)) {
-			con.setUseCaches(false);
-		}
+		con.setUseCaches(con.getClass().getSimpleName().startsWith("JNLP"));
 	}
 
 }

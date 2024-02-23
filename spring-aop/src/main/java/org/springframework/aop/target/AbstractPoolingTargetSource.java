@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,11 @@ import org.springframework.lang.Nullable;
  * {@link AbstractPrototypeBasedTargetSource} can be used to create objects
  * in order to put them into the pool.
  *
- * <p>Subclasses must also implement some monitoring methods from the
+ * <p>Subclasses must also implement some of the monitoring methods from the
  * {@link PoolingConfig} interface. The {@link #getPoolingConfigMixin()} method
  * makes these stats available on proxied objects through an IntroductionAdvisor.
  *
- * <p>This class implements the {@link org.springframework.beans.factory.DisposableBean}
+ * <p>This class implements the {@link DisposableBean}
  * interface in order to force subclasses to implement a {@link #destroy()}
  * method, closing down their object pool.
  *
@@ -116,7 +116,7 @@ public abstract class AbstractPoolingTargetSource extends AbstractPrototypeBased
 
 
 	/**
-	 * Return an IntroductionAdvisor that provides a mixin
+	 * Return an IntroductionAdvisor that providing a mixin
 	 * exposing statistics about the pool maintained by this object.
 	 */
 	public DefaultIntroductionAdvisor getPoolingConfigMixin() {

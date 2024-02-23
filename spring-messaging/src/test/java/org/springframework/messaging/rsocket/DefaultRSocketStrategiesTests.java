@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,34 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.rsocket;
 
-import java.util.function.Consumer;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.core.codec.ByteArrayDecoder;
-import org.springframework.core.codec.ByteArrayEncoder;
-import org.springframework.core.codec.ByteBufferDecoder;
-import org.springframework.core.codec.ByteBufferEncoder;
-import org.springframework.core.codec.CharSequenceEncoder;
-import org.springframework.core.codec.DataBufferDecoder;
-import org.springframework.core.codec.DataBufferEncoder;
-import org.springframework.core.codec.StringDecoder;
+import org.springframework.core.codec.*;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.SimpleRouteMatcher;
 
+import java.util.function.Consumer;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
- * Tests for {@link RSocketStrategies}.
- *
+ * Unit tests for {@link RSocketStrategies}.
  * @author Rossen Stoyanchev
  * @since 5.2
  */
@@ -109,9 +97,10 @@ class DefaultRSocketStrategiesTests {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	void applyMetadataExtractors() {
-		Consumer<MetadataExtractorRegistry> consumer = mock();
-		RSocketStrategies.builder().metadataExtractorRegistry(consumer).build();
+		Consumer<MetadataExtractorRegistry> consumer = (Consumer<MetadataExtractorRegistry>) mock(Consumer.class);
+		RSocketStrategies strategies = RSocketStrategies.builder().metadataExtractorRegistry(consumer).build();
 		verify(consumer, times(1)).accept(any());
 	}
 

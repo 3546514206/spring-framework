@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.test.web.reactive.server.samples;
 
 import java.security.Principal;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -36,18 +36,23 @@ import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
 /**
  * Samples tests that demonstrate applying ServerWebExchange initialization.
- *
  * @author Rossen Stoyanchev
  */
-class ExchangeMutatorTests {
+public class ExchangeMutatorTests {
 
-	private final WebTestClient webTestClient = WebTestClient.bindToController(new TestController())
-			.apply(identity("Pablo"))
-			.build();
+	private WebTestClient webTestClient;
 
+
+	@BeforeEach
+	public void setUp() throws Exception {
+
+		this.webTestClient = WebTestClient.bindToController(new TestController())
+				.apply(identity("Pablo"))
+				.build();
+	}
 
 	@Test
-	void useGloballyConfiguredIdentity() {
+	public void useGloballyConfiguredIdentity() throws Exception {
 		this.webTestClient.get().uri("/userIdentity")
 				.exchange()
 				.expectStatus().isOk()
@@ -55,7 +60,8 @@ class ExchangeMutatorTests {
 	}
 
 	@Test
-	void useLocallyConfiguredIdentity() {
+	public void useLocallyConfiguredIdentity() throws Exception {
+
 		this.webTestClient
 				.mutateWith(identity("Giovanni"))
 				.get().uri("/userIdentity")

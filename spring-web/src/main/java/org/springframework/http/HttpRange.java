@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.StringJoiner;
 
 import org.springframework.core.io.InputStreamResource;
@@ -66,7 +65,7 @@ public abstract class HttpRange {
 		long contentLength = getLengthFor(resource);
 		long start = getRangeStart(contentLength);
 		long end = getRangeEnd(contentLength);
-		Assert.isTrue(start < contentLength, () -> "'position' exceeds the resource length " + contentLength);
+		Assert.isTrue(start < contentLength, "'position' exceeds the resource length " + contentLength);
 		return new ResourceRegion(resource, start, end - start + 1);
 	}
 
@@ -148,9 +147,9 @@ public abstract class HttpRange {
 		Assert.hasLength(range, "Range String must not be empty");
 		int dashIdx = range.indexOf('-');
 		if (dashIdx > 0) {
-			long firstPos = Long.parseLong(range, 0, dashIdx, 10);
+			long firstPos = Long.parseLong(range.substring(0, dashIdx));
 			if (dashIdx < range.length() - 1) {
-				Long lastPos = Long.parseLong(range, dashIdx + 1, range.length(), 10);
+				Long lastPos = Long.parseLong(range.substring(dashIdx + 1));
 				return new ByteRange(firstPos, lastPos);
 			}
 			else {
@@ -158,7 +157,7 @@ public abstract class HttpRange {
 			}
 		}
 		else if (dashIdx == 0) {
-			long suffixLength = Long.parseLong(range, 1, range.length(), 10);
+			long suffixLength = Long.parseLong(range.substring(1));
 			return new SuffixByteRange(suffixLength);
 		}
 		else {
@@ -270,14 +269,21 @@ public abstract class HttpRange {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ByteRange that &&
-					this.firstPos == that.firstPos &&
-					ObjectUtils.nullSafeEquals(this.lastPos, that.lastPos)));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ByteRange)) {
+				return false;
+			}
+			ByteRange otherRange = (ByteRange) other;
+			return (this.firstPos == otherRange.firstPos &&
+					ObjectUtils.nullSafeEquals(this.lastPos, otherRange.lastPos));
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(this.firstPos, this.lastPos);
+			return (ObjectUtils.nullSafeHashCode(this.firstPos) * 31 +
+					ObjectUtils.nullSafeHashCode(this.lastPos));
 		}
 
 		@Override
@@ -326,8 +332,14 @@ public abstract class HttpRange {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof SuffixByteRange that &&
-					this.suffixLength == that.suffixLength));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof SuffixByteRange)) {
+				return false;
+			}
+			SuffixByteRange otherRange = (SuffixByteRange) other;
+			return (this.suffixLength == otherRange.suffixLength);
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.web.socket.sockjs.transport.handler;
 
-import java.time.Instant;
+import java.util.Date;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,24 +36,28 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * Test fixture for {@link AbstractHttpSendingTransportHandler} and subclasses.
+ * Test fixture for {@link AbstractHttpSendingTransportHandler} and sub-classes.
  *
  * @author Rossen Stoyanchev
  */
-class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
+public class HttpSendingTransportHandlerTests  extends AbstractHttpRequestTests {
 
-	private WebSocketHandler webSocketHandler = mock();
+	private WebSocketHandler webSocketHandler;
 
-	private TaskScheduler taskScheduler = mock();
+	private StubSockJsServiceConfig sockJsConfig;
 
-	private StubSockJsServiceConfig sockJsConfig = new StubSockJsServiceConfig();
+	private TaskScheduler taskScheduler;
 
 
-	@BeforeEach
 	@Override
-	protected void setup() {
+	@BeforeEach
+	public void setup() {
 		super.setup();
 
+		this.webSocketHandler = mock(WebSocketHandler.class);
+		this.taskScheduler = mock(TaskScheduler.class);
+
+		this.sockJsConfig = new StubSockJsServiceConfig();
 		this.sockJsConfig.setTaskScheduler(this.taskScheduler);
 
 		setRequest("POST", "/");
@@ -61,7 +65,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 
 
 	@Test
-	void handleRequestXhr() throws Exception {
+	public void handleRequestXhr() throws Exception {
 		XhrPollingTransportHandler transportHandler = new XhrPollingTransportHandler();
 		transportHandler.initialize(this.sockJsConfig);
 
@@ -77,7 +81,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 		transportHandler.handleRequest(this.request, this.response, this.webSocketHandler, session);
 
 		assertThat(this.servletRequest.isAsyncStarted()).as("Polling request should remain open").isTrue();
-		verify(this.taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+		verify(this.taskScheduler).schedule(any(Runnable.class), any(Date.class));
 
 		resetRequestAndResponse();
 		transportHandler.handleRequest(this.request, this.response, this.webSocketHandler, session);
@@ -87,7 +91,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void handleRequestXhrStreaming() throws Exception {
+	public void handleRequestXhrStreaming() throws Exception {
 		XhrStreamingTransportHandler transportHandler = new XhrStreamingTransportHandler();
 		transportHandler.initialize(this.sockJsConfig);
 		AbstractSockJsSession session = transportHandler.createSession("1", this.webSocketHandler, null);
@@ -100,7 +104,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void htmlFileTransport() throws Exception {
+	public void htmlFileTransport() throws Exception {
 		HtmlFileTransportHandler transportHandler = new HtmlFileTransportHandler();
 		transportHandler.initialize(this.sockJsConfig);
 		StreamingSockJsSession session = transportHandler.createSession("1", this.webSocketHandler, null);
@@ -122,7 +126,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void eventSourceTransport() throws Exception {
+	public void eventSourceTransport() throws Exception {
 		EventSourceTransportHandler transportHandler = new EventSourceTransportHandler();
 		transportHandler.initialize(this.sockJsConfig);
 		StreamingSockJsSession session = transportHandler.createSession("1", this.webSocketHandler, null);
@@ -135,7 +139,7 @@ class HttpSendingTransportHandlerTests extends AbstractHttpRequestTests {
 	}
 
 	@Test
-	void frameFormats() {
+	public void frameFormats() throws Exception {
 		this.servletRequest.setQueryString("c=callback");
 		this.servletRequest.addParameter("c", "callback");
 

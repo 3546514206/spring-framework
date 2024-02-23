@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  */
 
 package org.springframework.web.socket.sockjs.transport.handler;
-
-import java.util.Map;
-
-import jakarta.servlet.ServletContext;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.http.server.ServerHttpRequest;
@@ -37,6 +33,9 @@ import org.springframework.web.socket.sockjs.transport.TransportHandler;
 import org.springframework.web.socket.sockjs.transport.TransportType;
 import org.springframework.web.socket.sockjs.transport.session.AbstractSockJsSession;
 import org.springframework.web.socket.sockjs.transport.session.WebSocketServerSockJsSession;
+
+import javax.servlet.ServletContext;
+import java.util.Map;
 
 /**
  * WebSocket-based {@link TransportHandler}. Uses {@link SockJsWebSocketHandler} and
@@ -73,8 +72,8 @@ public class WebSocketTransportHandler extends AbstractTransportHandler
 
 	@Override
 	public void setServletContext(ServletContext servletContext) {
-		if (this.handshakeHandler instanceof ServletContextAware servletContextAware) {
-			servletContextAware.setServletContext(servletContext);
+		if (this.handshakeHandler instanceof ServletContextAware) {
+			((ServletContextAware) this.handshakeHandler).setServletContext(servletContext);
 		}
 	}
 
@@ -83,8 +82,8 @@ public class WebSocketTransportHandler extends AbstractTransportHandler
 	public void start() {
 		if (!isRunning()) {
 			this.running = true;
-			if (this.handshakeHandler instanceof Lifecycle lifecycle) {
-				lifecycle.start();
+			if (this.handshakeHandler instanceof Lifecycle) {
+				((Lifecycle) this.handshakeHandler).start();
 			}
 		}
 	}
@@ -93,8 +92,8 @@ public class WebSocketTransportHandler extends AbstractTransportHandler
 	public void stop() {
 		if (isRunning()) {
 			this.running = false;
-			if (this.handshakeHandler instanceof Lifecycle lifecycle) {
-				lifecycle.stop();
+			if (this.handshakeHandler instanceof Lifecycle) {
+				((Lifecycle) this.handshakeHandler).stop();
 			}
 		}
 	}
@@ -107,7 +106,7 @@ public class WebSocketTransportHandler extends AbstractTransportHandler
 
 	@Override
 	public boolean checkSessionType(SockJsSession session) {
-		return (session instanceof WebSocketServerSockJsSession);
+		return session instanceof WebSocketServerSockJsSession;
 	}
 
 	@Override
@@ -123,8 +122,7 @@ public class WebSocketTransportHandler extends AbstractTransportHandler
 		try {
 			wsHandler = new SockJsWebSocketHandler(getServiceConfig(), wsHandler, sockJsSession);
 			this.handshakeHandler.doHandshake(request, response, wsHandler, sockJsSession.getAttributes());
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			sockJsSession.tryCloseWithSockJsTransportError(ex, CloseStatus.SERVER_ERROR);
 			throw new SockJsTransportFailureException("WebSocket handshake failure", wsSession.getId(), ex);
 		}

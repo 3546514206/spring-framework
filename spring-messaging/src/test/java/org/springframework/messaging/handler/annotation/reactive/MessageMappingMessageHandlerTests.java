@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.handler.annotation.reactive;
 
 import java.time.Duration;
@@ -36,6 +35,7 @@ import org.springframework.core.codec.StringDecoder;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.DestinationPatternsMessageCondition;
@@ -54,67 +54,69 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link MessageMappingMessageHandler}.
- *
+ * Unit tests for {@link MessageMappingMessageHandler}.
  * @author Rossen Stoyanchev
  */
 @SuppressWarnings("ALL")
 public class MessageMappingMessageHandlerTests {
 
+	private static final DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+
+
 	private TestEncoderMethodReturnValueHandler returnValueHandler;
 
 
 	@Test
-	void handleString() {
+	public void handleString() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("string", "abcdef")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("abcdef::response"));
 	}
 
 	@Test
-	void handleMonoString() {
+	public void handleMonoString() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("monoString", "abcdef")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("abcdef::response"));
 	}
 
 	@Test
-	void handleFluxString() {
+	public void handleFluxString() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("fluxString", "abc", "def", "ghi")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Arrays.asList("abc::response", "def::response", "ghi::response"));
 	}
 
 	@Test
-	void handleWithPlaceholderInMapping() {
+	public void handleWithPlaceholderInMapping() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("path123", "abcdef")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("abcdef::response"));
 	}
 
 	@Test
-	void handleWithDestinationVariable() {
+	public void handleWithDestinationVariable() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("destination.test", "abcdef")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("test::abcdef::response"));
 	}
 
 	@Test
-	void handleException() {
+	public void handleException() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("exception", "abc")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("rejected::handled"));
 	}
 
 	@Test
-	void handleErrorSignal() {
+	public void handleErrorSignal() {
 		MessageMappingMessageHandler messsageHandler = initMesssageHandler();
 		messsageHandler.handleMessage(message("errorSignal", "abc")).block(Duration.ofSeconds(5));
 		verifyOutputContent(Collections.singletonList("rejected::handled"));
 	}
 
 	@Test
-	void unhandledExceptionShouldFlowThrough() {
+	public void unhandledExceptionShouldFlowThrough() {
 
 		GenericMessage<?> message = new GenericMessage<>(new Object(),
 				Collections.singletonMap(DestinationPatternsMessageCondition.LOOKUP_DESTINATION_HEADER,
@@ -152,7 +154,7 @@ public class MessageMappingMessageHandlerTests {
 	}
 
 	private Message<?> message(String destination, String... content) {
-		Flux<DataBuffer> payload = Flux.fromIterable(Arrays.asList(content)).map(this::toDataBuffer);
+		Flux<DataBuffer> payload = Flux.fromIterable(Arrays.asList(content)).map(parts -> toDataBuffer(parts));
 		MessageHeaderAccessor headers = new MessageHeaderAccessor();
 		headers.setLeaveMutable(true);
 		headers.setHeader(DestinationPatternsMessageCondition.LOOKUP_DESTINATION_HEADER,
@@ -161,7 +163,7 @@ public class MessageMappingMessageHandlerTests {
 	}
 
 	private DataBuffer toDataBuffer(String payload) {
-		return DefaultDataBufferFactory.sharedInstance.wrap(payload.getBytes(UTF_8));
+		return bufferFactory.wrap(payload.getBytes(UTF_8));
 	}
 
 	private void verifyOutputContent(List<String> expected) {

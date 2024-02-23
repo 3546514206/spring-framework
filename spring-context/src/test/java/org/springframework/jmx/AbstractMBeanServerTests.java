@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,23 @@
 
 package org.springframework.jmx;
 
-import java.net.BindException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.LifecycleMethodExecutionExceptionHandler;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
+import org.opentest4j.TestAbortedException;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.jmx.export.MBeanExporter;
+import org.springframework.util.MBeanTestUtils;
 
 import javax.management.MBeanServer;
 import javax.management.MBeanServerFactory;
 import javax.management.ObjectName;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.LifecycleMethodExecutionExceptionHandler;
-import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
-import org.opentest4j.TestAbortedException;
-
-import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.jmx.AbstractMBeanServerTests.BindExceptionHandler;
-import org.springframework.jmx.export.MBeanExporter;
-import org.springframework.util.MBeanTestUtils;
+import java.net.BindException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,7 +43,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code jmxremote_optional.jar} into your classpath, for example in the {@code lib/ext}
  * folder of your JVM.
  *
- * <p>See also: <a href="https://jira.spring.io/browse/SPR-8093">SPR-8093</a>
+ * <p>See also:
+ * <ul>
+ * <li><a href="https://jira.spring.io/browse/SPR-8093">SPR-8093</a></li>
+ * <li><a href="https://issuetracker.springsource.com/browse/EBR-349">EBR-349</a></li>
+ * </ul>
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
@@ -54,8 +55,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @author Stephane Nicoll
  */
-@ExtendWith(BindExceptionHandler.class)
 public abstract class AbstractMBeanServerTests {
+
+	@RegisterExtension
+	BindExceptionHandler bindExceptionHandler = new BindExceptionHandler();
 
 	protected MBeanServer server;
 
@@ -65,46 +68,38 @@ public abstract class AbstractMBeanServerTests {
 		this.server = MBeanServerFactory.createMBeanServer();
 		try {
 			onSetUp();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 			releaseServer();
 			throw ex;
 		}
 	}
 
+	protected ConfigurableApplicationContext loadContext(String configLocation) {
+		GenericApplicationContext ctx = new GenericApplicationContext();
+		new XmlBeanDefinitionReader(ctx).loadBeanDefinitions(configLocation);
+		ctx.getDefaultListableBeanFactory().registerSingleton("server", this.server);
+		ctx.refresh();
+		return ctx;
+	}
+
 	@AfterEach
-	protected void tearDown() throws Exception {
+	public void tearDown() throws Exception {
 		releaseServer();
 		onTearDown();
 	}
 
-	private void releaseServer() {
-		try {
-			MBeanServerFactory.releaseMBeanServer(getServer());
-		}
-		catch (IllegalArgumentException ex) {
-			if (!ex.getMessage().contains("not in list")) {
-				throw ex;
-			}
-		}
+	private void releaseServer() throws Exception {
+		MBeanServerFactory.releaseMBeanServer(getServer());
 		MBeanTestUtils.resetMBeanServers();
 	}
 
-	protected final ConfigurableApplicationContext loadContext(String configLocation) {
-		GenericApplicationContext ctx = new GenericApplicationContext();
-		new XmlBeanDefinitionReader(ctx).loadBeanDefinitions(configLocation);
-		ctx.getDefaultListableBeanFactory().registerSingleton("server", getServer());
-		ctx.refresh();
-		return ctx;
+	protected void onTearDown() throws Exception {
 	}
 
 	protected void onSetUp() throws Exception {
 	}
 
-	protected void onTearDown() {
-	}
-
-	protected final MBeanServer getServer() {
+	public MBeanServer getServer() {
 		return this.server;
 	}
 
@@ -125,7 +120,7 @@ public abstract class AbstractMBeanServerTests {
 	}
 
 
-	static class BindExceptionHandler implements TestExecutionExceptionHandler, LifecycleMethodExecutionExceptionHandler {
+	private static class BindExceptionHandler implements TestExecutionExceptionHandler, LifecycleMethodExecutionExceptionHandler {
 
 		@Override
 		public void handleTestExecutionException(ExtensionContext context, Throwable throwable) throws Throwable {

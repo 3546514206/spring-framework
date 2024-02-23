@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 		Class<?> element = MultipleNoninheritedComposedCachesClass.class;
 		Set<Cacheable> cacheables = getAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).hasSize(2);
+		assertThat(cacheables.size()).isEqualTo(2);
 
 		Iterator<Cacheable> iterator = cacheables.iterator();
 		Cacheable cacheable1 = iterator.next();
@@ -76,7 +76,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 		Class<?> element = SubMultipleNoninheritedComposedCachesClass.class;
 		Set<Cacheable> cacheables = getAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).isEmpty();
+		assertThat(cacheables.size()).isEqualTo(0);
 	}
 
 	@Test
@@ -89,7 +89,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 		Class<MultipleComposedCachesOnInterfaceClass> element = MultipleComposedCachesOnInterfaceClass.class;
 		Set<Cacheable> cacheables = getAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).isEmpty();
+		assertThat(cacheables.size()).isEqualTo(0);
 	}
 
 	@Test
@@ -106,10 +106,10 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 
 	@Test
 	@Disabled("Disabled since some Java 8 updates handle the bridge method differently")
-	void getMultipleComposedAnnotationsOnBridgeMethod() {
+	void getMultipleComposedAnnotationsOnBridgeMethod() throws Exception {
 		Set<Cacheable> cacheables = getAllMergedAnnotations(getBridgeMethod(), Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).isEmpty();
+		assertThat(cacheables.size()).isEqualTo(0);
 	}
 
 	@Test
@@ -127,7 +127,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 		Class<?> element = MultipleNoninheritedComposedCachesClass.class;
 		Set<Cacheable> cacheables = findAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).hasSize(2);
+		assertThat(cacheables.size()).isEqualTo(2);
 
 		Iterator<Cacheable> iterator = cacheables.iterator();
 		Cacheable cacheable1 = iterator.next();
@@ -141,7 +141,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 		Class<?> element = SubMultipleNoninheritedComposedCachesClass.class;
 		Set<Cacheable> cacheables = findAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).hasSize(2);
+		assertThat(cacheables.size()).isEqualTo(2);
 
 		Iterator<Cacheable> iterator = cacheables.iterator();
 		Cacheable cacheable1 = iterator.next();
@@ -178,15 +178,15 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 	}
 
 	@Test
-	void findMultipleComposedAnnotationsOnBridgeMethod() {
+	void findMultipleComposedAnnotationsOnBridgeMethod() throws Exception {
 		assertFindAllMergedAnnotationsBehavior(getBridgeMethod());
 	}
 
 	/**
 	 * Bridge/bridged method setup code copied from
-	 * {@link org.springframework.core.BridgeMethodResolverTests#withGenericParameter()}.
+	 * {@link org.springframework.core.BridgeMethodResolverTests#testWithGenericParameter()}.
 	 */
-	Method getBridgeMethod() {
+	Method getBridgeMethod() throws NoSuchMethodException {
 		Method[] methods = StringGenericParameter.class.getMethods();
 		Method bridgeMethod = null;
 		Method bridgedMethod = null;
@@ -213,7 +213,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 
 		Set<Cacheable> cacheables = getAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).hasSize(2);
+		assertThat(cacheables.size()).isEqualTo(2);
 
 		Iterator<Cacheable> iterator = cacheables.iterator();
 		Cacheable fooCacheable = iterator.next();
@@ -229,7 +229,7 @@ class MultipleComposedAnnotationsOnSingleAnnotatedElementTests {
 
 		Set<Cacheable> cacheables = findAllMergedAnnotations(element, Cacheable.class);
 		assertThat(cacheables).isNotNull();
-		assertThat(cacheables).hasSize(2);
+		assertThat(cacheables.size()).isEqualTo(2);
 
 		Iterator<Cacheable> iterator = cacheables.iterator();
 		Cacheable fooCacheable = iterator.next();

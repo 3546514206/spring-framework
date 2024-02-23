@@ -16,10 +16,10 @@
 
 package example.scannable_scoped;
 
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.stereotype.Component;
 
 @Component
-@MyScope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+@MyScope(BeanDefinition.SCOPE_PROTOTYPE)
 public class CustomScopeAnnotationBean {
 }

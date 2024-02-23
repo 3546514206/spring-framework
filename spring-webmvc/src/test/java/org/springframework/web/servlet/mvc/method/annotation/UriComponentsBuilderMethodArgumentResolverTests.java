@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.reflect.Method;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class UriComponentsBuilderMethodArgumentResolverTests {
+public class UriComponentsBuilderMethodArgumentResolverTests {
 
 	private UriComponentsBuilderMethodArgumentResolver resolver;
 
@@ -49,7 +48,7 @@ class UriComponentsBuilderMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		this.resolver = new UriComponentsBuilderMethodArgumentResolver();
 		this.servletRequest = new MockHttpServletRequest();
 		this.webRequest = new ServletWebRequest(this.servletRequest);
@@ -63,14 +62,14 @@ class UriComponentsBuilderMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() throws Exception {
+	public void supportsParameter() throws Exception {
 		assertThat(this.resolver.supportsParameter(this.builderParam)).isTrue();
 		assertThat(this.resolver.supportsParameter(this.servletBuilderParam)).isTrue();
 		assertThat(this.resolver.supportsParameter(this.intParam)).isFalse();
 	}
 
 	@Test
-	void resolveArgument() throws Exception {
+	public void resolveArgument() throws Exception {
 		this.servletRequest.setContextPath("/myapp");
 		this.servletRequest.setServletPath("/main");
 		this.servletRequest.setPathInfo("/accounts");

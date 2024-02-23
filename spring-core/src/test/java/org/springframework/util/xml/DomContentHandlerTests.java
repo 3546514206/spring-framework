@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,22 @@
 
 package org.springframework.util.xml;
 
-import java.io.StringReader;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.tests.XmlContent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
-import org.springframework.core.testfixture.xml.XmlContent;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DomContentHandler}.
+ * Unit tests for {@link DomContentHandler}.
  */
 class DomContentHandlerTests {
 
@@ -64,15 +60,13 @@ class DomContentHandlerTests {
 
 
 	@BeforeEach
+	@SuppressWarnings("deprecation")  // on JDK 9
 	void setUp() throws Exception {
 		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		documentBuilderFactory.setNamespaceAware(true);
 		documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		result = documentBuilder.newDocument();
-		SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
-		saxParserFactory.setNamespaceAware(true);
-		SAXParser saxParser = saxParserFactory.newSAXParser();
-		xmlReader = saxParser.getXMLReader();
+		xmlReader = org.xml.sax.helpers.XMLReaderFactory.createXMLReader();
 	}
 
 

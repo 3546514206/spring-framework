@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,20 +37,19 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED;
 import static org.springframework.transaction.annotation.Propagation.REQUIRED;
 
 /**
- * Tests for {@link TransactionalTestExecutionListener}.
+ * Unit tests for {@link TransactionalTestExecutionListener}.
  *
  * @author Sam Brannen
  * @since 4.0
  */
 class TransactionalTestExecutionListenerTests {
 
-	private final PlatformTransactionManager tm = mock();
+	private final PlatformTransactionManager tm = mock(PlatformTransactionManager.class);
 
 	private final TransactionalTestExecutionListener listener = new TransactionalTestExecutionListener() {
 		@Override
@@ -59,7 +58,7 @@ class TransactionalTestExecutionListenerTests {
 		}
 	};
 
-	private final TestContext testContext = mock(CALLS_REAL_METHODS);
+	private final TestContext testContext = mock(TestContext.class);
 
 
 	@AfterEach
@@ -286,12 +285,11 @@ class TransactionalTestExecutionListenerTests {
 
 	@Transactional
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface MetaTxWithOverride {
+	private static @interface MetaTxWithOverride {
 
-		@AliasFor(annotation = Transactional.class)
+		@AliasFor(annotation = Transactional.class, attribute = "value")
 		String transactionManager() default "";
 
-		@AliasFor(annotation = Transactional.class)
 		Propagation propagation() default REQUIRED;
 	}
 

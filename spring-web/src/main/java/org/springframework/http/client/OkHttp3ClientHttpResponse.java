@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.StreamUtils;
 
 /**
  * {@link ClientHttpResponse} implementation based on OkHttp 3.x.
@@ -35,8 +35,7 @@ import org.springframework.util.Assert;
  * @author Roy Clarkson
  * @since 4.3
  */
-@Deprecated(since = "6.1", forRemoval = true)
-class OkHttp3ClientHttpResponse implements ClientHttpResponse {
+class OkHttp3ClientHttpResponse extends AbstractClientHttpResponse {
 
 	private final Response response;
 
@@ -51,8 +50,8 @@ class OkHttp3ClientHttpResponse implements ClientHttpResponse {
 
 
 	@Override
-	public HttpStatusCode getStatusCode() throws IOException {
-		return HttpStatusCode.valueOf(this.response.code());
+	public int getRawStatusCode() {
+		return this.response.code();
 	}
 
 	@Override
@@ -63,7 +62,7 @@ class OkHttp3ClientHttpResponse implements ClientHttpResponse {
 	@Override
 	public InputStream getBody() throws IOException {
 		ResponseBody body = this.response.body();
-		return (body != null ? body.byteStream() : InputStream.nullInputStream());
+		return (body != null ? body.byteStream() : StreamUtils.emptyInput());
 	}
 
 	@Override

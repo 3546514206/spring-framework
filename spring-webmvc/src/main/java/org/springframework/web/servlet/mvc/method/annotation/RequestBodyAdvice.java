@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.lang.Nullable;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
 
 /**
  * Allows customizing the request before its body is read and converted into an
@@ -52,28 +52,30 @@ public interface RequestBodyAdvice {
 
 	/**
 	 * Invoked second before the request body is read and converted.
-	 * @param inputMessage the request
-	 * @param parameter the target method parameter
-	 * @param targetType the target type, not necessarily the same as the method
-	 * parameter type, e.g. for {@code HttpEntity<String>}.
+	 *
+	 * @param inputMessage  the request
+	 * @param parameter     the target method parameter
+	 * @param targetType    the target type, not necessarily the same as the method
+	 *                      parameter type, e.g. for {@code HttpEntity<String>}.
 	 * @param converterType the converter used to deserialize the body
-	 * @return the input request or a new instance (never {@code null})
+	 * @return the input request or a new instance, never {@code null}
 	 */
 	HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter,
 			Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException;
 
 	/**
 	 * Invoked third (and last) after the request body is converted to an Object.
-	 * @param body set to the converter Object before the first advice is called
-	 * @param inputMessage the request
-	 * @param parameter the target method parameter
-	 * @param targetType the target type, not necessarily the same as the method
-	 * parameter type, e.g. for {@code HttpEntity<String>}.
+	 *
+	 * @param body          set to the converter Object before the first advice is called
+	 * @param inputMessage  the request
+	 * @param parameter     the target method parameter
+	 * @param targetType    the target type, not necessarily the same as the method
+	 *                      parameter type, e.g. for {@code HttpEntity<String>}.
 	 * @param converterType the converter used to deserialize the body
 	 * @return the same body or a new instance
 	 */
 	Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter parameter,
-			Type targetType, Class<? extends HttpMessageConverter<?>> converterType);
+						 Type targetType, Class<? extends HttpMessageConverter<?>> converterType);
 
 	/**
 	 * Invoked second (and last) if the body is empty.
@@ -83,8 +85,8 @@ public interface RequestBodyAdvice {
 	 * @param targetType the target type, not necessarily the same as the method
 	 * parameter type, e.g. for {@code HttpEntity<String>}.
 	 * @param converterType the selected converter type
-	 * @return the value to use, or {@code null} which may then raise an
-	 * {@code HttpMessageNotReadableException} if the argument is required
+	 * @return the value to use or {@code null} which may then raise an
+	 * {@code HttpMessageNotReadableException} if the argument is required.
 	 */
 	@Nullable
 	Object handleEmptyBody(@Nullable Object body, HttpInputMessage inputMessage, MethodParameter parameter,

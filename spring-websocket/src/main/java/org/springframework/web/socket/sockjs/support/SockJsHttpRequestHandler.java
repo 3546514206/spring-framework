@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,6 @@
  */
 
 package org.springframework.web.socket.sockjs.support;
-
-import java.io.IOException;
-
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.http.server.ServerHttpRequest;
@@ -41,6 +34,12 @@ import org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator;
 import org.springframework.web.socket.sockjs.SockJsException;
 import org.springframework.web.socket.sockjs.SockJsService;
 
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
 /**
  * An {@link HttpRequestHandler} that allows mapping a {@link SockJsService} to requests
  * in a Servlet container.
@@ -58,7 +57,7 @@ public class SockJsHttpRequestHandler
 
 	private final WebSocketHandler webSocketHandler;
 
-	private volatile boolean running;
+	private volatile boolean running = false;
 
 
 	/**
@@ -91,8 +90,8 @@ public class SockJsHttpRequestHandler
 
 	@Override
 	public void setServletContext(ServletContext servletContext) {
-		if (this.sockJsService instanceof ServletContextAware servletContextAware) {
-			servletContextAware.setServletContext(servletContext);
+		if (this.sockJsService instanceof ServletContextAware) {
+			((ServletContextAware) this.sockJsService).setServletContext(servletContext);
 		}
 	}
 
@@ -101,8 +100,8 @@ public class SockJsHttpRequestHandler
 	public void start() {
 		if (!isRunning()) {
 			this.running = true;
-			if (this.sockJsService instanceof Lifecycle lifecycle) {
-				lifecycle.start();
+			if (this.sockJsService instanceof Lifecycle) {
+				((Lifecycle) this.sockJsService).start();
 			}
 		}
 	}
@@ -111,8 +110,8 @@ public class SockJsHttpRequestHandler
 	public void stop() {
 		if (isRunning()) {
 			this.running = false;
-			if (this.sockJsService instanceof Lifecycle lifecycle) {
-				lifecycle.stop();
+			if (this.sockJsService instanceof Lifecycle) {
+				((Lifecycle) this.sockJsService).stop();
 			}
 		}
 	}
@@ -132,8 +131,7 @@ public class SockJsHttpRequestHandler
 
 		try {
 			this.sockJsService.handleRequest(request, response, getSockJsPath(servletRequest), this.webSocketHandler);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			throw new SockJsException("Uncaught failure in SockJS request, uri=" + request.getURI(), ex);
 		}
 	}
@@ -147,8 +145,8 @@ public class SockJsHttpRequestHandler
 	@Override
 	@Nullable
 	public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
-		if (this.sockJsService instanceof CorsConfigurationSource ccs) {
-			return ccs.getCorsConfiguration(request);
+		if (this.sockJsService instanceof CorsConfigurationSource) {
+			return ((CorsConfigurationSource) this.sockJsService).getCorsConfiguration(request);
 		}
 		return null;
 	}

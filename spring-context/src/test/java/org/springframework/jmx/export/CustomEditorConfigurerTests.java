@@ -16,22 +16,20 @@
 
 package org.springframework.jmx.export;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.jmx.AbstractJmxTests;
+
+import javax.management.ObjectName;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import javax.management.ObjectName;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.jmx.AbstractJmxTests;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Rob Harrop
  */
-class CustomEditorConfigurerTests extends AbstractJmxTests {
+public class CustomEditorConfigurerTests extends AbstractJmxTests {
 
 	private final SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd");
 
@@ -41,30 +39,33 @@ class CustomEditorConfigurerTests extends AbstractJmxTests {
 	}
 
 	@Test
-	void datesInApplicationContext() throws Exception {
-		DateRange dr = getContext().getBean("dateRange", DateRange.class);
-
-		assertThat(dr.getStartDate()).as("startDate").isEqualTo(getStartDate());
-		assertThat(dr.getEndDate()).as("endDate").isEqualTo(getEndDate());
-	}
-
-	@Test
-	void datesInJmx() throws Exception {
+	public void testDatesInJmx() throws Exception {
+		// System.out.println(getServer().getClass().getName());
 		ObjectName oname = new ObjectName("bean:name=dateRange");
 
 		Date startJmx = (Date) getServer().getAttribute(oname, "StartDate");
 		Date endJmx = (Date) getServer().getAttribute(oname, "EndDate");
 
-		assertThat(startJmx).as("startDate").isEqualTo(getStartDate());
-		assertThat(endJmx).as("endDate").isEqualTo(getEndDate());
+		assertThat(startJmx).as("startDate ").isEqualTo(getStartDate());
+		assertThat(endJmx).as("endDate ").isEqualTo(getEndDate());
+	}
+
+	@Test
+	public void testGetDates() throws Exception {
+		DateRange dr = (DateRange) getContext().getBean("dateRange");
+
+		assertThat(dr.getStartDate()).as("startDate ").isEqualTo(getStartDate());
+		assertThat(dr.getEndDate()).as("endDate ").isEqualTo(getEndDate());
 	}
 
 	private Date getStartDate() throws ParseException {
-		return df.parse("2004/10/12");
+		Date start = df.parse("2004/10/12");
+		return start;
 	}
 
 	private Date getEndDate() throws ParseException {
-		return df.parse("2004/11/13");
+		Date end = df.parse("2004/11/13");
+		return end;
 	}
 
 }

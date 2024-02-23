@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.messaging.handler.invocation;
 
 import java.lang.reflect.Method;
@@ -24,12 +23,12 @@ import org.springframework.core.MethodIntrospector;
 import org.springframework.util.ReflectionUtils;
 
 /**
- * Subclass for {@link AbstractExceptionHandlerMethodResolver} for testing.
+ * Sub-class for {@link AbstractExceptionHandlerMethodResolver} for testing.
  * @author Rossen Stoyanchev
  */
 public class TestExceptionResolver extends AbstractExceptionHandlerMethodResolver {
 
-	private static final ReflectionUtils.MethodFilter EXCEPTION_HANDLER_METHOD_FILTER =
+	private final static ReflectionUtils.MethodFilter EXCEPTION_HANDLER_METHOD_FILTER =
 			method -> method.getName().matches("handle[\\w]*Exception");
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,13 @@
 
 package org.springframework.web.accept;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.context.request.NativeWebRequest;
+
+import java.util.*;
 
 /**
  * Central class to determine requested {@linkplain MediaType media types}
@@ -74,8 +64,8 @@ public class ContentNegotiationManager implements ContentNegotiationStrategy, Me
 		Assert.notEmpty(strategies, "At least one ContentNegotiationStrategy is expected");
 		this.strategies.addAll(strategies);
 		for (ContentNegotiationStrategy strategy : this.strategies) {
-			if (strategy instanceof MediaTypeFileExtensionResolver mediaTypeFileExtensionResolver) {
-				this.resolvers.add(mediaTypeFileExtensionResolver);
+			if (strategy instanceof MediaTypeFileExtensionResolver) {
+				this.resolvers.add((MediaTypeFileExtensionResolver) strategy);
 			}
 		}
 	}
@@ -136,7 +126,11 @@ public class ContentNegotiationManager implements ContentNegotiationStrategy, Me
 
 	@Override
 	public List<String> resolveFileExtensions(MediaType mediaType) {
-		return doResolveExtensions(resolver -> resolver.resolveFileExtensions(mediaType));
+		Set<String> result = new LinkedHashSet<>();
+		for (MediaTypeFileExtensionResolver resolver : this.resolvers) {
+			result.addAll(resolver.resolveFileExtensions(mediaType));
+		}
+		return new ArrayList<>(result);
 	}
 
 	/**
@@ -152,44 +146,11 @@ public class ContentNegotiationManager implements ContentNegotiationStrategy, Me
 	 */
 	@Override
 	public List<String> getAllFileExtensions() {
-		return doResolveExtensions(MediaTypeFileExtensionResolver::getAllFileExtensions);
-	}
-
-	private List<String> doResolveExtensions(Function<MediaTypeFileExtensionResolver, List<String>> extractor) {
-		List<String> result = null;
+		Set<String> result = new LinkedHashSet<>();
 		for (MediaTypeFileExtensionResolver resolver : this.resolvers) {
-			List<String> extensions = extractor.apply(resolver);
-			if (CollectionUtils.isEmpty(extensions)) {
-				continue;
-			}
-			result = (result != null ? result : new ArrayList<>(4));
-			for (String extension : extensions) {
-				if (!result.contains(extension)) {
-					result.add(extension);
-				}
-			}
+			result.addAll(resolver.getAllFileExtensions());
 		}
-		return (result != null ? result : Collections.emptyList());
-	}
-
-	/**
-	 * Return all registered lookup key to media type mappings by iterating
-	 * {@link MediaTypeFileExtensionResolver}s.
-	 * @since 5.2.4
-	 */
-	public Map<String, MediaType> getMediaTypeMappings() {
-		Map<String, MediaType> result = null;
-		for (MediaTypeFileExtensionResolver resolver : this.resolvers) {
-			if (resolver instanceof MappingMediaTypeFileExtensionResolver mappingResolver) {
-				Map<String, MediaType> map = mappingResolver.getMediaTypes();
-				if (CollectionUtils.isEmpty(map)) {
-					continue;
-				}
-				result = (result != null ? result : new HashMap<>(4));
-				result.putAll(map);
-			}
-		}
-		return (result != null ? result : Collections.emptyMap());
+		return new ArrayList<>(result);
 	}
 
 }

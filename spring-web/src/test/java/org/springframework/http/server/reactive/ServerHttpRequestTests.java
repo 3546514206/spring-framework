@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,113 +16,108 @@
 
 package org.springframework.http.server.reactive;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.mock.web.test.DelegatingServletInputStream;
+import org.springframework.mock.web.test.MockAsyncContext;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.util.MultiValueMap;
+
+import javax.servlet.AsyncContext;
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.ReadListener;
-import jakarta.servlet.ServletInputStream;
-import jakarta.servlet.http.HttpServletRequest;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.testfixture.servlet.DelegatingServletInputStream;
-import org.springframework.web.testfixture.servlet.MockAsyncContext;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link AbstractServerHttpRequest}.
+ * Unit tests for {@link AbstractServerHttpRequest}.
  *
  * @author Rossen Stoyanchev
  * @author Sam Brannen
- * @author Brian Clozel
  */
-class ServerHttpRequestTests {
+public class ServerHttpRequestTests {
 
 	@Test
-	void queryParamsNone() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path").getQueryParams();
-		assertThat(params).isEmpty();
+	public void queryParamsNone() throws Exception {
+		MultiValueMap<String, String> params = createHttpRequest("/path").getQueryParams();
+		assertThat(params.size()).isEqualTo(0);
 	}
 
 	@Test
-	void queryParams() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path?a=A&b=B").getQueryParams();
-		assertThat(params).hasSize(2);
+	public void queryParams() throws Exception {
+		MultiValueMap<String, String> params = createHttpRequest("/path?a=A&b=B").getQueryParams();
+		assertThat(params.size()).isEqualTo(2);
 		assertThat(params.get("a")).isEqualTo(Collections.singletonList("A"));
 		assertThat(params.get("b")).isEqualTo(Collections.singletonList("B"));
 	}
 
 	@Test
-	void queryParamsWithMultipleValues() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path?a=1&a=2").getQueryParams();
-		assertThat(params).hasSize(1);
+	public void queryParamsWithMultipleValues() throws Exception {
+		MultiValueMap<String, String> params = createHttpRequest("/path?a=1&a=2").getQueryParams();
+		assertThat(params.size()).isEqualTo(1);
 		assertThat(params.get("a")).isEqualTo(Arrays.asList("1", "2"));
 	}
 
 	@Test  // SPR-15140
 	public void queryParamsWithEncodedValue() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path?a=%20%2B+%C3%A0").getQueryParams();
-		assertThat(params).hasSize(1);
+		MultiValueMap<String, String> params = createHttpRequest("/path?a=%20%2B+%C3%A0").getQueryParams();
+		assertThat(params.size()).isEqualTo(1);
 		assertThat(params.get("a")).isEqualTo(Collections.singletonList(" + \u00e0"));
 	}
 
 	@Test
-	void queryParamsWithEmptyValue() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path?a=").getQueryParams();
-		assertThat(params).hasSize(1);
+	public void queryParamsWithEmptyValue() throws Exception {
+		MultiValueMap<String, String> params = createHttpRequest("/path?a=").getQueryParams();
+		assertThat(params.size()).isEqualTo(1);
 		assertThat(params.get("a")).isEqualTo(Collections.singletonList(""));
 	}
 
 	@Test
-	void queryParamsWithNoValue() throws Exception {
-		MultiValueMap<String, String> params = createRequest("/path?a").getQueryParams();
-		assertThat(params).hasSize(1);
+	public void queryParamsWithNoValue() throws Exception {
+		MultiValueMap<String, String> params = createHttpRequest("/path?a").getQueryParams();
+		assertThat(params.size()).isEqualTo(1);
 		assertThat(params.get("a")).isEqualTo(Collections.singletonList(null));
 	}
 
 	@Test
-	void mutateRequestMethod() throws Exception {
-		ServerHttpRequest request = createRequest("/").mutate().method(HttpMethod.DELETE).build();
-		assertThat(request.getMethod()).isEqualTo(HttpMethod.DELETE);
-	}
-
-	@Test
-	void mutateSslInfo() throws Exception {
-		SslInfo sslInfo = mock();
-		ServerHttpRequest request = createRequest("/").mutate().sslInfo(sslInfo).build();
+	public void mutateRequest() throws Exception {
+		SslInfo sslInfo = mock(SslInfo.class);
+		ServerHttpRequest request = createHttpRequest("/").mutate().sslInfo(sslInfo).build();
 		assertThat(request.getSslInfo()).isSameAs(sslInfo);
-	}
 
-	@Test
-	void mutateUriAndPath() throws Exception {
+		request = createHttpRequest("/").mutate().method(HttpMethod.DELETE).build();
+		assertThat(request.getMethod()).isEqualTo(HttpMethod.DELETE);
+
 		String baseUri = "https://aaa.org:8080/a";
 
-		ServerHttpRequest request = createRequest(baseUri).mutate().uri(URI.create("https://bbb.org:9090/b")).build();
+		request = createHttpRequest(baseUri).mutate().uri(URI.create("https://bbb.org:9090/b")).build();
 		assertThat(request.getURI().toString()).isEqualTo("https://bbb.org:9090/b");
 
-		request = createRequest(baseUri).mutate().path("/b/c/d").build();
+		request = createHttpRequest(baseUri).mutate().path("/b/c/d").build();
 		assertThat(request.getURI().toString()).isEqualTo("https://aaa.org:8080/b/c/d");
 
-		request = createRequest(baseUri).mutate().path("/app/b/c/d").contextPath("/app").build();
+		request = createHttpRequest(baseUri).mutate().path("/app/b/c/d").contextPath("/app").build();
 		assertThat(request.getURI().toString()).isEqualTo("https://aaa.org:8080/app/b/c/d");
 		assertThat(request.getPath().contextPath().value()).isEqualTo("/app");
 	}
 
+	@Test
+	public void mutateWithInvalidPath() throws Exception {
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				createHttpRequest("/").mutate().path("foo-bar"));
+	}
+
 	@Test  // SPR-16434
 	public void mutatePathWithEncodedQueryParams() throws Exception {
-		ServerHttpRequest request = createRequest("/path?name=%E6%89%8E%E6%A0%B9");
+		ServerHttpRequest request = createHttpRequest("/path?name=%E6%89%8E%E6%A0%B9");
 		request = request.mutate().path("/mutatedPath").build();
 
 		assertThat(request.getURI().getRawPath()).isEqualTo("/mutatedPath");
@@ -130,99 +125,49 @@ class ServerHttpRequestTests {
 	}
 
 	@Test
-	void mutateWithInvalidPath() {
-		assertThatIllegalArgumentException().isThrownBy(() -> createRequest("/").mutate().path("foo-bar"));
-	}
-
-	@Test
-	void mutateHeadersViaConsumer() throws Exception {
+	public void mutateHeadersViaConsumer() throws Exception {
 		String headerName = "key";
 		String headerValue1 = "value1";
 		String headerValue2 = "value2";
 
-		ServerHttpRequest request = createRequest("/path");
+		ServerHttpRequest request = createHttpRequest("/path");
 		assertThat(request.getHeaders().get(headerName)).isNull();
 
 		request = request.mutate().headers(headers -> headers.add(headerName, headerValue1)).build();
+
 		assertThat(request.getHeaders().get(headerName)).containsExactly(headerValue1);
 
 		request = request.mutate().headers(headers -> headers.add(headerName, headerValue2)).build();
+
 		assertThat(request.getHeaders().get(headerName)).containsExactly(headerValue1, headerValue2);
 	}
 
 	@Test
-	void mutateHeaderBySettingHeaderValues() throws Exception {
+	public void mutateHeaderBySettingHeaderValues() throws Exception {
 		String headerName = "key";
 		String headerValue1 = "value1";
 		String headerValue2 = "value2";
 		String headerValue3 = "value3";
 
-		ServerHttpRequest request = createRequest("/path");
+		ServerHttpRequest request = createHttpRequest("/path");
 		assertThat(request.getHeaders().get(headerName)).isNull();
 
 		request = request.mutate().header(headerName, headerValue1, headerValue2).build();
+
 		assertThat(request.getHeaders().get(headerName)).containsExactly(headerValue1, headerValue2);
 
 		request = request.mutate().header(headerName, headerValue3).build();
+
 		assertThat(request.getHeaders().get(headerName)).containsExactly(headerValue3);
 	}
 
-	@Test // gh-26615
-	void mutateContentTypeHeaderValue() throws Exception {
-		ServerHttpRequest request = createRequest("/path").mutate()
-				.headers(headers -> headers.setContentType(MediaType.APPLICATION_JSON)).build();
-
-		assertThat(request.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
-
-		ServerHttpRequest mutated = request.mutate()
-				.headers(headers -> headers.setContentType(MediaType.APPLICATION_CBOR)).build();
-		assertThat(mutated.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_CBOR);
-	}
-
-	@Test
-	void mutateWithExistingContextPath() throws Exception {
-		ServerHttpRequest request = createRequest("/context/path", "/context");
-
-		ServerHttpRequest mutated = request.mutate().build();
-		assertThat(mutated.getPath().contextPath().value()).isEqualTo("/context");
-		assertThat(mutated.getPath().pathWithinApplication().value()).isEqualTo("/path");
-		assertThat(mutated.getURI().getRawPath()).isEqualTo("/context/path");
-
-		mutated = request.mutate().contextPath("/other").path("/other/path").build();
-		assertThat(mutated.getPath().contextPath().value()).isEqualTo("/other");
-		assertThat(mutated.getPath().pathWithinApplication().value()).isEqualTo("/path");
-		assertThat(mutated.getURI().getRawPath()).isEqualTo("/other/path");
-	}
-
-	@Test
-	void mutateContextPathWithoutUpdatingPathShouldFail() throws Exception {
-		ServerHttpRequest request = createRequest("/context/path", "/context");
-
-		assertThatThrownBy(() -> request.mutate().contextPath("/fail").build())
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("Invalid contextPath '/fail': must match the start of requestPath: '/context/path'");
-	}
-
-	@Test // gh-26304
-	public void mutateDoesNotPreventAccessToNativeRequest() throws Exception {
-		ServerHttpRequest request = createRequest("/path");
-		request = request.mutate().header("key", "value").build();
-
-		Object nativeRequest = ServerHttpRequestDecorator.getNativeRequest(request);
-		assertThat(nativeRequest).isInstanceOf(HttpServletRequest.class);
-	}
-
-	private ServerHttpRequest createRequest(String uriString) throws Exception {
-		return createRequest(uriString, "");
-	}
-
-	private ServerHttpRequest createRequest(String uriString, String contextPath) throws Exception {
+	private ServerHttpRequest createHttpRequest(String uriString) throws Exception {
 		URI uri = URI.create(uriString);
 		MockHttpServletRequest request = new TestHttpServletRequest(uri);
-		request.setContextPath(contextPath);
 		AsyncContext asyncContext = new MockAsyncContext(request, new MockHttpServletResponse());
-		return new ServletServerHttpRequest(request, asyncContext, "", DefaultDataBufferFactory.sharedInstance, 1024);
+		return new ServletServerHttpRequest(request, asyncContext, "", new DefaultDataBufferFactory(), 1024);
 	}
+
 
 	private static class TestHttpServletRequest extends MockHttpServletRequest {
 

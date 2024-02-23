@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @author Chris Beams
- * @author Yanming Zhou
  */
 @SuppressWarnings("rawtypes")
 class BridgeMethodResolverTests {
@@ -85,35 +84,6 @@ class BridgeMethodResolverTests {
 		assertThat(bridgedMethod.getName()).isEqualTo("add");
 		assertThat(bridgedMethod.getParameterCount()).isEqualTo(1);
 		assertThat(bridgedMethod.getParameterTypes()[0]).isEqualTo(Date.class);
-	}
-
-	@Test
-	void findBridgedMethodFromOriginalMethodInHierarchy() throws Exception {
-		Method originalMethod = Adder.class.getMethod("add", Object.class);
-		assertThat(originalMethod.isBridge()).isFalse();
-		Method bridgedMethod = BridgeMethodResolver.getMostSpecificMethod(originalMethod, DateAdder.class);
-		assertThat(bridgedMethod.isBridge()).isFalse();
-		assertThat(bridgedMethod.getName()).isEqualTo("add");
-		assertThat(bridgedMethod.getParameterCount()).isEqualTo(1);
-		assertThat(bridgedMethod.getParameterTypes()[0]).isEqualTo(Date.class);
-	}
-
-	@Test
-	void findBridgedMethodFromOriginalMethodNotInHierarchy() throws Exception {
-		Method originalMethod = Adder.class.getMethod("add", Object.class);
-		Method mostSpecificMethod = BridgeMethodResolver.getMostSpecificMethod(originalMethod, FakeAdder.class);
-		assertThat(mostSpecificMethod).isSameAs(originalMethod);
-	}
-
-	@Test
-	void findBridgedMethodInHierarchyWithBoundedGenerics() throws Exception {
-		Method originalMethod = Bar.class.getDeclaredMethod("someMethod", Object.class, Object.class);
-		assertThat(originalMethod.isBridge()).isFalse();
-		Method bridgedMethod = BridgeMethodResolver.getMostSpecificMethod(originalMethod, SubBar.class);
-		assertThat(bridgedMethod.isBridge()).isFalse();
-		assertThat(bridgedMethod.getName()).isEqualTo("someMethod");
-		assertThat(bridgedMethod.getParameterCount()).isEqualTo(2);
-		assertThat(bridgedMethod.getParameterTypes()[0]).isEqualTo(CharSequence.class);
 	}
 
 	@Test
@@ -182,7 +152,7 @@ class BridgeMethodResolverTests {
 	}
 
 	@Test
-	void withGenericParameter() {
+	void withGenericParameter() throws Exception {
 		Method[] methods = StringGenericParameter.class.getMethods();
 		Method bridgeMethod = null;
 		Method bridgedMethod = null;
@@ -203,7 +173,7 @@ class BridgeMethodResolverTests {
 	}
 
 	@Test
-	void onAllMethods() {
+	void onAllMethods() throws Exception {
 		Method[] methods = StringList.class.getMethods();
 		for (Method method : methods) {
 			assertThat(BridgeMethodResolver.findBridgedMethod(method)).isNotNull();
@@ -236,7 +206,7 @@ class BridgeMethodResolverTests {
 	}
 
 	@Test
-	void spr2648() {
+	void spr2648() throws Exception {
 		Method bridgeMethod = ReflectionUtils.findMethod(GenericSqlMapIntegerDao.class, "saveOrUpdate", Object.class);
 		assertThat(bridgeMethod != null && bridgeMethod.isBridge()).isTrue();
 		Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(bridgeMethod);
@@ -282,7 +252,7 @@ class BridgeMethodResolverTests {
 		Method bridgedMethod = MegaMessageProducerImpl.class.getDeclaredMethod("receive", MegaMessageEvent.class);
 		assertThat(bridgedMethod.isBridge()).isFalse();
 
-		Method bridgeMethod = MegaMessageProducerImpl.class.getDeclaredMethod("receive", MegaEvent.class);
+		Method bridgeMethod  = MegaMessageProducerImpl.class.getDeclaredMethod("receive", MegaEvent.class);
 		assertThat(bridgeMethod.isBridge()).isTrue();
 
 		assertThat(BridgeMethodResolver.findBridgedMethod(bridgeMethod)).isEqualTo(bridgedMethod);
@@ -326,7 +296,7 @@ class BridgeMethodResolverTests {
 	}
 
 	@Test
-	void spr3534() {
+	void spr3534() throws Exception {
 		Method bridgeMethod = ReflectionUtils.findMethod(TestEmailProvider.class, "findBy", Object.class);
 		assertThat(bridgeMethod != null && bridgeMethod.isBridge()).isTrue();
 		Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(bridgeMethod);
@@ -376,7 +346,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class Bar<T> {
+	public static abstract class Bar<T> {
 
 		void someMethod(Map<?, ?> m, Object otherArg) {
 		}
@@ -388,15 +358,8 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class InterBar<T extends CharSequence> extends Bar<T> {
+	public static abstract class InterBar<T> extends Bar<T> {
 
-		@Override
-		void someMethod(T theArg, Object otherArg) {
-		}
-	}
-
-
-	public abstract static class SubBar<T extends StringBuffer> extends InterBar<T> {
 	}
 
 
@@ -417,7 +380,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class AbstractDateAdder implements Adder<Date> {
+	public static abstract class AbstractDateAdder implements Adder<Date> {
 
 		@Override
 		public abstract void add(Date date);
@@ -427,13 +390,6 @@ class BridgeMethodResolverTests {
 	public static class DateAdder extends AbstractDateAdder {
 
 		@Override
-		public void add(Date date) {
-		}
-	}
-
-
-	public static class FakeAdder {
-
 		public void add(Date date) {
 		}
 	}
@@ -519,7 +475,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	abstract static class AbstractDaoImpl<T, S> implements Dao<T, S> {
+	static abstract class AbstractDaoImpl<T, S> implements Dao<T, S> {
 
 		protected T object;
 
@@ -750,7 +706,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class BaseUserInitiatedEvent extends GenericEvent implements UserInitiatedEvent {
+	public static abstract class BaseUserInitiatedEvent extends GenericEvent implements UserInitiatedEvent {
 	}
 
 
@@ -787,7 +743,7 @@ class BridgeMethodResolverTests {
 
 
 	@SuppressWarnings({"unused", "unchecked"})
-	public abstract static class GenericEventBroadcasterImpl<T extends Event>
+	public static abstract class GenericEventBroadcasterImpl<T extends Event>
 			extends GenericBroadcasterImpl implements EventBroadcaster {
 
 		private Class<T>[] subscribingEvents;
@@ -887,7 +843,7 @@ class BridgeMethodResolverTests {
 
 	public interface SimpleGenericRepository<T> {
 
-		Class<T> getPersistentClass();
+		public Class<T> getPersistentClass();
 
 		List<T> findByQuery();
 
@@ -928,7 +884,7 @@ class BridgeMethodResolverTests {
 			return null;
 		}
 
-		public void afterPropertiesSet() {
+		public void afterPropertiesSet() throws Exception {
 		}
 	}
 
@@ -1097,7 +1053,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class AbstractDao<T> {
+	public static abstract class AbstractDao<T> {
 
 		public void save(T t) {
 		}
@@ -1125,7 +1081,7 @@ class BridgeMethodResolverTests {
 	}
 
 
-	public abstract static class BusinessGenericDao<T, PK extends Serializable>
+	public static abstract class BusinessGenericDao<T, PK extends Serializable>
 			implements DaoInterface<T, PK> {
 
 		public void save(T object) {
@@ -1225,7 +1181,7 @@ class BridgeMethodResolverTests {
 
 
 	@SuppressWarnings("unused")
-	private abstract static class AbstractImplementsInterface<D extends DomainObjectSuper> implements IGenericInterface<D> {
+	private static abstract class AbstractImplementsInterface<D extends DomainObjectSuper> implements IGenericInterface<D> {
 
 		@Override
 		public <T> void doSomething(D domainObject, T value) {
@@ -1341,7 +1297,7 @@ class BridgeMethodResolverTests {
 	// SPR-16103 classes
 	//-------------------
 
-	public abstract static class BaseEntity {
+	public static abstract class BaseEntity {
 	}
 
 	public static class FooEntity extends BaseEntity {

@@ -53,10 +53,22 @@ import org.springframework.lang.Nullable;
  * @see #getResourceByPath
  * @see GenericApplicationContext
  */
+
+/**
+ * FileSystemXmlApplicationContext 最主要的功能已经在 AbstractXmlApplicationContext 中实现了。
+ * 所以 FileSystemXmlApplicationContext 只要实现和它自身设计相关的两个功能。
+ * 一个功能是：实例化这个应用上下文的同时，启动 IoC 容器的 refresh() 过程。这个功能在
+ * FileSystemXmlApplicationContext(String[] configLocations, boolean refresh, @Nullable ApplicationContext parent)；
+ * 这个构造方法中实现了。
+ * 另外一个重要的功能是如何从文件系统中加载 xml 的 bean 定义资源相关的。这个功能在
+ * Resource getResourceByPath(String path);
+ * 方法中实现了，而这个方法重写覆盖了父类方法 DefaultResourceLoader#getResourceByPath。
+ */
 public class FileSystemXmlApplicationContext extends AbstractXmlApplicationContext {
 
 	/**
 	 * Create a new FileSystemXmlApplicationContext for bean-style configuration.
+	 *
 	 * @see #setConfigLocation
 	 * @see #setConfigLocations
 	 * @see #afterPropertiesSet()
@@ -149,9 +161,18 @@ public class FileSystemXmlApplicationContext extends AbstractXmlApplicationConte
 	 * <p>Note: Even if a given path starts with a slash, it will get
 	 * interpreted as relative to the current VM working directory.
 	 * This is consistent with the semantics in a Servlet container.
-	 * @param path the path to the resource
+	 * @param path path to the resource
 	 * @return the Resource handle
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext#getResourceByPath
+	 */
+	/**
+	 * 这是应用于文件系统加载资源场景下的 Resource 的实现，通过构造一个 FileSystemResource 来得到一个在文件
+	 * 系统中定位的 BeanDefinition。
+	 * 这个 getResourceByPath 是在 BeanDefinitionReader 的 loadBeanDefinitions 中被调用的。
+	 * loadBeanDefinitions 采用了模板模式，具体的定位实现是由各自的子类完成的。
+	 *
+	 * @param path the path to the resource
+	 * @return
 	 */
 	@Override
 	protected Resource getResourceByPath(String path) {

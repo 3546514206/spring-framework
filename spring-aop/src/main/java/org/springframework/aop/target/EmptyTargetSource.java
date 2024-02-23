@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,11 @@
 
 package org.springframework.aop.target;
 
-import java.io.Serializable;
-import java.util.Objects;
-
 import org.springframework.aop.TargetSource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
+
+import java.io.Serializable;
 
 /**
  * Canonical {@code TargetSource} when there is no target
@@ -71,7 +70,6 @@ public final class EmptyTargetSource implements TargetSource, Serializable {
 	// Instance implementation
 	//---------------------------------------------------------------------
 
-	@Nullable
 	private final Class<?> targetClass;
 
 	private final boolean isStatic;
@@ -116,6 +114,13 @@ public final class EmptyTargetSource implements TargetSource, Serializable {
 		return null;
 	}
 
+	/**
+	 * Nothing to release.
+	 */
+	@Override
+	public void releaseTarget(Object target) {
+	}
+
 
 	/**
 	 * Returns the canonical instance on deserialization in case
@@ -126,15 +131,20 @@ public final class EmptyTargetSource implements TargetSource, Serializable {
 	}
 
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof EmptyTargetSource that &&
-				ObjectUtils.nullSafeEquals(this.targetClass, that.targetClass) &&
-				this.isStatic == that.isStatic));
+	public boolean equals(Object other) {
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof EmptyTargetSource)) {
+			return false;
+		}
+		EmptyTargetSource otherTs = (EmptyTargetSource) other;
+		return (ObjectUtils.nullSafeEquals(this.targetClass, otherTs.targetClass) && this.isStatic == otherTs.isStatic);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getClass(), this.targetClass);
+		return EmptyTargetSource.class.hashCode() * 13 + ObjectUtils.nullSafeHashCode(this.targetClass);
 	}
 
 	@Override

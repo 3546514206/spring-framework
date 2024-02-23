@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package org.springframework.jca;
 
+import javax.resource.ResourceException;
+import javax.resource.spi.ActivationSpec;
+import javax.resource.spi.BootstrapContext;
+import javax.resource.spi.ResourceAdapter;
+import javax.resource.spi.ResourceAdapterInternalException;
+import javax.resource.spi.endpoint.MessageEndpointFactory;
 import javax.transaction.xa.XAResource;
-
-import jakarta.resource.spi.ActivationSpec;
-import jakarta.resource.spi.BootstrapContext;
-import jakarta.resource.spi.ResourceAdapter;
-import jakarta.resource.spi.endpoint.MessageEndpointFactory;
 
 /**
  * @author Juergen Hoeller
@@ -29,7 +30,7 @@ import jakarta.resource.spi.endpoint.MessageEndpointFactory;
 public class StubResourceAdapter implements ResourceAdapter {
 
 	@Override
-	public void start(BootstrapContext bootstrapContext) {
+	public void start(BootstrapContext bootstrapContext) throws ResourceAdapterInternalException {
 	}
 
 	@Override
@@ -37,7 +38,7 @@ public class StubResourceAdapter implements ResourceAdapter {
 	}
 
 	@Override
-	public void endpointActivation(MessageEndpointFactory messageEndpointFactory, ActivationSpec activationSpec) {
+	public void endpointActivation(MessageEndpointFactory messageEndpointFactory, ActivationSpec activationSpec) throws ResourceException {
 	}
 
 	@Override
@@ -45,7 +46,7 @@ public class StubResourceAdapter implements ResourceAdapter {
 	}
 
 	@Override
-	public XAResource[] getXAResources(ActivationSpec[] activationSpecs) {
+	public XAResource[] getXAResources(ActivationSpec[] activationSpecs) throws ResourceException {
 		return null;
 	}
 

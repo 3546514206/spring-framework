@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.ui;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.core.Conventions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of the {@link Model} interface based on a {@link ConcurrentHashMap}
@@ -66,12 +66,10 @@ public class ConcurrentModel extends ConcurrentHashMap<String, Object> implement
 
 
 	@Override
-	@Nullable
-	public Object put(String key, @Nullable Object value) {
+	public Object put(String key, Object value) {
 		if (value != null) {
 			return super.put(key, value);
-		}
-		else {
+		} else {
 			return remove(key);
 		}
 	}
@@ -108,7 +106,7 @@ public class ConcurrentModel extends ConcurrentHashMap<String, Object> implement
 	@Override
 	public ConcurrentModel addAttribute(Object attributeValue) {
 		Assert.notNull(attributeValue, "Model attribute value must not be null");
-		if (attributeValue instanceof Collection<?> collection && collection.isEmpty()) {
+		if (attributeValue instanceof Collection && ((Collection<?>) attributeValue).isEmpty()) {
 			return this;
 		}
 		return addAttribute(Conventions.getVariableName(attributeValue), attributeValue);

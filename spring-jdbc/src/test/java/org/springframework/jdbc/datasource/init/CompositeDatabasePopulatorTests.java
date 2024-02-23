@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,75 +28,65 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Tests for {@link CompositeDatabasePopulator}.
+ * Unit tests for {@link CompositeDatabasePopulator}.
  *
  * @author Kazuki Shimizu
  * @author Juergen Hoeller
  * @since 4.3
  */
-class CompositeDatabasePopulatorTests {
+public class CompositeDatabasePopulatorTests {
 
-	private final Connection mockedConnection = mock();
+	private final Connection mockedConnection = mock(Connection.class);
 
-	private final DatabasePopulator mockedDatabasePopulator1 = mock();
+	private final DatabasePopulator mockedDatabasePopulator1 = mock(DatabasePopulator.class);
 
-	private final DatabasePopulator mockedDatabasePopulator2 = mock();
+	private final DatabasePopulator mockedDatabasePopulator2 = mock(DatabasePopulator.class);
 
 
 	@Test
-	void addPopulators() throws SQLException {
+	public void addPopulators() throws SQLException {
 		CompositeDatabasePopulator populator = new CompositeDatabasePopulator();
 		populator.addPopulators(mockedDatabasePopulator1, mockedDatabasePopulator2);
-
 		populator.populate(mockedConnection);
-
-		verify(mockedDatabasePopulator1, times(1)).populate(mockedConnection);
+		verify(mockedDatabasePopulator1,times(1)).populate(mockedConnection);
 		verify(mockedDatabasePopulator2, times(1)).populate(mockedConnection);
 	}
 
 	@Test
-	void setPopulatorsWithMultiple() throws SQLException {
+	public void setPopulatorsWithMultiple() throws SQLException {
 		CompositeDatabasePopulator populator = new CompositeDatabasePopulator();
 		populator.setPopulators(mockedDatabasePopulator1, mockedDatabasePopulator2);  // multiple
-
 		populator.populate(mockedConnection);
-
 		verify(mockedDatabasePopulator1, times(1)).populate(mockedConnection);
 		verify(mockedDatabasePopulator2, times(1)).populate(mockedConnection);
 	}
 
 	@Test
-	void setPopulatorsForOverride() throws SQLException {
+	public void setPopulatorsForOverride() throws SQLException {
 		CompositeDatabasePopulator populator = new CompositeDatabasePopulator();
 		populator.setPopulators(mockedDatabasePopulator1);
 		populator.setPopulators(mockedDatabasePopulator2);  // override
-
 		populator.populate(mockedConnection);
-
 		verify(mockedDatabasePopulator1, times(0)).populate(mockedConnection);
 		verify(mockedDatabasePopulator2, times(1)).populate(mockedConnection);
 	}
 
 	@Test
-	void constructWithVarargs() throws SQLException {
+	public void constructWithVarargs() throws SQLException {
 		CompositeDatabasePopulator populator =
 				new CompositeDatabasePopulator(mockedDatabasePopulator1, mockedDatabasePopulator2);
-
 		populator.populate(mockedConnection);
-
 		verify(mockedDatabasePopulator1, times(1)).populate(mockedConnection);
 		verify(mockedDatabasePopulator2, times(1)).populate(mockedConnection);
 	}
 
 	@Test
-	void constructWithCollection() throws SQLException {
+	public void constructWithCollection() throws SQLException {
 		Set<DatabasePopulator> populators = new LinkedHashSet<>();
 		populators.add(mockedDatabasePopulator1);
 		populators.add(mockedDatabasePopulator2);
-
 		CompositeDatabasePopulator populator = new CompositeDatabasePopulator(populators);
 		populator.populate(mockedConnection);
-
 		verify(mockedDatabasePopulator1, times(1)).populate(mockedConnection);
 		verify(mockedDatabasePopulator2, times(1)).populate(mockedConnection);
 	}

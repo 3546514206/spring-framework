@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,26 +31,26 @@ import static org.mockito.Mockito.mock;
  * @author Rick Evans
  * @author Sam Brannen
  */
-class ByteArrayMultipartFileEditorTests {
+public class ByteArrayMultipartFileEditorTests {
 
 	private final ByteArrayMultipartFileEditor editor = new ByteArrayMultipartFileEditor();
 
 	@Test
-	void setValueAsByteArray() {
+	public void setValueAsByteArray() throws Exception {
 		String expectedValue = "Shumwere, shumhow, a shuck ish washing you. - Drunken Far Side";
 		editor.setValue(expectedValue.getBytes());
 		assertThat(editor.getAsText()).isEqualTo(expectedValue);
 	}
 
 	@Test
-	void setValueAsString() {
+	public void setValueAsString() throws Exception {
 		String expectedValue = "'Green Wing' - classic British comedy";
 		editor.setValue(expectedValue);
 		assertThat(editor.getAsText()).isEqualTo(expectedValue);
 	}
 
 	@Test
-	void setValueAsCustomObjectInvokesToString() {
+	public void setValueAsCustomObjectInvokesToString() throws Exception {
 		final String expectedValue = "'Green Wing' - classic British comedy";
 		Object object = new Object() {
 			@Override
@@ -64,23 +64,23 @@ class ByteArrayMultipartFileEditorTests {
 	}
 
 	@Test
-	void setValueAsNullGetsBackEmptyString() {
+	public void setValueAsNullGetsBackEmptyString() throws Exception {
 		editor.setValue(null);
-		assertThat(editor.getAsText()).isEmpty();
+		assertThat(editor.getAsText()).isEqualTo("");
 	}
 
 	@Test
-	void setValueAsMultipartFile() throws Exception {
+	public void setValueAsMultipartFile() throws Exception {
 		String expectedValue = "That is comforting to know";
-		MultipartFile file = mock();
+		MultipartFile file = mock(MultipartFile.class);
 		given(file.getBytes()).willReturn(expectedValue.getBytes());
 		editor.setValue(file);
 		assertThat(editor.getAsText()).isEqualTo(expectedValue);
 	}
 
 	@Test
-	void setValueAsMultipartFileWithBadBytes() throws Exception {
-		MultipartFile file = mock();
+	public void setValueAsMultipartFileWithBadBytes() throws Exception {
+		MultipartFile file = mock(MultipartFile.class);
 		given(file.getBytes()).willThrow(new IOException());
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				editor.setValue(file));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,10 +67,10 @@ public class DecoderHttpMessageReader<T> implements HttpMessageReader<T> {
 	}
 
 	private static void initLogger(Decoder<?> decoder) {
-		if (decoder instanceof AbstractDecoder<?> abstractDecoder &&
+		if (decoder instanceof AbstractDecoder &&
 				decoder.getClass().getName().startsWith("org.springframework.core.codec")) {
-			Log logger = HttpLogging.forLog(abstractDecoder.getLogger());
-			abstractDecoder.setLogger(logger);
+			Log logger = HttpLogging.forLog(((AbstractDecoder<?>) decoder).getLogger());
+			((AbstractDecoder<?>) decoder).setLogger(logger);
 		}
 	}
 
@@ -87,10 +87,6 @@ public class DecoderHttpMessageReader<T> implements HttpMessageReader<T> {
 		return this.mediaTypes;
 	}
 
-	@Override
-	public List<MediaType> getReadableMediaTypes(ResolvableType elementType) {
-		return MediaType.asMediaTypes(this.decoder.getDecodableMimeTypes(elementType));
-	}
 
 	@Override
 	public boolean canRead(ResolvableType elementType, @Nullable MediaType mediaType) {
@@ -100,15 +96,13 @@ public class DecoderHttpMessageReader<T> implements HttpMessageReader<T> {
 	@Override
 	public Flux<T> read(ResolvableType elementType, ReactiveHttpInputMessage message, Map<String, Object> hints) {
 		MediaType contentType = getContentType(message);
-		Map<String, Object> allHints = Hints.merge(hints, getReadHints(elementType, message));
-		return this.decoder.decode(message.getBody(), elementType, contentType, allHints);
+		return this.decoder.decode(message.getBody(), elementType, contentType, hints);
 	}
 
 	@Override
 	public Mono<T> readMono(ResolvableType elementType, ReactiveHttpInputMessage message, Map<String, Object> hints) {
 		MediaType contentType = getContentType(message);
-		Map<String, Object> allHints = Hints.merge(hints, getReadHints(elementType, message));
-		return this.decoder.decodeToMono(message.getBody(), elementType, contentType, allHints);
+		return this.decoder.decodeToMono(message.getBody(), elementType, contentType, hints);
 	}
 
 	/**
@@ -122,14 +116,6 @@ public class DecoderHttpMessageReader<T> implements HttpMessageReader<T> {
 	protected MediaType getContentType(HttpMessage inputMessage) {
 		MediaType contentType = inputMessage.getHeaders().getContentType();
 		return (contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM);
-	}
-
-	/**
-	 * Get additional hints for decoding based on the input HTTP message.
-	 * @since 5.3
-	 */
-	protected Map<String, Object> getReadHints(ResolvableType elementType, ReactiveHttpInputMessage message) {
-		return Hints.none();
 	}
 
 
@@ -163,8 +149,9 @@ public class DecoderHttpMessageReader<T> implements HttpMessageReader<T> {
 	protected Map<String, Object> getReadHints(ResolvableType actualType,
 			ResolvableType elementType, ServerHttpRequest request, ServerHttpResponse response) {
 
-		if (this.decoder instanceof HttpMessageDecoder<?> httpMessageDecoder) {
-			return httpMessageDecoder.getDecodeHints(actualType, elementType, request, response);
+		if (this.decoder instanceof HttpMessageDecoder) {
+			HttpMessageDecoder<?> decoder = (HttpMessageDecoder<?>) this.decoder;
+			return decoder.getDecodeHints(actualType, elementType, request, response);
 		}
 		return Hints.none();
 	}

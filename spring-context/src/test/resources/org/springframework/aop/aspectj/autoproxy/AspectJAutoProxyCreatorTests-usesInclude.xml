@@ -9,18 +9,18 @@
 	  <aop:include name="aspectOne"/>
 	</aop:aspectj-autoproxy>
 
-	<bean id="aspectOne" class="org.springframework.aop.aspectj.autoproxy.MultiplyReturnValue" >
-		<property name="multiple" value="2" />
+	<bean id="aspectOne" class="org.springframework.aop.aspectj.autoproxy.MultiplyReturnValue">
+		<property name="multiple" value="2"/>
 	</bean>
 
 	<bean id="aspectTwo"
-		class="org.springframework.aop.aspectj.autoproxy.MultiplyReturnValue" >
-		<property name="multiple" value="2" />
+		  class="org.springframework.aop.aspectj.autoproxy.MultiplyReturnValue">
+		<property name="multiple" value="2"/>
 	</bean>
 
-	<bean id="adrian" class="org.springframework.beans.testfixture.beans.TestBean">
-		<property name="name" value="adrian" />
-		<property name="age" value="34" />
+	<bean id="adrian" class="org.springframework.tests.sample.beans.TestBean">
+		<property name="name" value="adrian"/>
+		<property name="age" value="34"/>
 	</bean>
 
 </beans>

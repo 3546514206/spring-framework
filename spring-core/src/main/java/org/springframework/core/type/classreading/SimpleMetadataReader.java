@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package org.springframework.core.type.classreading;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 import org.springframework.asm.ClassReader;
+import org.springframework.core.NestedIOException;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.lang.Nullable;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * {@link MetadataReader} implementation based on an ASM
@@ -35,8 +37,8 @@ import org.springframework.lang.Nullable;
  */
 final class SimpleMetadataReader implements MetadataReader {
 
-	private static final int PARSING_OPTIONS =
-			(ClassReader.SKIP_DEBUG | ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES);
+	private static final int PARSING_OPTIONS = ClassReader.SKIP_DEBUG
+			| ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES;
 
 	private final Resource resource;
 
@@ -51,15 +53,12 @@ final class SimpleMetadataReader implements MetadataReader {
 	}
 
 	private static ClassReader getClassReader(Resource resource) throws IOException {
-		try (InputStream is = resource.getInputStream()) {
+		try (InputStream is = new BufferedInputStream(resource.getInputStream())) {
 			try {
 				return new ClassReader(is);
-			}
-			catch (IllegalArgumentException ex) {
-				throw new ClassFormatException("ASM ClassReader failed to parse class file - " +
-						"probably due to a new Java class file version that is not supported yet. " +
-						"Consider compiling with a lower '-target' or upgrade your framework version. " +
-						"Affected class: " + resource, ex);
+			} catch (IllegalArgumentException ex) {
+				throw new NestedIOException("ASM ClassReader failed to parse class file - " +
+						"probably due to a new Java class file version that isn't supported yet: " + resource, ex);
 			}
 		}
 	}

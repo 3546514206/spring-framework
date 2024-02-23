@@ -16,10 +16,6 @@
 
 package org.springframework.jms.core;
 
-import java.util.Map;
-
-import jakarta.jms.Destination;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessagingException;
@@ -28,10 +24,13 @@ import org.springframework.messaging.core.MessageReceivingOperations;
 import org.springframework.messaging.core.MessageRequestReplyOperations;
 import org.springframework.messaging.core.MessageSendingOperations;
 
+import javax.jms.Destination;
+import java.util.Map;
+
 /**
  * A specialization of {@link MessageSendingOperations}, {@link MessageReceivingOperations}
  * and {@link MessageRequestReplyOperations} for JMS related operations that allow to specify
- * a destination name rather than the actual {@link jakarta.jms.Destination}.
+ * a destination name rather than the actual {@link javax.jms.Destination}.
  *
  * @author Stephane Nicoll
  * @since 4.1
@@ -64,9 +63,10 @@ public interface JmsMessageOperations extends MessageSendingOperations<Destinati
 	 * {@link org.springframework.messaging.converter.MessageConverter},
 	 * wrap it as a message with the given headers and send it to
 	 * the given destination.
+	 *
 	 * @param destinationName the name of the target destination
-	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 * @param payload         the Object to use as payload
+	 * @param headers         headers for the message to send
 	 */
 	void convertAndSend(String destinationName, Object payload, Map<String, Object> headers)
 			throws MessagingException;
@@ -90,7 +90,7 @@ public interface JmsMessageOperations extends MessageSendingOperations<Destinati
 	 * and send the resulting message to the given destination.
 	 * @param destinationName the name of the target destination
 	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 * @param headers headers for the message to send
 	 * @param postProcessor the post processor to apply to the message
 	 */
 	void convertAndSend(String destinationName, Object payload, @Nullable Map<String, Object> headers,
@@ -147,7 +147,7 @@ public interface JmsMessageOperations extends MessageSendingOperations<Destinati
 	 * receive the reply and convert its body of the specified target class.
 	 * @param destinationName the name of the target destination
 	 * @param request payload for the request message to send
-	 * @param headers the headers for the request message to send
+	 * @param headers headers for the request message to send
 	 * @param targetClass the target type to convert the payload of the reply to
 	 * @return the payload of the reply message, possibly {@code null} if the message
 	 * could not be received, for example due to a timeout

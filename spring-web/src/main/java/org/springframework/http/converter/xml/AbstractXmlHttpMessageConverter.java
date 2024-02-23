@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.http.converter.xml;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
@@ -34,14 +33,13 @@ import org.springframework.http.converter.AbstractHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
-import org.springframework.util.StreamUtils;
 
 /**
  * Abstract base class for {@link org.springframework.http.converter.HttpMessageConverter HttpMessageConverters}
  * that convert from/to XML.
  *
  * <p>By default, subclasses of this converter support {@code text/xml}, {@code application/xml}, and {@code
- * application/*+xml}. This can be overridden by setting the {@link #setSupportedMediaTypes(java.util.List)
+ * application/*-xml}. This can be overridden by setting the {@link #setSupportedMediaTypes(java.util.List)
  * supportedMediaTypes} property.
  *
  * @author Arjen Poutsma
@@ -56,7 +54,7 @@ public abstract class AbstractXmlHttpMessageConverter<T> extends AbstractHttpMes
 
 	/**
 	 * Protected constructor that sets the {@link #setSupportedMediaTypes(java.util.List) supportedMediaTypes}
-	 * to {@code text/xml} and {@code application/xml}, and {@code application/*+xml}.
+	 * to {@code text/xml} and {@code application/xml}, and {@code application/*-xml}.
 	 */
 	protected AbstractXmlHttpMessageConverter() {
 		super(MediaType.APPLICATION_XML, MediaType.TEXT_XML, new MediaType("application", "*+xml"));
@@ -68,14 +66,13 @@ public abstract class AbstractXmlHttpMessageConverter<T> extends AbstractHttpMes
 			throws IOException, HttpMessageNotReadableException {
 
 		try {
-			InputStream inputStream = StreamUtils.nonClosing(inputMessage.getBody());
-			return readFromSource(clazz, inputMessage.getHeaders(), new StreamSource(inputStream));
+			return readFromSource(clazz, inputMessage.getHeaders(), new StreamSource(inputMessage.getBody()));
 		}
 		catch (IOException | HttpMessageConversionException ex) {
 			throw ex;
 		}
 		catch (Exception ex) {
-			throw new HttpMessageNotReadableException("Could not unmarshal to [" + clazz + "]: " + ex,
+			throw new HttpMessageNotReadableException("Could not unmarshal to [" + clazz + "]: " + ex.getMessage(),
 					ex, inputMessage);
 		}
 	}

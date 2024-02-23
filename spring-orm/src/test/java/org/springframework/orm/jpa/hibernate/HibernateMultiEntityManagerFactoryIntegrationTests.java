@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package org.springframework.orm.jpa.hibernate;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  *
  * @author Juergen Hoeller
  */
-class HibernateMultiEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
+public class HibernateMultiEntityManagerFactoryIntegrationTests extends AbstractContainerEntityManagerFactoryIntegrationTests {
 
 	@Autowired
 	private EntityManagerFactory entityManagerFactory2;
@@ -47,7 +48,7 @@ class HibernateMultiEntityManagerFactoryIntegrationTests extends AbstractContain
 
 	@Override
 	@Test
-	protected void testEntityManagerFactoryImplementsEntityManagerFactoryInfo() {
+	public void testEntityManagerFactoryImplementsEntityManagerFactoryInfo() {
 		boolean condition = this.entityManagerFactory instanceof EntityManagerFactoryInfo;
 		assertThat(condition).as("Must have introduced config interface").isTrue();
 		EntityManagerFactoryInfo emfi = (EntityManagerFactoryInfo) this.entityManagerFactory;
@@ -57,7 +58,7 @@ class HibernateMultiEntityManagerFactoryIntegrationTests extends AbstractContain
 	}
 
 	@Test
-	void testEntityManagerFactory2() {
+	public void testEntityManagerFactory2() {
 		EntityManager em = this.entityManagerFactory2.createEntityManager();
 		try {
 			assertThatIllegalArgumentException().isThrownBy(() ->

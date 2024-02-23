@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ public class AnnotationEnclosingClassSample {
 
 		@EnclosedThree
 		public static class EnclosedStaticStatic {
+
 		}
 
 	}
@@ -42,20 +43,24 @@ public class AnnotationEnclosingClassSample {
 
 		@EnclosedThree
 		public class EnclosedInnerInner {
+
 		}
 
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
-	@interface EnclosedOne {
+	public static @interface EnclosedOne {
+
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
-	@interface EnclosedTwo {
+	public static @interface EnclosedTwo {
+
 	}
 
 	@Retention(RetentionPolicy.RUNTIME)
-	@interface EnclosedThree {
+	public static @interface EnclosedThree {
+
 	}
 
 }

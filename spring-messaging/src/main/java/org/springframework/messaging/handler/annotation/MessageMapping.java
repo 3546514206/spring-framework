@@ -16,14 +16,9 @@
 
 package org.springframework.messaging.handler.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.springframework.aot.hint.annotation.Reflective;
 import org.springframework.messaging.Message;
+
+import java.lang.annotation.*;
 
 /**
  * Annotation for mapping a {@link Message} onto a message-handling method by
@@ -65,34 +60,18 @@ import org.springframework.messaging.Message;
  * authenticated user.</li>
  * </ul>
  *
- * <p>Return value handling depends on the processing scenario:
- * <ul>
- * <li>STOMP over WebSocket -- the value is turned into a message and sent to a
- * default response destination or to a custom destination specified with an
- * {@link SendTo @SendTo} or
- * {@link org.springframework.messaging.simp.annotation.SendToUser @SendToUser}
- * annotation.
- * <li>RSocket -- the response is used to reply to the stream request.
- * </ul>
+ * <p>How the return value is handled depends on the processing scenario. For
+ * STOMP over WebSocket, it is turned into a message and sent to a default response
+ * destination or to a custom destination specified with an {@link SendTo @SendTo}
+ * or {@link org.springframework.messaging.simp.annotation.SendToUser @SendToUser}
+ * annotation. For RSocket, the response is used to reply to the stream request.
  *
- * <p>Specializations of this annotation include
- * {@link org.springframework.messaging.simp.annotation.SubscribeMapping @SubscribeMapping}
- * (e.g. STOMP subscriptions) and
+ * <p>Specializations of this annotation including
+ * {@link org.springframework.messaging.simp.annotation.SubscribeMapping @SubscribeMapping} or
  * {@link org.springframework.messaging.rsocket.annotation.ConnectMapping @ConnectMapping}
- * (e.g. RSocket connections). Both narrow the primary mapping further and also match
- * against the message type. Both can be combined with a type-level
- * {@code @MessageMapping} that declares a common pattern prefix (or prefixes).
- *
- * <p>For further details on the use of this annotation in different contexts,
- * see the following sections of the Spring Framework reference:
- * <ul>
- * <li>STOMP over WebSocket
- * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#websocket-stomp-handle-annotations">
- * "Annotated Controllers"</a>.
- * <li>RSocket
- * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html#rsocket-annot-responders">
- * "Annotated Responders"</a>.
- * </ul>
+ * further narrow the mapping by message type. Both can be combined with a
+ * type-level {@code @MessageMapping} for declaring a common pattern prefix
+ * (or prefixes).
  *
  * <p><b>NOTE:</b> When using controller interfaces (e.g. for AOP proxying),
  * make sure to consistently put <i>all</i> your mapping annotations - such as
@@ -107,7 +86,6 @@ import org.springframework.messaging.Message;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Reflective(MessageMappingReflectiveProcessor.class)
 public @interface MessageMapping {
 
 	/**

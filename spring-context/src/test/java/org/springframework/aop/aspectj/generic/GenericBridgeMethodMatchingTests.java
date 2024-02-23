@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.springframework.aop.aspectj.generic;
 
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -41,40 +39,34 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Ramnivas Laddad
  * @author Chris Beams
  */
-class GenericBridgeMethodMatchingTests {
-
-	private ClassPathXmlApplicationContext ctx;
+public class GenericBridgeMethodMatchingTests {
 
 	protected DerivedInterface<String> testBean;
 
 	protected GenericCounterAspect counterAspect;
 
 
-	@BeforeEach
 	@SuppressWarnings("unchecked")
-	void setup() {
-		this.ctx = new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
+	@org.junit.jupiter.api.BeforeEach
+	public void setup() {
+		ClassPathXmlApplicationContext ctx =
+				new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
 
-		counterAspect = ctx.getBean("counterAspect", GenericCounterAspect.class);
+		counterAspect = (GenericCounterAspect) ctx.getBean("counterAspect");
 		counterAspect.count = 0;
 
 		testBean = (DerivedInterface<String>) ctx.getBean("testBean");
 	}
 
-	@AfterEach
-	void tearDown() {
-		this.ctx.close();
-	}
-
 
 	@Test
-	void testGenericDerivedInterfaceMethodThroughInterface() {
+	public void testGenericDerivedInterfaceMethodThroughInterface() {
 		testBean.genericDerivedInterfaceMethod("");
 		assertThat(counterAspect.count).isEqualTo(1);
 	}
 
 	@Test
-	void testGenericBaseInterfaceMethodThroughInterface() {
+	public void testGenericBaseInterfaceMethodThroughInterface() {
 		testBean.genericBaseInterfaceMethod("");
 		assertThat(counterAspect.count).isEqualTo(1);
 	}
@@ -90,7 +82,7 @@ interface BaseInterface<T> {
 
 interface DerivedInterface<T> extends BaseInterface<T> {
 
-	void genericDerivedInterfaceMethod(T t);
+	public void genericDerivedInterfaceMethod(T t);
 }
 
 

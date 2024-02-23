@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,10 +37,9 @@ import org.springframework.util.CollectionUtils;
  * <p>This class is typically imported via {@link EnableWebSocketMessageBroker}.
  *
  * @author Rossen Stoyanchev
- * @author Sebastien Deleuze
  * @since 4.0
  */
-@Configuration(proxyBeanMethods = false)
+@Configuration
 public class DelegatingWebSocketMessageBrokerConfiguration extends WebSocketMessageBrokerConfigurationSupport {
 
 	private final List<WebSocketMessageBrokerConfigurer> configurers = new ArrayList<>();
@@ -112,17 +111,6 @@ public class DelegatingWebSocketMessageBrokerConfiguration extends WebSocketMess
 		for (WebSocketMessageBrokerConfigurer configurer : this.configurers) {
 			configurer.configureMessageBroker(registry);
 		}
-	}
-
-	@Override
-	protected int initPhase() {
-		for (WebSocketMessageBrokerConfigurer configurer : this.configurers) {
-			Integer phase = configurer.getPhase();
-			if (phase != null) {
-				return phase;
-			}
-		}
-		return super.initPhase();
 	}
 
 }

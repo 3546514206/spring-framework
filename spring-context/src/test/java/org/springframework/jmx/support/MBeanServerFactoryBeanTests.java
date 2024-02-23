@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,65 +16,64 @@
 
 package org.springframework.jmx.support;
 
-import java.lang.management.ManagementFactory;
-import java.util.List;
-
-import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.util.MBeanTestUtils;
+
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+import java.lang.management.ManagementFactory;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for {@link MBeanServerFactoryBean}.
- *
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @author Phillip Webb
- * @author Sam Brannen
  */
-class MBeanServerFactoryBeanTests {
+public class MBeanServerFactoryBeanTests {
+
 
 	@BeforeEach
+	public void setUp() throws Exception {
+		MBeanTestUtils.resetMBeanServers();
+	}
+
+
 	@AfterEach
-	void resetMBeanServers() {
+	public void tearDown() throws Exception {
 		MBeanTestUtils.resetMBeanServers();
 	}
 
 	@Test
-	void defaultValues() {
+	public void getObject() throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.afterPropertiesSet();
 		try {
 			MBeanServer server = bean.getObject();
 			assertThat(server).as("The MBeanServer should not be null").isNotNull();
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void defaultDomain() {
+	public void defaultDomain() throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setDefaultDomain("foo");
 		bean.afterPropertiesSet();
 		try {
 			MBeanServer server = bean.getObject();
 			assertThat(server.getDefaultDomain()).as("The default domain should be foo").isEqualTo("foo");
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void locateExistingServerIfPossibleWithExistingServer() {
+	public void withLocateExistingAndExistingServer() {
 		MBeanServer server = MBeanServerFactory.createMBeanServer();
 		try {
 			MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
@@ -83,8 +82,7 @@ class MBeanServerFactoryBeanTests {
 			try {
 				MBeanServer otherServer = bean.getObject();
 				assertThat(otherServer).as("Existing MBeanServer not located").isSameAs(server);
-			}
-			finally {
+			} finally {
 				bean.destroy();
 			}
 		}
@@ -94,43 +92,40 @@ class MBeanServerFactoryBeanTests {
 	}
 
 	@Test
-	void locateExistingServerIfPossibleWithFallbackToPlatformServer() {
+	public void withLocateExistingAndFallbackToPlatformServer() {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setLocateExistingServerIfPossible(true);
 		bean.afterPropertiesSet();
 		try {
 			assertThat(bean.getObject()).isSameAs(ManagementFactory.getPlatformMBeanServer());
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void withEmptyAgentIdAndFallbackToPlatformServer() {
+	public void withEmptyAgentIdAndFallbackToPlatformServer() {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setAgentId("");
 		bean.afterPropertiesSet();
 		try {
 			assertThat(bean.getObject()).isSameAs(ManagementFactory.getPlatformMBeanServer());
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	@Test
-	void createMBeanServer() {
-		assertCreation(true, "The server should be available in the list");
+	public void createMBeanServer() throws Exception {
+		testCreation(true, "The server should be available in the list");
 	}
 
 	@Test
-	void newMBeanServer() {
-		assertCreation(false, "The server should not be available in the list");
+	public void newMBeanServer() throws Exception {
+		testCreation(false, "The server should not be available in the list");
 	}
 
-
-	private void assertCreation(boolean referenceShouldExist, String failMsg) {
+	private void testCreation(boolean referenceShouldExist, String failMsg) throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setRegisterWithFactory(referenceShouldExist);
 		bean.afterPropertiesSet();
@@ -138,14 +133,18 @@ class MBeanServerFactoryBeanTests {
 			MBeanServer server = bean.getObject();
 			List<MBeanServer> servers = MBeanServerFactory.findMBeanServer(null);
 			assertThat(hasInstance(servers, server)).as(failMsg).isEqualTo(referenceShouldExist);
-		}
-		finally {
+		} finally {
 			bean.destroy();
 		}
 	}
 
 	private boolean hasInstance(List<MBeanServer> servers, MBeanServer server) {
-		return servers.stream().anyMatch(current -> current == server);
+		for (MBeanServer candidate : servers) {
+			if (candidate == server) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }

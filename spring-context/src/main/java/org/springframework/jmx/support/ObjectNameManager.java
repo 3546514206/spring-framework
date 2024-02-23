@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,22 +36,23 @@ public final class ObjectNameManager {
 
 
 	/**
-	 * Retrieve the {@link ObjectName} instance corresponding to the supplied name.
-	 * @param name the name in {@code ObjectName} or {@code String} format
+	 * Retrieve the {@code ObjectName} instance corresponding to the supplied name.
+	 * @param objectName the {@code ObjectName} in {@code ObjectName} or
+	 * {@code String} format
 	 * @return the {@code ObjectName} instance
 	 * @throws MalformedObjectNameException in case of an invalid object name specification
 	 * @see ObjectName#ObjectName(String)
 	 * @see ObjectName#getInstance(String)
 	 */
-	public static ObjectName getInstance(Object name) throws MalformedObjectNameException {
-		if (name instanceof ObjectName objectName) {
-			return objectName;
+	public static ObjectName getInstance(Object objectName) throws MalformedObjectNameException {
+		if (objectName instanceof ObjectName) {
+			return (ObjectName) objectName;
 		}
-		if (!(name instanceof String text)) {
+		if (!(objectName instanceof String)) {
 			throw new MalformedObjectNameException("Invalid ObjectName value type [" +
-					name.getClass().getName() + "]: only ObjectName and String supported.");
+					objectName.getClass().getName() + "]: only ObjectName and String supported.");
 		}
-		return getInstance(text);
+		return getInstance((String) objectName);
 	}
 
 	/**

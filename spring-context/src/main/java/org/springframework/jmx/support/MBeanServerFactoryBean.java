@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,22 @@
 
 package org.springframework.jmx.support;
 
-import javax.management.MBeanServer;
-import javax.management.MBeanServerFactory;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jmx.MBeanServerNotFoundException;
 import org.springframework.lang.Nullable;
 
+import javax.management.MBeanServer;
+import javax.management.MBeanServerFactory;
+
 /**
- * {@link FactoryBean} that obtains a {@link javax.management.MBeanServer} reference
+ * {@link FactoryBean} that obtains an {@link javax.management.MBeanServer} reference
  * through the standard JMX 1.2 {@link javax.management.MBeanServerFactory}
- * API.
- *
- * <p>Exposes the {@code MBeanServer} for bean references.
+ * API (which is available on JDK 1.5 or as part of a JMX 1.2 provider).
+ * Exposes the {@code MBeanServer} for bean references.
  *
  * <p>By default, {@code MBeanServerFactoryBean} will always create
  * a new {@code MBeanServer} even if one is already running. To have
@@ -74,7 +72,7 @@ public class MBeanServerFactoryBean implements FactoryBean<MBeanServer>, Initial
 
 
 	/**
-	 * Set whether the {@code MBeanServerFactoryBean} should attempt
+	 * Set whether or not the {@code MBeanServerFactoryBean} should attempt
 	 * to locate a running {@code MBeanServer} before creating one.
 	 * <p>Default is {@code false}.
 	 */
@@ -112,7 +110,6 @@ public class MBeanServerFactoryBean implements FactoryBean<MBeanServer>, Initial
 	 * Set whether to register the {@code MBeanServer} with the
 	 * {@code MBeanServerFactory}, making it available through
 	 * {@code MBeanServerFactory.findMBeanServer()}.
-	 * <p>Default is {@code true}.
 	 * @see javax.management.MBeanServerFactory#createMBeanServer
 	 * @see javax.management.MBeanServerFactory#findMBeanServer
 	 */

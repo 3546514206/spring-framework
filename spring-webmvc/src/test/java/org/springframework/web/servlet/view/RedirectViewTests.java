@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,13 @@
 
 package org.springframework.web.servlet.view;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.ContextLoader;
 import org.springframework.web.context.support.StaticWebApplicationContext;
@@ -37,10 +32,9 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.support.RequestDataValueProcessor;
 import org.springframework.web.servlet.support.RequestDataValueProcessorWrapper;
 import org.springframework.web.servlet.support.SessionFlashMapManager;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
 import org.springframework.web.util.WebUtils;
+
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -59,7 +53,7 @@ import static org.mockito.Mockito.verify;
  * @author Rossen Stoyanchev
  * @since 27.05.2003
  */
-class RedirectViewTests {
+public class RedirectViewTests {
 
 	private MockHttpServletRequest request;
 
@@ -67,7 +61,7 @@ class RedirectViewTests {
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		this.request = new MockHttpServletRequest();
 		this.request.setContextPath("/context");
 		this.request.setCharacterEncoding(WebUtils.DEFAULT_CHARACTER_ENCODING);
@@ -79,14 +73,14 @@ class RedirectViewTests {
 
 
 	@Test
-	void noUrlSet() {
+	public void noUrlSet() throws Exception {
 		RedirectView rv = new RedirectView();
 		assertThatIllegalArgumentException().isThrownBy(
 				rv::afterPropertiesSet);
 	}
 
 	@Test
-	void http11() throws Exception {
+	public void http11() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com");
 		rv.setHttp10Compatible(false);
@@ -96,7 +90,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void explicitStatusCodeHttp11() throws Exception {
+	public void explicitStatusCodeHttp11() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com");
 		rv.setHttp10Compatible(false);
@@ -107,7 +101,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void explicitStatusCodeHttp10() throws Exception {
+	public void explicitStatusCodeHttp10() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com");
 		rv.setStatusCode(HttpStatus.MOVED_PERMANENTLY);
@@ -117,7 +111,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void attributeStatusCodeHttp10() throws Exception {
+	public void attributeStatusCodeHttp10() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com");
 		request.setAttribute(View.RESPONSE_STATUS_ATTRIBUTE, HttpStatus.CREATED);
@@ -127,7 +121,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void attributeStatusCodeHttp11() throws Exception {
+	public void attributeStatusCodeHttp11() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com");
 		rv.setHttp10Compatible(false);
@@ -138,7 +132,8 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void flashMap() throws Exception {
+	@SuppressWarnings("AssertEqualsBetweenInconvertibleTypes")
+	public void flashMap() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setUrl("https://url.somewhere.com/path");
 		rv.setHttp10Compatible(false);
@@ -155,13 +150,13 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void updateTargetUrl() throws Exception {
+	public void updateTargetUrl() throws Exception {
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
 		wac.registerSingleton("requestDataValueProcessor", RequestDataValueProcessorWrapper.class);
 		wac.setServletContext(new MockServletContext());
 		wac.refresh();
 
-		RequestDataValueProcessor mockProcessor = mock();
+		RequestDataValueProcessor mockProcessor = mock(RequestDataValueProcessor.class);
 		wac.getBean(RequestDataValueProcessorWrapper.class).setRequestDataValueProcessor(mockProcessor);
 
 		RedirectView rv = new RedirectView();
@@ -177,7 +172,7 @@ class RedirectViewTests {
 
 
 	@Test
-	void updateTargetUrlWithContextLoader() throws Exception {
+	public void updateTargetUrlWithContextLoader() throws Exception {
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
 		wac.registerSingleton("requestDataValueProcessor", RequestDataValueProcessorWrapper.class);
 
@@ -186,7 +181,7 @@ class RedirectViewTests {
 		contextLoader.initWebApplicationContext(servletContext);
 
 		try {
-			RequestDataValueProcessor mockProcessor = mock();
+			RequestDataValueProcessor mockProcessor = mock(RequestDataValueProcessor.class);
 			wac.getBean(RequestDataValueProcessorWrapper.class).setRequestDataValueProcessor(mockProcessor);
 
 			RedirectView rv = new RedirectView();
@@ -202,14 +197,14 @@ class RedirectViewTests {
 	}
 
 	@Test // SPR-13693
-	public void remoteHost() {
+	public void remoteHost() throws Exception {
 		RedirectView rv = new RedirectView();
 
 		assertThat(rv.isRemoteHost("https://url.somewhere.com")).isFalse();
 		assertThat(rv.isRemoteHost("/path")).isFalse();
 		assertThat(rv.isRemoteHost("http://somewhereelse.example")).isFalse();
 
-		rv.setHosts("url.somewhere.com");
+		rv.setHosts(new String[] {"url.somewhere.com"});
 
 		assertThat(rv.isRemoteHost("https://url.somewhere.com")).isFalse();
 		assertThat(rv.isRemoteHost("/path")).isFalse();
@@ -231,19 +226,19 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void emptyMap() throws Exception {
+	public void emptyMap() throws Exception {
 		String url = "/myUrl";
 		doTest(new HashMap<>(), url, false, url);
 	}
 
 	@Test
-	void emptyMapWithContextRelative() throws Exception {
+	public void emptyMapWithContextRelative() throws Exception {
 		String url = "/myUrl";
 		doTest(new HashMap<>(), url, true, "/context" + url);
 	}
 
 	@Test
-	void singleParam() throws Exception {
+	public void singleParam() throws Exception {
 		String url = "https://url.somewhere.com";
 		String key = "foo";
 		String val = "bar";
@@ -254,7 +249,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void singleParamWithoutExposingModelAttributes() throws Exception {
+	public void singleParamWithoutExposingModelAttributes() throws Exception {
 		String url = "https://url.somewhere.com";
 		Map<String, String> model = Collections.singletonMap("foo", "bar");
 
@@ -266,7 +261,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void paramWithAnchor() throws Exception {
+	public void paramWithAnchor() throws Exception {
 		String url = "https://url.somewhere.com/test.htm#myAnchor";
 		String key = "foo";
 		String val = "bar";
@@ -277,13 +272,13 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void contextRelativeQueryParam() throws Exception {
+	public void contextRelativeQueryParam() throws Exception {
 		String url = "/test.html?id=1";
 		doTest(new HashMap<>(), url, true, "/context" + url);
 	}
 
 	@Test
-	void twoParams() throws Exception {
+	public void twoParams() throws Exception {
 		String url = "https://url.somewhere.com";
 		String key = "foo";
 		String val = "bar";
@@ -304,7 +299,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void arrayParam() throws Exception {
+	public void arrayParam() throws Exception {
 		String url = "https://url.somewhere.com";
 		String key = "foo";
 		String[] val = new String[] {"bar", "baz"};
@@ -322,7 +317,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void collectionParam() throws Exception {
+	public void collectionParam() throws Exception {
 		String url = "https://url.somewhere.com";
 		String key = "foo";
 		List<String> val = new ArrayList<>();
@@ -342,7 +337,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void objectConversion() throws Exception {
+	public void objectConversion() throws Exception {
 		String url = "https://url.somewhere.com";
 		String key = "foo";
 		String val = "bar";
@@ -359,7 +354,7 @@ class RedirectViewTests {
 	}
 
 	@Test
-	void propagateQueryParams() throws Exception {
+	public void propagateQueryParams() throws Exception {
 		RedirectView rv = new RedirectView();
 		rv.setPropagateQueryParams(true);
 		rv.setUrl("https://url.somewhere.com?foo=bar#bazz");
@@ -382,7 +377,7 @@ class RedirectViewTests {
 
 	private static class TestRedirectView extends RedirectView {
 
-		private final Map<String, ?> expectedModel;
+		private Map<String, ?> expectedModel;
 
 		private boolean queryPropertiesCalled = false;
 

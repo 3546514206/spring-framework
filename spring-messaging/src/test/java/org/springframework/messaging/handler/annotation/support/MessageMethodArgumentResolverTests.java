@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,8 @@
 
 package org.springframework.messaging.handler.annotation.support;
 
-import java.lang.reflect.Method;
-import java.util.Locale;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -31,35 +27,41 @@ import org.springframework.messaging.support.ErrorMessage;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.lang.reflect.Method;
+import java.util.Locale;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link MessageMethodArgumentResolver}.
+ * Unit tests for {@link MessageMethodArgumentResolver}.
  *
  * @author Stephane Nicoll
  * @author Juergen Hoeller
  */
-class MessageMethodArgumentResolverTests {
+public class MessageMethodArgumentResolverTests {
 
-	private MessageConverter converter = mock();
+	private MessageConverter converter;
 
-	private MessageMethodArgumentResolver resolver = new MessageMethodArgumentResolver(this.converter);
+	private MessageMethodArgumentResolver resolver;
 
 	private Method method;
 
 
 	@BeforeEach
-	void setup() throws Exception {
-		this.method = getClass().getDeclaredMethod("handle",
+	public void setup() throws Exception {
+		this.method = MessageMethodArgumentResolverTests.class.getDeclaredMethod("handle",
 				Message.class, Message.class, Message.class, Message.class, ErrorMessage.class, Message.class);
+
+		this.converter = mock(MessageConverter.class);
+		this.resolver = new MessageMethodArgumentResolver(this.converter);
 	}
 
 
 	@Test
-	void resolveWithPayloadTypeAsWildcard() throws Exception {
+	public void resolveWithPayloadTypeAsWildcard() throws Exception {
 		Message<String> message = MessageBuilder.withPayload("test").build();
 		MethodParameter parameter = new MethodParameter(this.method, 0);
 
@@ -68,7 +70,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithMatchingPayloadType() throws Exception {
+	public void resolveWithMatchingPayloadType() throws Exception {
 		Message<Integer> message = MessageBuilder.withPayload(123).build();
 		MethodParameter parameter = new MethodParameter(this.method, 1);
 
@@ -77,7 +79,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithPayloadTypeSubclass() throws Exception {
+	public void resolveWithPayloadTypeSubclass() throws Exception {
 		Message<Integer> message = MessageBuilder.withPayload(123).build();
 		MethodParameter parameter = new MethodParameter(this.method, 2);
 
@@ -86,7 +88,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithConversion() throws Exception {
+	public void resolveWithConversion() throws Exception {
 		Message<String> message = MessageBuilder.withPayload("test").build();
 		MethodParameter parameter = new MethodParameter(this.method, 1);
 
@@ -97,11 +99,11 @@ class MessageMethodArgumentResolverTests {
 
 		assertThat(actual).isNotNull();
 		assertThat(actual.getHeaders()).isSameAs(message.getHeaders());
-		assertThat(actual.getPayload()).isEqualTo(4);
+		assertThat(actual.getPayload()).isEqualTo(new Integer(4));
 	}
 
 	@Test
-	void resolveWithConversionNoMatchingConverter() {
+	public void resolveWithConversionNoMatchingConverter() throws Exception {
 		Message<String> message = MessageBuilder.withPayload("test").build();
 		MethodParameter parameter = new MethodParameter(this.method, 1);
 
@@ -113,7 +115,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithConversionEmptyPayload() {
+	public void resolveWithConversionEmptyPayload() throws Exception {
 		Message<String> message = MessageBuilder.withPayload("").build();
 		MethodParameter parameter = new MethodParameter(this.method, 1);
 
@@ -126,7 +128,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithPayloadTypeUpperBound() throws Exception {
+	public void resolveWithPayloadTypeUpperBound() throws Exception {
 		Message<Integer> message = MessageBuilder.withPayload(123).build();
 		MethodParameter parameter = new MethodParameter(this.method, 3);
 
@@ -135,7 +137,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithPayloadTypeOutOfBound() {
+	public void resolveWithPayloadTypeOutOfBound() throws Exception {
 		Message<Locale> message = MessageBuilder.withPayload(Locale.getDefault()).build();
 		MethodParameter parameter = new MethodParameter(this.method, 3);
 
@@ -147,7 +149,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveMessageSubclassMatch() throws Exception {
+	public void resolveMessageSubclassMatch() throws Exception {
 		ErrorMessage message = new ErrorMessage(new UnsupportedOperationException());
 		MethodParameter parameter = new MethodParameter(this.method, 4);
 
@@ -156,7 +158,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithMessageSubclassAndPayloadWildcard() throws Exception {
+	public void resolveWithMessageSubclassAndPayloadWildcard() throws Exception {
 		ErrorMessage message = new ErrorMessage(new UnsupportedOperationException());
 		MethodParameter parameter = new MethodParameter(this.method, 0);
 
@@ -165,7 +167,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithWrongMessageType() {
+	public void resolveWithWrongMessageType() throws Exception {
 		UnsupportedOperationException ex = new UnsupportedOperationException();
 		Message<? extends Throwable> message = new GenericMessage<Throwable>(ex);
 		MethodParameter parameter = new MethodParameter(this.method, 4);
@@ -178,7 +180,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithPayloadTypeAsWildcardAndNoConverter() throws Exception {
+	public void resolveWithPayloadTypeAsWildcardAndNoConverter() throws Exception {
 		this.resolver = new MessageMethodArgumentResolver();
 
 		Message<String> message = MessageBuilder.withPayload("test").build();
@@ -189,7 +191,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithConversionNeededButNoConverter() {
+	public void resolveWithConversionNeededButNoConverter() throws Exception {
 		this.resolver = new MessageMethodArgumentResolver();
 
 		Message<String> message = MessageBuilder.withPayload("test").build();
@@ -203,7 +205,7 @@ class MessageMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithConversionEmptyPayloadButNoConverter() {
+	public void resolveWithConversionEmptyPayloadButNoConverter() throws Exception {
 		this.resolver = new MessageMethodArgumentResolver();
 
 		Message<String> message = MessageBuilder.withPayload("").build();

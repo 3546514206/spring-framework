@@ -16,14 +16,9 @@
 
 package org.springframework.test.context.event;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
@@ -32,6 +27,10 @@ import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.event.CustomTestEventTests.CustomEventPublishingTestExecutionListener;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.context.TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS;
@@ -57,7 +56,7 @@ public class CustomTestEventTests {
 
 	@Test
 	public void customTestEventPublished() {
-		assertThat(events).hasSize(1);
+		assertThat(events).size().isEqualTo(1);
 		CustomEvent customEvent = events.get(0);
 		assertThat(customEvent.getSource()).isEqualTo(getClass());
 		assertThat(customEvent.getTestName()).isEqualTo("customTestEventPublished");

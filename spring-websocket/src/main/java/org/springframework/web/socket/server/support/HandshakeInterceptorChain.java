@@ -16,18 +16,17 @@
 
 package org.springframework.web.socket.server.support;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.Nullable;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A helper class that assists with invoking a list of handshake interceptors.
@@ -76,8 +75,7 @@ public class HandshakeInterceptorChain {
 			HandshakeInterceptor interceptor = this.interceptors.get(i);
 			try {
 				interceptor.afterHandshake(request, response, this.wsHandler, failure);
-			}
-			catch (Exception ex) {
+			} catch (Throwable ex) {
 				if (logger.isWarnEnabled()) {
 					logger.warn(interceptor + " threw exception in afterHandshake: " + ex);
 				}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,29 @@
 
 package org.springframework.web.servlet.function;
 
-import java.util.Collections;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 
-import org.springframework.web.servlet.handler.PathPatternsTestUtils;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Arjen Poutsma
  */
-class RequestPredicateTests {
+public class RequestPredicateTests {
 
 	private ServerRequest request;
 
 	@BeforeEach
-	void createRequest() {
-		MockHttpServletRequest servletRequest = PathPatternsTestUtils.initRequest("GET", "/", true);
-		this.request = new DefaultServerRequest(servletRequest, Collections.emptyList());
+	public void createRequest() {
+		this.request = new DefaultServerRequest(new MockHttpServletRequest(),
+				Collections.emptyList());
 	}
 
 	@Test
-	void and() {
+	public void and() {
 		RequestPredicate predicate1 = request -> true;
 		RequestPredicate predicate2 = request -> true;
 		RequestPredicate predicate3 = request -> false;
@@ -51,7 +49,7 @@ class RequestPredicateTests {
 	}
 
 	@Test
-	void negate() {
+	public void negate() {
 		RequestPredicate predicate = request -> false;
 		RequestPredicate negated = predicate.negate();
 
@@ -64,7 +62,7 @@ class RequestPredicateTests {
 	}
 
 	@Test
-	void or() {
+	public void or() {
 		RequestPredicate predicate1 = request -> true;
 		RequestPredicate predicate2 = request -> false;
 		RequestPredicate predicate3 = request -> false;

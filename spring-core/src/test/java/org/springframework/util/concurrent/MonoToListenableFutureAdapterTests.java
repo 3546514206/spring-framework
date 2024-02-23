@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.util.concurrent;
 
 import java.time.Duration;
@@ -26,11 +25,9 @@ import reactor.core.publisher.Mono;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link MonoToListenableFutureAdapter}.
- *
+ * Unit tests for {@link MonoToListenableFutureAdapter}.
  * @author Rossen Stoyanchev
  */
-@SuppressWarnings("deprecation")
 class MonoToListenableFutureAdapterTests {
 
 	@Test
@@ -44,7 +41,6 @@ class MonoToListenableFutureAdapterTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	void failure() {
 		Throwable expected = new IllegalStateException("oops");
 		AtomicReference<Object> actual = new AtomicReference<>();

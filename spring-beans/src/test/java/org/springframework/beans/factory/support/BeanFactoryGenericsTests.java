@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,40 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Proxy;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
+import org.springframework.beans.PropertyEditorRegistrar;
+import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.TypedStringValue;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
-import org.springframework.beans.testfixture.beans.GenericBean;
-import org.springframework.beans.testfixture.beans.GenericIntegerBean;
-import org.springframework.beans.testfixture.beans.GenericSetOfIntegerBean;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.OverridingClassLoader;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.tests.EnabledForTestGroups;
+import org.springframework.tests.sample.beans.GenericBean;
+import org.springframework.tests.sample.beans.GenericIntegerBean;
+import org.springframework.tests.sample.beans.GenericSetOfIntegerBean;
+import org.springframework.tests.sample.beans.TestBean;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.entry;
+import static org.springframework.tests.TestGroup.LONG_RUNNING;
 
 /**
  * @author Juergen Hoeller
@@ -58,38 +57,44 @@ import static org.assertj.core.api.Assertions.entry;
  * @author Sam Brannen
  * @since 20.01.2006
  */
-class BeanFactoryGenericsTests {
+public class BeanFactoryGenericsTests {
 
 	@Test
-	void genericSetProperty() {
+	public void testGenericSetProperty() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		rbd.getPropertyValues().add("integerSet", Set.of("4", "5"));
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
+		rbd.getPropertyValues().add("integerSet", input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
 	}
 
 	@Test
-	void genericListProperty() throws Exception {
+	public void testGenericListProperty() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		List<String> input = List.of("http://localhost:8080", "http://localhost:9090");
+		List<String> input = new ArrayList<>();
+		input.add("http://localhost:8080");
+		input.add("http://localhost:9090");
 		rbd.getPropertyValues().add("resourceList", input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getResourceList())
-				.containsExactly(new UrlResource("http://localhost:8080"), new UrlResource("http://localhost:9090"));
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getResourceList().get(1)).isEqualTo(new UrlResource("http://localhost:9090"));
 	}
 
 	@Test
-	void genericListPropertyWithAutowiring() throws Exception {
+	public void testGenericListPropertyWithAutowiring() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.registerSingleton("resource1", new UrlResource("http://localhost:8080"));
 		bf.registerSingleton("resource2", new UrlResource("http://localhost:9090"));
@@ -99,19 +104,22 @@ class BeanFactoryGenericsTests {
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericIntegerBean gb = (GenericIntegerBean) bf.getBean("genericBean");
 
-		assertThat(gb.getResourceList())
-				.containsExactly(new UrlResource("http://localhost:8080"), new UrlResource("http://localhost:9090"));
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getResourceList().get(1)).isEqualTo(new UrlResource("http://localhost:9090"));
 	}
 
 	@Test
-	void genericListPropertyWithInvalidElementType() {
+	public void testGenericListPropertyWithInvalidElementType() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericIntegerBean.class);
 
-		rbd.getPropertyValues().add("testBeanList", List.of(1));
+		List<Integer> input = new ArrayList<>();
+		input.add(1);
+		rbd.getPropertyValues().add("testBeanList", input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
-		assertThatExceptionOfType(BeanCreationException.class).isThrownBy(() -> bf.getBean("genericBean"))
+		assertThatExceptionOfType(BeanCreationException.class).isThrownBy(() ->
+				bf.getBean("genericBean"))
 			.withMessageContaining("genericBean")
 			.withMessageContaining("testBeanList[0]")
 			.withMessageContaining(TestBean.class.getName())
@@ -119,7 +127,7 @@ class BeanFactoryGenericsTests {
 	}
 
 	@Test
-	void genericListPropertyWithOptionalAutowiring() {
+	public void testGenericListPropertyWithOptionalAutowiring() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
@@ -131,62 +139,71 @@ class BeanFactoryGenericsTests {
 	}
 
 	@Test
-	void genericMapProperty() {
+	public void testGenericMapProperty() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, String> input = Map.of(
-				"4", "5",
-				"6", "7");
+		Map<String, String> input = new HashMap<>();
+		input.put("4", "5");
+		input.put("6", "7");
 		rbd.getPropertyValues().add("shortMap", input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
 	}
 
 	@Test
-	void genericListOfArraysProperty() {
+	public void testGenericListOfArraysProperty() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("listOfArrays");
 
-		assertThat(gb.getListOfArrays()).containsExactly(new String[] {"value1", "value2"});
+		assertThat(gb.getListOfArrays().size()).isEqualTo(1);
+		String[] array = gb.getListOfArrays().get(0);
+		assertThat(array.length).isEqualTo(2);
+		assertThat(array[0]).isEqualTo("value1");
+		assertThat(array[1]).isEqualTo("value2");
 	}
 
+
 	@Test
-	void genericSetConstructor() {
+	public void testGenericSetConstructor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Set<String> input = Set.of("4", "5");
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
 	}
 
 	@Test
-	void genericSetConstructorWithAutowiring() {
+	public void testGenericSetConstructorWithAutowiring() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.registerSingleton("integer1", 4);
-		bf.registerSingleton("integer2", 5);
+		bf.registerSingleton("integer1", new Integer(4));
+		bf.registerSingleton("integer2", new Integer(5));
 
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setAutowireMode(RootBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
 	}
 
 	@Test
-	void genericSetConstructorWithOptionalAutowiring() {
+	public void testGenericSetConstructorWithOptionalAutowiring() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
@@ -198,28 +215,33 @@ class BeanFactoryGenericsTests {
 	}
 
 	@Test
-	void genericSetListConstructor() throws Exception {
+	public void testGenericSetListConstructor() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Set<String> input1 = Set.of("4", "5");
-		List<String> input2 = List.of("http://localhost:8080", "http://localhost:9090");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
+		List<String> input2 = new ArrayList<>();
+		input2.add("http://localhost:8080");
+		input2.add("http://localhost:9090");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
-		assertThat(gb.getResourceList())
-				.containsExactly(new UrlResource("http://localhost:8080"), new UrlResource("http://localhost:9090"));
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getResourceList().get(1)).isEqualTo(new UrlResource("http://localhost:9090"));
 	}
 
 	@Test
-	void genericSetListConstructorWithAutowiring() throws Exception {
+	public void testGenericSetListConstructorWithAutowiring() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.registerSingleton("integer1", 4);
-		bf.registerSingleton("integer2", 5);
+		bf.registerSingleton("integer1", new Integer(4));
+		bf.registerSingleton("integer2", new Integer(5));
 		bf.registerSingleton("resource1", new UrlResource("http://localhost:8080"));
 		bf.registerSingleton("resource2", new UrlResource("http://localhost:9090"));
 
@@ -228,13 +250,14 @@ class BeanFactoryGenericsTests {
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
-		assertThat(gb.getResourceList())
-				.containsExactly(new UrlResource("http://localhost:8080"), new UrlResource("http://localhost:9090"));
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getResourceList().get(1)).isEqualTo(new UrlResource("http://localhost:9090"));
 	}
 
 	@Test
-	void genericSetListConstructorWithOptionalAutowiring() throws Exception {
+	public void testGenericSetListConstructorWithOptionalAutowiring() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.registerSingleton("resource1", new UrlResource("http://localhost:8080"));
 		bf.registerSingleton("resource2", new UrlResource("http://localhost:9090"));
@@ -249,78 +272,81 @@ class BeanFactoryGenericsTests {
 	}
 
 	@Test
-	void genericSetMapConstructor() {
+	public void testGenericSetMapConstructor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Set<String> input1 = Set.of("4", "5");
-		Map<String, String> input2 = Map.of(
-				"4", "5",
-				"6", "7");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
+		Map<String, String> input2 = new HashMap<>();
+		input2.put("4", "5");
+		input2.put("6", "7");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
 	}
 
 	@Test
-	void genericMapResourceConstructor() throws Exception {
+	public void testGenericMapResourceConstructor() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, String> input = Map.of(
-				"4", "5",
-				"6", "7");
+		Map<String, String> input = new HashMap<>();
+		input.put("4", "5");
+		input.put("6", "7");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue("http://localhost:8080");
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
-		assertThat(gb.getResourceList()).containsExactly(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
 	}
 
 	@Test
-	void genericMapMapConstructor() {
+	public void testGenericMapMapConstructor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, String> input1 = Map.of(
-				"1", "0",
-				"2", "3");
-		Map<String, String> input2 = Map.of(
-				"4", "5",
-				"6", "7");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Map<String, String> input = new HashMap<>();
+		input.put("1", "0");
+		input.put("2", "3");
+		Map<String, String> input2 = new HashMap<>();
+		input2.put("4", "5");
+		input2.put("6", "7");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
 		assertThat(gb.getShortMap()).isNotSameAs(gb.getPlainMap());
-		assertThat(gb.getPlainMap()).hasSize(2);
+		assertThat(gb.getPlainMap().size()).isEqualTo(2);
 		assertThat(gb.getPlainMap().get("1")).isEqualTo("0");
 		assertThat(gb.getPlainMap().get("2")).isEqualTo("3");
-		assertThat(gb.getShortMap()).hasSize(2);
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
+		assertThat(gb.getShortMap().size()).isEqualTo(2);
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
 	}
 
 	@Test
-	void genericMapMapConstructorWithSameRefAndConversion() {
+	public void testGenericMapMapConstructorWithSameRefAndConversion() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, String> input = Map.of(
-				"1", "0",
-				"2", "3");
+		Map<String, String> input = new HashMap<>();
+		input.put("1", "0");
+		input.put("2", "3");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
@@ -328,22 +354,22 @@ class BeanFactoryGenericsTests {
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
 		assertThat(gb.getShortMap()).isNotSameAs(gb.getPlainMap());
-		assertThat(gb.getPlainMap()).hasSize(2);
+		assertThat(gb.getPlainMap().size()).isEqualTo(2);
 		assertThat(gb.getPlainMap().get("1")).isEqualTo("0");
 		assertThat(gb.getPlainMap().get("2")).isEqualTo("3");
-		assertThat(gb.getShortMap()).hasSize(2);
-		assertThat(gb.getShortMap().get(Short.valueOf("1"))).isEqualTo(0);
-		assertThat(gb.getShortMap().get(Short.valueOf("2"))).isEqualTo(3);
+		assertThat(gb.getShortMap().size()).isEqualTo(2);
+		assertThat(gb.getShortMap().get(new Short("1"))).isEqualTo(new Integer(0));
+		assertThat(gb.getShortMap().get(new Short("2"))).isEqualTo(new Integer(3));
 	}
 
 	@Test
-	void genericMapMapConstructorWithSameRefAndNoConversion() {
+	public void testGenericMapMapConstructorWithSameRefAndNoConversion() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
 		Map<Short, Integer> input = new HashMap<>();
-		input.put((short) 1, 0);
-		input.put((short) 2, 3);
+		input.put(new Short((short) 1), new Integer(0));
+		input.put(new Short((short) 2), new Integer(3));
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
@@ -351,135 +377,158 @@ class BeanFactoryGenericsTests {
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
 		assertThat(gb.getShortMap()).isSameAs(gb.getPlainMap());
-		assertThat(gb.getShortMap()).hasSize(2);
-		assertThat(gb.getShortMap().get(Short.valueOf("1"))).isEqualTo(0);
-		assertThat(gb.getShortMap().get(Short.valueOf("2"))).isEqualTo(3);
+		assertThat(gb.getShortMap().size()).isEqualTo(2);
+		assertThat(gb.getShortMap().get(new Short("1"))).isEqualTo(new Integer(0));
+		assertThat(gb.getShortMap().get(new Short("2"))).isEqualTo(new Integer(3));
 	}
 
 	@Test
-	void genericMapWithKeyTypeConstructor() {
+	public void testGenericMapWithKeyTypeConstructor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, String> input = Map.of(
-				"4", "5",
-				"6", "7");
+		Map<String, String> input = new HashMap<>();
+		input.put("4", "5");
+		input.put("6", "7");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getLongMap().get(4L)).isEqualTo("5");
-		assertThat(gb.getLongMap().get(6L)).isEqualTo("7");
+		assertThat(gb.getLongMap().get(new Long("4"))).isEqualTo("5");
+		assertThat(gb.getLongMap().get(new Long("6"))).isEqualTo("7");
 	}
 
 	@Test
-	void genericMapWithCollectionValueConstructor() {
+	public void testGenericMapWithCollectionValueConstructor() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.addPropertyEditorRegistrar(registry -> registry.registerCustomEditor(Number.class, new CustomNumberEditor(Integer.class, false)));
+		bf.addPropertyEditorRegistrar(new PropertyEditorRegistrar() {
+			@Override
+			public void registerCustomEditors(PropertyEditorRegistry registry) {
+				registry.registerCustomEditor(Number.class, new CustomNumberEditor(Integer.class, false));
+			}
+		});
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 
-		Map<String, Collection<?>> input = Map.of(
-				"1", Set.of(1),
-				"2", List.of(Boolean.TRUE));
+		Map<String, AbstractCollection<?>> input = new HashMap<>();
+		HashSet<Integer> value1 = new HashSet<>();
+		value1.add(new Integer(1));
+		input.put("1", value1);
+		ArrayList<Boolean> value2 = new ArrayList<>();
+		value2.add(Boolean.TRUE);
+		input.put("2", value2);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(Boolean.TRUE);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getCollectionMap().get(1)).isInstanceOf(Set.class);
-		assertThat(gb.getCollectionMap().get(2)).isInstanceOf(List.class);
+		boolean condition1 = gb.getCollectionMap().get(new Integer(1)) instanceof HashSet;
+		assertThat(condition1).isTrue();
+		boolean condition = gb.getCollectionMap().get(new Integer(2)) instanceof ArrayList;
+		assertThat(condition).isTrue();
 	}
 
+
 	@Test
-	void genericSetFactoryMethod() {
+	public void testGenericSetFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Set<String> input = Set.of("4", "5");
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
 	}
 
 	@Test
-	void genericSetListFactoryMethod() throws Exception {
+	public void testGenericSetListFactoryMethod() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Set<String> input1 = Set.of("4", "5");
-		List<String> input2 = List.of("http://localhost:8080", "http://localhost:9090");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
+		List<String> input2 = new ArrayList<>();
+		input2.add("http://localhost:8080");
+		input2.add("http://localhost:9090");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
-		assertThat(gb.getResourceList())
-				.containsExactly(new UrlResource("http://localhost:8080"), new UrlResource("http://localhost:9090"));
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getResourceList().get(1)).isEqualTo(new UrlResource("http://localhost:9090"));
 	}
 
 	@Test
-	void genericSetMapFactoryMethod() {
+	public void testGenericSetMapFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Set<String> input1 = Set.of("4", "5");
-		Map<String, String> input2 = Map.of(
-				"4", "5",
-				"6", "7");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Set<String> input = new HashSet<>();
+		input.add("4");
+		input.add("5");
+		Map<String, String> input2 = new HashMap<>();
+		input2.put("4", "5");
+		input2.put("6", "7");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getIntegerSet()).containsExactlyInAnyOrder(4, 5);
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
+		assertThat(gb.getIntegerSet().contains(new Integer(4))).isTrue();
+		assertThat(gb.getIntegerSet().contains(new Integer(5))).isTrue();
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
 	}
 
 	@Test
-	void genericMapResourceFactoryMethod() throws Exception {
+	public void testGenericMapResourceFactoryMethod() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Map<String, String> input = Map.of(
-				"4", "5",
-				"6", "7");
+		Map<String, String> input = new HashMap<>();
+		input.put("4", "5");
+		input.put("6", "7");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue("http://localhost:8080");
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
-		assertThat(gb.getResourceList()).containsExactly(new UrlResource("http://localhost:8080"));
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
+		assertThat(gb.getResourceList().get(0)).isEqualTo(new UrlResource("http://localhost:8080"));
 	}
 
 	@Test
-	void genericMapMapFactoryMethod() {
+	public void testGenericMapMapFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Map<String, String> input1 = Map.of(
-				"1", "0",
-				"2", "3");
-		Map<String, String> input2 = Map.of(
-				"4", "5",
-				"6", "7");
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(input1);
+		Map<String, String> input = new HashMap<>();
+		input.put("1", "0");
+		input.put("2", "3");
+		Map<String, String> input2 = new HashMap<>();
+		input2.put("4", "5");
+		input2.put("6", "7");
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input2);
 
 		bf.registerBeanDefinition("genericBean", rbd);
@@ -487,104 +536,121 @@ class BeanFactoryGenericsTests {
 
 		assertThat(gb.getPlainMap().get("1")).isEqualTo("0");
 		assertThat(gb.getPlainMap().get("2")).isEqualTo("3");
-		assertThat(gb.getShortMap().get(Short.valueOf("4"))).isEqualTo(5);
-		assertThat(gb.getShortMap().get(Short.valueOf("6"))).isEqualTo(7);
+		assertThat(gb.getShortMap().get(new Short("4"))).isEqualTo(new Integer(5));
+		assertThat(gb.getShortMap().get(new Short("6"))).isEqualTo(new Integer(7));
 	}
 
 	@Test
-	void genericMapWithKeyTypeFactoryMethod() {
+	public void testGenericMapWithKeyTypeFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Map<String, String> input = Map.of(
-				"4", "5",
-				"6", "7");
+		Map<String, String> input = new HashMap<>();
+		input.put("4", "5");
+		input.put("6", "7");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getLongMap().get(Long.valueOf("4"))).isEqualTo("5");
-		assertThat(gb.getLongMap().get(Long.valueOf("6"))).isEqualTo("7");
+		assertThat(gb.getLongMap().get(new Long("4"))).isEqualTo("5");
+		assertThat(gb.getLongMap().get(new Long("6"))).isEqualTo("7");
 	}
 
 	@Test
-	void genericMapWithCollectionValueFactoryMethod() {
+	public void testGenericMapWithCollectionValueFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
-		bf.addPropertyEditorRegistrar(registry -> registry.registerCustomEditor(Number.class, new CustomNumberEditor(Integer.class, false)));
+		bf.addPropertyEditorRegistrar(new PropertyEditorRegistrar() {
+			@Override
+			public void registerCustomEditors(PropertyEditorRegistry registry) {
+				registry.registerCustomEditor(Number.class, new CustomNumberEditor(Integer.class, false));
+			}
+		});
 		RootBeanDefinition rbd = new RootBeanDefinition(GenericBean.class);
 		rbd.setFactoryMethodName("createInstance");
 
-		Map<String, Collection<?>> input = Map.of(
-				"1", Set.of(1),
-				"2", List.of(Boolean.TRUE));
+		Map<String, AbstractCollection<?>> input = new HashMap<>();
+		HashSet<Integer> value1 = new HashSet<>();
+		value1.add(new Integer(1));
+		input.put("1", value1);
+		ArrayList<Boolean> value2 = new ArrayList<>();
+		value2.add(Boolean.TRUE);
+		input.put("2", value2);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(Boolean.TRUE);
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(input);
 
 		bf.registerBeanDefinition("genericBean", rbd);
 		GenericBean<?> gb = (GenericBean<?>) bf.getBean("genericBean");
 
-		assertThat(gb.getCollectionMap().get(1)).isInstanceOf(Set.class);
-		assertThat(gb.getCollectionMap().get(2)).isInstanceOf(List.class);
+		boolean condition1 = gb.getCollectionMap().get(new Integer(1)) instanceof HashSet;
+		assertThat(condition1).isTrue();
+		boolean condition = gb.getCollectionMap().get(new Integer(2)) instanceof ArrayList;
+		assertThat(condition).isTrue();
 	}
 
 	@Test
-	void genericListBean() throws Exception {
+	public void testGenericListBean() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
-		NamedUrlList list = bf.getBean("list", NamedUrlList.class);
-		assertThat(list).containsExactly(new URL("http://localhost:8080"));
+		List<?> list = (List<?>) bf.getBean("list");
+		assertThat(list.size()).isEqualTo(1);
+		assertThat(list.get(0)).isEqualTo(new URL("http://localhost:8080"));
 	}
 
 	@Test
-	void genericSetBean() throws Exception {
+	public void testGenericSetBean() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
-		NamedUrlSet set = bf.getBean("set", NamedUrlSet.class);
-		assertThat(set).containsExactly(new URL("http://localhost:8080"));
+		Set<?> set = (Set<?>) bf.getBean("set");
+		assertThat(set.size()).isEqualTo(1);
+		assertThat(set.iterator().next()).isEqualTo(new URL("http://localhost:8080"));
 	}
 
 	@Test
-	void genericMapBean() throws Exception {
+	public void testGenericMapBean() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
-		NamedUrlMap map = bf.getBean("map", NamedUrlMap.class);
-		assertThat(map).containsExactly(entry(10, new URL("http://localhost:8080")));
+		Map<?, ?> map = (Map<?, ?>) bf.getBean("map");
+		assertThat(map.size()).isEqualTo(1);
+		assertThat(map.keySet().iterator().next()).isEqualTo(new Integer(10));
+		assertThat(map.values().iterator().next()).isEqualTo(new URL("http://localhost:8080"));
 	}
 
 	@Test
-	void genericallyTypedIntegerBean() {
+	public void testGenericallyTypedIntegerBean() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
 		GenericIntegerBean gb = (GenericIntegerBean) bf.getBean("integerBean");
-		assertThat(gb.getGenericProperty()).isEqualTo(10);
-		assertThat(gb.getGenericListProperty()).containsExactly(20, 30);
+		assertThat(gb.getGenericProperty()).isEqualTo(new Integer(10));
+		assertThat(gb.getGenericListProperty().get(0)).isEqualTo(new Integer(20));
+		assertThat(gb.getGenericListProperty().get(1)).isEqualTo(new Integer(30));
 	}
 
 	@Test
-	void genericallyTypedSetOfIntegerBean() {
+	public void testGenericallyTypedSetOfIntegerBean() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
 		GenericSetOfIntegerBean gb = (GenericSetOfIntegerBean) bf.getBean("setOfIntegerBean");
-		assertThat(gb.getGenericProperty()).singleElement().isEqualTo(10);
-		assertThat(gb.getGenericListProperty()).satisfiesExactly(
-				zero -> assertThat(zero).containsExactly(20),
-				first -> assertThat(first).containsExactly(30));
+		assertThat(gb.getGenericProperty().iterator().next()).isEqualTo(new Integer(10));
+		assertThat(gb.getGenericListProperty().get(0).iterator().next()).isEqualTo(new Integer(20));
+		assertThat(gb.getGenericListProperty().get(1).iterator().next()).isEqualTo(new Integer(30));
 	}
 
 	@Test
-	void setBean() throws Exception {
+	@EnabledForTestGroups(LONG_RUNNING)
+	public void testSetBean() throws Exception {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		new XmlBeanDefinitionReader(bf).loadBeanDefinitions(
 				new ClassPathResource("genericBeanTests.xml", getClass()));
-		UrlSet urlSet = bf.getBean("setBean", UrlSet.class);
-		assertThat(urlSet).containsExactly(new URL("https://www.springframework.org"));
+		UrlSet us = (UrlSet) bf.getBean("setBean");
+		assertThat(us.size()).isEqualTo(1);
+		assertThat(us.iterator().next()).isEqualTo(new URL("https://www.springframework.org"));
 	}
 
 	/**
@@ -598,33 +664,18 @@ class BeanFactoryGenericsTests {
 	 * <p>See SPR-9493
 	 */
 	@Test
-	void parameterizedStaticFactoryMethod() {
-		RootBeanDefinition rbd = new RootBeanDefinition(getClass());
-		rbd.setFactoryMethodName("createMockitoMock");
+	public void parameterizedStaticFactoryMethod() {
+		RootBeanDefinition rbd = new RootBeanDefinition(Mockito.class);
+		rbd.setFactoryMethodName("mock");
 		rbd.getConstructorArgumentValues().addGenericArgumentValue(Runnable.class);
 
-		assertRunnableMockFactory(rbd);
-	}
-
-	@Test
-	void parameterizedStaticFactoryMethodWithWrappedClassName() {
-		RootBeanDefinition rbd = new RootBeanDefinition();
-		rbd.setBeanClassName(getClass().getName());
-		rbd.setFactoryMethodName("createMockitoMock");
-		// TypedStringValue is used as an equivalent to an XML-defined argument String
-		rbd.getConstructorArgumentValues().addGenericArgumentValue(new TypedStringValue(Runnable.class.getName()));
-
-		assertRunnableMockFactory(rbd);
-	}
-
-	private void assertRunnableMockFactory(RootBeanDefinition rbd) {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.registerBeanDefinition("mock", rbd);
 
-		assertThat(bf.isTypeMatch("mock", Runnable.class)).isTrue();
+		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).hasSize(1);
+		assertThat(beans.size()).isEqualTo(1);
 	}
 
 	/**
@@ -639,7 +690,7 @@ class BeanFactoryGenericsTests {
 	 * <p>See SPR-10411
 	 */
 	@Test
-	void parameterizedInstanceFactoryMethod() {
+	public void parameterizedInstanceFactoryMethod() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(MocksControl.class);
@@ -656,11 +707,11 @@ class BeanFactoryGenericsTests {
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).hasSize(1);
+		assertThat(beans.size()).isEqualTo(1);
 	}
 
 	@Test
-	void parameterizedInstanceFactoryMethodWithNonResolvedClassName() {
+	public void parameterizedInstanceFactoryMethodWithNonResolvedClassName() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(MocksControl.class);
@@ -677,11 +728,30 @@ class BeanFactoryGenericsTests {
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).hasSize(1);
+		assertThat(beans.size()).isEqualTo(1);
 	}
 
 	@Test
-	void parameterizedInstanceFactoryMethodWithInvalidClassName() {
+	public void parameterizedInstanceFactoryMethodWithWrappedClassName() {
+		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
+
+		RootBeanDefinition rbd = new RootBeanDefinition();
+		rbd.setBeanClassName(Mockito.class.getName());
+		rbd.setFactoryMethodName("mock");
+		// TypedStringValue used to be equivalent to an XML-defined argument String
+		rbd.getConstructorArgumentValues().addGenericArgumentValue(new TypedStringValue(Runnable.class.getName()));
+		bf.registerBeanDefinition("mock", rbd);
+
+		assertThat(bf.isTypeMatch("mock", Runnable.class)).isTrue();
+		assertThat(bf.isTypeMatch("mock", Runnable.class)).isTrue();
+		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
+		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
+		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
+		assertThat(beans.size()).isEqualTo(1);
+	}
+
+	@Test
+	public void parameterizedInstanceFactoryMethodWithInvalidClassName() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(MocksControl.class);
@@ -698,11 +768,11 @@ class BeanFactoryGenericsTests {
 		assertThat(bf.getType("mock")).isNull();
 		assertThat(bf.getType("mock")).isNull();
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).isEmpty();
+		assertThat(beans.size()).isEqualTo(0);
 	}
 
 	@Test
-	void parameterizedInstanceFactoryMethodWithIndexedArgument() {
+	public void parameterizedInstanceFactoryMethodWithIndexedArgument() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(MocksControl.class);
@@ -719,11 +789,11 @@ class BeanFactoryGenericsTests {
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).hasSize(1);
+		assertThat(beans.size()).isEqualTo(1);
 	}
 
 	@Test  // SPR-16720
-	void parameterizedInstanceFactoryMethodWithTempClassLoader() {
+	public void parameterizedInstanceFactoryMethodWithTempClassLoader() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.setTempClassLoader(new OverridingClassLoader(getClass().getClassLoader()));
 
@@ -741,11 +811,11 @@ class BeanFactoryGenericsTests {
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		assertThat(bf.getType("mock")).isEqualTo(Runnable.class);
 		Map<String, Runnable> beans = bf.getBeansOfType(Runnable.class);
-		assertThat(beans).hasSize(1);
+		assertThat(beans.size()).isEqualTo(1);
 	}
 
 	@Test
-	void genericMatchingWithBeanNameDifferentiation() {
+	public void testGenericMatchingWithBeanNameDifferentiation() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.setAutowireCandidateResolver(new GenericTypeAwareAutowireCandidateResolver());
 
@@ -761,13 +831,15 @@ class BeanFactoryGenericsTests {
 		String[] numberStoreNames = bf.getBeanNamesForType(ResolvableType.forClass(NumberStore.class));
 		String[] doubleStoreNames = bf.getBeanNamesForType(ResolvableType.forClassWithGenerics(NumberStore.class, Double.class));
 		String[] floatStoreNames = bf.getBeanNamesForType(ResolvableType.forClassWithGenerics(NumberStore.class, Float.class));
-		assertThat(numberStoreNames).containsExactly("doubleStore", "floatStore");
-		assertThat(doubleStoreNames).isEmpty();
-		assertThat(floatStoreNames).isEmpty();
+		assertThat(numberStoreNames.length).isEqualTo(2);
+		assertThat(numberStoreNames[0]).isEqualTo("doubleStore");
+		assertThat(numberStoreNames[1]).isEqualTo("floatStore");
+		assertThat(doubleStoreNames.length).isEqualTo(0);
+		assertThat(floatStoreNames.length).isEqualTo(0);
 	}
 
 	@Test
-	void genericMatchingWithFullTypeDifferentiation() {
+	public void testGenericMatchingWithFullTypeDifferentiation() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 		bf.setAutowireCandidateResolver(new GenericTypeAwareAutowireCandidateResolver());
@@ -782,17 +854,19 @@ class BeanFactoryGenericsTests {
 				new RootBeanDefinition(NumberBean.class, RootBeanDefinition.AUTOWIRE_CONSTRUCTOR, false));
 
 		NumberBean nb = bf.getBean(NumberBean.class);
-		NumberStore<?> store1 = bf.getBean("store1", NumberStore.class);
-		assertThat(nb.getDoubleStore()).isSameAs(store1);
-		NumberStore<?> store2 = bf.getBean("store2", NumberStore.class);
-		assertThat(nb.getFloatStore()).isSameAs(store2);
+		assertThat(nb.getDoubleStore()).isSameAs(bf.getBean("store1"));
+		assertThat(nb.getFloatStore()).isSameAs(bf.getBean("store2"));
 
 		String[] numberStoreNames = bf.getBeanNamesForType(ResolvableType.forClass(NumberStore.class));
 		String[] doubleStoreNames = bf.getBeanNamesForType(ResolvableType.forClassWithGenerics(NumberStore.class, Double.class));
 		String[] floatStoreNames = bf.getBeanNamesForType(ResolvableType.forClassWithGenerics(NumberStore.class, Float.class));
-		assertThat(numberStoreNames).containsExactly("store1", "store2");
-		assertThat(doubleStoreNames).containsExactly("store1");
-		assertThat(floatStoreNames).containsExactly("store2");
+		assertThat(numberStoreNames.length).isEqualTo(2);
+		assertThat(numberStoreNames[0]).isEqualTo("store1");
+		assertThat(numberStoreNames[1]).isEqualTo("store2");
+		assertThat(doubleStoreNames.length).isEqualTo(1);
+		assertThat(doubleStoreNames[0]).isEqualTo("store1");
+		assertThat(floatStoreNames.length).isEqualTo(1);
+		assertThat(floatStoreNames[0]).isEqualTo("store2");
 
 		ObjectProvider<NumberStore<?>> numberStoreProvider = bf.getBeanProvider(ResolvableType.forClass(NumberStore.class));
 		ObjectProvider<NumberStore<Double>> doubleStoreProvider = bf.getBeanProvider(ResolvableType.forClassWithGenerics(NumberStore.class, Double.class));
@@ -800,40 +874,64 @@ class BeanFactoryGenericsTests {
 		assertThatExceptionOfType(NoUniqueBeanDefinitionException.class).isThrownBy(numberStoreProvider::getObject);
 		assertThatExceptionOfType(NoUniqueBeanDefinitionException.class).isThrownBy(numberStoreProvider::getIfAvailable);
 		assertThat(numberStoreProvider.getIfUnique()).isNull();
-		assertThat(doubleStoreProvider.getObject()).isSameAs(store1);
-		assertThat(doubleStoreProvider.getIfAvailable()).isSameAs(store1);
-		assertThat(doubleStoreProvider.getIfUnique()).isSameAs(store1);
-		assertThat(floatStoreProvider.getObject()).isSameAs(store2);
-		assertThat(floatStoreProvider.getIfAvailable()).isSameAs(store2);
-		assertThat(floatStoreProvider.getIfUnique()).isSameAs(store2);
+		assertThat(doubleStoreProvider.getObject()).isSameAs(bf.getBean("store1"));
+		assertThat(doubleStoreProvider.getIfAvailable()).isSameAs(bf.getBean("store1"));
+		assertThat(doubleStoreProvider.getIfUnique()).isSameAs(bf.getBean("store1"));
+		assertThat(floatStoreProvider.getObject()).isSameAs(bf.getBean("store2"));
+		assertThat(floatStoreProvider.getIfAvailable()).isSameAs(bf.getBean("store2"));
+		assertThat(floatStoreProvider.getIfUnique()).isSameAs(bf.getBean("store2"));
 
 		List<NumberStore<?>> resolved = new ArrayList<>();
 		for (NumberStore<?> instance : numberStoreProvider) {
 			resolved.add(instance);
 		}
-		assertThat(resolved).containsExactly(store1, store2);
-		assertThat(numberStoreProvider.stream()).containsExactly(store1, store2);
-		assertThat(numberStoreProvider.orderedStream()).containsExactly(store2, store1);
+		assertThat(resolved.size()).isEqualTo(2);
+		assertThat(resolved.get(0)).isSameAs(bf.getBean("store1"));
+		assertThat(resolved.get(1)).isSameAs(bf.getBean("store2"));
+
+		resolved = numberStoreProvider.stream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(2);
+		assertThat(resolved.get(0)).isSameAs(bf.getBean("store1"));
+		assertThat(resolved.get(1)).isSameAs(bf.getBean("store2"));
+
+		resolved = numberStoreProvider.orderedStream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(2);
+		assertThat(resolved.get(0)).isSameAs(bf.getBean("store2"));
+		assertThat(resolved.get(1)).isSameAs(bf.getBean("store1"));
 
 		resolved = new ArrayList<>();
 		for (NumberStore<Double> instance : doubleStoreProvider) {
 			resolved.add(instance);
 		}
-		assertThat(resolved).containsExactly(store1);
-		assertThat(doubleStoreProvider.stream()).singleElement().isEqualTo(store1);
-		assertThat(doubleStoreProvider.orderedStream()).singleElement().isEqualTo(store1);
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store1"))).isTrue();
+
+		resolved = doubleStoreProvider.stream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store1"))).isTrue();
+
+		resolved = doubleStoreProvider.orderedStream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store1"))).isTrue();
 
 		resolved = new ArrayList<>();
 		for (NumberStore<Float> instance : floatStoreProvider) {
 			resolved.add(instance);
 		}
-		assertThat(resolved).containsExactly(store2);
-		assertThat(floatStoreProvider.stream()).singleElement().isEqualTo(store2);
-		assertThat(floatStoreProvider.orderedStream()).singleElement().isEqualTo(store2);
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store2"))).isTrue();
+
+		resolved = floatStoreProvider.stream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store2"))).isTrue();
+
+		resolved = floatStoreProvider.orderedStream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(1);
+		assertThat(resolved.contains(bf.getBean("store2"))).isTrue();
 	}
 
 	@Test
-	void genericMatchingWithUnresolvedOrderedStream() {
+	public void testGenericMatchingWithUnresolvedOrderedStream() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 		bf.setAutowireCandidateResolver(new GenericTypeAwareAutowireCandidateResolver());
@@ -846,23 +944,15 @@ class BeanFactoryGenericsTests {
 		bf.registerBeanDefinition("store2", bd2);
 
 		ObjectProvider<NumberStore<?>> numberStoreProvider = bf.getBeanProvider(ResolvableType.forClass(NumberStore.class));
-		assertThat(numberStoreProvider.orderedStream()).containsExactly(
-				bf.getBean("store2", NumberStore.class), bf.getBean("store1", NumberStore.class));
-	}
-
-
-	/**
-	 * Mimics and delegates to {@link Mockito#mock(Class)} -- created here to avoid factory
-	 * method resolution issues caused by the introduction of {@code Mockito.mock(T...)}
-	 * in Mockito 4.10.
-	 */
-	public static <T> T createMockitoMock(Class<T> classToMock) {
-		return Mockito.mock(classToMock);
+		List<NumberStore<?>> resolved = numberStoreProvider.orderedStream().collect(Collectors.toList());
+		assertThat(resolved.size()).isEqualTo(2);
+		assertThat(resolved.get(0)).isSameAs(bf.getBean("store2"));
+		assertThat(resolved.get(1)).isSameAs(bf.getBean("store1"));
 	}
 
 
 	@SuppressWarnings("serial")
-	public static class NamedUrlList extends ArrayList<URL> {
+	public static class NamedUrlList extends LinkedList<URL> {
 	}
 
 
@@ -879,9 +969,9 @@ class BeanFactoryGenericsTests {
 	public static class CollectionDependentBean {
 
 		public CollectionDependentBean(NamedUrlList list, NamedUrlSet set, NamedUrlMap map) {
-			assertThat(list).hasSize(1);
-			assertThat(set).hasSize(1);
-			assertThat(map).hasSize(1);
+			assertThat(list.size()).isEqualTo(1);
+			assertThat(set.size()).isEqualTo(1);
+			assertThat(map.size()).isEqualTo(1);
 		}
 	}
 
@@ -913,8 +1003,11 @@ class BeanFactoryGenericsTests {
 		@SuppressWarnings("unchecked")
 		public <T> T createMock(Class<T> toMock) {
 			return (T) Proxy.newProxyInstance(BeanFactoryGenericsTests.class.getClassLoader(), new Class<?>[] {toMock},
-					(proxy, method, args) -> {
-						throw new UnsupportedOperationException("mocked!");
+					new InvocationHandler() {
+						@Override
+						public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+							throw new UnsupportedOperationException("mocked!");
+						}
 					});
 		}
 	}

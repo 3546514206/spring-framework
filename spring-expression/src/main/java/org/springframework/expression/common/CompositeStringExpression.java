@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,19 +24,17 @@ import org.springframework.expression.TypedValue;
 import org.springframework.lang.Nullable;
 
 /**
- * Represents a template expression broken into pieces.
- *
- * <p>Each piece will be an {@link Expression}, but pure text parts of the
- * template will be represented as {@link LiteralExpression} objects. An example
- * of a template expression might be:
+ * Represents a template expression broken into pieces. Each piece will be an Expression
+ * but pure text parts to the template will be represented as LiteralExpression objects.
+ * An example of a template expression might be:
  *
  * <pre class="code">
  * &quot;Hello ${getName()}&quot;
  * </pre>
  *
- * which will be represented as a {@code CompositeStringExpression} of two parts:
- * the first part being a {@link LiteralExpression} representing 'Hello ' and the
- * second part being a real expression that will call {@code getName()} when invoked.
+ * which will be represented as a CompositeStringExpression of two parts. The first part
+ * being a LiteralExpression representing 'Hello ' and the second part being a real
+ * expression that will call {@code getName()} when invoked.
  *
  * @author Andy Clement
  * @author Juergen Hoeller
@@ -80,7 +78,7 @@ public class CompositeStringExpression implements Expression {
 	@Override
 	@Nullable
 	public <T> T getValue(@Nullable Class<T> expectedResultType) throws EvaluationException {
-		String value = getValue();
+		Object value = getValue();
 		return ExpressionUtils.convertTypedValue(null, new TypedValue(value), expectedResultType);
 	}
 
@@ -99,7 +97,7 @@ public class CompositeStringExpression implements Expression {
 	@Override
 	@Nullable
 	public <T> T getValue(@Nullable Object rootObject, @Nullable Class<T> desiredResultType) throws EvaluationException {
-		String value = getValue(rootObject);
+		Object value = getValue(rootObject);
 		return ExpressionUtils.convertTypedValue(null, new TypedValue(value), desiredResultType);
 	}
 
@@ -120,7 +118,7 @@ public class CompositeStringExpression implements Expression {
 	public <T> T getValue(EvaluationContext context, @Nullable Class<T> expectedResultType)
 			throws EvaluationException {
 
-		String value = getValue(context);
+		Object value = getValue(context);
 		return ExpressionUtils.convertTypedValue(context, new TypedValue(value), expectedResultType);
 	}
 
@@ -141,7 +139,7 @@ public class CompositeStringExpression implements Expression {
 	public <T> T getValue(EvaluationContext context, @Nullable Object rootObject, @Nullable Class<T> desiredResultType)
 			throws EvaluationException {
 
-		String value = getValue(context,rootObject);
+		Object value = getValue(context,rootObject);
 		return ExpressionUtils.convertTypedValue(context, new TypedValue(value), desiredResultType);
 	}
 

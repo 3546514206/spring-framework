@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package org.springframework.orm.jpa;
 
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.spi.PersistenceUnitInfo;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceException;
+import javax.persistence.spi.PersistenceUnitInfo;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -40,13 +41,13 @@ public abstract class AbstractEntityManagerFactoryBeanTests {
 	protected static EntityManagerFactory mockEmf;
 
 	@BeforeEach
-	void setUp() {
-		mockEmf = mock();
+	public void setUp() throws Exception {
+		mockEmf = mock(EntityManagerFactory.class);
 	}
 
 	@AfterEach
-	void tearDown() {
-		assertThat(TransactionSynchronizationManager.getResourceMap()).isEmpty();
+	public void tearDown() throws Exception {
+		assertThat(TransactionSynchronizationManager.getResourceMap().isEmpty()).isTrue();
 		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
 		assertThat(TransactionSynchronizationManager.isCurrentTransactionReadOnly()).isFalse();
 		assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
@@ -68,7 +69,7 @@ public abstract class AbstractEntityManagerFactoryBeanTests {
 
 		private static final long serialVersionUID = 1L;
 
-		private final transient EntityManagerFactory emf;
+		private final EntityManagerFactory emf;
 
 		public DummyEntityManagerFactoryBean(EntityManagerFactory emf) {
 			this.emf = emf;

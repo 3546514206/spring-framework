@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.springframework.context.support;
 
-import java.io.IOException;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextException;
 import org.springframework.lang.Nullable;
+
+import java.io.IOException;
 
 /**
  * Base class for {@link org.springframework.context.ApplicationContext}
@@ -70,9 +70,15 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	@Nullable
 	private Boolean allowCircularReferences;
 
-	/** Bean factory for this context. */
+	/**
+	 * Synchronization monitor for the internal BeanFactory.
+	 */
+	private final Object beanFactoryMonitor = new Object();
+	/**
+	 * Bean factory for this context.
+	 */
 	@Nullable
-	private volatile DefaultListableBeanFactory beanFactory;
+	private DefaultListableBeanFactory beanFactory;
 
 
 	/**
@@ -117,39 +123,57 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * bean factory, shutting down the previous bean factory (if any) and
 	 * initializing a fresh bean factory for the next phase of the context's lifecycle.
 	 */
+
+	/**
+	 * 这个方法被 refresh() 方法方法调用，这个方法中通过 createBeanFactory 方法构建一个基本的 IoC 容器给 ApplicationContext
+	 * 使用。这个 IoC 容器就是 DefaultListableBeanFactory，同时这个方法启动了 loadBeanDefinitions 来载入 BeanDefinitions。
+	 *
+	 * @throws BeansException
+	 */
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
+		// 判断当前ApplicationContext是否存在BeanFactory，如果存在的话就销毁所有 Bean，关闭 BeanFactory
+		// 注意，一个应用可以存在多个BeanFactory，这里判断的是当前ApplicationContext是否存在BeanFactory
 		if (hasBeanFactory()) {
 			destroyBeans();
 			closeBeanFactory();
 		}
+		// 这里是创建并设置持有的 DefaultListableBeanFactory 的地方同时调用 loadBeanDefinitions
+		// 再载入 BeanDefinitions 的信息。
 		try {
+			// 初始化DefaultListableBeanFactory
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
 			beanFactory.setSerializationId(getId());
+
+			// 设置 BeanFactory 的两个配置属性：是否允许 Bean 覆盖、是否允许循环引用
 			customizeBeanFactory(beanFactory);
+			// 加载 Bean 到 BeanFactory 中
 			loadBeanDefinitions(beanFactory);
-			this.beanFactory = beanFactory;
-		}
-		catch (IOException ex) {
+			synchronized (this.beanFactoryMonitor) {
+				this.beanFactory = beanFactory;
+			}
+		} catch (IOException ex) {
 			throw new ApplicationContextException("I/O error parsing bean definition source for " + getDisplayName(), ex);
 		}
 	}
 
 	@Override
-	protected void cancelRefresh(Throwable ex) {
-		DefaultListableBeanFactory beanFactory = this.beanFactory;
-		if (beanFactory != null) {
-			beanFactory.setSerializationId(null);
+	protected void cancelRefresh(BeansException ex) {
+		synchronized (this.beanFactoryMonitor) {
+			if (this.beanFactory != null) {
+				this.beanFactory.setSerializationId(null);
+			}
 		}
 		super.cancelRefresh(ex);
 	}
 
 	@Override
 	protected final void closeBeanFactory() {
-		DefaultListableBeanFactory beanFactory = this.beanFactory;
-		if (beanFactory != null) {
-			beanFactory.setSerializationId(null);
-			this.beanFactory = null;
+		synchronized (this.beanFactoryMonitor) {
+			if (this.beanFactory != null) {
+				this.beanFactory.setSerializationId(null);
+				this.beanFactory = null;
+			}
 		}
 	}
 
@@ -158,17 +182,20 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * i.e. has been refreshed at least once and not been closed yet.
 	 */
 	protected final boolean hasBeanFactory() {
-		return (this.beanFactory != null);
+		synchronized (this.beanFactoryMonitor) {
+			return (this.beanFactory != null);
+		}
 	}
 
 	@Override
 	public final ConfigurableListableBeanFactory getBeanFactory() {
-		DefaultListableBeanFactory beanFactory = this.beanFactory;
-		if (beanFactory == null) {
-			throw new IllegalStateException("BeanFactory not initialized or already closed - " +
-					"call 'refresh' before accessing beans via the ApplicationContext");
+		synchronized (this.beanFactoryMonitor) {
+			if (this.beanFactory == null) {
+				throw new IllegalStateException("BeanFactory not initialized or already closed - " +
+						"call 'refresh' before accessing beans via the ApplicationContext");
+			}
+			return this.beanFactory;
 		}
-		return beanFactory;
 	}
 
 	/**
@@ -228,6 +255,20 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * @throws IOException if loading of bean definition files failed
 	 * @see org.springframework.beans.factory.support.PropertiesBeanDefinitionReader
 	 * @see org.springframework.beans.factory.xml.XmlBeanDefinitionReader
+	 */
+	/**
+	 *
+	 * @param beanFactory
+	 * @throws BeansException
+	 * @throws IOException
+	 */
+	/**
+	 * 虽然我们常用的载入 DeanDefinition 的方式是 XML，但是从框架的角度考虑还是需要支持多种载入方式
+	 * 所以这里没有具体实现，而是通过抽象函数把具体的实现委托给子类来完成。
+	 *
+	 * @param beanFactory
+	 * @throws BeansException
+	 * @throws IOException
 	 */
 	protected abstract void loadBeanDefinitions(DefaultListableBeanFactory beanFactory)
 			throws BeansException, IOException;

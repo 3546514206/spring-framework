@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.test.context.junit4.rules;
 
+import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -78,7 +79,7 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 		public final SpringMethodRule springMethodRule = new SpringMethodRule();
 
 
-		protected void incrementInvocationCount() {
+		protected void incrementInvocationCount() throws IOException {
 			invocationCount.incrementAndGet();
 		}
 	}
@@ -87,7 +88,7 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 
 		@Test
 		@Timed(millis = 10000)
-		public void nonAnnotated() {
+		public void nonAnnotated() throws Exception {
 			incrementInvocationCount();
 		}
 	}
@@ -97,7 +98,7 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 		@Test
 		@Repeat
 		@Timed(millis = 10000)
-		public void defaultRepeatValue() {
+		public void defaultRepeatValue() throws Exception {
 			incrementInvocationCount();
 		}
 	}
@@ -107,7 +108,7 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 		@Test
 		@Repeat(-5)
 		@Timed(millis = 10000)
-		public void negativeRepeatValue() {
+		public void negativeRepeatValue() throws Exception {
 			incrementInvocationCount();
 		}
 	}
@@ -116,27 +117,27 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 
 		@Test
 		@Repeat(5)
-		public void repeatedFiveTimes() {
+		public void repeatedFiveTimes() throws Exception {
 			incrementInvocationCount();
 		}
 	}
 
 	@Repeat(5)
 	@Retention(RetentionPolicy.RUNTIME)
-	private @interface RepeatedFiveTimes {
+	private static @interface RepeatedFiveTimes {
 	}
 
 	public static final class RepeatedFiveTimesViaMetaAnnotationRepeatedTestCase extends AbstractRepeatedTestCase {
 
 		@Test
 		@RepeatedFiveTimes
-		public void repeatedFiveTimes() {
+		public void repeatedFiveTimes() throws Exception {
 			incrementInvocationCount();
 		}
 	}
 
 	/**
-	 * Tests for claims raised in <a href="https://jira.spring.io/browse/SPR-6011" target="_blank">SPR-6011</a>.
+	 * Unit tests for claims raised in <a href="https://jira.spring.io/browse/SPR-6011" target="_blank">SPR-6011</a>.
 	 */
 	@Ignore("TestCase classes are run manually by the enclosing test class")
 	public static final class TimedRepeatedTestCase extends AbstractRepeatedTestCase {
@@ -144,7 +145,7 @@ public class RepeatedSpringRuleTests extends RepeatedSpringRunnerTests {
 		@Test
 		@Timed(millis = 1000)
 		@Repeat(5)
-		public void repeatedFiveTimesButDoesNotExceedTimeout() {
+		public void repeatedFiveTimesButDoesNotExceedTimeout() throws Exception {
 			incrementInvocationCount();
 		}
 

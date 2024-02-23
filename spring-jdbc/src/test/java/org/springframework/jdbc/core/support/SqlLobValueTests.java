@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ import static org.mockito.Mockito.verify;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class SqlLobValueTests {
+class SqlLobValueTests  {
 
 	@Mock
 	private PreparedStatement preparedStatement;
@@ -96,7 +96,7 @@ class SqlLobValueTests {
 	}
 
 	@Test
-	void test3() {
+	void test3() throws SQLException {
 		SqlLobValue lob = new SqlLobValue(new InputStreamReader(new ByteArrayInputStream("Bla".getBytes())), 12);
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				lob.setTypeValue(preparedStatement, 1, Types.BLOB, "test"));
@@ -132,7 +132,7 @@ class SqlLobValueTests {
 	}
 
 	@Test
-	void test7() {
+	void test7() throws SQLException {
 		SqlLobValue lob = new SqlLobValue("bla".getBytes());
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				lob.setTypeValue(preparedStatement, 1, Types.CLOB, "test"));
@@ -182,7 +182,7 @@ class SqlLobValueTests {
 	}
 
 	@Test
-	void testOtherSqlType() {
+	void testOtherSqlType() throws SQLException {
 		SqlLobValue lob = new SqlLobValue("Bla", handler);
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				lob.setTypeValue(preparedStatement, 1, Types.SMALLINT, "test"));

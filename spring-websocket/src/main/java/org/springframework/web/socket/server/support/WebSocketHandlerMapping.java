@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,70 +16,32 @@
 
 package org.springframework.web.socket.server.support;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.ServletContext;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.http.HttpHeaders;
-import org.springframework.lang.Nullable;
 import org.springframework.web.context.ServletContextAware;
-import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
 
 /**
- * Extension of {@link SimpleUrlHandlerMapping} with support for more
- * precise mapping of WebSocket handshake requests to handlers of type
- * {@link WebSocketHttpRequestHandler}. Also delegates {@link Lifecycle}
- * methods to handlers in the {@link #getUrlMap()} that implement it.
+ * An extension of {@link SimpleUrlHandlerMapping} that is also a
+ * {@link SmartLifecycle} container and propagates start and stop calls to any
+ * handlers that implement {@link Lifecycle}. The handlers are typically expected
+ * to be {@code WebSocketHttpRequestHandler} or {@code SockJsHttpRequestHandler}.
  *
  * @author Rossen Stoyanchev
  * @since 4.2
  */
 public class WebSocketHandlerMapping extends SimpleUrlHandlerMapping implements SmartLifecycle {
 
-	private boolean webSocketUpgradeMatch;
-
-	@Nullable
-	private Integer phase;
-
-	private volatile boolean running;
-
-
-	/**
-	 * When this is set, if the matched handler is
-	 * {@link WebSocketHttpRequestHandler}, ensure the request is a WebSocket
-	 * handshake, i.e. HTTP GET with the header {@code "Upgrade:websocket"},
-	 * or otherwise suppress the match and return {@code null} allowing another
-	 * {@link org.springframework.web.servlet.HandlerMapping} to match for the
-	 * same URL path.
-	 * @param match whether to enable matching on {@code "Upgrade: websocket"}
-	 * @since 5.3.5
-	 */
-	public void setWebSocketUpgradeMatch(boolean match) {
-		this.webSocketUpgradeMatch = match;
-	}
-
-	/**
-	 * Set the phase that this handler should run in.
-	 * <p>By default, this is {@link SmartLifecycle#DEFAULT_PHASE}.
-	 * @since 6.1.4
-	 */
-	public void setPhase(int phase) {
-		this.phase = phase;
-	}
-
-	@Override
-	public int getPhase() {
-		return (this.phase != null ? this.phase : SmartLifecycle.super.getPhase());
-	}
+	private volatile boolean running = false;
 
 
 	@Override
 	protected void initServletContext(ServletContext servletContext) {
 		for (Object handler : getUrlMap().values()) {
-			if (handler instanceof ServletContextAware servletContextAware) {
-				servletContextAware.setServletContext(servletContext);
+			if (handler instanceof ServletContextAware) {
+				((ServletContextAware) handler).setServletContext(servletContext);
 			}
 		}
 	}
@@ -90,8 +52,8 @@ public class WebSocketHandlerMapping extends SimpleUrlHandlerMapping implements 
 		if (!isRunning()) {
 			this.running = true;
 			for (Object handler : getUrlMap().values()) {
-				if (handler instanceof Lifecycle lifecycle) {
-					lifecycle.start();
+				if (handler instanceof Lifecycle) {
+					((Lifecycle) handler).start();
 				}
 			}
 		}
@@ -102,8 +64,8 @@ public class WebSocketHandlerMapping extends SimpleUrlHandlerMapping implements 
 		if (isRunning()) {
 			this.running = false;
 			for (Object handler : getUrlMap().values()) {
-				if (handler instanceof Lifecycle lifecycle) {
-					lifecycle.stop();
+				if (handler instanceof Lifecycle) {
+					((Lifecycle) handler).stop();
 				}
 			}
 		}
@@ -112,24 +74,6 @@ public class WebSocketHandlerMapping extends SimpleUrlHandlerMapping implements 
 	@Override
 	public boolean isRunning() {
 		return this.running;
-	}
-
-
-	@Override
-	@Nullable
-	protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
-		Object handler = super.getHandlerInternal(request);
-		return (matchWebSocketUpgrade(handler, request) ? handler : null);
-	}
-
-	private boolean matchWebSocketUpgrade(@Nullable Object handler, HttpServletRequest request) {
-		handler = (handler instanceof HandlerExecutionChain chain ? chain.getHandler() : handler);
-		if (this.webSocketUpgradeMatch && handler instanceof WebSocketHttpRequestHandler) {
-			String header = request.getHeader(HttpHeaders.UPGRADE);
-			return (request.getMethod().equals("GET") &&
-					header != null && header.equalsIgnoreCase("websocket"));
-		}
-		return true;
 	}
 
 }

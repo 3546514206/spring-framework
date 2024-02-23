@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.socket.handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
@@ -46,8 +45,7 @@ public class ExceptionWebSocketHandlerDecorator extends WebSocketHandlerDecorato
 	public void afterConnectionEstablished(WebSocketSession session) {
 		try {
 			getDelegate().afterConnectionEstablished(session);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			tryCloseWithError(session, ex, logger);
 		}
 	}
@@ -56,8 +54,7 @@ public class ExceptionWebSocketHandlerDecorator extends WebSocketHandlerDecorato
 	public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) {
 		try {
 			getDelegate().handleMessage(session, message);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			tryCloseWithError(session, ex, logger);
 		}
 	}
@@ -66,8 +63,7 @@ public class ExceptionWebSocketHandlerDecorator extends WebSocketHandlerDecorato
 	public void handleTransportError(WebSocketSession session, Throwable exception) {
 		try {
 			getDelegate().handleTransportError(session, exception);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			tryCloseWithError(session, ex, logger);
 		}
 	}
@@ -76,8 +72,7 @@ public class ExceptionWebSocketHandlerDecorator extends WebSocketHandlerDecorato
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
 		try {
 			getDelegate().afterConnectionClosed(session, closeStatus);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			if (logger.isWarnEnabled()) {
 				logger.warn("Unhandled exception after connection closed for " + this, ex);
 			}

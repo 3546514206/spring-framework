@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package org.springframework.beans;
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * {@link ConfigurablePropertyAccessor} implementation that directly accesses
@@ -52,7 +52,8 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 
 	/**
 	 * Create a new DirectFieldAccessor for the given object.
-	 * @param object the object wrapped by this DirectFieldAccessor
+	 *
+	 * @param object object wrapped by this DirectFieldAccessor
 	 */
 	public DirectFieldAccessor(Object object) {
 		super(object);
@@ -61,7 +62,7 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 	/**
 	 * Create a new DirectFieldAccessor for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this DirectFieldAccessor
+	 * @param object object wrapped by this DirectFieldAccessor
 	 * @param nestedPath the nested path of the object
 	 * @param parent the containing DirectFieldAccessor (must not be {@code null})
 	 */
@@ -92,7 +93,8 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 	@Override
 	protected NotWritablePropertyException createNotWritablePropertyException(String propertyName) {
 		PropertyMatches matches = PropertyMatches.forField(propertyName, getRootClass());
-		throw new NotWritablePropertyException(getRootClass(), getNestedPath() + propertyName,
+		throw new NotWritablePropertyException(
+				getRootClass(), getNestedPath() + propertyName,
 				matches.buildErrorMessage(), matches.getPossibleMatches());
 	}
 
@@ -101,34 +103,19 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 
 		private final Field field;
 
-		private final ResolvableType resolvableType;
-
 		public FieldPropertyHandler(Field field) {
 			super(field.getType(), true, true);
 			this.field = field;
-			this.resolvableType = ResolvableType.forField(this.field);
 		}
 
 		@Override
 		public TypeDescriptor toTypeDescriptor() {
-			return new TypeDescriptor(this.resolvableType, this.field.getType(), this.field.getAnnotations());
+			return new TypeDescriptor(this.field);
 		}
 
 		@Override
 		public ResolvableType getResolvableType() {
-			return this.resolvableType;
-		}
-
-		@Override
-		public TypeDescriptor getMapValueType(int nestingLevel) {
-			return new TypeDescriptor(this.resolvableType.getNested(nestingLevel).asMap().getGeneric(1),
-					null, this.field.getAnnotations());
-		}
-
-		@Override
-		public TypeDescriptor getCollectionType(int nestingLevel) {
-			return new TypeDescriptor(this.resolvableType.getNested(nestingLevel).asCollection().getGeneric(),
-					null, this.field.getAnnotations());
+			return ResolvableType.forField(this.field);
 		}
 
 		@Override
@@ -144,6 +131,7 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 				ReflectionUtils.makeAccessible(this.field);
 				return this.field.get(getWrappedInstance());
 			}
+
 			catch (IllegalAccessException ex) {
 				throw new InvalidPropertyException(getWrappedClass(),
 						this.field.getName(), "Field is not accessible", ex);

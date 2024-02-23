@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.springframework.test.context.jdbc;
 
-import java.lang.reflect.Array;
-import java.util.Arrays;
-
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.style.DefaultToStringStyler;
-import org.springframework.core.style.SimpleValueStyler;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.lang.Nullable;
-import org.springframework.test.context.TestContextAnnotationUtils;
 import org.springframework.test.context.jdbc.SqlConfig.ErrorMode;
 import org.springframework.test.context.jdbc.SqlConfig.TransactionMode;
 import org.springframework.util.Assert;
+
+import java.lang.reflect.Array;
+import java.util.Arrays;
 
 /**
  * {@code MergedSqlConfig} encapsulates the <em>merged</em> {@link SqlConfig @SqlConfig}
@@ -102,14 +100,13 @@ class MergedSqlConfig {
 		enforceCommentPrefixAliases(localAttributes);
 
 		// Get global attributes, if any.
-		SqlConfig globalSqlConfig = TestContextAnnotationUtils.findMergedAnnotation(testClass, SqlConfig.class);
+		AnnotationAttributes globalAttributes = AnnotatedElementUtils.findMergedAnnotationAttributes(
+				testClass, SqlConfig.class.getName(), false, false);
 
 		// Use local attributes only?
-		if (globalSqlConfig == null) {
+		if (globalAttributes == null) {
 			return localAttributes;
 		}
-
-		AnnotationAttributes globalAttributes = AnnotationUtils.getAnnotationAttributes(globalSqlConfig, false, false);
 
 		// Enforce comment prefix aliases within the global @SqlConfig.
 		enforceCommentPrefixAliases(globalAttributes);
@@ -176,8 +173,8 @@ class MergedSqlConfig {
 
 	/**
 	 * Get the prefixes that identify single-line comments within the SQL scripts.
-	 * @since 5.2
 	 * @see SqlConfig#commentPrefixes()
+	 * @since 5.2
 	 */
 	String[] getCommentPrefixes() {
 		return this.commentPrefixes;
@@ -212,7 +209,7 @@ class MergedSqlConfig {
 	 */
 	@Override
 	public String toString() {
-		return new ToStringCreator(this, new DefaultToStringStyler(new SimpleValueStyler()))
+		return new ToStringCreator(this)
 				.append("dataSource", this.dataSource)
 				.append("transactionManager", this.transactionManager)
 				.append("transactionMode", this.transactionMode)
@@ -238,7 +235,7 @@ class MergedSqlConfig {
 
 	private static String getString(AnnotationAttributes attributes, String attributeName, String defaultValue) {
 		String value = attributes.getString(attributeName);
-		if (value.isEmpty()) {
+		if ("".equals(value)) {
 			value = defaultValue;
 		}
 		return value;
@@ -291,7 +288,7 @@ class MergedSqlConfig {
 	}
 
 	private static boolean isEmptyString(@Nullable Object value) {
-		return (value instanceof String str && str.isEmpty());
+		return (value instanceof String && ((String) value).isEmpty());
 	}
 
 	private static boolean isEmptyArray(@Nullable Object value) {

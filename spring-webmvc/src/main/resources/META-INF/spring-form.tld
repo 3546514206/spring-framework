@@ -125,8 +125,15 @@
 		</attribute>
 		<attribute>
 			<description>Name of the model attribute under which the form object is exposed.
-			Defaults to 'command'.</description>
+				Defaults to 'command'.
+			</description>
 			<name>modelAttribute</name>
+			<required>false</required>
+			<rtexprvalue>true</rtexprvalue>
+		</attribute>
+		<attribute>
+			<description>DEPRECATED: Use "modelAttribute" instead.</description>
+			<name>commandName</name>
 			<required>false</required>
 			<rtexprvalue>true</rtexprvalue>
 		</attribute>
@@ -2459,5 +2466,5 @@
 		</attribute>
 		<dynamic-attributes>true</dynamic-attributes>
 	</tag>
-	
+
 </taglib>

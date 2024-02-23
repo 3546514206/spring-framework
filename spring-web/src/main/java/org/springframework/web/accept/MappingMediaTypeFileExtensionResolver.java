@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,20 @@
 
 package org.springframework.web.accept;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import org.springframework.http.MediaType;
+import org.springframework.lang.Nullable;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import org.springframework.http.MediaType;
-import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
 
 /**
  * An implementation of {@code MediaTypeFileExtensionResolver} that maintains
  * lookups between file extensions and MediaTypes in both directions.
  *
  * <p>Initially created with a map of file extensions and media types.
- * Subsequently, subclasses can use {@link #addMapping} to add more mappings.
+ * Subsequently subclasses can use {@link #addMapping} to add more mappings.
  *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
@@ -55,7 +49,7 @@ public class MappingMediaTypeFileExtensionResolver implements MediaTypeFileExten
 	 */
 	public MappingMediaTypeFileExtensionResolver(@Nullable Map<String, MediaType> mediaTypes) {
 		if (mediaTypes != null) {
-			Set<String> allFileExtensions = CollectionUtils.newHashSet(mediaTypes.size());
+			List<String> allFileExtensions = new ArrayList<>();
 			mediaTypes.forEach((extension, mediaType) -> {
 				String lowerCaseExtension = extension.toLowerCase(Locale.ENGLISH);
 				this.mediaTypes.put(lowerCaseExtension, mediaType);

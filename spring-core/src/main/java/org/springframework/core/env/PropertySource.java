@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,8 @@
 
 package org.springframework.core.env;
 
-import java.util.Objects;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -70,8 +67,6 @@ public abstract class PropertySource<T> {
 
 	/**
 	 * Create a new {@code PropertySource} with the given name and source object.
-	 * @param name the associated name
-	 * @param source the source object
 	 */
 	public PropertySource(String name, T source) {
 		Assert.hasText(name, "Property source name must contain at least one character");
@@ -94,8 +89,6 @@ public abstract class PropertySource<T> {
 
 	/**
 	 * Return the name of this {@code PropertySource}.
-	 * <p>See the {@linkplain PropertySource class-level Javadoc} for details
-	 * on property source identity and names.
 	 */
 	public String getName() {
 		return this.name;
@@ -139,8 +132,8 @@ public abstract class PropertySource<T> {
 	 */
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof PropertySource<?> that &&
-				ObjectUtils.nullSafeEquals(getName(), that.getName())));
+		return (this == other || (other instanceof PropertySource &&
+				ObjectUtils.nullSafeEquals(this.name, ((PropertySource<?>) other).name)));
 	}
 
 	/**
@@ -149,7 +142,7 @@ public abstract class PropertySource<T> {
 	 */
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(getName());
+		return ObjectUtils.nullSafeHashCode(this.name);
 	}
 
 	/**
@@ -158,38 +151,37 @@ public abstract class PropertySource<T> {
 	 * PropertySource instance and every name/value property pair.
 	 * <p>This variable verbosity is useful as a property source such as system properties
 	 * or environment variables may contain an arbitrary number of property pairs,
-	 * potentially leading to difficulties to read exception and log messages.
+	 * potentially leading to difficult to read exception and log messages.
 	 * @see Log#isDebugEnabled()
 	 */
 	@Override
 	public String toString() {
 		if (logger.isDebugEnabled()) {
 			return getClass().getSimpleName() + "@" + System.identityHashCode(this) +
-					" {name='" + getName() + "', properties=" + getSource() + "}";
+					" {name='" + this.name + "', properties=" + this.source + "}";
 		}
 		else {
-			return getClass().getSimpleName() + " {name='" + getName() + "'}";
+			return getClass().getSimpleName() + " {name='" + this.name + "'}";
 		}
 	}
 
 
 	/**
-	 * Return a {@code PropertySource} implementation intended for collection
-	 * comparison purposes only.
-	 * <p>Primarily for internal use, but given a collection of {@code PropertySource}
-	 * objects, may be used as follows:
+	 * Return a {@code PropertySource} implementation intended for collection comparison purposes only.
+	 * <p>Primarily for internal use, but given a collection of {@code PropertySource} objects, may be
+	 * used as follows:
 	 * <pre class="code">
-	 * List&lt;PropertySource&lt;?&gt;&gt; sources = new ArrayList&lt;&gt;();
+	 * {@code List<PropertySource<?>> sources = new ArrayList<PropertySource<?>>();
 	 * sources.add(new MapPropertySource("sourceA", mapA));
 	 * sources.add(new MapPropertySource("sourceB", mapB));
 	 * assert sources.contains(PropertySource.named("sourceA"));
 	 * assert sources.contains(PropertySource.named("sourceB"));
-	 * assert !sources.contains(PropertySource.named("sourceC"));</pre>
-	 * <p>The returned {@code PropertySource} will throw {@code UnsupportedOperationException}
+	 * assert !sources.contains(PropertySource.named("sourceC"));
+	 * }</pre>
+	 * The returned {@code PropertySource} will throw {@code UnsupportedOperationException}
 	 * if any methods other than {@code equals(Object)}, {@code hashCode()}, and {@code toString()}
 	 * are called.
-	 * @param name the name of the comparison {@code PropertySource} to be created
-	 * and returned
+	 * @param name the name of the comparison {@code PropertySource} to be created and returned.
 	 */
 	public static PropertySource<?> named(String name) {
 		return new ComparisonPropertySource(name);
@@ -211,7 +203,7 @@ public abstract class PropertySource<T> {
 	public static class StubPropertySource extends PropertySource<Object> {
 
 		public StubPropertySource(String name) {
-			super(name);
+			super(name, new Object());
 		}
 
 		/**

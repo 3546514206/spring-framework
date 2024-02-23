@@ -27,7 +27,7 @@
 
 	That is, this advice element is where the transactional semantics of
 	any	number of methods are defined (where transactional semantics
-	include the propagation settings, the isolation level, the rollback
+	includes the propagation settings, the isolation level, the rollback
 	rules, and suchlike).
 				]]></xsd:documentation>
 				<xsd:appinfo>
@@ -43,21 +43,19 @@
 					</xsd:sequence>
 					<xsd:attribute name="transaction-manager" type="xsd:string" default="transactionManager">
 						<xsd:annotation>
-							<xsd:documentation source="java:org.springframework.transaction.TransactionManager"><![CDATA[
-	The bean name of the TransactionManager that is to be used
+							<xsd:documentation source="java:org.springframework.transaction.PlatformTransactionManager">
+								<![CDATA[
+	The bean name of the PlatformTransactionManager that is to be used
 	to drive transactions.
 
-	Supports PlatformTransactionManager implementations for imperative
-	transaction management and ReactiveTransactionManager implementations
-	for reactive transaction management.
-
 	This attribute is not required, and only needs to be specified
-	explicitly if the bean name of the desired TransactionManager
+	explicitly if the bean name of the desired PlatformTransactionManager
 	is not 'transactionManager'.
 							]]></xsd:documentation>
 							<xsd:appinfo>
 								<tool:annotation kind="ref">
-									<tool:expected-type type="org.springframework.transaction.TransactionManager"/>
+									<tool:expected-type
+											type="org.springframework.transaction.PlatformTransactionManager"/>
 								</tool:annotation>
 							</xsd:appinfo>
 						</xsd:annotation>
@@ -71,12 +69,11 @@
 		<xsd:complexType>
 			<xsd:annotation>
 				<xsd:documentation source="java:org.springframework.transaction.annotation.AnnotationTransactionAttributeSource"><![CDATA[
-	Indicates that transaction configuration is defined by
+	Indicates that transaction configuration is defined by Java 5
 	annotations on bean classes, and that proxies are automatically
 	to be created for the relevant annotated beans.
 
-	The default annotations supported are Spring's @Transactional,
-	JTA 1.2's @Transactional (if available),
+	The default annotations supported are Spring's @Transactional
 	and EJB3's @TransactionAttribute (if available).
 
 	Transaction semantics such as propagation settings, the isolation level,
@@ -88,21 +85,18 @@
 			</xsd:annotation>
 			<xsd:attribute name="transaction-manager" type="xsd:string" default="transactionManager">
 				<xsd:annotation>
-					<xsd:documentation source="java:org.springframework.transaction.TransactionManager"><![CDATA[
-	The bean name of the TransactionManager that is to be used
+					<xsd:documentation source="java:org.springframework.transaction.PlatformTransactionManager">
+						<![CDATA[
+	The bean name of the PlatformTransactionManager that is to be used
 	to drive transactions.
 
-	Supports PlatformTransactionManager implementations for imperative
-	transaction management and ReactiveTransactionManager implementations
-	for reactive transaction management.
-
 	This attribute is not required, and only needs to be specified
-	explicitly if the bean name of the desired TransactionManager
+	explicitly if the bean name of the desired PlatformTransactionManager
 	is not 'transactionManager'.
 					]]></xsd:documentation>
 					<xsd:appinfo>
 						<tool:annotation kind="ref">
-							<tool:expected-type type="org.springframework.transaction.TransactionManager"/>
+							<tool:expected-type type="org.springframework.transaction.PlatformTransactionManager"/>
 						</tool:annotation>
 					</xsd:appinfo>
 				</xsd:annotation>
@@ -111,7 +105,7 @@
 				<xsd:annotation>
 					<xsd:documentation><![CDATA[
 	Should annotated beans be proxied using Spring's AOP framework,
-	or should they rather be woven with an AspectJ transaction aspect?
+	or should they rather be weaved with an AspectJ transaction aspect?
 
 	AspectJ weaving requires spring-aspects.jar on the classpath,
 	as well as load-time weaving (or compile-time weaving) enabled.
@@ -156,6 +150,8 @@
 			<xsd:documentation><![CDATA[
 	Creates a default JtaTransactionManager bean with name "transactionManager",
 	matching the default bean name expected by the "annotation-driven" tag.
+	Automatically detects WebLogic and WebSphere: creating a WebLogicJtaTransactionManager
+	or WebSphereUowTransactionManager, respectively.
 
 	For customization needs, consider defining a JtaTransactionManager bean as a regular
 	Spring bean definition with name "transactionManager", replacing this element.
@@ -216,7 +212,7 @@
 							</xsd:restriction>
 						</xsd:simpleType>
 					</xsd:attribute>
-					<xsd:attribute name="timeout" type="xsd:string" default="">
+					<xsd:attribute name="timeout" type="xsd:int" default="-1">
 						<xsd:annotation>
 							<xsd:documentation><![CDATA[
 	The transaction timeout value (in seconds).

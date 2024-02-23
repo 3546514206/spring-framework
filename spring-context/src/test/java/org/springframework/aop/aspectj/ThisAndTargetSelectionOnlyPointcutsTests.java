@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.aop.aspectj;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,11 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Ramnivas Laddad
  * @author Chris Beams
- * @author Sam Brannen
  */
-class ThisAndTargetSelectionOnlyPointcutsTests {
-
-	private ClassPathXmlApplicationContext ctx;
+public class ThisAndTargetSelectionOnlyPointcutsTests {
 
 	private TestInterface testBean;
 
@@ -41,64 +37,70 @@ class ThisAndTargetSelectionOnlyPointcutsTests {
 	private Counter targetAsInterfaceCounter;
 	private Counter thisAsClassAndTargetAsClassCounter;
 	private Counter thisAsInterfaceAndTargetAsInterfaceCounter;
+	private Counter thisAsInterfaceAndTargetAsClassCounter;
 
 
 	@BeforeEach
-	void setup() {
-		this.ctx = new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
+	public void setup() {
+		ClassPathXmlApplicationContext ctx =
+				new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
 		testBean = (TestInterface) ctx.getBean("testBean");
-		thisAsClassCounter = ctx.getBean("thisAsClassCounter", Counter.class);
-		thisAsInterfaceCounter = ctx.getBean("thisAsInterfaceCounter", Counter.class);
-		targetAsClassCounter = ctx.getBean("targetAsClassCounter", Counter.class);
-		targetAsInterfaceCounter = ctx.getBean("targetAsInterfaceCounter", Counter.class);
-		thisAsClassAndTargetAsClassCounter = ctx.getBean("thisAsClassAndTargetAsClassCounter", Counter.class);
-		thisAsInterfaceAndTargetAsInterfaceCounter = ctx.getBean("thisAsInterfaceAndTargetAsInterfaceCounter", Counter.class);
-	}
+		thisAsClassCounter = (Counter) ctx.getBean("thisAsClassCounter");
+		thisAsInterfaceCounter = (Counter) ctx.getBean("thisAsInterfaceCounter");
+		targetAsClassCounter = (Counter) ctx.getBean("targetAsClassCounter");
+		targetAsInterfaceCounter = (Counter) ctx.getBean("targetAsInterfaceCounter");
+		thisAsClassAndTargetAsClassCounter = (Counter) ctx.getBean("thisAsClassAndTargetAsClassCounter");
+		thisAsInterfaceAndTargetAsInterfaceCounter = (Counter) ctx.getBean("thisAsInterfaceAndTargetAsInterfaceCounter");
+		thisAsInterfaceAndTargetAsClassCounter = (Counter) ctx.getBean("thisAsInterfaceAndTargetAsClassCounter");
 
-	@AfterEach
-	void tearDown() {
-		this.ctx.close();
+		thisAsClassCounter.reset();
+		thisAsInterfaceCounter.reset();
+		targetAsClassCounter.reset();
+		targetAsInterfaceCounter.reset();
+		thisAsClassAndTargetAsClassCounter.reset();
+		thisAsInterfaceAndTargetAsInterfaceCounter.reset();
+		thisAsInterfaceAndTargetAsClassCounter.reset();
 	}
 
 
 	@Test
-	void thisAsClassDoesNotMatch() {
+	public void testThisAsClassDoesNotMatch() {
 		testBean.doIt();
 		assertThat(thisAsClassCounter.getCount()).isEqualTo(0);
 	}
 
 	@Test
-	void thisAsInterfaceMatch() {
+	public void testThisAsInterfaceMatch() {
 		testBean.doIt();
 		assertThat(thisAsInterfaceCounter.getCount()).isEqualTo(1);
 	}
 
 	@Test
-	void targetAsClassDoesMatch() {
+	public void testTargetAsClassDoesMatch() {
 		testBean.doIt();
 		assertThat(targetAsClassCounter.getCount()).isEqualTo(1);
 	}
 
 	@Test
-	void targetAsInterfaceMatch() {
+	public void testTargetAsInterfaceMatch() {
 		testBean.doIt();
 		assertThat(targetAsInterfaceCounter.getCount()).isEqualTo(1);
 	}
 
 	@Test
-	void thisAsClassAndTargetAsClassCounterNotMatch() {
+	public void testThisAsClassAndTargetAsClassCounterNotMatch() {
 		testBean.doIt();
 		assertThat(thisAsClassAndTargetAsClassCounter.getCount()).isEqualTo(0);
 	}
 
 	@Test
-	void thisAsInterfaceAndTargetAsInterfaceCounterMatch() {
+	public void testThisAsInterfaceAndTargetAsInterfaceCounterMatch() {
 		testBean.doIt();
 		assertThat(thisAsInterfaceAndTargetAsInterfaceCounter.getCount()).isEqualTo(1);
 	}
 
 	@Test
-	void thisAsInterfaceAndTargetAsClassCounterMatch() {
+	public void testThisAsInterfaceAndTargetAsClassCounterMatch() {
 		testBean.doIt();
 		assertThat(thisAsInterfaceAndTargetAsInterfaceCounter.getCount()).isEqualTo(1);
 	}
@@ -107,7 +109,7 @@ class ThisAndTargetSelectionOnlyPointcutsTests {
 
 
 interface TestInterface {
-	void doIt();
+	public void doIt();
 }
 
 

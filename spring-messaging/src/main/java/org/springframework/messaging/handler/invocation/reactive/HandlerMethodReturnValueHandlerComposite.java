@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.messaging.handler.invocation.reactive;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
+import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A HandlerMethodReturnValueHandler that wraps and delegates to others.
@@ -37,6 +36,7 @@ import org.springframework.messaging.Message;
 public class HandlerMethodReturnValueHandlerComposite implements HandlerMethodReturnValueHandler {
 
 	protected final Log logger = LogFactory.getLog(getClass());
+
 
 	private final List<HandlerMethodReturnValueHandler> returnValueHandlers = new ArrayList<>();
 
@@ -95,7 +95,8 @@ public class HandlerMethodReturnValueHandlerComposite implements HandlerMethodRe
 	@SuppressWarnings("ForLoopReplaceableByForEach")
 	@Nullable
 	private HandlerMethodReturnValueHandler getReturnValueHandler(MethodParameter returnType) {
-		for (HandlerMethodReturnValueHandler handler : this.returnValueHandlers) {
+		for (int i = 0; i < this.returnValueHandlers.size(); i++) {
+			HandlerMethodReturnValueHandler handler = this.returnValueHandlers.get(i);
 			if (handler.supportsReturnType(returnType)) {
 				return handler;
 			}

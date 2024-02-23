@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.reactive.result.method.annotation;
 
-import io.reactivex.rxjava3.core.Single;
+import io.reactivex.Single;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.web.method.ResolvableMethod;
 import org.springframework.web.reactive.BindingContext;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebSession;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.method.ResolvableMethod;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link WebSessionMethodArgumentResolver}.
+ * Unit tests for {@link WebSessionMethodArgumentResolver}.
  *
  * @author Rossen Stoyanchev
  */
-class WebSessionMethodArgumentResolverTests {
+public class WebSessionMethodArgumentResolverTests {
 
 	private final WebSessionMethodArgumentResolver resolver =
 			new WebSessionMethodArgumentResolver(ReactiveAdapterRegistry.getSharedInstance());
@@ -46,7 +44,7 @@ class WebSessionMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		assertThat(this.resolver.supportsParameter(this.testMethod.arg(WebSession.class))).isTrue();
 		assertThat(this.resolver.supportsParameter(this.testMethod.arg(Mono.class, WebSession.class))).isTrue();
 		assertThat(this.resolver.supportsParameter(this.testMethod.arg(Single.class, WebSession.class))).isTrue();
@@ -54,10 +52,10 @@ class WebSessionMethodArgumentResolverTests {
 
 
 	@Test
-	void resolverArgument() {
+	public void resolverArgument() {
 
 		BindingContext context = new BindingContext();
-		WebSession session = mock();
+		WebSession session = mock(WebSession.class);
 		MockServerHttpRequest request = MockServerHttpRequest.get("/").build();
 		ServerWebExchange exchange = MockServerWebExchange.builder(request).session(session).build();
 

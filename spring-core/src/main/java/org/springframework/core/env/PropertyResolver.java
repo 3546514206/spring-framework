@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,10 +94,12 @@ public interface PropertyResolver {
 	 * Resolve ${...} placeholders in the given text, replacing them with corresponding
 	 * property values as resolved by {@link #getProperty}. Unresolvable placeholders with
 	 * no default value are ignored and passed through unchanged.
+	 *
 	 * @param text the String to resolve
 	 * @return the resolved String (never {@code null})
 	 * @throws IllegalArgumentException if given text is {@code null}
 	 * @see #resolveRequiredPlaceholders
+	 * @see org.springframework.util.SystemPropertyUtils#resolvePlaceholders(String)
 	 */
 	String resolvePlaceholders(String text);
 
@@ -108,6 +110,7 @@ public interface PropertyResolver {
 	 * @return the resolved String (never {@code null})
 	 * @throws IllegalArgumentException if given text is {@code null}
 	 * or if any placeholders are unresolvable
+	 * @see org.springframework.util.SystemPropertyUtils#resolvePlaceholders(String, boolean)
 	 */
 	String resolveRequiredPlaceholders(String text) throws IllegalArgumentException;
 

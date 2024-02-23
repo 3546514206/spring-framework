@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
 
 package org.springframework.format.datetime;
 
-import java.util.Calendar;
-import java.util.Date;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.format.FormatterRegistrar;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * Configures basic date formatting for use with Spring, primarily for
@@ -38,6 +38,7 @@ import org.springframework.util.Assert;
  * @author Phillip Webb
  * @since 3.2
  * @see org.springframework.format.datetime.standard.DateTimeFormatterRegistrar
+ * @see org.springframework.format.datetime.joda.JodaTimeFormatterRegistrar
  * @see FormatterRegistrar#registerFormatters
  */
 public class DateFormatterRegistrar implements FormatterRegistrar {
@@ -60,13 +61,14 @@ public class DateFormatterRegistrar implements FormatterRegistrar {
 	@Override
 	public void registerFormatters(FormatterRegistry registry) {
 		addDateConverters(registry);
+		registry.addFormatterForFieldAnnotation(new DateTimeFormatAnnotationFormatterFactory());
+
 		// In order to retain back compatibility we only register Date/Calendar
 		// types when a user defined formatter is specified (see SPR-10105)
 		if (this.dateFormatter != null) {
 			registry.addFormatter(this.dateFormatter);
 			registry.addFormatterForFieldType(Calendar.class, this.dateFormatter);
 		}
-		registry.addFormatterForFieldAnnotation(new DateTimeFormatAnnotationFormatterFactory());
 	}
 
 	/**

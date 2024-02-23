@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.springframework.util.Assert;
  *
  * @author Rossen Stoyanchev
  * @since 5.1
- * @see MultipartFile#getResource()
  */
 class MultipartFileResource extends AbstractResource {
 
@@ -89,8 +88,8 @@ class MultipartFileResource extends AbstractResource {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof MultipartFileResource that &&
-				this.multipartFile.equals(that.multipartFile)));
+		return (this == other || (other instanceof MultipartFileResource &&
+				((MultipartFileResource) other).multipartFile.equals(this.multipartFile)));
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.util;
-
-import jakarta.servlet.ServletContext;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.PropertyPlaceholderHelper;
 import org.springframework.util.SystemPropertyUtils;
+
+import javax.servlet.ServletContext;
 
 /**
  * Helper class for resolving placeholders in texts. Usually applied to file paths.
@@ -39,13 +38,11 @@ public abstract class ServletContextPropertyUtils {
 
 	private static final PropertyPlaceholderHelper strictHelper =
 			new PropertyPlaceholderHelper(SystemPropertyUtils.PLACEHOLDER_PREFIX,
-					SystemPropertyUtils.PLACEHOLDER_SUFFIX, SystemPropertyUtils.VALUE_SEPARATOR,
-					SystemPropertyUtils.ESCAPE_CHARACTER, false);
+					SystemPropertyUtils.PLACEHOLDER_SUFFIX, SystemPropertyUtils.VALUE_SEPARATOR, false);
 
 	private static final PropertyPlaceholderHelper nonStrictHelper =
 			new PropertyPlaceholderHelper(SystemPropertyUtils.PLACEHOLDER_PREFIX,
-					SystemPropertyUtils.PLACEHOLDER_SUFFIX, SystemPropertyUtils.VALUE_SEPARATOR,
-					SystemPropertyUtils.ESCAPE_CHARACTER, true);
+					SystemPropertyUtils.PLACEHOLDER_SUFFIX, SystemPropertyUtils.VALUE_SEPARATOR, true);
 
 
 	/**
@@ -71,23 +68,21 @@ public abstract class ServletContextPropertyUtils {
 	 * @param servletContext the servletContext to use for lookups.
 	 * @param ignoreUnresolvablePlaceholders flag to determine is unresolved placeholders are ignored
 	 * @return the resolved String
-	 * @throws IllegalArgumentException if there is an unresolvable placeholder and the flag is {@code false}
+	 * @throws IllegalArgumentException if there is an unresolvable placeholder and the flag is false
 	 * @see SystemPropertyUtils#PLACEHOLDER_PREFIX
 	 * @see SystemPropertyUtils#PLACEHOLDER_SUFFIX
 	 * @see SystemPropertyUtils#resolvePlaceholders(String, boolean)
 	 */
-	public static String resolvePlaceholders(
-			String text, ServletContext servletContext, boolean ignoreUnresolvablePlaceholders) {
+	public static String resolvePlaceholders(String text, ServletContext servletContext,
+											 boolean ignoreUnresolvablePlaceholders) {
 
-		if (text.isEmpty()) {
-			return text;
-		}
 		PropertyPlaceholderHelper helper = (ignoreUnresolvablePlaceholders ? nonStrictHelper : strictHelper);
 		return helper.replacePlaceholders(text, new ServletContextPlaceholderResolver(text, servletContext));
 	}
 
 
-	private static class ServletContextPlaceholderResolver implements PropertyPlaceholderHelper.PlaceholderResolver {
+	private static class ServletContextPlaceholderResolver
+			implements PropertyPlaceholderHelper.PlaceholderResolver {
 
 		private final String text;
 

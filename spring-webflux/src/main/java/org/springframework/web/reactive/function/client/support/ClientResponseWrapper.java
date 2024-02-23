@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,8 @@
 
 package org.springframework.web.reactive.function.client.support;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalLong;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRequest;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.client.reactive.ClientHttpResponse;
 import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
@@ -37,6 +25,12 @@ import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 /**
  * Implementation of the {@link ClientResponse} interface that can be subclassed
@@ -70,8 +64,18 @@ public class ClientResponseWrapper implements ClientResponse {
 	}
 
 	@Override
-	public HttpStatusCode statusCode() {
+	public ExchangeStrategies strategies() {
+		return this.delegate.strategies();
+	}
+
+	@Override
+	public HttpStatus statusCode() {
 		return this.delegate.statusCode();
+	}
+
+	@Override
+	public int rawStatusCode() {
+		return this.delegate.rawStatusCode();
 	}
 
 	@Override
@@ -82,16 +86,6 @@ public class ClientResponseWrapper implements ClientResponse {
 	@Override
 	public MultiValueMap<String, ResponseCookie> cookies() {
 		return this.delegate.cookies();
-	}
-
-	@Override
-	public ExchangeStrategies strategies() {
-		return this.delegate.strategies();
-	}
-
-	@Override
-	public HttpRequest request() {
-		return this.delegate.request();
 	}
 
 	@Override
@@ -152,16 +146,6 @@ public class ClientResponseWrapper implements ClientResponse {
 	@Override
 	public Mono<WebClientResponseException> createException() {
 		return this.delegate.createException();
-	}
-
-	@Override
-	public <T> Mono<T> createError() {
-		return this.delegate.createError();
-	}
-
-	@Override
-	public String logPrefix() {
-		return this.delegate.logPrefix();
 	}
 
 	/**

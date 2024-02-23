@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.web.servlet.config;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.w3c.dom.Element;
-
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.AbstractSingleBeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.util.StringUtils;
 import org.springframework.util.xml.DomUtils;
+import org.w3c.dom.Element;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Parse the <code>&lt;mvc:freemarker-configurer&gt;</code> MVC namespace element and
@@ -60,6 +59,9 @@ public class FreeMarkerConfigurerBeanDefinitionParser extends AbstractSingleBean
 			List<String> locations = new ArrayList<>(childElements.size());
 			for (Element childElement : childElements) {
 				locations.add(childElement.getAttribute("location"));
+			}
+			if (locations.isEmpty()) {
+				locations.add("/WEB-INF/");
 			}
 			builder.addPropertyValue("templateLoaderPaths", StringUtils.toStringArray(locations));
 		}

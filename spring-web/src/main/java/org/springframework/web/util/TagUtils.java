@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package org.springframework.web.util;
 
-import jakarta.servlet.jsp.PageContext;
-import jakarta.servlet.jsp.tagext.Tag;
+import javax.servlet.jsp.PageContext;
+import javax.servlet.jsp.tagext.Tag;
 
 import org.springframework.util.Assert;
 
@@ -28,13 +28,13 @@ import org.springframework.util.Assert;
  * <p>
  * <ul>
  * <li>{@code page} will be transformed to
- * {@link jakarta.servlet.jsp.PageContext#PAGE_SCOPE PageContext.PAGE_SCOPE}
+ * {@link javax.servlet.jsp.PageContext#PAGE_SCOPE PageContext.PAGE_SCOPE}
  * <li>{@code request} will be transformed to
- * {@link jakarta.servlet.jsp.PageContext#REQUEST_SCOPE PageContext.REQUEST_SCOPE}
+ * {@link javax.servlet.jsp.PageContext#REQUEST_SCOPE PageContext.REQUEST_SCOPE}
  * <li>{@code session} will be transformed to
- * {@link jakarta.servlet.jsp.PageContext#SESSION_SCOPE PageContext.SESSION_SCOPE}
+ * {@link javax.servlet.jsp.PageContext#SESSION_SCOPE PageContext.SESSION_SCOPE}
  * <li>{@code application} will be transformed to
- * {@link jakarta.servlet.jsp.PageContext#APPLICATION_SCOPE PageContext.APPLICATION_SCOPE}
+ * {@link javax.servlet.jsp.PageContext#APPLICATION_SCOPE PageContext.APPLICATION_SCOPE}
  * </ul>
  *
  * @author Alef Arendsen
@@ -67,12 +67,18 @@ public abstract class TagUtils {
 	 */
 	public static int getScope(String scope) {
 		Assert.notNull(scope, "Scope to search for cannot be null");
-		return switch (scope) {
-			case SCOPE_REQUEST -> PageContext.REQUEST_SCOPE;
-			case SCOPE_SESSION -> PageContext.SESSION_SCOPE;
-			case SCOPE_APPLICATION -> PageContext.APPLICATION_SCOPE;
-			default -> PageContext.PAGE_SCOPE;
-		};
+		if (scope.equals(SCOPE_REQUEST)) {
+			return PageContext.REQUEST_SCOPE;
+		}
+		else if (scope.equals(SCOPE_SESSION)) {
+			return PageContext.SESSION_SCOPE;
+		}
+		else if (scope.equals(SCOPE_APPLICATION)) {
+			return PageContext.APPLICATION_SCOPE;
+		}
+		else {
+			return PageContext.PAGE_SCOPE;
+		}
 	}
 
 	/**
@@ -117,7 +123,7 @@ public abstract class TagUtils {
 	 * or in the case of the {@link String}-typed arguments, is composed wholly
 	 * of whitespace; or if the supplied {@code ancestorTagClass} is not
 	 * type-assignable to the {@link Tag} class
-	 * @see #hasAncestorOfType(jakarta.servlet.jsp.tagext.Tag, Class)
+	 * @see #hasAncestorOfType(javax.servlet.jsp.tagext.Tag, Class)
 	 */
 	public static void assertHasAncestorOfType(Tag tag, Class<?> ancestorTagClass, String tagName,
 			String ancestorTagName) {

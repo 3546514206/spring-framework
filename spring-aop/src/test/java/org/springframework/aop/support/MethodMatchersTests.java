@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,23 @@
 
 package org.springframework.aop.support;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.aop.MethodMatcher;
+import org.springframework.lang.Nullable;
+import org.springframework.tests.sample.beans.IOther;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.util.SerializationTestUtils;
+
 import java.lang.reflect.Method;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.aop.MethodMatcher;
-import org.springframework.beans.testfixture.beans.IOther;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.core.testfixture.io.SerializationTestUtils;
-import org.springframework.lang.Nullable;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 /**
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class MethodMatchersTests {
-
-	private static final Method TEST_METHOD = mock(Method.class);
+public class MethodMatchersTests {
 
 	private final Method EXCEPTION_GETMESSAGE;
 
@@ -56,19 +52,19 @@ class MethodMatchersTests {
 
 
 	@Test
-	void testDefaultMatchesAll() {
+	public void testDefaultMatchesAll() throws Exception {
 		MethodMatcher defaultMm = MethodMatcher.TRUE;
 		assertThat(defaultMm.matches(EXCEPTION_GETMESSAGE, Exception.class)).isTrue();
 		assertThat(defaultMm.matches(ITESTBEAN_SETAGE, TestBean.class)).isTrue();
 	}
 
 	@Test
-	void testMethodMatcherTrueSerializable() throws Exception {
+	public void testMethodMatcherTrueSerializable() throws Exception {
 		assertThat(MethodMatcher.TRUE).isSameAs(SerializationTestUtils.serializeAndDeserialize(MethodMatcher.TRUE));
 	}
 
 	@Test
-	void testSingle() {
+	public void testSingle() throws Exception {
 		MethodMatcher defaultMm = MethodMatcher.TRUE;
 		assertThat(defaultMm.matches(EXCEPTION_GETMESSAGE, Exception.class)).isTrue();
 		assertThat(defaultMm.matches(ITESTBEAN_SETAGE, TestBean.class)).isTrue();
@@ -80,22 +76,22 @@ class MethodMatchersTests {
 
 
 	@Test
-	void testDynamicAndStaticMethodMatcherIntersection() {
+	public void testDynamicAndStaticMethodMatcherIntersection() throws Exception {
 		MethodMatcher mm1 = MethodMatcher.TRUE;
 		MethodMatcher mm2 = new TestDynamicMethodMatcherWhichMatches();
 		MethodMatcher intersection = MethodMatchers.intersection(mm1, mm2);
 		assertThat(intersection.isRuntime()).as("Intersection is a dynamic matcher").isTrue();
 		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class)).as("2Matched setAge method").isTrue();
-		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class, 5)).as("3Matched setAge method").isTrue();
+		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class, new Integer(5))).as("3Matched setAge method").isTrue();
 		// Knock out dynamic part
 		intersection = MethodMatchers.intersection(intersection, new TestDynamicMethodMatcherWhichDoesNotMatch());
 		assertThat(intersection.isRuntime()).as("Intersection is a dynamic matcher").isTrue();
 		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class)).as("2Matched setAge method").isTrue();
-		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class, 5)).as("3 - not Matched setAge method").isFalse();
+		assertThat(intersection.matches(ITESTBEAN_SETAGE, TestBean.class, new Integer(5))).as("3 - not Matched setAge method").isFalse();
 	}
 
 	@Test
-	void testStaticMethodMatcherUnion() {
+	public void testStaticMethodMatcherUnion() throws Exception {
 		MethodMatcher getterMatcher = new StartsWithMatcher("get");
 		MethodMatcher setterMatcher = new StartsWithMatcher("set");
 		MethodMatcher union = MethodMatchers.union(getterMatcher, setterMatcher);
@@ -107,70 +103,11 @@ class MethodMatchersTests {
 	}
 
 	@Test
-	void testUnionEquals() {
+	public void testUnionEquals() {
 		MethodMatcher first = MethodMatchers.union(MethodMatcher.TRUE, MethodMatcher.TRUE);
 		MethodMatcher second = new ComposablePointcut(MethodMatcher.TRUE).union(new ComposablePointcut(MethodMatcher.TRUE)).getMethodMatcher();
-		assertThat(first).isEqualTo(second);
-		assertThat(second).isEqualTo(first);
-	}
-
-	@Test
-	void negateMethodMatcher() {
-		MethodMatcher getterMatcher = new StartsWithMatcher("get");
-		MethodMatcher negate = MethodMatchers.negate(getterMatcher);
-		assertThat(negate.matches(ITESTBEAN_SETAGE, int.class)).isTrue();
-	}
-
-	@Test
-	void negateTrueMethodMatcher() {
-		MethodMatcher negate = MethodMatchers.negate(MethodMatcher.TRUE);
-		assertThat(negate.matches(TEST_METHOD, String.class)).isFalse();
-		assertThat(negate.matches(TEST_METHOD, Object.class)).isFalse();
-		assertThat(negate.matches(TEST_METHOD, Integer.class)).isFalse();
-	}
-
-	@Test
-	void negateTrueMethodMatcherAppliedTwice() {
-		MethodMatcher negate = MethodMatchers.negate(MethodMatchers.negate(MethodMatcher.TRUE));
-		assertThat(negate.matches(TEST_METHOD, String.class)).isTrue();
-		assertThat(negate.matches(TEST_METHOD, Object.class)).isTrue();
-		assertThat(negate.matches(TEST_METHOD, Integer.class)).isTrue();
-	}
-
-	@Test
-	void negateIsNotEqualsToOriginalMatcher() {
-		MethodMatcher original = MethodMatcher.TRUE;
-		MethodMatcher negate = MethodMatchers.negate(original);
-		assertThat(original).isNotEqualTo(negate);
-	}
-
-	@Test
-	void negateOnSameMatcherIsEquals() {
-		MethodMatcher original = MethodMatcher.TRUE;
-		MethodMatcher first = MethodMatchers.negate(original);
-		MethodMatcher second = MethodMatchers.negate(original);
-		assertThat(first).isEqualTo(second);
-	}
-
-	@Test
-	void negateHasNotSameHashCodeAsOriginalMatcher() {
-		MethodMatcher original = MethodMatcher.TRUE;
-		MethodMatcher negate = MethodMatchers.negate(original);
-		assertThat(original).doesNotHaveSameHashCodeAs(negate);
-	}
-
-	@Test
-	void negateOnSameMatcherHasSameHashCode() {
-		MethodMatcher original = MethodMatcher.TRUE;
-		MethodMatcher first = MethodMatchers.negate(original);
-		MethodMatcher second = MethodMatchers.negate(original);
-		assertThat(first).hasSameHashCodeAs(second);
-	}
-
-	@Test
-	void toStringIncludesRepresentationOfOriginalMatcher() {
-		MethodMatcher original = MethodMatcher.TRUE;
-		assertThat(MethodMatchers.negate(original)).hasToString("Negate " + original);
+		assertThat(first.equals(second)).isTrue();
+		assertThat(second.equals(first)).isTrue();
 	}
 
 

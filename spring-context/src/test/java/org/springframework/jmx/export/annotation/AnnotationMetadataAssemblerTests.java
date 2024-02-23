@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Chris Beams
  */
-class AnnotationMetadataAssemblerTests extends AbstractMetadataAssemblerTests {
+public class AnnotationMetadataAssemblerTests extends AbstractMetadataAssemblerTests {
 
 	private static final String OBJECT_NAME = "bean:name=testBean4";
 
 
 	@Test
-	void testAttributeFromInterface() throws Exception {
+	public void testAttributeFromInterface() throws Exception {
 		ModelMBeanInfo inf = getMBeanInfoFromAssembler();
 		ModelMBeanAttributeInfo attr = inf.getAttribute("Colour");
 		assertThat(attr.isWritable()).as("The name attribute should be writable").isTrue();
@@ -46,21 +46,21 @@ class AnnotationMetadataAssemblerTests extends AbstractMetadataAssemblerTests {
 	}
 
 	@Test
-	void testOperationFromInterface() throws Exception {
+	public void testOperationFromInterface() throws Exception {
 		ModelMBeanInfo inf = getMBeanInfoFromAssembler();
 		ModelMBeanOperationInfo op = inf.getOperation("fromInterface");
 		assertThat(op).isNotNull();
 	}
 
 	@Test
-	void testOperationOnGetter() throws Exception {
+	public void testOperationOnGetter() throws Exception {
 		ModelMBeanInfo inf = getMBeanInfoFromAssembler();
 		ModelMBeanOperationInfo op = inf.getOperation("getExpensiveToCalculate");
 		assertThat(op).isNotNull();
 	}
 
 	@Test
-	void testRegistrationOnInterface() throws Exception {
+	public void testRegistrationOnInterface() throws Exception {
 		Object bean = getContext().getBean("testInterfaceBean");
 		ModelMBeanInfo inf = getAssembler().getMBeanInfo(bean, "bean:name=interfaceTestBean");
 		assertThat(inf).isNotNull();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Juergen Hoeller
  */
-class BeanNameGenerationTests {
+public class BeanNameGenerationTests {
 
 	private DefaultListableBeanFactory beanFactory;
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() {
 		this.beanFactory = new DefaultListableBeanFactory();
 		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this.beanFactory);
 		reader.setValidationMode(XmlBeanDefinitionReader.VALIDATION_NONE);
@@ -43,7 +43,7 @@ class BeanNameGenerationTests {
 	}
 
 	@Test
-	void naming() {
+	public void naming() {
 		String className = GeneratedNameBean.class.getName();
 
 		String targetName = className + BeanDefinitionReaderUtils.GENERATED_BEAN_NAME_SEPARATOR + "0";
@@ -56,13 +56,13 @@ class BeanNameGenerationTests {
 
 		GeneratedNameBean child1 = topLevel1.getChild();
 		assertThat(child1.getBeanName()).isNotNull();
-		assertThat(child1.getBeanName()).startsWith(className);
+		assertThat(child1.getBeanName().startsWith(className)).isTrue();
 
 		GeneratedNameBean child2 = topLevel2.getChild();
 		assertThat(child2.getBeanName()).isNotNull();
-		assertThat(child2.getBeanName()).startsWith(className);
+		assertThat(child2.getBeanName().startsWith(className)).isTrue();
 
-		assertThat(child1.getBeanName()).isNotEqualTo(child2.getBeanName());
+		assertThat(child1.getBeanName().equals(child2.getBeanName())).isFalse();
 	}
 
 }

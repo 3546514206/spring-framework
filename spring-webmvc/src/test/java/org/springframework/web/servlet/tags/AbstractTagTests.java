@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,10 @@
 
 package org.springframework.web.servlet.tags;
 
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockPageContext;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.LocaleResolver;
@@ -23,10 +27,6 @@ import org.springframework.web.servlet.SimpleWebApplicationContext;
 import org.springframework.web.servlet.ThemeResolver;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.theme.FixedThemeResolver;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockPageContext;
-import org.springframework.web.testfixture.servlet.MockServletContext;
 
 /**
  * Abstract base class for testing tags; provides {@link #createPageContext()}.
@@ -35,7 +35,6 @@ import org.springframework.web.testfixture.servlet.MockServletContext;
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
-@SuppressWarnings("deprecation")
 public abstract class AbstractTagTests {
 
 	protected MockPageContext createPageContext() {

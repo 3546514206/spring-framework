@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.reactive.result.method.annotation;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
+import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.MatrixVariable;
+import org.springframework.web.method.ResolvableMethod;
+import org.springframework.web.reactive.BindingContext;
+import org.springframework.web.reactive.HandlerMapping;
+import org.springframework.web.server.ServerErrorException;
+import org.springframework.web.server.ServerWebInputException;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -22,32 +36,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.MethodParameter;
-import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.MatrixVariable;
-import org.springframework.web.reactive.BindingContext;
-import org.springframework.web.reactive.HandlerMapping;
-import org.springframework.web.server.ServerErrorException;
-import org.springframework.web.server.ServerWebInputException;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.method.ResolvableMethod;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.springframework.web.testfixture.method.MvcAnnotationPredicates.matrixAttribute;
+import static org.springframework.web.method.MvcAnnotationPredicates.matrixAttribute;
 
 /**
- * Tests for {@link MatrixVariableMethodArgumentResolver}.
+ * Unit tests for {@link MatrixVariableMethodArgumentResolver}.
  *
  * @author Rossen Stoyanchev
  */
-class MatrixVariablesMethodArgumentResolverTests {
+public class MatrixVariablesMethodArgumentResolverTests {
 
 	private MatrixVariableMethodArgumentResolver resolver =
 			new MatrixVariableMethodArgumentResolver(null, ReactiveAdapterRegistry.getSharedInstance());
@@ -58,13 +56,13 @@ class MatrixVariablesMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		this.exchange.getAttributes().put(HandlerMapping.MATRIX_VARIABLES_ATTRIBUTE, new LinkedHashMap<>());
 	}
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 
 		assertThat(this.resolver.supportsParameter(this.testMethod.arg(String.class))).isFalse();
 
@@ -76,7 +74,7 @@ class MatrixVariablesMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgument() throws Exception {
+	public void resolveArgument() throws Exception {
 		MultiValueMap<String, String> params = getVariablesFor("cars");
 		params.add("colors", "red");
 		params.add("colors", "green");
@@ -87,7 +85,7 @@ class MatrixVariablesMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentPathVariable() {
+	public void resolveArgumentPathVariable() throws Exception {
 		getVariablesFor("cars").add("year", "2006");
 		getVariablesFor("bikes").add("year", "2005");
 		MethodParameter param = this.testMethod.annot(matrixAttribute().name("year")).arg(int.class);
@@ -97,14 +95,14 @@ class MatrixVariablesMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentDefaultValue() {
+	public void resolveArgumentDefaultValue() throws Exception {
 		MethodParameter param = this.testMethod.annot(matrixAttribute().name("year")).arg(int.class);
 		Object actual = this.resolver.resolveArgument(param, new BindingContext(), this.exchange).block(Duration.ZERO);
 		assertThat(actual).isEqualTo(2013);
 	}
 
 	@Test
-	void resolveArgumentMultipleMatches() {
+	public void resolveArgumentMultipleMatches() throws Exception {
 		getVariablesFor("var1").add("colors", "red");
 		getVariablesFor("var2").add("colors", "green");
 
@@ -114,14 +112,14 @@ class MatrixVariablesMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentRequired() {
+	public void resolveArgumentRequired() throws Exception {
 		MethodParameter param = this.testMethod.annot(matrixAttribute().noName()).arg(List.class, String.class);
 		assertThatExceptionOfType(ServerWebInputException.class).isThrownBy(() ->
 				this.resolver.resolveArgument(param, new BindingContext(), this.exchange).block(Duration.ZERO));
 	}
 
 	@Test
-	void resolveArgumentNoMatch() {
+	public void resolveArgumentNoMatch() throws Exception {
 		MultiValueMap<String, String> params = getVariablesFor("cars");
 		params.add("anotherYear", "2012");
 		MethodParameter param = this.testMethod.annot(matrixAttribute().name("year")).arg(int.class);

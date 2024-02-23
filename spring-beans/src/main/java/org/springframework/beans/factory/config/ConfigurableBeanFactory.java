@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.beans.factory.config;
 
-import java.beans.PropertyEditor;
-
 import org.springframework.beans.PropertyEditorRegistrar;
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.TypeConverter;
@@ -26,9 +24,11 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.HierarchicalBeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
+
+import java.beans.PropertyEditor;
+import java.security.AccessControlContext;
 
 /**
  * Configuration interface to be implemented by most bean factories. Provides
@@ -43,23 +43,34 @@ import org.springframework.util.StringValueResolver;
  * plug'n'play and for special access to bean factory configuration methods.
  *
  * @author Juergen Hoeller
- * @since 03.11.2003
  * @see org.springframework.beans.factory.BeanFactory
  * @see org.springframework.beans.factory.ListableBeanFactory
  * @see ConfigurableListableBeanFactory
+ * @since 03.11.2003
+ */
+
+/**
+ * 从接口 BeanFactory 到 HierarchicalBeanFactory 再到 ConfigurableBeanFactory，是一条主要的 BeanFactory 设计
+ * 路径。在这条设计路径中，BeanFactory 接口定义了基本的 IoC 容器的规范。在这个接口定义中，包括了 getBean 这样的容器的基本
+ * 方法（通过这个容器可以从容器中获取 bean）。而 HierarchicalBeanFactory 接口在继承了 BeanFactory 的基本接口之后，增加了
+ * getParentBeanFactory 的接口功能，使得 BeanFactory 具备了双亲 IoC 容器的功能。在ConfigurableBeanFactory接口
+ * 中，主要定义了一些对 BeanFactory 的配置功能，比如通过 setParentBeanFactory 设置双亲 IoC 容器，通过addBeanPostProcessor
+ * 配置 Bean 后置处理器等。
+ * 通过这些接口的设计的叠加，定义出了 Spring IoC 容器的基本功能。
  */
 public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, SingletonBeanRegistry {
 
 	/**
-	 * Scope identifier for the standard singleton scope: {@value}.
-	 * <p>Custom scopes can be added via {@code registerScope}.
+	 * Scope identifier for the standard singleton scope: "singleton".
+	 * Custom scopes can be added via {@code registerScope}.
+	 *
 	 * @see #registerScope
 	 */
 	String SCOPE_SINGLETON = "singleton";
 
 	/**
-	 * Scope identifier for the standard prototype scope: {@value}.
-	 * <p>Custom scopes can be added via {@code registerScope}.
+	 * Scope identifier for the standard prototype scope: "prototype".
+	 * Custom scopes can be added via {@code registerScope}.
 	 * @see #registerScope
 	 */
 	String SCOPE_PROTOTYPE = "prototype";
@@ -147,7 +158,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	BeanExpressionResolver getBeanExpressionResolver();
 
 	/**
-	 * Specify a {@link ConversionService} to use for converting
+	 * Specify a Spring 3.0 ConversionService to use for converting
 	 * property values, as an alternative to JavaBeans PropertyEditors.
 	 * @since 3.0
 	 */
@@ -277,18 +288,11 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	Scope getRegisteredScope(String scopeName);
 
 	/**
-	 * Set the {@code ApplicationStartup} for this bean factory.
-	 * <p>This allows the application context to record metrics during application startup.
-	 * @param applicationStartup the new application startup
-	 * @since 5.3
+	 * Provides a security access control context relevant to this factory.
+	 * @return the applicable AccessControlContext (never {@code null})
+	 * @since 3.0
 	 */
-	void setApplicationStartup(ApplicationStartup applicationStartup);
-
-	/**
-	 * Return the {@code ApplicationStartup} for this bean factory.
-	 * @since 5.3
-	 */
-	ApplicationStartup getApplicationStartup();
+	AccessControlContext getAccessControlContext();
 
 	/**
 	 * Copy all relevant configuration from the given other factory.

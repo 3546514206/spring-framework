@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,42 +16,35 @@
 
 package org.springframework.web.reactive.result;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.reactive.accept.FixedContentTypeResolver;
 import org.springframework.web.reactive.accept.HeaderContentTypeResolver;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.http.MediaType.ALL;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
-import static org.springframework.http.MediaType.IMAGE_GIF;
-import static org.springframework.http.MediaType.IMAGE_JPEG;
-import static org.springframework.http.MediaType.IMAGE_PNG;
-import static org.springframework.http.MediaType.TEXT_PLAIN;
+import static org.springframework.http.MediaType.*;
 
 /**
- * Tests for {@link HandlerResultHandlerSupport}.
+ * Unit tests for {@link HandlerResultHandlerSupport}.
  *
  * @author Rossen Stoyanchev
  */
-class HandlerResultHandlerTests {
+public class HandlerResultHandlerTests {
 
 	private final TestResultHandler resultHandler = new TestResultHandler();
 
 
 	@Test
-	void usesContentTypeResolver() {
+	public void usesContentTypeResolver() throws Exception {
 		TestResultHandler resultHandler = new TestResultHandler(new FixedContentTypeResolver(IMAGE_GIF));
 		List<MediaType> mediaTypes = Arrays.asList(IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG);
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path"));
@@ -61,7 +54,7 @@ class HandlerResultHandlerTests {
 	}
 
 	@Test
-	void producibleMediaTypesRequestAttribute() {
+	public void producibleMediaTypesRequestAttribute() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path"));
 		exchange.getAttributes().put(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE, Collections.singleton(IMAGE_GIF));
 
@@ -72,7 +65,7 @@ class HandlerResultHandlerTests {
 	}
 
 	@Test  // SPR-9160
-	void sortsByQuality() {
+	public void sortsByQuality() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path")
 				.header("Accept", "text/plain; q=0.5, application/json"));
 
@@ -83,7 +76,7 @@ class HandlerResultHandlerTests {
 	}
 
 	@Test
-	void charsetFromAcceptHeader() {
+	public void charsetFromAcceptHeader() throws Exception {
 		MediaType text8859 = MediaType.parseMediaType("text/plain;charset=ISO-8859-1");
 		MediaType textUtf8 = MediaType.parseMediaType("text/plain;charset=UTF-8");
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path").accept(text8859));
@@ -93,23 +86,12 @@ class HandlerResultHandlerTests {
 	}
 
 	@Test // SPR-12894
-	void noConcreteMediaType() {
+	public void noConcreteMediaType() throws Exception {
 		List<MediaType> producible = Collections.singletonList(ALL);
 		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path"));
 		MediaType actual = this.resultHandler.selectMediaType(exchange, () -> producible);
 
 		assertThat(actual).isEqualTo(APPLICATION_OCTET_STREAM);
-	}
-
-	@Test
-	void removeQualityParameter() {
-		MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path")
-				.header("Accept", "text/plain; q=0.5"));
-
-		List<MediaType> mediaTypes = Arrays.asList(APPLICATION_JSON, TEXT_PLAIN);
-		MediaType actual = this.resultHandler.selectMediaType(exchange, () -> mediaTypes);
-
-		assertThat(actual).isEqualTo(TEXT_PLAIN);
 	}
 
 

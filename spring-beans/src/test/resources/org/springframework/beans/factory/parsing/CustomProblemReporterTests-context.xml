@@ -6,7 +6,7 @@
 
 	<bean id="invalidClass" class="some.class.that.does.not.Exist"/>
 
-	<bean id="invalidMapDefinition" class="org.springframework.beans.testfixture.beans.TestBean">
+	<bean id="invalidMapDefinition" class="org.springframework.tests.sample.beans.TestBean">
 		<property name="someMap">
 			<map>
 				<entry/>
@@ -14,18 +14,17 @@
 		</property>
 	</bean>
 
-	<bean id="nestedBeanErrors" class="org.springframework.beans.testfixture.beans.TestBean">
+	<bean id="nestedBeanErrors" class="org.springframework.tests.sample.beans.TestBean">
 		<property name="spouse">
-			<bean class="org.springframework.beans.testfixture.beans.TestBean">
+			<bean class="org.springframework.tests.sample.beans.TestBean">
 				<property name="someMap">
-				    <map>
-				        <entry/>
-				    </map>
+					<map>
+						<entry/>
+					</map>
 				</property>
 			</bean>
 		</property>
 	</bean>
 
-	<bean id="validBean" class="org.springframework.beans.testfixture.beans.TestBean"/>
-
+	<bean id="validBean" class="org.springframework.tests.sample.beans.TestBean"/>
 </beans>

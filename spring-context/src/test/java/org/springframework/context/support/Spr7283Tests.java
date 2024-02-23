@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,24 +26,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Scott Andrews
  * @author Juergen Hoeller
  */
-class Spr7283Tests {
+public class Spr7283Tests {
 
 	@Test
-	void listWithInconsistentElementTypes() {
+	public void testListWithInconsistentElementType() {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("spr7283.xml", getClass());
 		List<?> list = ctx.getBean("list", List.class);
-		assertThat(list).satisfiesExactly(zero -> assertThat(zero).isInstanceOf(A.class),
-				one -> assertThat(one).isInstanceOf(B.class));
-		ctx.close();
+		assertThat(list.size()).isEqualTo(2);
+		boolean condition1 = list.get(0) instanceof A;
+		assertThat(condition1).isTrue();
+		boolean condition = list.get(1) instanceof B;
+		assertThat(condition).isTrue();
 	}
 
 
-	static class A {
-		A() {}
+	public static class A {
+		public A() {}
 	}
 
-	static class B {
-		B() {}
+	public static class B {
+		public B() {}
 	}
 
 }

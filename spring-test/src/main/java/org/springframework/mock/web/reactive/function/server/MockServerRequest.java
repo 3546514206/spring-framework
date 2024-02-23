@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,11 @@
 
 package org.springframework.mock.web.reactive.function.server;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.charset.Charset;
-import java.security.Principal;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.OptionalLong;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpRange;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.http.codec.HttpMessageReader;
 import org.springframework.http.codec.multipart.Part;
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.lang.Nullable;
@@ -49,7 +28,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.server.HandlerStrategies;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -57,6 +35,15 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebSession;
 import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.security.Principal;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Mock implementation of {@link ServerRequest}.
@@ -70,7 +57,7 @@ public final class MockServerRequest implements ServerRequest {
 
 	private final URI uri;
 
-	private final RequestPath requestPath;
+	private final RequestPath pathContainer;
 
 	private final MockHeaders headers;
 
@@ -89,13 +76,10 @@ public final class MockServerRequest implements ServerRequest {
 	private final WebSession session;
 
 	@Nullable
-	private final Principal principal;
+	private Principal principal;
 
 	@Nullable
 	private final InetSocketAddress remoteAddress;
-
-	@Nullable
-	private final InetSocketAddress localAddress;
 
 	private final List<HttpMessageReader<?>> messageReaders;
 
@@ -104,15 +88,15 @@ public final class MockServerRequest implements ServerRequest {
 
 
 	private MockServerRequest(HttpMethod method, URI uri, String contextPath, MockHeaders headers,
-			MultiValueMap<String, HttpCookie> cookies, @Nullable Object body,
-			Map<String, Object> attributes, MultiValueMap<String, String> queryParams,
-			Map<String, String> pathVariables, @Nullable WebSession session, @Nullable Principal principal,
-			@Nullable InetSocketAddress remoteAddress, @Nullable InetSocketAddress localAddress,
-			List<HttpMessageReader<?>> messageReaders, @Nullable ServerWebExchange exchange) {
+							  MultiValueMap<String, HttpCookie> cookies, @Nullable Object body,
+							  Map<String, Object> attributes, MultiValueMap<String, String> queryParams,
+							  Map<String, String> pathVariables, @Nullable WebSession session, @Nullable Principal principal,
+							  @Nullable InetSocketAddress remoteAddress, List<HttpMessageReader<?>> messageReaders,
+							  @Nullable ServerWebExchange exchange) {
 
 		this.method = method;
 		this.uri = uri;
-		this.requestPath = RequestPath.parse(uri, contextPath);
+		this.pathContainer = RequestPath.parse(uri, contextPath);
 		this.headers = headers;
 		this.cookies = cookies;
 		this.body = body;
@@ -122,7 +106,6 @@ public final class MockServerRequest implements ServerRequest {
 		this.session = session;
 		this.principal = principal;
 		this.remoteAddress = remoteAddress;
-		this.localAddress = localAddress;
 		this.messageReaders = messageReaders;
 		this.exchange = exchange;
 	}
@@ -134,7 +117,6 @@ public final class MockServerRequest implements ServerRequest {
 	}
 
 	@Override
-	@Deprecated
 	public String methodName() {
 		return this.method.name();
 	}
@@ -150,8 +132,8 @@ public final class MockServerRequest implements ServerRequest {
 	}
 
 	@Override
-	public RequestPath requestPath() {
-		return this.requestPath;
+	public PathContainer pathContainer() {
+		return this.pathContainer;
 	}
 
 	@Override
@@ -167,11 +149,6 @@ public final class MockServerRequest implements ServerRequest {
 	@Override
 	public Optional<InetSocketAddress> remoteAddress() {
 		return Optional.ofNullable(this.remoteAddress);
-	}
-
-	@Override
-	public Optional<InetSocketAddress> localAddress() {
-		return Optional.ofNullable(this.localAddress);
 	}
 
 	@Override
@@ -219,20 +196,6 @@ public final class MockServerRequest implements ServerRequest {
 	public <S> Flux<S> bodyToFlux(ParameterizedTypeReference<S> typeReference) {
 		Assert.state(this.body != null, "No body");
 		return (Flux<S>) this.body;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> Mono<T> bind(Class<T> bindType) {
-		Assert.state(this.body != null, "No body");
-		return (Mono<T>) this.body;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> Mono<T> bind(Class<T> bindType, Consumer<WebDataBinder> dataBinderCustomizer) {
-		Assert.state(this.body != null, "No body");
-		return (Mono<T>) this.body;
 	}
 
 	@Override
@@ -317,11 +280,16 @@ public final class MockServerRequest implements ServerRequest {
 
 		Builder session(WebSession session);
 
+		/**
+		 * Sets the request {@link Principal}.
+		 * @deprecated in favor of {@link #principal(Principal)}
+		 */
+		@Deprecated
+		Builder session(Principal principal);
+
 		Builder principal(Principal principal);
 
 		Builder remoteAddress(InetSocketAddress remoteAddress);
-
-		Builder localAddress(InetSocketAddress localAddress);
 
 		Builder messageReaders(List<HttpMessageReader<?>> messageReaders);
 
@@ -362,9 +330,6 @@ public final class MockServerRequest implements ServerRequest {
 
 		@Nullable
 		private InetSocketAddress remoteAddress;
-
-		@Nullable
-		private InetSocketAddress localAddress;
 
 		private List<HttpMessageReader<?>> messageReaders = HandlerStrategies.withDefaults().messageReaders();
 
@@ -474,6 +439,12 @@ public final class MockServerRequest implements ServerRequest {
 		}
 
 		@Override
+		@Deprecated
+		public Builder session(Principal principal) {
+			return principal(principal);
+		}
+
+		@Override
 		public Builder principal(Principal principal) {
 			Assert.notNull(principal, "'principal' must not be null");
 			this.principal = principal;
@@ -484,13 +455,6 @@ public final class MockServerRequest implements ServerRequest {
 		public Builder remoteAddress(InetSocketAddress remoteAddress) {
 			Assert.notNull(remoteAddress, "'remoteAddress' must not be null");
 			this.remoteAddress = remoteAddress;
-			return this;
-		}
-
-		@Override
-		public Builder localAddress(InetSocketAddress localAddress) {
-			Assert.notNull(localAddress, "'localAddress' must not be null");
-			this.localAddress = localAddress;
 			return this;
 		}
 
@@ -513,16 +477,16 @@ public final class MockServerRequest implements ServerRequest {
 			this.body = body;
 			return new MockServerRequest(this.method, this.uri, this.contextPath, this.headers,
 					this.cookies, this.body, this.attributes, this.queryParams, this.pathVariables,
-					this.session, this.principal, this.remoteAddress, this.localAddress,
-					this.messageReaders, this.exchange);
+					this.session, this.principal, this.remoteAddress, this.messageReaders,
+					this.exchange);
 		}
 
 		@Override
 		public MockServerRequest build() {
 			return new MockServerRequest(this.method, this.uri, this.contextPath, this.headers,
 					this.cookies, null, this.attributes, this.queryParams, this.pathVariables,
-					this.session, this.principal, this.remoteAddress, this.localAddress,
-					this.messageReaders, this.exchange);
+					this.session, this.principal, this.remoteAddress, this.messageReaders,
+					this.exchange);
 		}
 	}
 

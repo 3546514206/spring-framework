@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link StompClientSupport}.
+ * Unit tests for {@link StompClientSupport}.
  *
  * @author Rossen Stoyanchev
  */
-class StompClientSupportTests {
+public class StompClientSupportTests {
 
 	private final StompClientSupport stompClient = new StompClientSupport() {};
 
 
 	@Test
-	void defaultHeartbeatValidation() {
+	public void defaultHeartbeatValidation() throws Exception {
 		trySetDefaultHeartbeat(new long[] {-1, 0});
 		trySetDefaultHeartbeat(new long[] {0, -1});
 	}
@@ -43,12 +43,12 @@ class StompClientSupportTests {
 	}
 
 	@Test
-	void defaultHeartbeatValue() {
+	public void defaultHeartbeatValue() throws Exception {
 		assertThat(this.stompClient.getDefaultHeartbeat()).isEqualTo(new long[] {10000, 10000});
 	}
 
 	@Test
-	void isDefaultHeartbeatEnabled() {
+	public void isDefaultHeartbeatEnabled() throws Exception {
 		assertThat(this.stompClient.getDefaultHeartbeat()).isEqualTo(new long[] {10000, 10000});
 		assertThat(this.stompClient.isDefaultHeartbeatEnabled()).isTrue();
 
@@ -57,7 +57,7 @@ class StompClientSupportTests {
 	}
 
 	@Test
-	void processConnectHeadersDefault() {
+	public void processConnectHeadersDefault() throws Exception {
 		StompHeaders connectHeaders = this.stompClient.processConnectHeaders(null);
 
 		assertThat(connectHeaders).isNotNull();
@@ -65,7 +65,7 @@ class StompClientSupportTests {
 	}
 
 	@Test
-	void processConnectHeadersWithExplicitHeartbeat() {
+	public void processConnectHeadersWithExplicitHeartbeat() throws Exception {
 
 		StompHeaders connectHeaders = new StompHeaders();
 		connectHeaders.setHeartbeat(new long[] {15000, 15000});

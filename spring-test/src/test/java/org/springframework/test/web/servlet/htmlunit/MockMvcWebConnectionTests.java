@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 
 /**
@@ -61,7 +60,7 @@ public class MockMvcWebConnectionTests {
 	}
 
 	@Test
-	public void contextPathEmpty() {
+	public void contextPathEmpty() throws IOException {
 		this.webClient.setWebConnection(new MockMvcWebConnection(this.mockMvc, this.webClient, ""));
 		// Empty context path (root context) should not match to a URL with a context path
 		assertThatExceptionOfType(FailingHttpStatusCodeException.class).isThrownBy(() ->
@@ -82,20 +81,15 @@ public class MockMvcWebConnectionTests {
 	}
 
 	@Test
-	public void infiniteForward() {
-		this.webClient.setWebConnection(new MockMvcWebConnection(this.mockMvc, this.webClient, ""));
-		assertThatIllegalStateException().isThrownBy(() -> this.webClient.getPage("http://localhost/infiniteForward"))
-						.withMessage("Forwarded 100 times in a row, potential infinite forward loop");
-	}
-
-	@Test
-	public void contextPathDoesNotStartWithSlash() {
+	@SuppressWarnings("resource")
+	public void contextPathDoesNotStartWithSlash() throws IOException {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new MockMvcWebConnection(this.mockMvc, this.webClient, "context"));
 	}
 
 	@Test
-	public void contextPathEndsWithSlash() {
+	@SuppressWarnings("resource")
+	public void contextPathEndsWithSlash() throws IOException {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				new MockMvcWebConnection(this.mockMvc, this.webClient, "/context/"));
 	}

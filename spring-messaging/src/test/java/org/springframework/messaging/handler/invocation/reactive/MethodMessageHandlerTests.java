@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,24 +49,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
- * Tests for {@link AbstractMethodMessageHandler}.
- *
+ * Unit tests for {@link AbstractMethodMessageHandler}.
  * @author Rossen Stoyanchev
  */
-class MethodMessageHandlerTests {
+public class MethodMessageHandlerTests {
 
 
 	@Test
-	void duplicateMapping() {
+	public void duplicateMapping() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				initMethodMessageHandler(DuplicateMappingsController.class));
 	}
 
 	@Test
-	void registeredMappings() {
+	public void registeredMappings() {
 		TestMethodMessageHandler messageHandler = initMethodMessageHandler(TestController.class);
 		Map<String, HandlerMethod> mappings = messageHandler.getHandlerMethods();
 
+		assertThat(mappings.keySet().size()).isEqualTo(5);
 		assertThat(mappings).containsOnlyKeys(
 				"/handleMessage", "/handleMessageWithArgument", "/handleMessageWithError",
 				"/handleMessageMatch1", "/handleMessageMatch2");
@@ -77,10 +77,8 @@ class MethodMessageHandlerTests {
 	public void bestMatch() throws NoSuchMethodException {
 		TestMethodMessageHandler handler = new TestMethodMessageHandler();
 		TestController controller = new TestController();
-		handler.registerHandlerMethod(controller,
-				TestController.class.getMethod("handleMessageMatch1"), "/bestmatch/{foo}/path");
-		handler.registerHandlerMethod(controller,
-				TestController.class.getMethod("handleMessageMatch2"), "/bestmatch/*/*");
+		handler.register(controller, TestController.class.getMethod("handleMessageMatch1"), "/bestmatch/{foo}/path");
+		handler.register(controller, TestController.class.getMethod("handleMessageMatch2"), "/bestmatch/*/*");
 		handler.afterPropertiesSet();
 
 		Message<?> message = new GenericMessage<>("body", Collections.singletonMap(
@@ -221,6 +219,10 @@ class MethodMessageHandlerTests {
 		@Nullable
 		public Object getLastReturnValue() {
 			return this.returnValueHandler.getLastReturnValue();
+		}
+
+		public void register(Object handler, Method method, String mapping) {
+			super.registerHandlerMethod(handler, method, mapping);
 		}
 
 		@Override

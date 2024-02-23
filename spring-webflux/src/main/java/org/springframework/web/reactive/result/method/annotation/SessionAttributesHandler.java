@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.reactive.result.method.annotation;
 
 import java.util.Collections;
@@ -42,7 +41,7 @@ class SessionAttributesHandler {
 
 	private final Set<Class<?>> attributeTypes = new HashSet<>();
 
-	private final Set<String> knownAttributeNames = ConcurrentHashMap.newKeySet(4);
+	private final Set<String> knownAttributeNames = Collections.newSetFromMap(new ConcurrentHashMap<>(4));
 
 
 	/**

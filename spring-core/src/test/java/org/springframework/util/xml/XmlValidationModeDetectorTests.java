@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.util.xml;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,10 +23,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.util.xml.XmlValidationModeDetector.VALIDATION_DTD;
-import static org.springframework.util.xml.XmlValidationModeDetector.VALIDATION_XSD;
 
 /**
- * Tests for {@link XmlValidationModeDetector}.
+ * Unit tests for {@link XmlValidationModeDetector}.
  *
  * @author Sam Brannen
  * @since 5.1.10
@@ -38,36 +36,11 @@ class XmlValidationModeDetectorTests {
 
 
 	@ParameterizedTest
-	@ValueSource(strings = {
-		"dtdWithNoComments.xml",
-		"dtdWithLeadingComment.xml",
-		"dtdWithTrailingComment.xml",
-		"dtdWithTrailingCommentAcrossMultipleLines.xml",
-		"dtdWithCommentOnNextLine.xml",
-		"dtdWithMultipleComments.xml"
-	})
+	@ValueSource(strings = { "dtdWithTrailingComment.xml", "dtdWithLeadingComment.xml", "dtdWithCommentOnNextLine.xml",
+		"dtdWithMultipleComments.xml" })
 	void dtdDetection(String fileName) throws Exception {
-		assertValidationMode(fileName, VALIDATION_DTD);
-	}
-
-	@ParameterizedTest
-	@ValueSource(strings = {
-		"xsdWithNoComments.xml",
-		"xsdWithMultipleComments.xml",
-		"xsdWithDoctypeInComment.xml",
-		"xsdWithDoctypeInOpenCommentWithAdditionalCommentOnSameLine.xml"
-	})
-	void xsdDetection(String fileName) throws Exception {
-		assertValidationMode(fileName, VALIDATION_XSD);
-	}
-
-
-	private void assertValidationMode(String fileName, int expectedValidationMode) throws IOException {
-		try (InputStream inputStream = getClass().getResourceAsStream(fileName)) {
-			assertThat(xmlValidationModeDetector.detectValidationMode(inputStream))
-				.as("Validation Mode")
-				.isEqualTo(expectedValidationMode);
-		}
+		InputStream inputStream = getClass().getResourceAsStream(fileName);
+		assertThat(xmlValidationModeDetector.detectValidationMode(inputStream)).isEqualTo(VALIDATION_DTD);
 	}
 
 }

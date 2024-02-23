@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,16 @@
 
 package org.springframework.web.reactive.function.server;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.AbstractHttpHandlerIntegrationTests;
 import org.springframework.http.server.reactive.HttpHandler;
-import org.springframework.lang.Nullable;
+import org.springframework.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -41,13 +34,15 @@ import org.springframework.web.reactive.DispatcherHandler;
 import org.springframework.web.reactive.HandlerMapping;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.AbstractHttpHandlerIntegrationTests;
-import org.springframework.web.testfixture.http.server.reactive.bootstrap.HttpServer;
 import org.springframework.web.util.pattern.PathPattern;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.web.reactive.function.BodyInserters.fromPublisher;
-import static org.springframework.web.reactive.function.server.RequestPredicates.accept;
 import static org.springframework.web.reactive.function.server.RouterFunctions.nest;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
@@ -92,14 +87,14 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 	void flux(HttpServer httpServer) throws Exception {
 		startServer(httpServer);
 
-		ParameterizedTypeReference<List<Person>> reference = new ParameterizedTypeReference<>() {};
+		ParameterizedTypeReference<List<Person>> reference = new ParameterizedTypeReference<List<Person>>() {};
 		ResponseEntity<List<Person>> result =
 				this.restTemplate
 						.exchange("http://localhost:" + this.port + "/flux", HttpMethod.GET, null, reference);
 
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
 		List<Person> body = result.getBody();
-		assertThat(body).hasSize(2);
+		assertThat(body.size()).isEqualTo(2);
 		assertThat(body.get(0).getName()).isEqualTo("John");
 		assertThat(body.get(1).getName()).isEqualTo("Jane");
 	}
@@ -126,15 +121,6 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
 	}
 
-	@ParameterizedHttpServerTest
-	void nested(HttpServer httpServer) throws Exception {
-		startServer(httpServer);
-
-		ResponseEntity<String> result = this.restTemplate
-				.getForEntity("http://localhost:" + this.port + "/foo/bar", String.class);
-
-		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-	}
 
 	@EnableWebFlux
 	@Configuration
@@ -170,17 +156,6 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 			return nest(RequestPredicates.GET("/attributes"),
 					route(RequestPredicates.GET("/{foo}"), attributesHandler::attributes));
 		}
-
-		@Bean
-		public RouterFunction<ServerResponse> nested() {
-			return route()
-					.path("/foo", () -> route()
-							.nest(accept(MediaType.APPLICATION_JSON), builder -> builder
-									.GET("/bar", request -> ServerResponse.ok().build()))
-							.build())
-					.build();
-		}
-
 	}
 
 
@@ -210,13 +185,13 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 			Map<String, String> pathVariables =
 					(Map<String, String>) request.attributes().get(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
 			assertThat(pathVariables).isNotNull();
-			assertThat(pathVariables).hasSize(1);
+			assertThat(pathVariables.size()).isEqualTo(1);
 			assertThat(pathVariables.get("foo")).isEqualTo("bar");
 
 			pathVariables =
 					(Map<String, String>) request.attributes().get(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
 			assertThat(pathVariables).isNotNull();
-			assertThat(pathVariables).hasSize(1);
+			assertThat(pathVariables.size()).isEqualTo(1);
 			assertThat(pathVariables.get("foo")).isEqualTo("bar");
 
 
@@ -268,7 +243,7 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 		}
 
 		@Override
-		public boolean equals(@Nullable Object o) {
+		public boolean equals(Object o) {
 			if (this == o) {
 				return true;
 			}
@@ -276,7 +251,7 @@ class DispatcherHandlerIntegrationTests extends AbstractHttpHandlerIntegrationTe
 				return false;
 			}
 			Person person = (Person) o;
-			return Objects.equals(this.name, person.name);
+			return !(this.name != null ? !this.name.equals(person.name) : person.name != null);
 		}
 
 		@Override

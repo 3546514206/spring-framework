@@ -1,1 +1,2 @@
-INSERT INTO person VALUES('bob');
+INSERT INTO man
+VALUES ('bob');

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Dave Syer
  * @author Sam Brannen
  */
-class GroovyAspectTests {
+public class GroovyAspectTests {
 
 	private final LogUserAdvice logAdvice = new LogUserAdvice();
 
@@ -41,7 +41,7 @@ class GroovyAspectTests {
 
 
 	@Test
-	void manualGroovyBeanWithUnconditionalPointcut() throws Exception {
+	public void manualGroovyBeanWithUnconditionalPointcut() throws Exception {
 		TestService target = (TestService) scriptFactory.getScriptedObject(new ResourceScriptSource(
 				new ClassPathResource("GroovyServiceImpl.grv", getClass())));
 
@@ -49,7 +49,7 @@ class GroovyAspectTests {
 	}
 
 	@Test
-	void manualGroovyBeanWithStaticPointcut() throws Exception {
+	public void manualGroovyBeanWithStaticPointcut() throws Exception {
 		TestService target = (TestService) scriptFactory.getScriptedObject(new ResourceScriptSource(
 				new ClassPathResource("GroovyServiceImpl.grv", getClass())));
 
@@ -59,7 +59,7 @@ class GroovyAspectTests {
 	}
 
 	@Test
-	void manualGroovyBeanWithDynamicPointcut() throws Exception {
+	public void manualGroovyBeanWithDynamicPointcut() throws Exception {
 		TestService target = (TestService) scriptFactory.getScriptedObject(new ResourceScriptSource(
 				new ClassPathResource("GroovyServiceImpl.grv", getClass())));
 
@@ -69,7 +69,7 @@ class GroovyAspectTests {
 	}
 
 	@Test
-	void manualGroovyBeanWithDynamicPointcutProxyTargetClass() throws Exception {
+	public void manualGroovyBeanWithDynamicPointcutProxyTargetClass() throws Exception {
 		TestService target = (TestService) scriptFactory.getScriptedObject(new ResourceScriptSource(
 				new ClassPathResource("GroovyServiceImpl.grv", getClass())));
 
@@ -78,13 +78,14 @@ class GroovyAspectTests {
 		testAdvice(new DefaultPointcutAdvisor(pointcut, logAdvice), logAdvice, target, "GroovyServiceImpl", true);
 	}
 
-	private void testAdvice(Advisor advisor, LogUserAdvice logAdvice, TestService target, String message) {
+	private void testAdvice(Advisor advisor, LogUserAdvice logAdvice, TestService target, String message)
+			throws Exception {
 
 		testAdvice(advisor, logAdvice, target, message, false);
 	}
 
 	private void testAdvice(Advisor advisor, LogUserAdvice logAdvice, TestService target, String message,
-			boolean proxyTargetClass) {
+			boolean proxyTargetClass) throws Exception {
 
 		logAdvice.reset();
 

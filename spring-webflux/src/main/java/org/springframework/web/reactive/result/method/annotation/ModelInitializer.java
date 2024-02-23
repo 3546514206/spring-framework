@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.Conventions;
-import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ReactiveAdapterRegistry;
@@ -47,7 +46,6 @@ import org.springframework.web.server.ServerWebExchange;
  * default model initialization through {@code @ModelAttribute} methods.
  *
  * @author Rossen Stoyanchev
- * @author Sebastien Deleuze
  * @since 5.0
  */
 class ModelInitializer {
@@ -114,7 +112,7 @@ class ModelInitializer {
 				.zip(resultList, objectArray ->
 						Arrays.stream(objectArray)
 								.map(object -> handleResult(((HandlerResult) object), bindingContext))
-								.toList())
+								.collect(Collectors.toList()))
 				.flatMap(Mono::when);
 	}
 
@@ -122,22 +120,18 @@ class ModelInitializer {
 		Object value = handlerResult.getReturnValue();
 		if (value != null) {
 			ResolvableType type = handlerResult.getReturnType();
-			MethodParameter typeSource = handlerResult.getReturnTypeSource();
 			ReactiveAdapter adapter = this.adapterRegistry.getAdapter(type.resolve(), value);
-			if (isAsyncVoidType(type, typeSource, adapter)) {
+			if (isAsyncVoidType(type, adapter)) {
 				return Mono.from(adapter.toPublisher(value));
 			}
-			String name = getAttributeName(typeSource);
+			String name = getAttributeName(handlerResult.getReturnTypeSource());
 			bindingContext.getModel().asMap().putIfAbsent(name, value);
 		}
 		return Mono.empty();
 	}
 
-
-	private boolean isAsyncVoidType(ResolvableType type, MethodParameter typeSource, @Nullable ReactiveAdapter adapter) {
-		Method method = typeSource.getMethod();
-		return (adapter != null && (adapter.isNoValue() || type.resolveGeneric() == Void.class)) ||
-				(method != null && KotlinDetector.isSuspendingFunction(method) && typeSource.getParameterType() == void.class);
+	private boolean isAsyncVoidType(ResolvableType type, @Nullable  ReactiveAdapter adapter) {
+		return (adapter != null && (adapter.isNoValue() || type.resolveGeneric() == Void.class));
 	}
 
 	private String getAttributeName(MethodParameter param) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,27 @@
 
 package org.springframework.jmx.access;
 
-import java.beans.PropertyDescriptor;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.ThreadMXBean;
-import java.lang.reflect.Method;
-import java.net.BindException;
-import java.util.HashMap;
-import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.jmx.AbstractMBeanServerTests;
+import org.springframework.jmx.IJmxTestBean;
+import org.springframework.jmx.JmxException;
+import org.springframework.jmx.JmxTestBean;
+import org.springframework.jmx.export.MBeanExporter;
+import org.springframework.jmx.export.assembler.AbstractReflectiveMBeanInfoAssembler;
+import org.springframework.util.SocketUtils;
 
 import javax.management.Descriptor;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Method;
+import java.net.BindException;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.core.testfixture.net.TestSocketUtils;
-import org.springframework.jmx.AbstractMBeanServerTests;
-import org.springframework.jmx.IJmxTestBean;
-import org.springframework.jmx.JmxTestBean;
-import org.springframework.jmx.export.MBeanExporter;
-import org.springframework.jmx.export.assembler.AbstractReflectiveMBeanInfoAssembler;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIOException;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -54,7 +45,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * @author Sam Brannen
  * @author Chris Beams
  */
-class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
+public class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 
 	protected static final String OBJECT_NAME = "spring:test=proxy";
 
@@ -91,14 +82,14 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void proxyClassIsDifferent() throws Exception {
+	public void testProxyClassIsDifferent() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
-		assertThat(proxy.getClass()).as("The proxy class should be different than the base class").isNotSameAs(IJmxTestBean.class);
+		assertThat((proxy.getClass() != IJmxTestBean.class)).as("The proxy class should be different than the base class").isTrue();
 	}
 
 	@Test
-	void differentProxiesSameClass() throws Exception {
+	public void testDifferentProxiesSameClass() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy1 = getProxy();
 		IJmxTestBean proxy2 = getProxy();
@@ -108,7 +99,7 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void getAttributeValue() throws Exception {
+	public void testGetAttributeValue() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy1 = getProxy();
 		int age = proxy1.getAge();
@@ -116,7 +107,7 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void setAttributeValue() throws Exception {
+	public void testSetAttributeValue() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
 		proxy.setName("Rob Harrop");
@@ -124,35 +115,39 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void setAttributeValueWithRuntimeException() throws Exception {
+	public void testSetAttributeValueWithRuntimeException() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
-		assertThatIllegalArgumentException().isThrownBy(() -> proxy.setName("Juergen"));
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				proxy.setName("Juergen"));
 	}
 
 	@Test
-	void setAttributeValueWithCheckedException() throws Exception {
+	public void testSetAttributeValueWithCheckedException() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
-		assertThatExceptionOfType(ClassNotFoundException.class).isThrownBy(() -> proxy.setName("Juergen Class"));
+		assertThatExceptionOfType(ClassNotFoundException.class).isThrownBy(() ->
+				proxy.setName("Juergen Class"));
 	}
 
 	@Test
-	void setAttributeValueWithIOException() throws Exception {
+	public void testSetAttributeValueWithIOException() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
-		assertThatIOException().isThrownBy(() -> proxy.setName("Juergen IO"));
+		assertThatIOException().isThrownBy(() ->
+				proxy.setName("Juergen IO"));
 	}
 
 	@Test
-	void setReadOnlyAttribute() throws Exception {
+	public void testSetReadOnlyAttribute() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
-		assertThatExceptionOfType(InvalidInvocationException.class).isThrownBy(() -> proxy.setAge(900));
+		assertThatExceptionOfType(InvalidInvocationException.class).isThrownBy(() ->
+				proxy.setAge(900));
 	}
 
 	@Test
-	void invokeNoArgs() throws Exception {
+	public void testInvokeNoArgs() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
 		long result = proxy.myOperation();
@@ -160,7 +155,7 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void invokeArgs() throws Exception {
+	public void testInvokeArgs() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean proxy = getProxy();
 		int result = proxy.add(1, 2);
@@ -168,18 +163,18 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void invokeUnexposedMethodWithException() throws Exception {
+	public void testInvokeUnexposedMethodWithException() throws Exception {
 		assumeTrue(runTests);
 		IJmxTestBean bean = getProxy();
-		assertThatExceptionOfType(InvalidInvocationException.class).isThrownBy(bean::dontExposeMe);
+		assertThatExceptionOfType(InvalidInvocationException.class).isThrownBy(() ->
+				bean.dontExposeMe());
 	}
 
 	@Test
-	void lazyConnectionToRemote() throws Exception {
+	public void testTestLazyConnectionToRemote() throws Exception {
 		assumeTrue(runTests);
 
-		@SuppressWarnings("deprecation")
-		final int port = TestSocketUtils.findAvailableTcpPort();
+		final int port = SocketUtils.findAvailableTcpPort();
 
 		JMXServiceURL url = new JMXServiceURL("service:jmx:jmxmp://localhost:" + port);
 		JMXConnectorServer connector = JMXConnectorServerFactory.newJMXConnectorServer(url, null, getServer());
@@ -199,39 +194,63 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 			connector.start();
 		}
 		catch (BindException ex) {
-			Assumptions.abort("Skipping remainder of JMX LazyConnectionToRemote test because binding to local port [" +
-					port + "] failed: " + ex.getMessage());
+			System.out.println("Skipping remainder of JMX LazyConnectionToRemote test because binding to local port ["
+					+ port + "] failed: " + ex.getMessage());
+			return;
 		}
 
 		// should now be able to access data via the lazy proxy
 		try {
 			assertThat(bean.getName()).isEqualTo("Rob Harrop");
 			assertThat(bean.getAge()).isEqualTo(100);
+		} finally {
+			connector.stop();
 		}
-		finally {
+
+		try {
+			bean.getName();
+		} catch (JmxException ex) {
+			// expected
+		}
+
+		connector = JMXConnectorServerFactory.newJMXConnectorServer(url, null, getServer());
+		connector.start();
+
+		// should now be able to access data via the lazy proxy
+		try {
+			assertThat(bean.getName()).isEqualTo("Rob Harrop");
+			assertThat(bean.getAge()).isEqualTo(100);
+		} finally {
 			connector.stop();
 		}
 	}
 
-	@Test
-	void mxBeanAttributeAccess() throws Exception {
+	/*
+	public void testMXBeanAttributeAccess() throws Exception {
 		MBeanClientInterceptor interceptor = new MBeanClientInterceptor();
 		interceptor.setServer(ManagementFactory.getPlatformMBeanServer());
 		interceptor.setObjectName("java.lang:type=Memory");
 		interceptor.setManagementInterface(MemoryMXBean.class);
 		MemoryMXBean proxy = ProxyFactory.getProxy(MemoryMXBean.class, interceptor);
-		assertThat(proxy.getHeapMemoryUsage().getMax()).isGreaterThan(0);
+		assertTrue(proxy.getHeapMemoryUsage().getMax() > 0);
 	}
 
-	@Test
-	void mxBeanOperationAccess() throws Exception {
+	public void testMXBeanOperationAccess() throws Exception {
 		MBeanClientInterceptor interceptor = new MBeanClientInterceptor();
 		interceptor.setServer(ManagementFactory.getPlatformMBeanServer());
 		interceptor.setObjectName("java.lang:type=Threading");
 		ThreadMXBean proxy = ProxyFactory.getProxy(ThreadMXBean.class, interceptor);
-		assertThat(proxy.getThreadInfo(Thread.currentThread().getId()).getStackTrace()).isNotNull();
+		assertTrue(proxy.getThreadInfo(Thread.currentThread().getId()).getStackTrace() != null);
 	}
 
+	public void testMXBeanAttributeListAccess() throws Exception {
+		MBeanClientInterceptor interceptor = new MBeanClientInterceptor();
+		interceptor.setServer(ManagementFactory.getPlatformMBeanServer());
+		interceptor.setObjectName("com.sun.management:type=HotSpotDiagnostic");
+		HotSpotDiagnosticMXBean proxy = ProxyFactory.getProxy(HotSpotDiagnosticMXBean.class, interceptor);
+		assertFalse(proxy.getDiagnosticOptions().isEmpty());
+	}
+	*/
 
 	private static class ProxyTestAssembler extends AbstractReflectiveMBeanInfoAssembler {
 
@@ -268,10 +287,12 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 
 		@SuppressWarnings("unused")
 		protected void populateAttributeDescriptor(Descriptor descriptor, Method getter, Method setter) {
+
 		}
 
 		@SuppressWarnings("unused")
 		protected void populateOperationDescriptor(Descriptor descriptor, Method method) {
+
 		}
 
 		@SuppressWarnings({ "unused", "rawtypes" })
@@ -281,6 +302,7 @@ class MBeanClientInterceptorTests extends AbstractMBeanServerTests {
 
 		@SuppressWarnings({ "unused", "rawtypes" })
 		protected void populateMBeanDescriptor(Descriptor mbeanDescriptor, String beanKey, Class beanClass) {
+
 		}
 	}
 

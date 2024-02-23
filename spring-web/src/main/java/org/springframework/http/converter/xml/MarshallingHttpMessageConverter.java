@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,10 +69,8 @@ public class MarshallingHttpMessageConverter extends AbstractXmlHttpMessageConve
 	public MarshallingHttpMessageConverter(Marshaller marshaller) {
 		Assert.notNull(marshaller, "Marshaller must not be null");
 		this.marshaller = marshaller;
-		// The following pattern variable cannot be named "unmarshaller" due to lacking
-		// support in Checkstyle: https://github.com/checkstyle/checkstyle/issues/10969
-		if (marshaller instanceof Unmarshaller _unmarshaller) {
-			this.unmarshaller = _unmarshaller;
+		if (marshaller instanceof Unmarshaller) {
+			this.unmarshaller = (Unmarshaller) marshaller;
 		}
 	}
 
@@ -123,7 +121,7 @@ public class MarshallingHttpMessageConverter extends AbstractXmlHttpMessageConve
 
 	@Override
 	protected Object readFromSource(Class<?> clazz, HttpHeaders headers, Source source) throws Exception {
-		Assert.state(this.unmarshaller != null, "Property 'unmarshaller' is required");
+		Assert.notNull(this.unmarshaller, "Property 'unmarshaller' is required");
 		Object result = this.unmarshaller.unmarshal(source);
 		if (!clazz.isInstance(result)) {
 			throw new TypeMismatchException(result, clazz);
@@ -133,12 +131,8 @@ public class MarshallingHttpMessageConverter extends AbstractXmlHttpMessageConve
 
 	@Override
 	protected void writeToResult(Object o, HttpHeaders headers, Result result) throws Exception {
-		Assert.state(this.marshaller != null, "Property 'marshaller' is required");
+		Assert.notNull(this.marshaller, "Property 'marshaller' is required");
 		this.marshaller.marshal(o, result);
 	}
 
-	@Override
-	protected boolean supportsRepeatableWrites(Object o) {
-		return true;
-	}
 }

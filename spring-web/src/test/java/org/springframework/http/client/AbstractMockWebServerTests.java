@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ public abstract class AbstractMockWebServerTests {
 			new MediaType("text", "plain", Collections.singletonMap("charset", "UTF-8"));
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
 		this.server = new MockWebServer();
 		this.server.setDispatcher(new TestDispatcher());
 		this.server.start();
@@ -54,13 +54,13 @@ public abstract class AbstractMockWebServerTests {
 	}
 
 	@AfterEach
-	void tearDown() throws Exception {
+	public void tearDown() throws Exception {
 		this.server.shutdown();
 	}
 
 	protected class TestDispatcher extends Dispatcher {
 		@Override
-		public MockResponse dispatch(RecordedRequest request) {
+		public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
 			try {
 				if (request.getPath().equals("/echo")) {
 					assertThat(request.getHeader("Host"))
@@ -78,11 +78,6 @@ public abstract class AbstractMockWebServerTests {
 				}
 				else if(request.getPath().equals("/status/notfound")) {
 					return new MockResponse().setResponseCode(404);
-				}
-				else if (request.getPath().equals("/status/299")) {
-					assertThat(request.getHeader("Expect"))
-							.contains("299");
-					return new MockResponse().setResponseCode(299);
 				}
 				else if(request.getPath().startsWith("/params")) {
 					assertThat(request.getPath()).contains("param1=value");

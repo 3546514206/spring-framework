@@ -58,8 +58,6 @@ public class WebMvcStompWebSocketEndpointRegistration implements StompWebSocketE
 
 	private final List<String> allowedOrigins = new ArrayList<>();
 
-	private final List<String> allowedOriginPatterns = new ArrayList<>();
-
 	@Nullable
 	private SockJsServiceRegistration registration;
 
@@ -100,15 +98,6 @@ public class WebMvcStompWebSocketEndpointRegistration implements StompWebSocketE
 	}
 
 	@Override
-	public StompWebSocketEndpointRegistration setAllowedOriginPatterns(String... allowedOriginPatterns) {
-		this.allowedOriginPatterns.clear();
-		if (!ObjectUtils.isEmpty(allowedOriginPatterns)) {
-			this.allowedOriginPatterns.addAll(Arrays.asList(allowedOriginPatterns));
-		}
-		return this;
-	}
-
-	@Override
 	public SockJsServiceRegistration withSockJS() {
 		this.registration = new SockJsServiceRegistration();
 		this.registration.setTaskScheduler(this.sockJsTaskScheduler);
@@ -123,20 +112,13 @@ public class WebMvcStompWebSocketEndpointRegistration implements StompWebSocketE
 		if (!this.allowedOrigins.isEmpty()) {
 			this.registration.setAllowedOrigins(StringUtils.toStringArray(this.allowedOrigins));
 		}
-		if (!this.allowedOriginPatterns.isEmpty()) {
-			this.registration.setAllowedOriginPatterns(StringUtils.toStringArray(this.allowedOriginPatterns));
-		}
 		return this.registration;
 	}
 
 	protected HandshakeInterceptor[] getInterceptors() {
 		List<HandshakeInterceptor> interceptors = new ArrayList<>(this.interceptors.size() + 1);
 		interceptors.addAll(this.interceptors);
-		OriginHandshakeInterceptor interceptor = new OriginHandshakeInterceptor(this.allowedOrigins);
-		interceptors.add(interceptor);
-		if (!ObjectUtils.isEmpty(this.allowedOriginPatterns)) {
-			interceptor.setAllowedOriginPatterns(this.allowedOriginPatterns);
-		}
+		interceptors.add(new OriginHandshakeInterceptor(this.allowedOrigins));
 		return interceptors.toArray(new HandshakeInterceptor[0]);
 	}
 

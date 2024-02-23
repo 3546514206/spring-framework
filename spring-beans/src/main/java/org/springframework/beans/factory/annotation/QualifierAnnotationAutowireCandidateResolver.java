@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package org.springframework.beans.factory.annotation;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.DependencyDescriptor;
@@ -39,15 +39,15 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 /**
  * {@link AutowireCandidateResolver} implementation that matches bean definition qualifiers
  * against {@link Qualifier qualifier annotations} on the field or parameter to be autowired.
  * Also supports suggested expression values through a {@link Value value} annotation.
  *
- * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation, if available.
+ * <p>Also supports JSR-330's {@link javax.inject.Qualifier} annotation, if available.
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
@@ -59,7 +59,7 @@ import org.springframework.util.ObjectUtils;
  */
 public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwareAutowireCandidateResolver {
 
-	private final Set<Class<? extends Annotation>> qualifierTypes = CollectionUtils.newLinkedHashSet(2);
+	private final Set<Class<? extends Annotation>> qualifierTypes = new LinkedHashSet<>(2);
 
 	private Class<? extends Annotation> valueAnnotationType = Value.class;
 
@@ -67,13 +67,13 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	/**
 	 * Create a new QualifierAnnotationAutowireCandidateResolver
 	 * for Spring's standard {@link Qualifier} annotation.
-	 * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation, if available.
+	 * <p>Also supports JSR-330's {@link javax.inject.Qualifier} annotation, if available.
 	 */
 	@SuppressWarnings("unchecked")
 	public QualifierAnnotationAutowireCandidateResolver() {
 		this.qualifierTypes.add(Qualifier.class);
 		try {
-			this.qualifierTypes.add((Class<? extends Annotation>) ClassUtils.forName("jakarta.inject.Qualifier",
+			this.qualifierTypes.add((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Qualifier",
 							QualifierAnnotationAutowireCandidateResolver.class.getClassLoader()));
 		}
 		catch (ClassNotFoundException ex) {
@@ -138,7 +138,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * as a <em>qualifier</em>, the bean must 'match' against the annotation as
 	 * well as any attributes it may contain. The bean definition must contain
 	 * the same qualifier or match by meta attributes. A "value" attribute will
-	 * fall back to match against the bean name or an alias if a qualifier or
+	 * fallback to match against the bean name or an alias if a qualifier or
 	 * attribute does not match.
 	 * @see Qualifier
 	 */
@@ -164,44 +164,42 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * Match the given qualifier annotations against the candidate bean definition.
 	 */
 	protected boolean checkQualifiers(BeanDefinitionHolder bdHolder, Annotation[] annotationsToSearch) {
-		boolean qualifierFound = false;
-		if (!ObjectUtils.isEmpty(annotationsToSearch)) {
-			SimpleTypeConverter typeConverter = new SimpleTypeConverter();
-			for (Annotation annotation : annotationsToSearch) {
-				Class<? extends Annotation> type = annotation.annotationType();
-				boolean checkMeta = true;
-				boolean fallbackToMeta = false;
-				if (isQualifier(type)) {
-					qualifierFound = true;
-					if (!checkQualifier(bdHolder, annotation, typeConverter)) {
-						fallbackToMeta = true;
-					}
-					else {
-						checkMeta = false;
-					}
+		if (ObjectUtils.isEmpty(annotationsToSearch)) {
+			return true;
+		}
+		SimpleTypeConverter typeConverter = new SimpleTypeConverter();
+		for (Annotation annotation : annotationsToSearch) {
+			Class<? extends Annotation> type = annotation.annotationType();
+			boolean checkMeta = true;
+			boolean fallbackToMeta = false;
+			if (isQualifier(type)) {
+				if (!checkQualifier(bdHolder, annotation, typeConverter)) {
+					fallbackToMeta = true;
 				}
-				if (checkMeta) {
-					boolean foundMeta = false;
-					for (Annotation metaAnn : type.getAnnotations()) {
-						Class<? extends Annotation> metaType = metaAnn.annotationType();
-						if (isQualifier(metaType)) {
-							qualifierFound = true;
-							foundMeta = true;
-							// Only accept fallback match if @Qualifier annotation has a value...
-							// Otherwise, it is just a marker for a custom qualifier annotation.
-							if ((fallbackToMeta && ObjectUtils.isEmpty(AnnotationUtils.getValue(metaAnn))) ||
-									!checkQualifier(bdHolder, metaAnn, typeConverter)) {
-								return false;
-							}
+				else {
+					checkMeta = false;
+				}
+			}
+			if (checkMeta) {
+				boolean foundMeta = false;
+				for (Annotation metaAnn : type.getAnnotations()) {
+					Class<? extends Annotation> metaType = metaAnn.annotationType();
+					if (isQualifier(metaType)) {
+						foundMeta = true;
+						// Only accept fallback match if @Qualifier annotation has a value...
+						// Otherwise it is just a marker for a custom qualifier annotation.
+						if ((fallbackToMeta && StringUtils.isEmpty(AnnotationUtils.getValue(metaAnn))) ||
+								!checkQualifier(bdHolder, metaAnn, typeConverter)) {
+							return false;
 						}
 					}
-					if (fallbackToMeta && !foundMeta) {
-						return false;
-					}
+				}
+				if (fallbackToMeta && !foundMeta) {
+					return false;
 				}
 			}
 		}
-		return (qualifierFound || ((RootBeanDefinition) bdHolder.getBeanDefinition()).isDefaultCandidate());
+		return true;
 	}
 
 	/**
@@ -243,11 +241,10 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 				}
 			}
 			if (targetAnnotation == null) {
-				BeanFactory beanFactory = getBeanFactory();
 				// Look for matching annotation on the target class
-				if (beanFactory != null) {
+				if (getBeanFactory() != null) {
 					try {
-						Class<?> beanType = beanFactory.getType(bdHolder.getBeanName());
+						Class<?> beanType = getBeanFactory().getType(bdHolder.getBeanName());
 						if (beanType != null) {
 							targetAnnotation = AnnotationUtils.getAnnotation(ClassUtils.getUserClass(beanType), type);
 						}
@@ -283,8 +280,8 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 				actualValue = bd.getAttribute(attributeName);
 			}
 			if (actualValue == null && attributeName.equals(AutowireCandidateQualifier.VALUE_KEY) &&
-					expectedValue instanceof String name && bdHolder.matchesName(name)) {
-				// Finally, check bean name (or alias) match
+					expectedValue instanceof String && bdHolder.matchesName((String) expectedValue)) {
+				// Fall back on bean name (or alias) match
 				continue;
 			}
 			if (actualValue == null && qualifier != null) {
@@ -294,7 +291,7 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 			if (actualValue != null) {
 				actualValue = typeConverter.convertIfNecessary(actualValue, expectedValue.getClass());
 			}
-			if (!ObjectUtils.nullSafeEquals(expectedValue, actualValue)) {
+			if (!expectedValue.equals(actualValue)) {
 				return false;
 			}
 		}
@@ -335,26 +332,12 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 */
 	@Override
 	public boolean hasQualifier(DependencyDescriptor descriptor) {
-		for (Annotation annotation : descriptor.getAnnotations()) {
-			if (isQualifier(annotation.annotationType())) {
+		for (Annotation ann : descriptor.getAnnotations()) {
+			if (isQualifier(ann.annotationType())) {
 				return true;
 			}
 		}
 		return false;
-	}
-
-	@Override
-	@Nullable
-	public String getSuggestedName(DependencyDescriptor descriptor) {
-		for (Annotation annotation : descriptor.getAnnotations()) {
-			if (isQualifier(annotation.annotationType())) {
-				Object value = AnnotationUtils.getValue(annotation);
-				if (value instanceof String str) {
-					return str;
-				}
-			}
-		}
-		return null;
 	}
 
 	/**

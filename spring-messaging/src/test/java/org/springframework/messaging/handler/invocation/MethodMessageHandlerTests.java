@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,8 @@
 
 package org.springframework.messaging.handler.invocation;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.converter.SimpleMessageConverter;
@@ -39,6 +29,9 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.PathMatcher;
 
+import java.lang.reflect.Method;
+import java.util.*;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -49,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Brian Clozel
  * @author Rossen Stoyanchev
  */
-class MethodMessageHandlerTests {
+public class MethodMessageHandlerTests {
 
 	private static final String DESTINATION_HEADER = "destination";
 
@@ -59,9 +52,9 @@ class MethodMessageHandlerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 
-		List<String> destinationPrefixes = List.of("/test");
+		List<String> destinationPrefixes = Arrays.asList("/test");
 
 		this.messageHandler = new TestMethodMessageHandler();
 		this.messageHandler.setApplicationContext(new StaticApplicationContext());
@@ -73,13 +66,13 @@ class MethodMessageHandlerTests {
 	}
 
 	@Test
-	void duplicateMapping() {
+	public void duplicateMapping() {
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.messageHandler.registerHandler(new DuplicateMappingsController()));
 	}
 
 	@Test
-	void registeredMappings() {
+	public void registeredMappings() {
 
 		Map<String, HandlerMethod> handlerMethods = this.messageHandler.getHandlerMethods();
 
@@ -88,7 +81,7 @@ class MethodMessageHandlerTests {
 	}
 
 	@Test
-	void patternMatch() throws Exception {
+	public void patternMatch() throws Exception {
 
 		Method method = this.testController.getClass().getMethod("handlerPathMatchWildcard");
 		this.messageHandler.registerHandlerMethod(this.testController, method, "/handlerPathMatch*");
@@ -99,7 +92,7 @@ class MethodMessageHandlerTests {
 	}
 
 	@Test
-	void bestMatch() throws Exception {
+	public void bestMatch() throws Exception {
 
 		Method method = this.testController.getClass().getMethod("bestMatch");
 		this.messageHandler.registerHandlerMethod(this.testController, method, "/bestmatch/{foo}/path");
@@ -113,7 +106,7 @@ class MethodMessageHandlerTests {
 	}
 
 	@Test
-	void argumentResolution() {
+	public void argumentResolution() {
 
 		this.messageHandler.handleMessage(toDestination("/test/handlerArgumentResolver"));
 
@@ -122,7 +115,7 @@ class MethodMessageHandlerTests {
 	}
 
 	@Test
-	void handleException() {
+	public void handleException() {
 
 		this.messageHandler.handleMessage(toDestination("/test/handlerThrowsExc"));
 
@@ -204,7 +197,9 @@ class MethodMessageHandlerTests {
 
 		@Override
 		protected List<? extends HandlerMethodReturnValueHandler> initReturnValueHandlers() {
-			return new ArrayList<>(getCustomReturnValueHandlers());
+			List<HandlerMethodReturnValueHandler> handlers = new ArrayList<>();
+			handlers.addAll(getCustomReturnValueHandlers());
+			return handlers;
 		}
 
 		@Override

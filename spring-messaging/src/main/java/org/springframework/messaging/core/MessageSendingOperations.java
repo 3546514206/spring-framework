@@ -16,19 +16,19 @@
 
 package org.springframework.messaging.core;
 
-import java.util.Map;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessagingException;
 
+import java.util.Map;
+
 /**
  * Operations for sending messages to a destination.
  *
+ * @param <D> the destination type
  * @author Mark Fisher
  * @author Rossen Stoyanchev
  * @since 4.0
- * @param <D> the destination type
  */
 public interface MessageSendingOperations<D> {
 
@@ -67,9 +67,10 @@ public interface MessageSendingOperations<D> {
 	 * {@link org.springframework.messaging.converter.MessageConverter},
 	 * wrap it as a message with the given headers and send it to
 	 * the given destination.
+	 *
 	 * @param destination the target destination
-	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 * @param payload     the Object to use as payload
+	 * @param headers     headers for the message to send
 	 */
 	void convertAndSend(D destination, Object payload, Map<String, Object> headers) throws MessagingException;
 
@@ -101,7 +102,7 @@ public interface MessageSendingOperations<D> {
 	 * and send the resulting message to the given destination.
 	 * @param destination the target destination
 	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 * @param headers headers for the message to send
 	 * @param postProcessor the post processor to apply to the message
 	 */
 	void convertAndSend(D destination, Object payload, @Nullable Map<String, Object> headers,

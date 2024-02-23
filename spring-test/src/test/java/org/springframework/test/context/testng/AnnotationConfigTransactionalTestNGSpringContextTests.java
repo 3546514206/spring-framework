@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,7 @@
 
 package org.springframework.test.context.testng;
 
-import javax.sql.DataSource;
-
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.testfixture.beans.Employee;
-import org.springframework.beans.testfixture.beans.Pet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -34,9 +24,14 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.transaction.AfterTransaction;
 import org.springframework.test.context.transaction.BeforeTransaction;
+import org.springframework.tests.sample.beans.Employee;
+import org.springframework.tests.sample.beans.Pet;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.testng.annotations.*;
+
+import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.transaction.TransactionAssert.assertThatTransaction;
@@ -54,7 +49,7 @@ import static org.springframework.transaction.support.TransactionSynchronization
  * @since 3.1
  */
 @ContextConfiguration
-class AnnotationConfigTransactionalTestNGSpringContextTests
+public class AnnotationConfigTransactionalTestNGSpringContextTests
 		extends AbstractTransactionalTestNGSpringContextTests {
 
 	private static final String JANE = "jane";
@@ -127,7 +122,7 @@ class AnnotationConfigTransactionalTestNGSpringContextTests
 	}
 
 	@BeforeMethod
-	void setUp() {
+	void setUp() throws Exception {
 		numSetUpCalls++;
 		if (isActualTransactionActive()) {
 			numSetUpCallsInTransaction++;
@@ -144,7 +139,7 @@ class AnnotationConfigTransactionalTestNGSpringContextTests
 	}
 
 	@AfterMethod
-	void tearDown() {
+	void tearDown() throws Exception {
 		numTearDownCalls++;
 		if (isActualTransactionActive()) {
 			numTearDownCallsInTransaction++;
@@ -183,11 +178,10 @@ class AnnotationConfigTransactionalTestNGSpringContextTests
 
 		@Bean
 		DataSource dataSource() {
-			return new EmbeddedDatabaseBuilder()
-					.generateUniqueName(true)
-					.addScript("classpath:/org/springframework/test/jdbc/schema.sql")
-					.addScript("classpath:/org/springframework/test/jdbc/data.sql")
-					.build();
+			return new EmbeddedDatabaseBuilder()//
+			.addScript("classpath:/org/springframework/test/jdbc/schema.sql")//
+			.addScript("classpath:/org/springframework/test/jdbc/data.sql")//
+			.build();
 		}
 
 	}

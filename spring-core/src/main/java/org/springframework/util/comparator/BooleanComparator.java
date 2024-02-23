@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import org.springframework.lang.Nullable;
  * {@code true} or {@code false} first.
  *
  * @author Keith Donald
- * @author Eugene Rabii
  * @since 1.2.2
  */
 @SuppressWarnings("serial")
@@ -64,20 +63,20 @@ public class BooleanComparator implements Comparator<Boolean>, Serializable {
 
 
 	@Override
-	public int compare(Boolean left, Boolean right) {
-		int multiplier = this.trueLow ? -1 : 1;
-		return multiplier * Boolean.compare(left, right);
+	public int compare(Boolean v1, Boolean v2) {
+		return (v1 ^ v2) ? ((v1 ^ this.trueLow) ? 1 : -1) : 0;
 	}
 
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof BooleanComparator that && this.trueLow == that.trueLow));
+		return (this == other || (other instanceof BooleanComparator &&
+				this.trueLow == ((BooleanComparator) other).trueLow));
 	}
 
 	@Override
 	public int hashCode() {
-		return Boolean.hashCode(this.trueLow);
+		return getClass().hashCode() * (this.trueLow ? -1 : 1);
 	}
 
 	@Override

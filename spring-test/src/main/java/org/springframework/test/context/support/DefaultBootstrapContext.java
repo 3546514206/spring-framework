@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.test.context.support;
 
-import org.springframework.core.style.DefaultToStringStyler;
-import org.springframework.core.style.SimpleValueStyler;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.test.context.BootstrapContext;
 import org.springframework.test.context.CacheAwareContextLoaderDelegate;
@@ -48,11 +46,17 @@ public class DefaultBootstrapContext implements BootstrapContext {
 		this.cacheAwareContextLoaderDelegate = cacheAwareContextLoaderDelegate;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public Class<?> getTestClass() {
 		return this.testClass;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public CacheAwareContextLoaderDelegate getCacheAwareContextLoaderDelegate() {
 		return this.cacheAwareContextLoaderDelegate;
@@ -63,10 +67,10 @@ public class DefaultBootstrapContext implements BootstrapContext {
 	 */
 	@Override
 	public String toString() {
-		return new ToStringCreator(this, new DefaultToStringStyler(new SimpleValueStyler()))
-			.append("testClass", this.testClass)
-			.append("cacheAwareContextLoaderDelegate", this.cacheAwareContextLoaderDelegate.getClass())
-			.toString();
+		return new ToStringCreator(this)//
+		.append("testClass", this.testClass.getName())//
+		.append("cacheAwareContextLoaderDelegate", this.cacheAwareContextLoaderDelegate.getClass().getName())//
+		.toString();
 	}
 
 }

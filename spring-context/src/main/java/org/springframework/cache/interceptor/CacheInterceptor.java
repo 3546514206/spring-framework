@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,10 @@ package org.springframework.cache.interceptor;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 
-import kotlin.coroutines.Continuation;
-import kotlin.coroutines.CoroutineContext;
-import kotlinx.coroutines.Job;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.reactivestreams.Publisher;
 
-import org.springframework.core.CoroutinesUtils;
-import org.springframework.core.KotlinDetector;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * AOP Alliance MethodInterceptor for declarative cache
@@ -45,7 +38,6 @@ import org.springframework.util.Assert;
  *
  * @author Costin Leau
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 3.1
  */
 @SuppressWarnings("serial")
@@ -58,9 +50,6 @@ public class CacheInterceptor extends CacheAspectSupport implements MethodInterc
 
 		CacheOperationInvoker aopAllianceInvoker = () -> {
 			try {
-				if (KotlinDetector.isKotlinReflectPresent() && KotlinDetector.isSuspendingFunction(method)) {
-					return KotlinDelegate.invokeSuspendingFunction(method, invocation.getThis(), invocation.getArguments());
-				}
 				return invocation.proceed();
 			}
 			catch (Throwable ex) {
@@ -68,25 +57,11 @@ public class CacheInterceptor extends CacheAspectSupport implements MethodInterc
 			}
 		};
 
-		Object target = invocation.getThis();
-		Assert.state(target != null, "Target must not be null");
 		try {
-			return execute(aopAllianceInvoker, target, method, invocation.getArguments());
+			return execute(aopAllianceInvoker, invocation.getThis(), method, invocation.getArguments());
 		}
 		catch (CacheOperationInvoker.ThrowableWrapper th) {
 			throw th.getOriginal();
-		}
-	}
-
-	/**
-	 * Inner class to avoid a hard dependency on Kotlin at runtime.
-	 */
-	private static class KotlinDelegate {
-
-		public static Publisher<?> invokeSuspendingFunction(Method method, Object target, Object... args) {
-			Continuation<?> continuation = (Continuation<?>) args[args.length - 1];
-			CoroutineContext coroutineContext = continuation.getContext().minusKey(Job.Key);
-			return CoroutinesUtils.invokeSuspendingFunction(coroutineContext, method, target, args);
 		}
 	}
 

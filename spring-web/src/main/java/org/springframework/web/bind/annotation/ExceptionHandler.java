@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,7 @@
 
 package org.springframework.web.bind.annotation;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.springframework.aot.hint.annotation.Reflective;
+import java.lang.annotation.*;
 
 /**
  * Annotation for handling exceptions in specific handler classes and/or
@@ -35,13 +29,10 @@ import org.springframework.aot.hint.annotation.Reflective;
  * <li>An exception argument: declared as a general Exception or as a more
  * specific exception. This also serves as a mapping hint if the annotation
  * itself does not narrow the exception types through its {@link #value()}.
- * You may refer to a top-level exception being propagated or to a nested
- * cause within a wrapper exception. As of 5.3, any cause level is being
- * exposed, whereas previously only an immediate cause was considered.
  * <li>Request and/or response objects (typically from the Servlet API).
  * You may choose any specific request/response type, e.g.
- * {@link jakarta.servlet.ServletRequest} / {@link jakarta.servlet.http.HttpServletRequest}.
- * <li>Session object: typically {@link jakarta.servlet.http.HttpSession}.
+ * {@link javax.servlet.ServletRequest} / {@link javax.servlet.http.HttpServletRequest}.
+ * <li>Session object: typically {@link javax.servlet.http.HttpSession}.
  * An argument of this type will enforce the presence of a corresponding session.
  * As a consequence, such an argument will never be {@code null}.
  * <i>Note that session access may not be thread-safe, in particular in a
@@ -90,7 +81,7 @@ import org.springframework.aot.hint.annotation.Reflective;
  * {@linkplain org.springframework.http.converter.HttpMessageConverter message converters}.
  * <li>{@code void} if the method handles the response itself (by
  * writing the response content directly, declaring an argument of type
- * {@link jakarta.servlet.ServletResponse} / {@link jakarta.servlet.http.HttpServletResponse}
+ * {@link javax.servlet.ServletResponse} / {@link javax.servlet.http.HttpServletResponse}
  * for that purpose) or if the view name is supposed to be implicitly determined
  * through a {@link org.springframework.web.servlet.RequestToViewNameTranslator}
  * (not declaring a response argument in the handler method signature).
@@ -102,13 +93,11 @@ import org.springframework.aot.hint.annotation.Reflective;
  * @author Arjen Poutsma
  * @author Juergen Hoeller
  * @since 3.0
- * @see ControllerAdvice
  * @see org.springframework.web.context.request.WebRequest
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Reflective(ExceptionHandlerReflectiveProcessor.class)
 public @interface ExceptionHandler {
 
 	/**

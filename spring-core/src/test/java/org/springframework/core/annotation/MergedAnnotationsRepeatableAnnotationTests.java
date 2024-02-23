@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,15 @@
 
 package org.springframework.core.annotation;
 
-import java.lang.annotation.Annotation;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.AnnotatedElement;
-import java.util.Set;
-import java.util.stream.Stream;
-
 import org.assertj.core.api.ThrowableTypeAssert;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import java.lang.annotation.*;
+import java.lang.reflect.AnnotatedElement;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * Tests for {@link MergedAnnotations} and {@link RepeatableContainers} that
@@ -223,35 +213,14 @@ class MergedAnnotationsRepeatableAnnotationTests {
 				"B", "C");
 	}
 
-	@Test
-	void typeHierarchyAnnotationsWithLocalComposedAnnotationWhoseRepeatableMetaAnnotationsAreFiltered() {
-		Class<WithRepeatedMetaAnnotationsClass> element = WithRepeatedMetaAnnotationsClass.class;
-		SearchStrategy searchStrategy = SearchStrategy.TYPE_HIERARCHY;
-		AnnotationFilter annotationFilter = PeteRepeat.class.getName()::equals;
-
-		Set<PeteRepeat> annotations = getAnnotations(null, PeteRepeat.class, searchStrategy, element, annotationFilter);
-		assertThat(annotations).isEmpty();
-
-		MergedAnnotations mergedAnnotations = MergedAnnotations.from(element, searchStrategy,
-				RepeatableContainers.standardRepeatables(), annotationFilter);
-		Stream<Class<? extends Annotation>> annotationTypes = mergedAnnotations.stream()
-				.map(MergedAnnotation::synthesize)
-				.map(Annotation::annotationType);
-		assertThat(annotationTypes).containsExactly(WithRepeatedMetaAnnotations.class, Noninherited.class, Noninherited.class);
-	}
-
-	private <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container,
-			Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element) {
-
-		return getAnnotations(container, repeatable, searchStrategy, element, AnnotationFilter.PLAIN);
-	}
-
-	private <A extends Annotation> Set<A> getAnnotations(Class<? extends Annotation> container,
-			Class<A> repeatable, SearchStrategy searchStrategy, AnnotatedElement element, AnnotationFilter annotationFilter) {
-
+	private <A extends Annotation> Set<A> getAnnotations(
+			Class<? extends Annotation> container, Class<A> repeatable,
+			SearchStrategy searchStrategy, AnnotatedElement element) {
 		RepeatableContainers containers = RepeatableContainers.of(repeatable, container);
-		MergedAnnotations annotations = MergedAnnotations.from(element, searchStrategy, containers, annotationFilter);
-		return annotations.stream(repeatable).collect(MergedAnnotationCollectors.toAnnotationSet());
+		MergedAnnotations annotations = MergedAnnotations.from(element,
+				searchStrategy, containers, AnnotationFilter.PLAIN);
+		return annotations.stream(repeatable).collect(
+				MergedAnnotationCollectors.toAnnotationSet());
 	}
 
 	private void nonRepeatableRequirements(Exception ex) {
@@ -434,19 +403,6 @@ class MergedAnnotationsRepeatableAnnotationTests {
 
 	static class SubNoninheritedRepeatableClass extends NoninheritedRepeatableClass {
 
-	}
-
-	@Retention(RetentionPolicy.RUNTIME)
-	@PeteRepeat("A")
-	@PeteRepeat("B")
-	@interface WithRepeatedMetaAnnotations {
-	}
-
-	@WithRepeatedMetaAnnotations
-	@PeteRepeat("C")
-	@Noninherited("X")
-	@Noninherited("Y")
-	static class WithRepeatedMetaAnnotationsClass {
 	}
 
 }

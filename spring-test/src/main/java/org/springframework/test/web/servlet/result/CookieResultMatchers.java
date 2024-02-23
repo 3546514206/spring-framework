@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,14 @@
 
 package org.springframework.test.web.servlet.result;
 
-import jakarta.servlet.http.Cookie;
 import org.hamcrest.Matcher;
-
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import javax.servlet.http.Cookie;
+
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.springframework.test.util.AssertionErrors.assertEquals;
-import static org.springframework.test.util.AssertionErrors.assertNotNull;
-import static org.springframework.test.util.AssertionErrors.assertNull;
+import static org.springframework.test.util.AssertionErrors.*;
 
 /**
  * Factory for response cookie assertions.
@@ -82,7 +80,7 @@ public class CookieResultMatchers {
 	public ResultMatcher doesNotExist(String name) {
 		return result -> {
 			Cookie cookie = result.getResponse().getCookie(name);
-			assertNull("Unexpected cookie with name '" + name + "'", cookie);
+			assertTrue("Unexpected cookie with name '" + name + "'", cookie == null);
 		};
 	}
 
@@ -97,7 +95,7 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's maxAge.
+	 * Assert a cookie's maxAge value.
 	 */
 	public ResultMatcher maxAge(String name, int maxAge) {
 		return result -> {
@@ -107,7 +105,7 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's path with a Hamcrest {@link Matcher}.
+	 * Assert a cookie path with a Hamcrest {@link Matcher}.
 	 */
 	public ResultMatcher path(String name, Matcher<? super String> matcher) {
 		return result -> {
@@ -116,9 +114,6 @@ public class CookieResultMatchers {
 		};
 	}
 
-	/**
-	 * Assert a cookie's path.
-	 */
 	public ResultMatcher path(String name, String path) {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
@@ -137,7 +132,7 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's domain.
+	 * Assert a cookie's domain value.
 	 */
 	public ResultMatcher domain(String name, String domain) {
 		return result -> {
@@ -147,27 +142,8 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's SameSite attribute with a Hamcrest {@link Matcher}.
-	 * @since 6.0.8
-	 * @see #attribute(String, String, Matcher)
-	 */
-	public ResultMatcher sameSite(String name, Matcher<? super String> matcher) {
-		return attribute(name, "SameSite", matcher);
-	}
-
-	/**
-	 * Assert a cookie's SameSite attribute.
-	 * @since 6.0.8
-	 * @see #attribute(String, String, String)
-	 */
-	public ResultMatcher sameSite(String name, String sameSite) {
-		return attribute(name, "SameSite", sameSite);
-	}
-
-	/**
 	 * Assert a cookie's comment with a Hamcrest {@link Matcher}.
 	 */
-	@SuppressWarnings("removal")
 	public ResultMatcher comment(String name, Matcher<? super String> matcher) {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
@@ -176,9 +152,8 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's comment.
+	 * Assert a cookie's comment value.
 	 */
-	@SuppressWarnings("removal")
 	public ResultMatcher comment(String name, String comment) {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
@@ -189,7 +164,6 @@ public class CookieResultMatchers {
 	/**
 	 * Assert a cookie's version with a Hamcrest {@link Matcher}.
 	 */
-	@SuppressWarnings("removal")
 	public ResultMatcher version(String name, Matcher<? super Integer> matcher) {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
@@ -198,9 +172,8 @@ public class CookieResultMatchers {
 	}
 
 	/**
-	 * Assert a cookie's version.
+	 * Assert a cookie's version value.
 	 */
-	@SuppressWarnings("removal")
 	public ResultMatcher version(String name, int version) {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
@@ -226,34 +199,6 @@ public class CookieResultMatchers {
 		return result -> {
 			Cookie cookie = getCookie(result, name);
 			assertEquals("Response cookie '" + name + "' httpOnly", httpOnly, cookie.isHttpOnly());
-		};
-	}
-
-	/**
-	 * Assert a cookie's specified attribute with a Hamcrest {@link Matcher}.
-	 * @param cookieAttribute the name of the Cookie attribute (case-insensitive)
-	 * @since 6.0.8
-	 */
-	public ResultMatcher attribute(String cookieName, String cookieAttribute, Matcher<? super String> matcher) {
-		return result -> {
-			Cookie cookie = getCookie(result, cookieName);
-			String attribute = cookie.getAttribute(cookieAttribute);
-			assertNotNull("Response cookie '" + cookieName + "' doesn't have attribute '" + cookieAttribute + "'", attribute);
-			assertThat("Response cookie '" + cookieName + "' attribute '" + cookieAttribute + "'",
-					attribute, matcher);
-		};
-	}
-
-	/**
-	 * Assert a cookie's specified attribute.
-	 * @param cookieAttribute the name of the Cookie attribute (case-insensitive)
-	 * @since 6.0.8
-	 */
-	public ResultMatcher attribute(String cookieName, String cookieAttribute, String attributeValue) {
-		return result -> {
-			Cookie cookie = getCookie(result, cookieName);
-			assertEquals("Response cookie '" + cookieName + "' attribute '" + cookieAttribute + "'",
-					attributeValue, cookie.getAttribute(cookieAttribute));
 		};
 	}
 

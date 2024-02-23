@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,20 +30,15 @@ import org.springframework.lang.Nullable;
 
 /**
  * Object to represent an SQL BLOB/CLOB value parameter. BLOBs can either be an
- * InputStream or a byte array. CLOBs can be in the form of a Reader, InputStream,
+ * InputStream or a byte array. CLOBs can be in the form of a Reader, InputStream
  * or String. Each CLOB/BLOB value will be stored together with its length.
- * The type is based on which constructor is used. Instances of this class are
- * stateful and immutable: use them and discard them.
+ * The type is based on which constructor is used. Objects of this class are
+ * immutable except for the LobCreator reference. Use them and discard them.
  *
- * <p><b>NOTE: As of 6.1.4, this class is effectively superseded by
- * {@link SqlBinaryValue} and {@link SqlCharacterValue} which are capable of
- * modern BLOB/CLOB handling while also handling LONGVARBINARY/LONGVARCHAR.</b>
- * The only reason to keep using this class is a custom {@link LobHandler}.
- *
- * <p>This class holds a reference to a {@link LobCreator} that must be closed after
- * the update has completed. This is done via a call to the {@link #cleanup()} method.
- * All handling of the {@code LobCreator} is done by the framework classes that use it -
- * no need to set or close the {@code LobCreator} for end users of this class.
+ * <p>This class holds a reference to a LocCreator that must be closed after the
+ * update has completed. This is done via a call to the closeLobCreator method.
+ * All handling of the LobCreator is done by the framework classes that use it -
+ * no need to set or close the LobCreator for end users of this class.
  *
  * <p>A usage example:
  *
@@ -68,9 +63,7 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.jdbc.core.JdbcTemplate#update(String, Object[], int[])
  * @see org.springframework.jdbc.object.SqlUpdate#update(Object[])
  * @see org.springframework.jdbc.object.StoredProcedure#execute(java.util.Map)
- * @deprecated as of 6.2, in favor of {@link SqlBinaryValue} and {@link SqlCharacterValue}
  */
-@Deprecated(since = "6.2")
 public class SqlLobValue implements DisposableSqlTypeValue {
 
 	@Nullable
@@ -79,7 +72,8 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 	private final int length;
 
 	/**
-	 * Reference to the LobCreator - so we can close it once the update is done.
+	 * This contains a reference to the LobCreator - so we can close it
+	 * once the update is done.
 	 */
 	private final LobCreator lobCreator;
 
@@ -184,11 +178,11 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 			if (this.content instanceof byte[] || this.content == null) {
 				this.lobCreator.setBlobAsBytes(ps, paramIndex, (byte[]) this.content);
 			}
-			else if (this.content instanceof String string) {
-				this.lobCreator.setBlobAsBytes(ps, paramIndex, string.getBytes());
+			else if (this.content instanceof String) {
+				this.lobCreator.setBlobAsBytes(ps, paramIndex, ((String) this.content).getBytes());
 			}
-			else if (this.content instanceof InputStream inputStream) {
-				this.lobCreator.setBlobAsBinaryStream(ps, paramIndex, inputStream, this.length);
+			else if (this.content instanceof InputStream) {
+				this.lobCreator.setBlobAsBinaryStream(ps, paramIndex, (InputStream) this.content, this.length);
 			}
 			else {
 				throw new IllegalArgumentException(
@@ -199,11 +193,11 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 			if (this.content instanceof String || this.content == null) {
 				this.lobCreator.setClobAsString(ps, paramIndex, (String) this.content);
 			}
-			else if (this.content instanceof InputStream inputStream) {
-				this.lobCreator.setClobAsAsciiStream(ps, paramIndex, inputStream, this.length);
+			else if (this.content instanceof InputStream) {
+				this.lobCreator.setClobAsAsciiStream(ps, paramIndex, (InputStream) this.content, this.length);
 			}
-			else if (this.content instanceof Reader reader) {
-				this.lobCreator.setClobAsCharacterStream(ps, paramIndex, reader, this.length);
+			else if (this.content instanceof Reader) {
+				this.lobCreator.setClobAsCharacterStream(ps, paramIndex, (Reader) this.content, this.length);
 			}
 			else {
 				throw new IllegalArgumentException(
@@ -216,7 +210,7 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 	}
 
 	/**
-	 * Close the LobCreator.
+	 * Close the LobCreator, if any.
 	 */
 	@Override
 	public void cleanup() {

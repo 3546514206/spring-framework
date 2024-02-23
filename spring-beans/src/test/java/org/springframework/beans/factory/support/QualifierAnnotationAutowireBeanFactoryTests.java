@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package org.springframework.beans.factory.support;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.beans.factory.config.DependencyDescriptor;
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.core.MethodParameter;
+import org.springframework.util.ClassUtils;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.beans.factory.config.DependencyDescriptor;
-import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.core.MethodParameter;
-import org.springframework.util.ClassUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Mark Fisher
  * @author Juergen Hoeller
  */
-class QualifierAnnotationAutowireBeanFactoryTests {
+public class QualifierAnnotationAutowireBeanFactoryTests {
 
 	private static final String JUERGEN = "juergen";
 
@@ -45,7 +44,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 
 
 	@Test
-	void testAutowireCandidateDefaultWithIrrelevantDescriptor() throws Exception {
+	public void testAutowireCandidateDefaultWithIrrelevantDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs = new ConstructorArgumentValues();
 		cavs.addGenericArgumentValue(JUERGEN);
@@ -59,7 +58,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 	}
 
 	@Test
-	void testAutowireCandidateExplicitlyFalseWithIrrelevantDescriptor() throws Exception {
+	public void testAutowireCandidateExplicitlyFalseWithIrrelevantDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs = new ConstructorArgumentValues();
 		cavs.addGenericArgumentValue(JUERGEN);
@@ -75,7 +74,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 
 	@Disabled
 	@Test
-	void testAutowireCandidateWithFieldDescriptor() throws Exception {
+	public void testAutowireCandidateWithFieldDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs1 = new ConstructorArgumentValues();
 		cavs1.addGenericArgumentValue(JUERGEN);
@@ -99,7 +98,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 	}
 
 	@Test
-	void testAutowireCandidateExplicitlyFalseWithFieldDescriptor() throws Exception {
+	public void testAutowireCandidateExplicitlyFalseWithFieldDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs = new ConstructorArgumentValues();
 		cavs.addGenericArgumentValue(JUERGEN);
@@ -117,7 +116,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 	}
 
 	@Test
-	void testAutowireCandidateWithShortClassName() throws Exception {
+	public void testAutowireCandidateWithShortClassName() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs = new ConstructorArgumentValues();
 		cavs.addGenericArgumentValue(JUERGEN);
@@ -135,7 +134,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 
 	@Disabled
 	@Test
-	void testAutowireCandidateWithConstructorDescriptor() throws Exception {
+	public void testAutowireCandidateWithConstructorDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs1 = new ConstructorArgumentValues();
 		cavs1.addGenericArgumentValue(JUERGEN);
@@ -148,7 +147,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 		lbf.registerBeanDefinition(MARK, person2);
 		MethodParameter param = new MethodParameter(QualifiedTestBean.class.getDeclaredConstructor(Person.class), 0);
 		DependencyDescriptor qualifiedDescriptor = new DependencyDescriptor(param, false);
-		param.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+		param.initParameterNameDiscovery(new LocalVariableTableParameterNameDiscoverer());
 		assertThat(param.getParameterName()).isEqualTo("tpb");
 		assertThat(lbf.isAutowireCandidate(JUERGEN, null)).isTrue();
 		assertThat(lbf.isAutowireCandidate(JUERGEN, qualifiedDescriptor)).isTrue();
@@ -157,7 +156,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 
 	@Disabled
 	@Test
-	void testAutowireCandidateWithMethodDescriptor() throws Exception {
+	public void testAutowireCandidateWithMethodDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs1 = new ConstructorArgumentValues();
 		cavs1.addGenericArgumentValue(JUERGEN);
@@ -174,9 +173,9 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 				new MethodParameter(QualifiedTestBean.class.getDeclaredMethod("autowireNonqualified", Person.class), 0);
 		DependencyDescriptor qualifiedDescriptor = new DependencyDescriptor(qualifiedParam, false);
 		DependencyDescriptor nonqualifiedDescriptor = new DependencyDescriptor(nonqualifiedParam, false);
-		qualifiedParam.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+		qualifiedParam.initParameterNameDiscovery(new LocalVariableTableParameterNameDiscoverer());
 		assertThat(qualifiedParam.getParameterName()).isEqualTo("tpb");
-		nonqualifiedParam.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+		nonqualifiedParam.initParameterNameDiscovery(new LocalVariableTableParameterNameDiscoverer());
 		assertThat(nonqualifiedParam.getParameterName()).isEqualTo("tpb");
 		assertThat(lbf.isAutowireCandidate(JUERGEN, null)).isTrue();
 		assertThat(lbf.isAutowireCandidate(JUERGEN, nonqualifiedDescriptor)).isTrue();
@@ -187,7 +186,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 	}
 
 	@Test
-	void testAutowireCandidateWithMultipleCandidatesDescriptor() throws Exception {
+	public void testAutowireCandidateWithMultipleCandidatesDescriptor() throws Exception {
 		DefaultListableBeanFactory lbf = new DefaultListableBeanFactory();
 		ConstructorArgumentValues cavs1 = new ConstructorArgumentValues();
 		cavs1.addGenericArgumentValue(JUERGEN);
@@ -244,7 +243,7 @@ class QualifierAnnotationAutowireBeanFactoryTests {
 	@Target({ElementType.FIELD, ElementType.PARAMETER})
 	@Retention(RetentionPolicy.RUNTIME)
 	@Qualifier
-	private @interface TestQualifier {
+	private static @interface TestQualifier {
 	}
 
 }

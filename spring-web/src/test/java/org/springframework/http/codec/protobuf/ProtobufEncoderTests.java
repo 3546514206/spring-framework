@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,33 @@
 
 package org.springframework.http.codec.protobuf;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.function.Consumer;
-
 import com.google.protobuf.Message;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import org.springframework.core.codec.AbstractEncoderTests;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.testfixture.codec.AbstractEncoderTests;
 import org.springframework.http.MediaType;
 import org.springframework.protobuf.Msg;
 import org.springframework.protobuf.SecondMsg;
 import org.springframework.util.MimeType;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.core.ResolvableType.forClass;
 
 /**
- * Tests for {@link ProtobufEncoder}.
+ * Unit tests for {@link ProtobufEncoder}.
  *
  * @author Sebastien Deleuze
  */
-class ProtobufEncoderTests extends AbstractEncoderTests<ProtobufEncoder> {
+public class ProtobufEncoderTests extends AbstractEncoderTests<ProtobufEncoder> {
 
-	private static final MimeType PROTOBUF_MIME_TYPE = new MimeType("application", "x-protobuf");
+	private final static MimeType PROTOBUF_MIME_TYPE = new MimeType("application", "x-protobuf");
 
 	private Msg msg1 =
 			Msg.newBuilder().setFoo("Foo").setBlah(SecondMsg.newBuilder().setBlah(123).build()).build();
@@ -58,7 +57,7 @@ class ProtobufEncoderTests extends AbstractEncoderTests<ProtobufEncoder> {
 
 	@Override
 	@Test
-	protected void canEncode() {
+	public void canEncode() {
 		assertThat(this.encoder.canEncode(forClass(Msg.class), null)).isTrue();
 		assertThat(this.encoder.canEncode(forClass(Msg.class), PROTOBUF_MIME_TYPE)).isTrue();
 		assertThat(this.encoder.canEncode(forClass(Msg.class), MediaType.APPLICATION_OCTET_STREAM)).isTrue();
@@ -68,7 +67,7 @@ class ProtobufEncoderTests extends AbstractEncoderTests<ProtobufEncoder> {
 
 	@Override
 	@Test
-	protected void encode() {
+	public void encode() {
 		Mono<Message> input = Mono.just(this.msg1);
 
 		testEncodeAll(input, Msg.class, step -> step
@@ -88,7 +87,7 @@ class ProtobufEncoderTests extends AbstractEncoderTests<ProtobufEncoder> {
 	}
 
 	@Test
-	void encodeStream() {
+	public void encodeStream() {
 		Flux<Message> input = Flux.just(this.msg1, this.msg2);
 
 		testEncodeAll(input, Msg.class, step -> step

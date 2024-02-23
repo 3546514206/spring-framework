@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,23 @@
 
 package org.springframework.web.servlet.mvc.method;
 
-import java.util.List;
-import java.util.Set;
-
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.http.HttpMethod;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.PathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.servlet.handler.AbstractHandlerMapping;
-import org.springframework.web.servlet.mvc.condition.ConsumesRequestCondition;
-import org.springframework.web.servlet.mvc.condition.HeadersRequestCondition;
-import org.springframework.web.servlet.mvc.condition.ParamsRequestCondition;
-import org.springframework.web.servlet.mvc.condition.PathPatternsRequestCondition;
-import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
-import org.springframework.web.servlet.mvc.condition.ProducesRequestCondition;
-import org.springframework.web.servlet.mvc.condition.RequestCondition;
-import org.springframework.web.servlet.mvc.condition.RequestConditionHolder;
-import org.springframework.web.servlet.mvc.condition.RequestMethodsRequestCondition;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import org.springframework.web.util.ServletRequestPathUtils;
+import org.springframework.web.servlet.mvc.condition.*;
 import org.springframework.web.util.UrlPathHelper;
-import org.springframework.web.util.pattern.PathPattern;
-import org.springframework.web.util.pattern.PathPatternParser;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Set;
 
 /**
- * Request mapping information. A composite for the following conditions:
+ * Request mapping information. Encapsulates the following request mapping conditions:
  * <ol>
- * <li>{@link PathPatternsRequestCondition} with parsed {@code PathPatterns} or
- * {@link PatternsRequestCondition} with String patterns via {@code PathMatcher}
+ * <li>{@link PatternsRequestCondition}
  * <li>{@link RequestMethodsRequestCondition}
  * <li>{@link ParamsRequestCondition}
  * <li>{@link HeadersRequestCondition}
@@ -65,30 +47,9 @@ import org.springframework.web.util.pattern.PathPatternParser;
  */
 public final class RequestMappingInfo implements RequestCondition<RequestMappingInfo> {
 
-	private static final PathPatternsRequestCondition EMPTY_PATH_PATTERNS = new PathPatternsRequestCondition();
-
-	private static final PatternsRequestCondition EMPTY_PATTERNS = new PatternsRequestCondition();
-
-	private static final RequestMethodsRequestCondition EMPTY_REQUEST_METHODS = new RequestMethodsRequestCondition();
-
-	private static final ParamsRequestCondition EMPTY_PARAMS = new ParamsRequestCondition();
-
-	private static final HeadersRequestCondition EMPTY_HEADERS = new HeadersRequestCondition();
-
-	private static final ConsumesRequestCondition EMPTY_CONSUMES = new ConsumesRequestCondition();
-
-	private static final ProducesRequestCondition EMPTY_PRODUCES = new ProducesRequestCondition();
-
-	private static final RequestConditionHolder EMPTY_CUSTOM = new RequestConditionHolder(null);
-
-
 	@Nullable
 	private final String name;
 
-	@Nullable
-	private final PathPatternsRequestCondition pathPatternsCondition;
-
-	@Nullable
 	private final PatternsRequestCondition patternsCondition;
 
 	private final RequestMethodsRequestCondition methodsCondition;
@@ -103,39 +64,25 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	private final RequestConditionHolder customConditionHolder;
 
-	private final int hashCode;
 
-	private final BuilderConfiguration options;
-
-
-	/**
-	 * Full constructor with a mapping name.
-	 * @deprecated as of 5.3 in favor using {@link RequestMappingInfo.Builder} via
-	 * {@link #paths(String...)}.
-	 */
-	@Deprecated
 	public RequestMappingInfo(@Nullable String name, @Nullable PatternsRequestCondition patterns,
 			@Nullable RequestMethodsRequestCondition methods, @Nullable ParamsRequestCondition params,
 			@Nullable HeadersRequestCondition headers, @Nullable ConsumesRequestCondition consumes,
 			@Nullable ProducesRequestCondition produces, @Nullable RequestCondition<?> custom) {
 
-		this(name, null,
-				(patterns != null ? patterns : EMPTY_PATTERNS),
-				(methods != null ? methods : EMPTY_REQUEST_METHODS),
-				(params != null ? params : EMPTY_PARAMS),
-				(headers != null ? headers : EMPTY_HEADERS),
-				(consumes != null ? consumes : EMPTY_CONSUMES),
-				(produces != null ? produces : EMPTY_PRODUCES),
-				(custom != null ? new RequestConditionHolder(custom) : EMPTY_CUSTOM),
-				new BuilderConfiguration());
+		this.name = (StringUtils.hasText(name) ? name : null);
+		this.patternsCondition = (patterns != null ? patterns : new PatternsRequestCondition());
+		this.methodsCondition = (methods != null ? methods : new RequestMethodsRequestCondition());
+		this.paramsCondition = (params != null ? params : new ParamsRequestCondition());
+		this.headersCondition = (headers != null ? headers : new HeadersRequestCondition());
+		this.consumesCondition = (consumes != null ? consumes : new ConsumesRequestCondition());
+		this.producesCondition = (produces != null ? produces : new ProducesRequestCondition());
+		this.customConditionHolder = new RequestConditionHolder(custom);
 	}
 
 	/**
-	 * Create an instance with the given conditions.
-	 * @deprecated as of 5.3 in favor using {@link RequestMappingInfo.Builder} via
-	 * {@link #paths(String...)}.
+	 * Creates a new instance with the given request conditions.
 	 */
-	@Deprecated
 	public RequestMappingInfo(@Nullable PatternsRequestCondition patterns,
 			@Nullable RequestMethodsRequestCondition methods, @Nullable ParamsRequestCondition params,
 			@Nullable HeadersRequestCondition headers, @Nullable ConsumesRequestCondition consumes,
@@ -146,40 +93,10 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	/**
 	 * Re-create a RequestMappingInfo with the given custom request condition.
-	 * @deprecated since 5.3 in favor of using {@link #addCustomCondition(RequestCondition)}.
 	 */
-	@Deprecated
 	public RequestMappingInfo(RequestMappingInfo info, @Nullable RequestCondition<?> customRequestCondition) {
 		this(info.name, info.patternsCondition, info.methodsCondition, info.paramsCondition, info.headersCondition,
 				info.consumesCondition, info.producesCondition, customRequestCondition);
-	}
-
-	private RequestMappingInfo(@Nullable String name,
-			@Nullable PathPatternsRequestCondition pathPatternsCondition,
-			@Nullable PatternsRequestCondition patternsCondition,
-			RequestMethodsRequestCondition methodsCondition, ParamsRequestCondition paramsCondition,
-			HeadersRequestCondition headersCondition, ConsumesRequestCondition consumesCondition,
-			ProducesRequestCondition producesCondition, RequestConditionHolder customCondition,
-			BuilderConfiguration options) {
-
-		Assert.isTrue(pathPatternsCondition != null || patternsCondition != null,
-				"Neither PathPatterns nor String patterns condition");
-
-		this.name = (StringUtils.hasText(name) ? name : null);
-		this.pathPatternsCondition = pathPatternsCondition;
-		this.patternsCondition = patternsCondition;
-		this.methodsCondition = methodsCondition;
-		this.paramsCondition = paramsCondition;
-		this.headersCondition = headersCondition;
-		this.consumesCondition = consumesCondition;
-		this.producesCondition = producesCondition;
-		this.customConditionHolder = customCondition;
-		this.options = options;
-
-		this.hashCode = calculateHashCode(
-				this.pathPatternsCondition, this.patternsCondition,
-				this.methodsCondition, this.paramsCondition, this.headersCondition,
-				this.consumesCondition, this.producesCondition, this.customConditionHolder);
 	}
 
 
@@ -192,77 +109,11 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	}
 
 	/**
-	 * Return the patterns condition in use when parsed patterns are
-	 * {@link AbstractHandlerMapping#usesPathPatterns() enabled}.
-	 * <p>This is mutually exclusive with {@link #getPatternsCondition()} such
-	 * that when one returns {@code null} the other one returns an instance.
-	 * @since 5.3
-	 * @see #getActivePatternsCondition()
+	 * Return the URL patterns of this {@link RequestMappingInfo};
+	 * or instance with 0 patterns (never {@code null}).
 	 */
-	@Nullable
-	public PathPatternsRequestCondition getPathPatternsCondition() {
-		return this.pathPatternsCondition;
-	}
-
-	/**
-	 * Return the patterns condition when String pattern matching via
-	 * {@link PathMatcher} is in use.
-	 * <p>This is mutually exclusive with {@link #getPathPatternsCondition()}
-	 * such that when one returns {@code null} the other one returns an instance.
-	 */
-	@Nullable
 	public PatternsRequestCondition getPatternsCondition() {
 		return this.patternsCondition;
-	}
-
-	/**
-	 * Returns either {@link #getPathPatternsCondition()} or
-	 * {@link #getPatternsCondition()} depending on which is not null.
-	 * @since 5.3
-	 */
-	@SuppressWarnings("unchecked")
-	public <T> RequestCondition<T> getActivePatternsCondition() {
-		if (this.pathPatternsCondition != null) {
-			return (RequestCondition<T>) this.pathPatternsCondition;
-		}
-		else if (this.patternsCondition != null) {
-			return (RequestCondition<T>) this.patternsCondition;
-		}
-		else {
-			// Already checked in the constructor...
-			throw new IllegalStateException();
-		}
-	}
-
-	/**
-	 * Return the mapping paths that are not patterns.
-	 * @since 5.3
-	 */
-	public Set<String> getDirectPaths() {
-		RequestCondition<?> condition = getActivePatternsCondition();
-		return (condition instanceof PathPatternsRequestCondition pprc ?
-				pprc.getDirectPaths() : ((PatternsRequestCondition) condition).getDirectPaths());
-	}
-
-	/**
-	 * Return the patterns for the {@link #getActivePatternsCondition() active}
-	 * patterns condition as Strings.
-	 * @since 5.3
-	 */
-	public Set<String> getPatternValues() {
-		RequestCondition<?> condition = getActivePatternsCondition();
-		return (condition instanceof PathPatternsRequestCondition pprc ?
-				pprc.getPatternValues() : ((PatternsRequestCondition) condition).getPatterns());
-	}
-
-	/**
-	 * Whether the request mapping has an empty URL path mapping.
-	 * @since 6.0.10
-	 */
-	public boolean isEmptyMapping() {
-		RequestCondition<?> condition = getActivePatternsCondition();
-		return (condition instanceof PathPatternsRequestCondition pprc ?
-				pprc.isEmptyPathMapping() : ((PatternsRequestCondition) condition).isEmptyPathMapping());
 	}
 
 	/**
@@ -313,38 +164,16 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		return this.customConditionHolder.getCondition();
 	}
 
-	/**
-	 * Create a new instance based on the current one, also adding the given
-	 * custom condition.
-	 * @param customCondition the custom condition to add
-	 * @since 5.3
-	 */
-	public RequestMappingInfo addCustomCondition(RequestCondition<?> customCondition) {
-		return new RequestMappingInfo(this.name,
-				this.pathPatternsCondition, this.patternsCondition,
-				this.methodsCondition, this.paramsCondition, this.headersCondition,
-				this.consumesCondition, this.producesCondition,
-				new RequestConditionHolder(customCondition), this.options);
-	}
 
 	/**
-	 * Combine "this" request mapping info (i.e. the current instance) with
-	 * another request mapping info instance.
+	 * Combine "this" request mapping info (i.e. the current instance) with another request mapping info instance.
 	 * <p>Example: combine type- and method-level request mappings.
 	 * @return a new request mapping info instance; never {@code null}
 	 */
 	@Override
 	public RequestMappingInfo combine(RequestMappingInfo other) {
 		String name = combineNames(other);
-
-		PathPatternsRequestCondition pathPatterns =
-				(this.pathPatternsCondition != null && other.pathPatternsCondition != null ?
-						this.pathPatternsCondition.combine(other.pathPatternsCondition) : null);
-
-		PatternsRequestCondition patterns =
-				(this.patternsCondition != null && other.patternsCondition != null ?
-						this.patternsCondition.combine(other.patternsCondition) : null);
-
+		PatternsRequestCondition patterns = this.patternsCondition.combine(other.patternsCondition);
 		RequestMethodsRequestCondition methods = this.methodsCondition.combine(other.methodsCondition);
 		ParamsRequestCondition params = this.paramsCondition.combine(other.paramsCondition);
 		HeadersRequestCondition headers = this.headersCondition.combine(other.headersCondition);
@@ -352,8 +181,8 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		ProducesRequestCondition produces = this.producesCondition.combine(other.producesCondition);
 		RequestConditionHolder custom = this.customConditionHolder.combine(other.customConditionHolder);
 
-		return new RequestMappingInfo(name, pathPatterns, patterns,
-				methods, params, headers, consumes, produces, custom, this.options);
+		return new RequestMappingInfo(name, patterns,
+				methods, params, headers, consumes, produces, custom.getCondition());
 	}
 
 	@Nullable
@@ -371,13 +200,11 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	}
 
 	/**
-	 * Checks if all conditions in this request mapping info match the provided
-	 * request and returns a potentially new request mapping info with conditions
-	 * tailored to the current request.
-	 * <p>For example the returned instance may contain the subset of URL
-	 * patterns that match to the current request, sorted with best matching
-	 * patterns on top.
-	 * @return a new instance in case of a match; or {@code null} otherwise
+	 * Checks if all conditions in this request mapping info match the provided request and returns
+	 * a potentially new request mapping info with conditions tailored to the current request.
+	 * <p>For example the returned instance may contain the subset of URL patterns that match to
+	 * the current request, sorted with best matching patterns on top.
+	 * @return a new instance in case all conditions match; or {@code null} otherwise
 	 */
 	@Override
 	@Nullable
@@ -402,34 +229,24 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		if (produces == null) {
 			return null;
 		}
-		PathPatternsRequestCondition pathPatterns = null;
-		if (this.pathPatternsCondition != null) {
-			pathPatterns = this.pathPatternsCondition.getMatchingCondition(request);
-			if (pathPatterns == null) {
-				return null;
-			}
-		}
-		PatternsRequestCondition patterns = null;
-		if (this.patternsCondition != null) {
-			patterns = this.patternsCondition.getMatchingCondition(request);
-			if (patterns == null) {
-				return null;
-			}
+		PatternsRequestCondition patterns = this.patternsCondition.getMatchingCondition(request);
+		if (patterns == null) {
+			return null;
 		}
 		RequestConditionHolder custom = this.customConditionHolder.getMatchingCondition(request);
 		if (custom == null) {
 			return null;
 		}
-		return new RequestMappingInfo(this.name, pathPatterns, patterns,
-				methods, params, headers, consumes, produces, custom, this.options);
+
+		return new RequestMappingInfo(this.name, patterns,
+				methods, params, headers, consumes, produces, custom.getCondition());
 	}
 
 	/**
-	 * Compares "this" info (i.e. the current instance) with another info in the
-	 * context of a request.
+	 * Compares "this" info (i.e. the current instance) with another info in the context of a request.
 	 * <p>Note: It is assumed both instances have been obtained via
-	 * {@link #getMatchingCondition(HttpServletRequest)} to ensure they have
-	 * conditions with content relevant to current request.
+	 * {@link #getMatchingCondition(HttpServletRequest)} to ensure they have conditions with
+	 * content relevant to current request.
 	 */
 	@Override
 	public int compareTo(RequestMappingInfo other, HttpServletRequest request) {
@@ -441,7 +258,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 				return result;
 			}
 		}
-		result = getActivePatternsCondition().compareTo(other.getActivePatternsCondition(), request);
+		result = this.patternsCondition.compareTo(other.getPatternsCondition(), request);
 		if (result != 0) {
 			return result;
 		}
@@ -475,31 +292,28 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof RequestMappingInfo that &&
-				getActivePatternsCondition().equals(that.getActivePatternsCondition()) &&
-				this.methodsCondition.equals(that.methodsCondition) &&
-				this.paramsCondition.equals(that.paramsCondition) &&
-				this.headersCondition.equals(that.headersCondition) &&
-				this.consumesCondition.equals(that.consumesCondition) &&
-				this.producesCondition.equals(that.producesCondition) &&
-				this.customConditionHolder.equals(that.customConditionHolder)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof RequestMappingInfo)) {
+			return false;
+		}
+		RequestMappingInfo otherInfo = (RequestMappingInfo) other;
+		return (this.patternsCondition.equals(otherInfo.patternsCondition) &&
+				this.methodsCondition.equals(otherInfo.methodsCondition) &&
+				this.paramsCondition.equals(otherInfo.paramsCondition) &&
+				this.headersCondition.equals(otherInfo.headersCondition) &&
+				this.consumesCondition.equals(otherInfo.consumesCondition) &&
+				this.producesCondition.equals(otherInfo.producesCondition) &&
+				this.customConditionHolder.equals(otherInfo.customConditionHolder));
 	}
 
 	@Override
 	public int hashCode() {
-		return this.hashCode;
-	}
-
-	@SuppressWarnings("ConstantConditions")
-	private static int calculateHashCode(
-			@Nullable PathPatternsRequestCondition pathPatterns, @Nullable PatternsRequestCondition patterns,
-			RequestMethodsRequestCondition methods, ParamsRequestCondition params, HeadersRequestCondition headers,
-			ConsumesRequestCondition consumes, ProducesRequestCondition produces, RequestConditionHolder custom) {
-
-		return (pathPatterns != null ? pathPatterns : patterns).hashCode() * 31 +
-				methods.hashCode() + params.hashCode() +
-				headers.hashCode() + consumes.hashCode() + produces.hashCode() +
-				custom.hashCode();
+		return (this.patternsCondition.hashCode() * 31 +  // primary differentiation
+				this.methodsCondition.hashCode() + this.paramsCondition.hashCode() +
+				this.headersCondition.hashCode() + this.consumesCondition.hashCode() +
+				this.producesCondition.hashCode() + this.customConditionHolder.hashCode());
 	}
 
 	@Override
@@ -509,10 +323,10 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 			Set<RequestMethod> httpMethods = this.methodsCondition.getMethods();
 			builder.append(httpMethods.size() == 1 ? httpMethods.iterator().next() : httpMethods);
 		}
-
-		// Patterns conditions are never empty and have "" (empty path) at least.
-		builder.append(' ').append(getActivePatternsCondition());
-
+		if (!this.patternsCondition.isEmpty()) {
+			Set<String> patterns = this.patternsCondition.getPatterns();
+			builder.append(" ").append(patterns.size() == 1 ? patterns.iterator().next() : patterns);
+		}
 		if (!this.paramsCondition.isEmpty()) {
 			builder.append(", params ").append(this.paramsCondition);
 		}
@@ -530,15 +344,6 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		}
 		builder.append('}');
 		return builder.toString();
-	}
-
-	/**
-	 * Return a builder to create a new RequestMappingInfo by modifying this one.
-	 * @return a builder to create a new, modified instance
-	 * @since 5.3.4
-	 */
-	public Builder mutate() {
-		return new MutateBuilder(this);
 	}
 
 
@@ -559,7 +364,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	public interface Builder {
 
 		/**
-		 * Set the URL path patterns.
+		 * Set the path patterns.
 		 */
 		Builder paths(String... paths);
 
@@ -613,7 +418,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 	private static class DefaultBuilder implements Builder {
 
-		private String[] paths;
+		private String[] paths = new String[0];
 
 		private RequestMethod[] methods = new RequestMethod[0];
 
@@ -624,10 +429,6 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		private String[] consumes = new String[0];
 
 		private String[] produces = new String[0];
-
-		private boolean hasContentType;
-
-		private boolean hasAccept;
 
 		@Nullable
 		private String mappingName;
@@ -661,12 +462,6 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 		@Override
 		public DefaultBuilder headers(String... headers) {
-			for (String header : headers) {
-				this.hasContentType = this.hasContentType ||
-						header.contains("Content-Type") || header.contains("content-type");
-				this.hasAccept = this.hasAccept ||
-						header.contains("Accept") || header.contains("accept");
-			}
 			this.headers = headers;
 			return this;
 		}
@@ -702,167 +497,21 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		}
 
 		@Override
-		@SuppressWarnings("deprecation")
 		public RequestMappingInfo build() {
-
-			PathPatternsRequestCondition pathPatternsCondition = null;
-			PatternsRequestCondition patternsCondition = null;
-
-			PathPatternParser parser = this.options.getPatternParserToUse();
-
-			if (parser != null) {
-				pathPatternsCondition = (ObjectUtils.isEmpty(this.paths) ?
-						EMPTY_PATH_PATTERNS :
-						new PathPatternsRequestCondition(parser, this.paths));
-			}
-			else {
-				patternsCondition = (ObjectUtils.isEmpty(this.paths) ?
-						EMPTY_PATTERNS :
-						new PatternsRequestCondition(
-								this.paths, null, this.options.pathMatcher,
-								this.options.useSuffixPatternMatch(), this.options.useTrailingSlashMatch(),
-								this.options.getFileExtensions()));
-			}
-
 			ContentNegotiationManager manager = this.options.getContentNegotiationManager();
 
-			return new RequestMappingInfo(
-					this.mappingName, pathPatternsCondition, patternsCondition,
-					ObjectUtils.isEmpty(this.methods) ?
-							EMPTY_REQUEST_METHODS : new RequestMethodsRequestCondition(this.methods),
-					ObjectUtils.isEmpty(this.params) ?
-							EMPTY_PARAMS : new ParamsRequestCondition(this.params),
-					ObjectUtils.isEmpty(this.headers) ?
-							EMPTY_HEADERS : new HeadersRequestCondition(this.headers),
-					ObjectUtils.isEmpty(this.consumes) && !this.hasContentType ?
-							EMPTY_CONSUMES : new ConsumesRequestCondition(this.consumes, this.headers),
-					ObjectUtils.isEmpty(this.produces) && !this.hasAccept ?
-							EMPTY_PRODUCES : new ProducesRequestCondition(this.produces, this.headers, manager),
-					this.customCondition != null ?
-							new RequestConditionHolder(this.customCondition) : EMPTY_CUSTOM, this.options);
-		}
-	}
+			PatternsRequestCondition patternsCondition = new PatternsRequestCondition(
+					this.paths, this.options.getUrlPathHelper(), this.options.getPathMatcher(),
+					this.options.useSuffixPatternMatch(), this.options.useTrailingSlashMatch(),
+					this.options.getFileExtensions());
 
-
-	private static class MutateBuilder implements Builder {
-
-		@Nullable
-		private String name;
-
-		@Nullable
-		private PathPatternsRequestCondition pathPatternsCondition;
-
-		@Nullable
-		private PatternsRequestCondition patternsCondition;
-
-		private RequestMethodsRequestCondition methodsCondition;
-
-		private ParamsRequestCondition paramsCondition;
-
-		private HeadersRequestCondition headersCondition;
-
-		private ConsumesRequestCondition consumesCondition;
-
-		private ProducesRequestCondition producesCondition;
-
-		private RequestConditionHolder customConditionHolder;
-
-		private BuilderConfiguration options;
-
-		public MutateBuilder(RequestMappingInfo other) {
-			this.name = other.name;
-			this.pathPatternsCondition = other.pathPatternsCondition;
-			this.patternsCondition = other.patternsCondition;
-			this.methodsCondition = other.methodsCondition;
-			this.paramsCondition = other.paramsCondition;
-			this.headersCondition = other.headersCondition;
-			this.consumesCondition = other.consumesCondition;
-			this.producesCondition = other.producesCondition;
-			this.customConditionHolder = other.customConditionHolder;
-			this.options = other.options;
-		}
-
-		@Override
-		@SuppressWarnings("deprecation")
-		public Builder paths(String... paths) {
-			PathPatternParser parser = this.options.getPatternParserToUse();
-
-			if (parser != null) {
-				this.pathPatternsCondition = (ObjectUtils.isEmpty(paths) ?
-						EMPTY_PATH_PATTERNS : new PathPatternsRequestCondition(parser, paths));
-			}
-			else {
-				this.patternsCondition = (ObjectUtils.isEmpty(paths) ?
-						EMPTY_PATTERNS :
-						new PatternsRequestCondition(
-								paths, null, this.options.getPathMatcher(),
-								this.options.useSuffixPatternMatch(), this.options.useTrailingSlashMatch(),
-								this.options.getFileExtensions()));
-			}
-			return this;
-		}
-
-		@Override
-		public Builder methods(RequestMethod... methods) {
-			this.methodsCondition = (ObjectUtils.isEmpty(methods) ?
-					EMPTY_REQUEST_METHODS : new RequestMethodsRequestCondition(methods));
-			return this;
-		}
-
-		@Override
-		public Builder params(String... params) {
-			this.paramsCondition = (ObjectUtils.isEmpty(params) ?
-					EMPTY_PARAMS : new ParamsRequestCondition(params));
-			return this;
-		}
-
-		@Override
-		public Builder headers(String... headers) {
-			this.headersCondition = (ObjectUtils.isEmpty(headers) ?
-					EMPTY_HEADERS : new HeadersRequestCondition(headers));
-			return this;
-		}
-
-		@Override
-		public Builder consumes(String... consumes) {
-			this.consumesCondition = (ObjectUtils.isEmpty(consumes) ?
-					EMPTY_CONSUMES : new ConsumesRequestCondition(consumes));
-			return this;
-		}
-
-		@Override
-		public Builder produces(String... produces) {
-			this.producesCondition = (ObjectUtils.isEmpty(produces) ?
-					EMPTY_PRODUCES :
-					new ProducesRequestCondition(produces, null, this.options.getContentNegotiationManager()));
-			return this;
-		}
-
-		@Override
-		public Builder mappingName(String name) {
-			this.name = name;
-			return this;
-		}
-
-		@Override
-		public Builder customCondition(RequestCondition<?> condition) {
-			this.customConditionHolder = new RequestConditionHolder(condition);
-			return this;
-		}
-
-		@Override
-		public Builder options(BuilderConfiguration options) {
-			this.options = options;
-			return this;
-		}
-
-		@Override
-		public RequestMappingInfo build() {
-			return new RequestMappingInfo(this.name,
-					this.pathPatternsCondition, this.patternsCondition,
-					this.methodsCondition, this.paramsCondition, this.headersCondition,
-					this.consumesCondition, this.producesCondition,
-					this.customConditionHolder, this.options);
+			return new RequestMappingInfo(this.mappingName, patternsCondition,
+					new RequestMethodsRequestCondition(this.methods),
+					new ParamsRequestCondition(this.params),
+					new HeadersRequestCondition(this.headers),
+					new ConsumesRequestCondition(this.consumes, this.headers),
+					new ProducesRequestCondition(this.produces, this.headers, manager),
+					this.customCondition);
 		}
 	}
 
@@ -876,77 +525,41 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 	 */
 	public static class BuilderConfiguration {
 
-		private static PathPatternParser defaultPatternParser = new PathPatternParser();
-
-
 		@Nullable
-		private PathPatternParser patternParser;
+		private UrlPathHelper urlPathHelper;
 
 		@Nullable
 		private PathMatcher pathMatcher;
 
-		private boolean trailingSlashMatch = false;
+		private boolean trailingSlashMatch = true;
 
-		private boolean suffixPatternMatch = false;
+		private boolean suffixPatternMatch = true;
 
 		private boolean registeredSuffixPatternMatch = false;
 
 		@Nullable
 		private ContentNegotiationManager contentNegotiationManager;
 
-
-		/**
-		 * Enable use of parsed {@link PathPattern}s as described in
-		 * {@link AbstractHandlerMapping#setPatternParser(PathPatternParser)}.
-		 * <p><strong>Note:</strong> This property is mutually exclusive with
-		 * {@link #setPathMatcher(PathMatcher)}.
-		 * <p>By default this is not set, but {@link RequestMappingInfo.Builder}
-		 * defaults to using {@link PathPatternParser} unless
-		 * {@link #setPathMatcher(PathMatcher)} is explicitly set.
-		 * @since 5.3
-		 */
-		public void setPatternParser(@Nullable PathPatternParser patternParser) {
-			this.patternParser = patternParser;
-		}
-
-		/**
-		 * Return the {@link #setPatternParser(PathPatternParser) configured}
-		 * {@code PathPatternParser}, or {@code null}.
-		 * @since 5.3
-		 */
-		@Nullable
-		public PathPatternParser getPatternParser() {
-			return this.patternParser;
-		}
-
 		/**
 		 * Set a custom UrlPathHelper to use for the PatternsRequestCondition.
 		 * <p>By default this is not set.
 		 * @since 4.2.8
-		 * @deprecated as of 5.3, the path is resolved externally and obtained with
-		 * {@link ServletRequestPathUtils#getCachedPathValue(ServletRequest)}
 		 */
-		@Deprecated
 		public void setUrlPathHelper(@Nullable UrlPathHelper urlPathHelper) {
+			this.urlPathHelper = urlPathHelper;
 		}
 
 		/**
-		 * Return the configured UrlPathHelper.
-		 * @deprecated as of 5.3, the path is resolved externally and obtained with
-		 * {@link ServletRequestPathUtils#getCachedPathValue(ServletRequest)};
-		 * this method always returns {@link UrlPathHelper#defaultInstance}.
+		 * Return a custom UrlPathHelper to use for the PatternsRequestCondition, if any.
 		 */
 		@Nullable
-		@Deprecated
 		public UrlPathHelper getUrlPathHelper() {
-			return UrlPathHelper.defaultInstance;
+			return this.urlPathHelper;
 		}
 
 		/**
 		 * Set a custom PathMatcher to use for the PatternsRequestCondition.
-		 * <p>By default this is not set. You must set it explicitly if you want
-		 * {@link PathMatcher} to be used, or otherwise {@link RequestMappingInfo}
-		 * defaults to using {@link PathPatternParser}.
+		 * <p>By default this is not set.
 		 */
 		public void setPathMatcher(@Nullable PathMatcher pathMatcher) {
 			this.pathMatcher = pathMatcher;
@@ -961,58 +574,32 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		}
 
 		/**
-		 * Return the {@code PathPatternParser} to use, the one set explicitly
-		 * or falling back on a default instance if both {@code PathPatternParser}
-		 * and {@code PathMatcher} are not set.
-		 * @since 6.1.2
-		 */
-		@Nullable
-		public PathPatternParser getPatternParserToUse() {
-			if (this.patternParser == null && this.pathMatcher == null) {
-				return defaultPatternParser;
-			}
-			return this.patternParser;
-		}
-
-		/**
 		 * Set whether to apply trailing slash matching in PatternsRequestCondition.
-		 * <p>The default was changed in 6.0 from {@code true} to {@code false} in
-		 * order to support the deprecation of the property.
-		 * @deprecated as of 6.0, see
-		 * {@link PathPatternParser#setMatchOptionalTrailingSeparator(boolean)}
+		 * <p>By default this is set to 'true'.
 		 */
-		@Deprecated(since = "6.0")
 		public void setTrailingSlashMatch(boolean trailingSlashMatch) {
 			this.trailingSlashMatch = trailingSlashMatch;
 		}
 
 		/**
 		 * Return whether to apply trailing slash matching in PatternsRequestCondition.
-		 * @deprecated as of 6.0 together with {@link #setTrailingSlashMatch(boolean)}
 		 */
-		@Deprecated(since = "6.0")
 		public boolean useTrailingSlashMatch() {
 			return this.trailingSlashMatch;
 		}
 
 		/**
 		 * Set whether to apply suffix pattern matching in PatternsRequestCondition.
-		 * <p>By default this is set to 'false'.
+		 * <p>By default this is set to 'true'.
 		 * @see #setRegisteredSuffixPatternMatch(boolean)
-		 * @deprecated as of 5.2.4. See deprecation note on
-		 * {@link RequestMappingHandlerMapping#setUseSuffixPatternMatch(boolean)}.
 		 */
-		@Deprecated
 		public void setSuffixPatternMatch(boolean suffixPatternMatch) {
 			this.suffixPatternMatch = suffixPatternMatch;
 		}
 
 		/**
 		 * Return whether to apply suffix pattern matching in PatternsRequestCondition.
-		 * @deprecated as of 5.2.4. See deprecation note on
-		 * {@link RequestMappingHandlerMapping#setUseSuffixPatternMatch(boolean)}.
 		 */
-		@Deprecated
 		public boolean useSuffixPatternMatch() {
 			return this.suffixPatternMatch;
 		}
@@ -1023,11 +610,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		 * {@code suffixPatternMatch=true} and requires that a
 		 * {@link #setContentNegotiationManager} is also configured in order to
 		 * obtain the registered file extensions.
-		 * @deprecated as of 5.2.4. See class-level note in
-		 * {@link RequestMappingHandlerMapping} on the deprecation of path
-		 * extension config options.
 		 */
-		@Deprecated
 		public void setRegisteredSuffixPatternMatch(boolean registeredSuffixPatternMatch) {
 			this.registeredSuffixPatternMatch = registeredSuffixPatternMatch;
 			this.suffixPatternMatch = (registeredSuffixPatternMatch || this.suffixPatternMatch);
@@ -1036,11 +619,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		/**
 		 * Return whether suffix pattern matching should be restricted to registered
 		 * file extensions only.
-		 * @deprecated as of 5.2.4. See class-level note in
-		 * {@link RequestMappingHandlerMapping} on the deprecation of path
-		 * extension config options.
 		 */
-		@Deprecated
 		public boolean useRegisteredSuffixPatternMatch() {
 			return this.registeredSuffixPatternMatch;
 		}
@@ -1049,12 +628,8 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 		 * Return the file extensions to use for suffix pattern matching. If
 		 * {@code registeredSuffixPatternMatch=true}, the extensions are obtained
 		 * from the configured {@code contentNegotiationManager}.
-		 * @deprecated as of 5.2.4. See class-level note in
-		 * {@link RequestMappingHandlerMapping} on the deprecation of path
-		 * extension config options.
 		 */
 		@Nullable
-		@Deprecated
 		public List<String> getFileExtensions() {
 			if (useRegisteredSuffixPatternMatch() && this.contentNegotiationManager != null) {
 				return this.contentNegotiationManager.getAllFileExtensions();

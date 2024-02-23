@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,26 +28,26 @@ import org.springframework.web.context.request.NativeWebRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A test fixture with a test subclass of AbstractMappingContentNegotiationStrategy.
+ * A test fixture with a test sub-class of AbstractMappingContentNegotiationStrategy.
  *
  * @author Rossen Stoyanchev
  * @since 3.2
  */
-class MappingContentNegotiationStrategyTests {
+public class MappingContentNegotiationStrategyTests {
 
 	@Test
-	void resolveMediaTypes() throws Exception {
+	public void resolveMediaTypes() throws Exception {
 		Map<String, MediaType> mapping = Collections.singletonMap("json", MediaType.APPLICATION_JSON);
 		TestMappingContentNegotiationStrategy strategy = new TestMappingContentNegotiationStrategy("json", mapping);
 
 		List<MediaType> mediaTypes = strategy.resolveMediaTypes(null);
 
-		assertThat(mediaTypes).hasSize(1);
+		assertThat(mediaTypes.size()).isEqualTo(1);
 		assertThat(mediaTypes.get(0).toString()).isEqualTo("application/json");
 	}
 
 	@Test
-	void resolveMediaTypesNoMatch() throws Exception {
+	public void resolveMediaTypesNoMatch() throws Exception {
 		Map<String, MediaType> mapping = null;
 		TestMappingContentNegotiationStrategy strategy = new TestMappingContentNegotiationStrategy("blah", mapping);
 
@@ -57,7 +57,7 @@ class MappingContentNegotiationStrategyTests {
 	}
 
 	@Test
-	void resolveMediaTypesNoKey() throws Exception {
+	public void resolveMediaTypesNoKey() throws Exception {
 		Map<String, MediaType> mapping = Collections.singletonMap("json", MediaType.APPLICATION_JSON);
 		TestMappingContentNegotiationStrategy strategy = new TestMappingContentNegotiationStrategy(null, mapping);
 
@@ -67,13 +67,13 @@ class MappingContentNegotiationStrategyTests {
 	}
 
 	@Test
-	void resolveMediaTypesHandleNoMatch() throws Exception {
+	public void resolveMediaTypesHandleNoMatch() throws Exception {
 		Map<String, MediaType> mapping = null;
 		TestMappingContentNegotiationStrategy strategy = new TestMappingContentNegotiationStrategy("xml", mapping);
 
 		List<MediaType> mediaTypes = strategy.resolveMediaTypes(null);
 
-		assertThat(mediaTypes).hasSize(1);
+		assertThat(mediaTypes.size()).isEqualTo(1);
 		assertThat(mediaTypes.get(0).toString()).isEqualTo("application/xml");
 	}
 

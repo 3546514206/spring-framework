@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.springframework.core.io.support;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.Properties;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DefaultPropertiesPersister;
 import org.springframework.util.PropertiesPersister;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.Properties;
 
 /**
  * Base class for JavaBean-style components that need to load properties
@@ -57,7 +55,7 @@ public abstract class PropertiesLoaderSupport {
 	@Nullable
 	private String fileEncoding;
 
-	private PropertiesPersister propertiesPersister = DefaultPropertiesPersister.INSTANCE;
+	private PropertiesPersister propertiesPersister = new DefaultPropertiesPersister();
 
 
 	/**
@@ -131,12 +129,12 @@ public abstract class PropertiesLoaderSupport {
 
 	/**
 	 * Set the PropertiesPersister to use for parsing properties files.
-	 * The default is {@code DefaultPropertiesPersister}.
-	 * @see DefaultPropertiesPersister#INSTANCE
+	 * The default is DefaultPropertiesPersister.
+	 * @see org.springframework.util.DefaultPropertiesPersister
 	 */
 	public void setPropertiesPersister(@Nullable PropertiesPersister propertiesPersister) {
 		this.propertiesPersister =
-				(propertiesPersister != null ? propertiesPersister : DefaultPropertiesPersister.INSTANCE);
+				(propertiesPersister != null ? propertiesPersister : new DefaultPropertiesPersister());
 	}
 
 
@@ -181,14 +179,12 @@ public abstract class PropertiesLoaderSupport {
 				try {
 					PropertiesLoaderUtils.fillProperties(
 							props, new EncodedResource(location, this.fileEncoding), this.propertiesPersister);
-				}
-				catch (FileNotFoundException | UnknownHostException | SocketException ex) {
+				} catch (FileNotFoundException | UnknownHostException ex) {
 					if (this.ignoreResourceNotFound) {
 						if (logger.isDebugEnabled()) {
 							logger.debug("Properties resource not found: " + ex.getMessage());
 						}
-					}
-					else {
+					} else {
 						throw ex;
 					}
 				}

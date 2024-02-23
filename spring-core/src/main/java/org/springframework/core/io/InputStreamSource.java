@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,10 +47,10 @@ public interface InputStreamSource {
 	 * as JavaMail, which needs to be able to read the stream multiple times when
 	 * creating mail attachments. For such a use case, it is <i>required</i>
 	 * that each {@code getInputStream()} call returns a fresh stream.
+	 *
 	 * @return the input stream for the underlying resource (must not be {@code null})
-	 * @throws java.io.FileNotFoundException if the underlying resource does not exist
-	 * @throws IOException if the content stream could not be opened
-	 * @see Resource#isReadable()
+	 * @throws java.io.FileNotFoundException if the underlying resource doesn't exist
+	 * @throws IOException                   if the content stream could not be opened
 	 */
 	InputStream getInputStream() throws IOException;
 

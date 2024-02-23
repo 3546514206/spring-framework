@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,30 @@
 
 package org.springframework.transaction.annotation;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.cache.support.SimpleCacheManager;
-import org.springframework.context.annotation.AdviceMode;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportResource;
+import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.stereotype.Repository;
+import org.springframework.tests.transaction.CallCountingTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor;
-import org.springframework.transaction.testfixture.CallCountingTransactionManager;
+
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Integration tests for the @EnableTransactionManagement annotation.
@@ -54,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatException;
  * @author Sam Brannen
  * @since 3.1
  */
+@SuppressWarnings("resource")
 class EnableTransactionManagementIntegrationTests {
 
 	@Test
@@ -96,8 +91,8 @@ class EnableTransactionManagementIntegrationTests {
 		ctx.register(Config.class, AspectJTxConfig.class);
 		// this test is a bit fragile, but gets the job done, proving that an
 		// attempt was made to look up the AJ aspect. It's due to classpath issues
-		// in integration-tests that it's not found.
-		assertThatException()
+		// in .integration-tests that it's not found.
+		assertThatExceptionOfType(Exception.class)
 			.isThrownBy(ctx::refresh)
 			.withMessageContaining("AspectJJtaTransactionManagementConfiguration");
 	}

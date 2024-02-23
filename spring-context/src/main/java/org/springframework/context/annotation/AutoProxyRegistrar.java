@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.config.AopConfigUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
+
+import java.util.Set;
 
 /**
  * Registers an auto proxy creator against the current {@link BeanDefinitionRegistry}
@@ -32,9 +31,8 @@ import org.springframework.core.type.AnnotationMetadata;
  * {@code proxyTargetClass} attributes set to the correct values.
  *
  * @author Chris Beams
+ * @see EnableAspectJAutoProxy
  * @since 3.1
- * @see org.springframework.cache.annotation.EnableCaching
- * @see org.springframework.transaction.annotation.EnableTransactionManagement
  */
 public class AutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 

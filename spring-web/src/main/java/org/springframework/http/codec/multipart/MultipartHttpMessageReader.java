@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,6 @@
 
 package org.springframework.http.codec.multipart;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Hints;
 import org.springframework.core.log.LogFormatUtils;
@@ -36,6 +27,11 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * {@code HttpMessageReader} for reading {@code "multipart/form-data"} requests
@@ -54,10 +50,6 @@ public class MultipartHttpMessageReader extends LoggingCodecSupport
 	private static final ResolvableType MULTIPART_VALUE_TYPE = ResolvableType.forClassWithGenerics(
 			MultiValueMap.class, String.class, Part.class);
 
-	static final List<MediaType> MIME_TYPES = List.of(
-			MediaType.MULTIPART_FORM_DATA,
-			MediaType.MULTIPART_MIXED,
-			MediaType.MULTIPART_RELATED);
 
 	private final HttpMessageReader<Part> partReader;
 
@@ -68,35 +60,17 @@ public class MultipartHttpMessageReader extends LoggingCodecSupport
 	}
 
 
-	/**
-	 * Return the configured parts reader.
-	 * @since 5.1.11
-	 */
-	public HttpMessageReader<Part> getPartReader() {
-		return this.partReader;
-	}
-
 	@Override
 	public List<MediaType> getReadableMediaTypes() {
-		return MIME_TYPES;
+		return Collections.singletonList(MediaType.MULTIPART_FORM_DATA);
 	}
 
 	@Override
 	public boolean canRead(ResolvableType elementType, @Nullable MediaType mediaType) {
-		return supportsMediaType(mediaType) && MULTIPART_VALUE_TYPE.isAssignableFrom(elementType);
+		return MULTIPART_VALUE_TYPE.isAssignableFrom(elementType) &&
+				(mediaType == null || MediaType.MULTIPART_FORM_DATA.isCompatibleWith(mediaType));
 	}
 
-	private boolean supportsMediaType(@Nullable MediaType mediaType) {
-		if (mediaType == null) {
-			return true;
-		}
-		for (MediaType supportedMediaType : MIME_TYPES) {
-			if (supportedMediaType.isCompatibleWith(mediaType)) {
-				return true;
-			}
-		}
-		return false;
-	}
 
 	@Override
 	public Flux<MultiValueMap<String, Part>> read(ResolvableType elementType,
@@ -130,7 +104,7 @@ public class MultipartHttpMessageReader extends LoggingCodecSupport
 	}
 
 	private List<Part> toList(Collection<Part> collection) {
-		return (collection instanceof List<Part> list ? list : new ArrayList<>(collection));
+		return collection instanceof List ? (List<Part>) collection : new ArrayList<>(collection);
 	}
 
 }

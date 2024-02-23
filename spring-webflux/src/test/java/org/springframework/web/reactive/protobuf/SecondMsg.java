@@ -6,7 +6,6 @@ package org.springframework.web.reactive.protobuf;
 /**
  * Protobuf type {@code SecondMsg}
  */
-@SuppressWarnings("serial")
 public  final class SecondMsg extends
     com.google.protobuf.GeneratedMessage
     implements SecondMsgOrBuilder {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package org.springframework.core.codec;
 
-import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
+import org.springframework.core.ResolvableType;
+import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
 
-import org.springframework.core.ResolvableType;
-import org.springframework.core.testfixture.codec.AbstractEncoderTests;
-import org.springframework.util.MimeTypeUtils;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,7 +41,7 @@ class ByteArrayEncoderTests extends AbstractEncoderTests<ByteArrayEncoder> {
 
 	@Override
 	@Test
-	protected void canEncode() {
+	public void canEncode() {
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(byte[].class),
 				MimeTypeUtils.TEXT_PLAIN)).isTrue();
 		assertThat(this.encoder.canEncode(ResolvableType.forClass(Integer.class),
@@ -57,7 +55,7 @@ class ByteArrayEncoderTests extends AbstractEncoderTests<ByteArrayEncoder> {
 
 	@Override
 	@Test
-	protected void encode() {
+	public void encode() {
 		Flux<byte[]> input = Flux.just(this.fooBytes, this.barBytes);
 
 		testEncodeAll(input, byte[].class, step -> step

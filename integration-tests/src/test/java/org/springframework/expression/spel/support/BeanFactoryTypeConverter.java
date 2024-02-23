@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.expression.TypeConverter;
-import org.springframework.util.ClassUtils;
 
 /**
  * Copied from Spring Integration for purposes of reproducing
@@ -60,9 +59,11 @@ class BeanFactoryTypeConverter implements TypeConverter, BeanFactoryAware {
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		if (beanFactory instanceof ConfigurableBeanFactory cbf &&
-				cbf.getTypeConverter() instanceof SimpleTypeConverter simpleTypeConverter) {
-			this.delegate = simpleTypeConverter;
+		if (beanFactory instanceof ConfigurableBeanFactory) {
+			Object typeConverter = ((ConfigurableBeanFactory) beanFactory).getTypeConverter();
+			if (typeConverter instanceof SimpleTypeConverter) {
+				delegate = (SimpleTypeConverter) typeConverter;
+			}
 		}
 	}
 
@@ -85,6 +86,7 @@ class BeanFactoryTypeConverter implements TypeConverter, BeanFactoryAware {
 		if (conversionService.canConvert(sourceTypeDescriptor, targetTypeDescriptor)) {
 			return true;
 		}
+		// TODO: what does this mean? This method is not used in SpEL so probably ignorable?
 		Class<?> sourceType = sourceTypeDescriptor.getObjectType();
 		Class<?> targetType = targetTypeDescriptor.getObjectType();
 		return canConvert(sourceType, targetType);
@@ -92,7 +94,7 @@ class BeanFactoryTypeConverter implements TypeConverter, BeanFactoryAware {
 
 	@Override
 	public Object convertValue(Object value, TypeDescriptor sourceType, TypeDescriptor targetType) {
-		if (ClassUtils.isVoidType(targetType.getType())) {
+		if (targetType.getType() == Void.class || targetType.getType() == Void.TYPE) {
 			return null;
 		}
 		if (conversionService.canConvert(sourceType, targetType)) {

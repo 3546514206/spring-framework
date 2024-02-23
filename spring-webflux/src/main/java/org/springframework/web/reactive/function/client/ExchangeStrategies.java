@@ -16,12 +16,12 @@
 
 package org.springframework.web.reactive.function.client;
 
-import java.util.List;
-import java.util.function.Consumer;
-
 import org.springframework.http.codec.ClientCodecConfigurer;
 import org.springframework.http.codec.HttpMessageReader;
 import org.springframework.http.codec.HttpMessageWriter;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Provides strategies for use in an {@link ExchangeFunction}.
@@ -46,15 +46,6 @@ public interface ExchangeStrategies {
 	 * @return the message writers
 	 */
 	List<HttpMessageWriter<?>> messageWriters();
-
-	/**
-	 * Return a builder to create a new {@link ExchangeStrategies} instance
-	 * replicated from the current instance.
-	 * @since 5.1.12
-	 */
-	default Builder mutate() {
-		throw new UnsupportedOperationException();
-	}
 
 
 	// Static builder methods

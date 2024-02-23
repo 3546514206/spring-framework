@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@ package org.springframework.web.socket.adapter.standard;
 
 import java.nio.ByteBuffer;
 
-import jakarta.websocket.DecodeException;
-import jakarta.websocket.Decoder;
-import jakarta.websocket.EncodeException;
-import jakarta.websocket.Encoder;
+import javax.websocket.DecodeException;
+import javax.websocket.Decoder;
+import javax.websocket.EncodeException;
+import javax.websocket.Encoder;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,6 @@ import org.springframework.core.convert.ConverterNotFoundException;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
-import org.springframework.lang.Nullable;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.socket.ContextLoaderTestUtils;
@@ -51,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  *
  * @author Phillip Webb
  */
-class ConvertingEncoderDecoderSupportTests {
+public class ConvertingEncoderDecoderSupportTests {
 
 	private static final String CONVERTED_TEXT = "_test";
 
@@ -64,12 +64,12 @@ class ConvertingEncoderDecoderSupportTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		setup(Config.class);
 	}
 
 	@AfterEach
-	void teardown() {
+	public void teardown() {
 		ContextLoaderTestUtils.setCurrentWebApplicationContext(null);
 	}
 
@@ -82,12 +82,12 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void encodeToText() throws Exception {
+	public void encodeToText() throws Exception {
 		assertThat(new MyTextEncoder().encode(myType)).isEqualTo(CONVERTED_TEXT);
 	}
 
 	@Test
-	void encodeToTextCannotConvert() {
+	public void encodeToTextCannotConvert() throws Exception {
 		setup(NoConvertersConfig.class);
 		assertThatExceptionOfType(EncodeException.class).isThrownBy(() ->
 				new MyTextEncoder().encode(myType))
@@ -95,13 +95,13 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void encodeToBinary() throws Exception {
+	public void encodeToBinary() throws Exception {
 		assertThat(new MyBinaryEncoder().encode(myType).array())
 				.isEqualTo(CONVERTED_BYTES.array());
 	}
 
 	@Test
-	void encodeToBinaryCannotConvert() {
+	public void encodeToBinaryCannotConvert() throws Exception {
 		setup(NoConvertersConfig.class);
 		assertThatExceptionOfType(EncodeException.class).isThrownBy(() ->
 				new MyBinaryEncoder().encode(myType))
@@ -109,14 +109,14 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void decodeFromText() throws Exception {
+	public void decodeFromText() throws Exception {
 		Decoder.Text<MyType> decoder = new MyTextDecoder();
 		assertThat(decoder.willDecode(CONVERTED_TEXT)).isTrue();
 		assertThat(decoder.decode(CONVERTED_TEXT)).isEqualTo(myType);
 	}
 
 	@Test
-	void decodeFromTextCannotConvert() {
+	public void decodeFromTextCannotConvert() throws Exception {
 		setup(NoConvertersConfig.class);
 		Decoder.Text<MyType> decoder = new MyTextDecoder();
 		assertThat(decoder.willDecode(CONVERTED_TEXT)).isFalse();
@@ -126,14 +126,14 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void decodeFromBinary() throws Exception {
+	public void decodeFromBinary() throws Exception {
 		Decoder.Binary<MyType> decoder = new MyBinaryDecoder();
 		assertThat(decoder.willDecode(CONVERTED_BYTES)).isTrue();
 		assertThat(decoder.decode(CONVERTED_BYTES)).isEqualTo(myType);
 	}
 
 	@Test
-	void decodeFromBinaryCannotConvert() {
+	public void decodeFromBinaryCannotConvert() throws Exception {
 		setup(NoConvertersConfig.class);
 		Decoder.Binary<MyType> decoder = new MyBinaryDecoder();
 		assertThat(decoder.willDecode(CONVERTED_BYTES)).isFalse();
@@ -143,28 +143,28 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void encodeAndDecodeText() throws Exception {
+	public void encodeAndDecodeText() throws Exception {
 		MyTextEncoderDecoder encoderDecoder = new MyTextEncoderDecoder();
 		String encoded = encoderDecoder.encode(myType);
 		assertThat(encoderDecoder.decode(encoded)).isEqualTo(myType);
 	}
 
 	@Test
-	void encodeAndDecodeBytes() throws Exception {
+	public void encodeAndDecodeBytes() throws Exception {
 		MyBinaryEncoderDecoder encoderDecoder = new MyBinaryEncoderDecoder();
 		ByteBuffer encoded = encoderDecoder.encode(myType);
 		assertThat(encoderDecoder.decode(encoded)).isEqualTo(myType);
 	}
 
 	@Test
-	void autowiresIntoEncoder() {
+	public void autowiresIntoEncoder() throws Exception {
 		WithAutowire withAutowire = new WithAutowire();
 		withAutowire.init(null);
 		assertThat(withAutowire.config).isEqualTo(applicationContext.getBean(Config.class));
 	}
 
 	@Test
-	void cannotFindApplicationContext() {
+	public void cannotFindApplicationContext() throws Exception {
 		ContextLoaderTestUtils.setCurrentWebApplicationContext(null);
 		WithAutowire encoder = new WithAutowire();
 		encoder.init(null);
@@ -174,7 +174,7 @@ class ConvertingEncoderDecoderSupportTests {
 	}
 
 	@Test
-	void cannotFindConversionService() {
+	public void cannotFindConversionService() throws Exception {
 		setup(NoConfig.class);
 		MyBinaryEncoder encoder = new MyBinaryEncoder();
 		encoder.init(null);
@@ -233,8 +233,11 @@ class ConvertingEncoderDecoderSupportTests {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object obj) {
-			return (obj instanceof MyType that && this.value.equals(that.value));
+		public boolean equals(Object obj) {
+			if (obj instanceof MyType) {
+				return ((MyType)obj).value.equals(value);
+			}
+			return false;
 		}
 	}
 
@@ -242,7 +245,7 @@ class ConvertingEncoderDecoderSupportTests {
 	private static class MyTypeToStringConverter implements Converter<MyType, String> {
 		@Override
 		public String convert(MyType source) {
-			return "_" + source;
+			return "_" + source.toString();
 		}
 	}
 
@@ -250,7 +253,7 @@ class ConvertingEncoderDecoderSupportTests {
 	private static class MyTypeToBytesConverter implements Converter<MyType, byte[]> {
 		@Override
 		public byte[] convert(MyType source) {
-			return ("~" + source).getBytes();
+			return ("~" + source.toString()).getBytes();
 		}
 	}
 

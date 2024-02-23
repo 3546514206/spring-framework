@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,72 +16,55 @@
 
 package org.springframework.web.reactive.function.client;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.function.Predicate;
-
 import org.reactivestreams.Publisher;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import org.springframework.core.codec.CodecException;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
+import java.util.List;
 
 /**
- * Internal methods shared between {@link DefaultWebClient} and
- * {@link DefaultClientResponse}.
+ * Internal methods shared between {@link DefaultWebClient} and {@link DefaultClientResponse}.
  *
  * @author Arjen Poutsma
  * @since 5.2
  */
 abstract class WebClientUtils {
 
-	private static final String VALUE_NONE = "\n\t\t\n\t\t\n\uE000\uE001\uE002\n\t\t\t\t\n";
-
 	/**
-	 * Predicate that returns true if an exception should be wrapped.
+	 * Create a delayed {@link ResponseEntity} from the given response and body.
 	 */
-	public static final Predicate<? super Throwable> WRAP_EXCEPTION_PREDICATE =
-			t -> !(t instanceof WebClientException) && !(t instanceof CodecException);
-
-
-	/**
-	 * Map the given response to a single value {@code ResponseEntity<T>}.
-	 */
-	@SuppressWarnings("unchecked")
-	public static <T> Mono<ResponseEntity<T>> mapToEntity(ClientResponse response, Mono<T> bodyMono) {
-		return ((Mono<Object>) bodyMono).defaultIfEmpty(VALUE_NONE).map(body ->
-				new ResponseEntity<>(
-						body != VALUE_NONE ? (T) body : null,
-						response.headers().asHttpHeaders(),
-						response.statusCode()));
+	public static <T> Mono<ResponseEntity<T>> toEntity(ClientResponse response, Mono<T> bodyMono) {
+		return Mono.defer(() -> {
+			HttpHeaders headers = response.headers().asHttpHeaders();
+			int status = response.rawStatusCode();
+			return bodyMono
+					.map(body -> createEntity(body, headers, status))
+					.switchIfEmpty(Mono.fromCallable(() -> createEntity(null, headers, status)));
+		});
 	}
 
 	/**
-	 * Map the given response to a {@code ResponseEntity<List<T>>}.
+	 * Create a delayed {@link ResponseEntity} list from the given response and body.
 	 */
-	public static <T> Mono<ResponseEntity<List<T>>> mapToEntityList(ClientResponse response, Publisher<T> body) {
-		return Flux.from(body).collectList().map(list ->
-				new ResponseEntity<>(list, response.headers().asHttpHeaders(), response.statusCode()));
+	public static <T> Mono<ResponseEntity<List<T>>> toEntityList(ClientResponse response, Publisher<T> body) {
+		return Mono.defer(() -> {
+			HttpHeaders headers = response.headers().asHttpHeaders();
+			int status = response.rawStatusCode();
+			return Flux.from(body)
+					.collectList()
+					.map(list -> createEntity(list, headers, status));
+		});
 	}
 
-	/**
-	 * Return a String representation of the request details for logging purposes.
-	 * @since 6.0.16
-	 */
-	public static String getRequestDescription(HttpMethod httpMethod, URI uri) {
-		if (StringUtils.hasText(uri.getQuery())) {
-			try {
-				uri = new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(), uri.getPath(), null, null);
-			}
-			catch (URISyntaxException ex) {
-				// ignore
-			}
-		}
-		return httpMethod.name() + " " + uri;
+	public static <T> ResponseEntity<T> createEntity(@Nullable T body, HttpHeaders headers, int status) {
+		HttpStatus resolvedStatus = HttpStatus.resolve(status);
+		return resolvedStatus != null
+				? new ResponseEntity<>(body, headers, resolvedStatus)
+				: ResponseEntity.status(status).headers(headers).body(body);
 	}
 
 }

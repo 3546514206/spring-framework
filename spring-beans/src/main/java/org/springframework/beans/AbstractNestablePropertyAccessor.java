@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,8 @@
 
 package org.springframework.beans;
 
-import java.beans.PropertyChangeEvent;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.security.PrivilegedActionException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.CollectionFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.ConversionException;
@@ -43,6 +27,11 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
+
+import java.beans.PropertyChangeEvent;
+import java.lang.reflect.*;
+import java.security.PrivilegedActionException;
+import java.util.*;
 
 /**
  * A basic {@link ConfigurablePropertyAccessor} that provides the necessary
@@ -59,7 +48,6 @@ import org.springframework.util.StringUtils;
  * @author Stephane Nicoll
  * @author Rod Johnson
  * @author Rob Harrop
- * @author Sam Brannen
  * @since 4.2
  * @see #registerCustomEditor
  * @see #setPropertyValues
@@ -115,7 +103,8 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 
 	/**
 	 * Create a new accessor for the given object.
-	 * @param object the object wrapped by this accessor
+	 *
+	 * @param object object wrapped by this accessor
 	 */
 	protected AbstractNestablePropertyAccessor(Object object) {
 		registerDefaultEditors();
@@ -134,7 +123,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new accessor for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this accessor
+	 * @param object object wrapped by this accessor
 	 * @param nestedPath the nested path of the object
 	 * @param rootObject the root object at the top of the path
 	 */
@@ -146,7 +135,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new accessor for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this accessor
+	 * @param object object wrapped by this accessor
 	 * @param nestedPath the nested path of the object
 	 * @param parent the containing accessor (must not be {@code null})
 	 */
@@ -279,7 +268,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		}
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("unchecked")
 	private void processKeyedProperty(PropertyTokenHolder tokens, PropertyValue pv) {
 		Object propValue = getPropertyHoldingValue(tokens);
 		PropertyHandler ph = getLocalPropertyHandler(tokens.actualName);
@@ -291,7 +280,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		String lastKey = tokens.keys[tokens.keys.length - 1];
 
 		if (propValue.getClass().isArray()) {
-			Class<?> requiredType = propValue.getClass().componentType();
+			Class<?> requiredType = propValue.getClass().getComponentType();
 			int arrayIndex = Integer.parseInt(lastKey);
 			Object oldValue = null;
 			try {
@@ -302,13 +291,11 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 						requiredType, ph.nested(tokens.keys.length));
 				int length = Array.getLength(propValue);
 				if (arrayIndex >= length && arrayIndex < this.autoGrowCollectionLimit) {
-					Class<?> componentType = propValue.getClass().componentType();
+					Class<?> componentType = propValue.getClass().getComponentType();
 					Object newArray = Array.newInstance(componentType, arrayIndex + 1);
 					System.arraycopy(propValue, 0, newArray, 0, length);
-					int lastKeyIndex = tokens.canonicalName.lastIndexOf('[');
-					String propName = tokens.canonicalName.substring(0, lastKeyIndex);
-					setPropertyValue(propName, newArray);
-					propValue = getPropertyValue(propName);
+					setPropertyValue(tokens.actualName, newArray);
+					propValue = getPropertyValue(tokens.actualName);
 				}
 				Array.set(propValue, arrayIndex, convertedValue);
 			}
@@ -318,15 +305,16 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 			}
 		}
 
-		else if (propValue instanceof List list) {
-			TypeDescriptor requiredType = ph.getCollectionType(tokens.keys.length);
+		else if (propValue instanceof List) {
+			Class<?> requiredType = ph.getCollectionType(tokens.keys.length);
+			List<Object> list = (List<Object>) propValue;
 			int index = Integer.parseInt(lastKey);
 			Object oldValue = null;
 			if (isExtractOldValueForEditor() && index < list.size()) {
 				oldValue = list.get(index);
 			}
 			Object convertedValue = convertIfNecessary(tokens.canonicalName, oldValue, pv.getValue(),
-					requiredType.getResolvableType().resolve(), requiredType);
+					requiredType, ph.nested(tokens.keys.length));
 			int size = list.size();
 			if (index >= size && index < this.autoGrowCollectionLimit) {
 				for (int i = size; i < index; i++) {
@@ -353,13 +341,14 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 			}
 		}
 
-		else if (propValue instanceof Map map) {
-			TypeDescriptor mapKeyType = ph.getMapKeyType(tokens.keys.length);
-			TypeDescriptor mapValueType = ph.getMapValueType(tokens.keys.length);
+		else if (propValue instanceof Map) {
+			Class<?> mapKeyType = ph.getMapKeyType(tokens.keys.length);
+			Class<?> mapValueType = ph.getMapValueType(tokens.keys.length);
+			Map<Object, Object> map = (Map<Object, Object>) propValue;
 			// IMPORTANT: Do not pass full property name in here - property editors
 			// must not kick in for map keys but rather only for map values.
-			Object convertedMapKey = convertIfNecessary(null, null, lastKey,
-					mapKeyType.getResolvableType().resolve(), mapKeyType);
+			TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(mapKeyType);
+			Object convertedMapKey = convertIfNecessary(null, null, lastKey, mapKeyType, typeDescriptor);
 			Object oldValue = null;
 			if (isExtractOldValueForEditor()) {
 				oldValue = map.get(convertedMapKey);
@@ -367,7 +356,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 			// Pass full property name and old value in here, since we want full
 			// conversion ability for map values.
 			Object convertedMapValue = convertIfNecessary(tokens.canonicalName, oldValue, pv.getValue(),
-					mapValueType.getResolvableType().resolve(), mapValueType);
+					mapValueType, ph.nested(tokens.keys.length));
 			map.put(convertedMapKey, convertedMapValue);
 		}
 
@@ -421,13 +410,9 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 							"' - property not found on bean class [" + getRootClass().getName() + "]");
 				}
 				return;
+			} else {
+				throw createNotWritablePropertyException(tokens.canonicalName);
 			}
-			if (this.suppressNotWritablePropertyException) {
-				// Optimization for common ignoreUnknown=true scenario since the
-				// exception would be caught and swallowed higher up anyway...
-				return;
-			}
-			throw createNotWritablePropertyException(tokens.canonicalName);
 		}
 
 		Object oldValue = null;
@@ -444,8 +429,8 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 							oldValue = ph.getValue();
 						}
 						catch (Exception ex) {
-							if (ex instanceof PrivilegedActionException pae) {
-								ex = pae.getException();
+							if (ex instanceof PrivilegedActionException) {
+								ex = ((PrivilegedActionException) ex).getException();
 							}
 							if (logger.isDebugEnabled()) {
 								logger.debug("Could not read previous value of property '" +
@@ -461,9 +446,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 			ph.setValue(valueToApply);
 		}
 		catch (TypeMismatchException ex) {
-			if (!ph.setValueFallbackIfPossible(pv.getValue())) {
-				throw ex;
-			}
+			throw ex;
 		}
 		catch (InvocationTargetException ex) {
 			PropertyChangeEvent propertyChangeEvent = new PropertyChangeEvent(
@@ -617,7 +600,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		return nestedPa.getPropertyValue(tokens);
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("unchecked")
 	@Nullable
 	protected Object getPropertyValue(PropertyTokenHolder tokens) throws BeansException {
 		String propertyName = tokens.canonicalName;
@@ -653,39 +636,32 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 						value = growArrayIfNecessary(value, index, indexedPropertyName.toString());
 						value = Array.get(value, index);
 					}
-					else if (value instanceof List list) {
+					else if (value instanceof List) {
 						int index = Integer.parseInt(key);
+						List<Object> list = (List<Object>) value;
 						growCollectionIfNecessary(list, index, indexedPropertyName.toString(), ph, i + 1);
 						value = list.get(index);
 					}
-					else if (value instanceof Iterable iterable) {
-						// Apply index to Iterator in case of a Set/Collection/Iterable.
+					else if (value instanceof Set) {
+						// Apply index to Iterator in case of a Set.
+						Set<Object> set = (Set<Object>) value;
 						int index = Integer.parseInt(key);
-						if (value instanceof Collection<?> coll) {
-							if (index < 0 || index >= coll.size()) {
-								throw new InvalidPropertyException(getRootClass(), this.nestedPath + propertyName,
-										"Cannot get element with index " + index + " from Collection of size " +
-												coll.size() + ", accessed using property path '" + propertyName + "'");
-							}
+						if (index < 0 || index >= set.size()) {
+							throw new InvalidPropertyException(getRootClass(), this.nestedPath + propertyName,
+									"Cannot get element with index " + index + " from Set of size " +
+											set.size() + ", accessed using property path '" + propertyName + "'");
 						}
-						Iterator<Object> it = iterable.iterator();
-						boolean found = false;
-						int currIndex = 0;
-						for (; it.hasNext(); currIndex++) {
+						Iterator<Object> it = set.iterator();
+						for (int j = 0; it.hasNext(); j++) {
 							Object elem = it.next();
-							if (currIndex == index) {
+							if (j == index) {
 								value = elem;
-								found = true;
 								break;
 							}
 						}
-						if (!found) {
-							throw new InvalidPropertyException(getRootClass(), this.nestedPath + propertyName,
-									"Cannot get element with index " + index + " from Iterable of size " +
-											currIndex + ", accessed using property path '" + propertyName + "'");
-						}
 					}
-					else if (value instanceof Map map) {
+					else if (value instanceof Map) {
+						Map<Object, Object> map = (Map<Object, Object>) value;
 						Class<?> mapKeyType = ph.getResolvableType().getNested(i + 1).asMap().resolveGeneric(0);
 						// IMPORTANT: Do not pass full property name in here - property editors
 						// must not kick in for map keys but rather only for map values.
@@ -696,16 +672,12 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 					else {
 						throw new InvalidPropertyException(getRootClass(), this.nestedPath + propertyName,
 								"Property referenced in indexed property path '" + propertyName +
-										"' is neither an array nor a List/Set/Collection/Iterable nor a Map; " +
-										"returned value was [" + value + "]");
+										"' is neither an array nor a List nor a Set nor a Map; returned value was [" + value + "]");
 					}
 					indexedPropertyName.append(PROPERTY_KEY_PREFIX).append(key).append(PROPERTY_KEY_SUFFIX);
 				}
 			}
 			return value;
-		}
-		catch (InvalidPropertyException ex) {
-			throw ex;
 		}
 		catch (IndexOutOfBoundsException ex) {
 			throw new InvalidPropertyException(getRootClass(), this.nestedPath + propertyName,
@@ -753,7 +725,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	/**
 	 * Create a new nested property accessor instance.
 	 * Can be overridden in subclasses to create a PropertyAccessor subclass.
-	 * @param object the object wrapped by this PropertyAccessor
+	 * @param object object wrapped by this PropertyAccessor
 	 * @param nestedPath the nested path of the object
 	 * @return the nested PropertyAccessor instance
 	 */
@@ -771,7 +743,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		}
 		int length = Array.getLength(array);
 		if (index >= length && index < this.autoGrowCollectionLimit) {
-			Class<?> componentType = array.getClass().componentType();
+			Class<?> componentType = array.getClass().getComponentType();
 			Object newArray = Array.newInstance(componentType, index + 1);
 			System.arraycopy(array, 0, newArray, 0, length);
 			for (int i = length; i < Array.getLength(newArray); i++) {
@@ -822,6 +794,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	 * @param propertyPath property path, which may be nested
 	 * @return a property accessor for the target bean
 	 */
+	@SuppressWarnings("unchecked")  // avoid nested generic
 	protected AbstractNestablePropertyAccessor getPropertyAccessorForPropertyPath(String propertyPath) {
 		int pos = PropertyAccessorUtils.getFirstNestedPropertySeparatorIndex(propertyPath);
 		// Handle nested properties recursively.
@@ -852,7 +825,7 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		PropertyTokenHolder tokens = getPropertyNameTokens(nestedProperty);
 		String canonicalName = tokens.canonicalName;
 		Object value = getPropertyValue(tokens);
-		if (value == null || (value instanceof Optional<?> optional && optional.isEmpty())) {
+		if (value == null || (value instanceof Optional && !((Optional<?>) value).isPresent())) {
 			if (isAutoGrowNestedPaths()) {
 				value = setDefaultValue(tokens);
 			}
@@ -902,11 +875,11 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	private Object newValue(Class<?> type, @Nullable TypeDescriptor desc, String name) {
 		try {
 			if (type.isArray()) {
-				Class<?> componentType = type.componentType();
+				Class<?> componentType = type.getComponentType();
 				// TODO - only handles 2-dimensional arrays
 				if (componentType.isArray()) {
 					Object array = Array.newInstance(componentType, 1);
-					Array.set(array, 0, Array.newInstance(componentType.componentType(), 0));
+					Array.set(array, 0, Array.newInstance(componentType.getComponentType(), 0));
 					return array;
 				}
 				else {
@@ -978,11 +951,11 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		int length = propertyName.length();
 		for (int i = startIndex; i < length; i++) {
 			switch (propertyName.charAt(i)) {
-				case PropertyAccessor.PROPERTY_KEY_PREFIX_CHAR -> {
+				case PropertyAccessor.PROPERTY_KEY_PREFIX_CHAR:
 					// The property name contains opening prefix(es)...
 					unclosedPrefixes++;
-				}
-				case PropertyAccessor.PROPERTY_KEY_SUFFIX_CHAR -> {
+					break;
+				case PropertyAccessor.PROPERTY_KEY_SUFFIX_CHAR:
 					if (unclosedPrefixes == 0) {
 						// No unclosed prefix(es) in the property name (left) ->
 						// this is the suffix we are looking for.
@@ -993,11 +966,12 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 						// just one that occurred within the property name.
 						unclosedPrefixes--;
 					}
-				}
+					break;
 			}
 		}
 		return -1;
 	}
+
 
 	@Override
 	public String toString() {
@@ -1014,20 +988,18 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 	 */
 	protected abstract static class PropertyHandler {
 
-		@Nullable
 		private final Class<?> propertyType;
 
 		private final boolean readable;
 
 		private final boolean writable;
 
-		public PropertyHandler(@Nullable Class<?> propertyType, boolean readable, boolean writable) {
+		public PropertyHandler(Class<?> propertyType, boolean readable, boolean writable) {
 			this.propertyType = propertyType;
 			this.readable = readable;
 			this.writable = writable;
 		}
 
-		@Nullable
 		public Class<?> getPropertyType() {
 			return this.propertyType;
 		}
@@ -1044,16 +1016,19 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 
 		public abstract ResolvableType getResolvableType();
 
-		public TypeDescriptor getMapKeyType(int nestingLevel) {
-			return TypeDescriptor.valueOf(getResolvableType().getNested(nestingLevel).asMap().resolveGeneric(0));
+		@Nullable
+		public Class<?> getMapKeyType(int nestingLevel) {
+			return getResolvableType().getNested(nestingLevel).asMap().resolveGeneric(0);
 		}
 
-		public TypeDescriptor getMapValueType(int nestingLevel) {
-			return TypeDescriptor.valueOf(getResolvableType().getNested(nestingLevel).asMap().resolveGeneric(1));
+		@Nullable
+		public Class<?> getMapValueType(int nestingLevel) {
+			return getResolvableType().getNested(nestingLevel).asMap().resolveGeneric(1);
 		}
 
-		public TypeDescriptor getCollectionType(int nestingLevel) {
-			return TypeDescriptor.valueOf(getResolvableType().getNested(nestingLevel).asCollection().resolveGeneric());
+		@Nullable
+		public Class<?> getCollectionType(int nestingLevel) {
+			return getResolvableType().getNested(nestingLevel).asCollection().resolveGeneric();
 		}
 
 		@Nullable
@@ -1063,10 +1038,6 @@ public abstract class AbstractNestablePropertyAccessor extends AbstractPropertyA
 		public abstract Object getValue() throws Exception;
 
 		public abstract void setValue(@Nullable Object value) throws Exception;
-
-		public boolean setValueFallbackIfPossible(@Nullable Object value) {
-			return false;
-		}
 	}
 
 

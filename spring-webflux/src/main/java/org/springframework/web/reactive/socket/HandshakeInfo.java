@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +24,9 @@ import java.util.Map;
 
 import reactor.core.publisher.Mono;
 
-import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.MultiValueMap;
 
 /**
  * Simple container of information related to the handshake request that started
@@ -41,17 +38,11 @@ import org.springframework.util.MultiValueMap;
  */
 public class HandshakeInfo {
 
-	private static final MultiValueMap<String, HttpCookie> EMPTY_COOKIES =
-			CollectionUtils.toMultiValueMap(Collections.emptyMap());
-
-
 	private final URI uri;
 
 	private final Mono<Principal> principalMono;
 
 	private final HttpHeaders headers;
-
-	private final MultiValueMap<String, HttpCookie> cookies;
 
 	@Nullable
 	private final String protocol;
@@ -73,57 +64,34 @@ public class HandshakeInfo {
 	 * @param protocol the negotiated sub-protocol (may be {@code null})
 	 */
 	public HandshakeInfo(URI uri, HttpHeaders headers, Mono<Principal> principal, @Nullable String protocol) {
-		this(uri, headers, EMPTY_COOKIES, principal, protocol, null, Collections.emptyMap(), null);
+		this(uri, headers, principal, protocol, null, Collections.emptyMap(), null);
 	}
 
 	/**
-	 * Constructor targeting server-side use with extra information such as
-	 * the remote address, attributes, and a log prefix.
+	 * Constructor targetting server-side use with extra information about the
+	 * handshake, the remote address, and a pre-existing log prefix for
+	 * correlation.
 	 * @param uri the endpoint URL
-	 * @param headers server request headers
+	 * @param headers request headers for server or response headers or client
 	 * @param principal the principal for the session
 	 * @param protocol the negotiated sub-protocol (may be {@code null})
-	 * @param remoteAddress the remote address of the client
-	 * @param attributes initial attributes for the WebSocket session
-	 * @param logPrefix the log prefix for the handshake request.
+	 * @param remoteAddress the remote address where the handshake came from
+	 * @param attributes initial attributes to use for the WebSocket session
+	 * @param logPrefix log prefix used during the handshake for correlating log
+	 * messages, if any.
 	 * @since 5.1
-	 * @deprecated as of 5.3.5 in favor of
-	 * {@link #HandshakeInfo(URI, HttpHeaders, MultiValueMap, Mono, String, InetSocketAddress, Map, String)}
 	 */
-	@Deprecated
 	public HandshakeInfo(URI uri, HttpHeaders headers, Mono<Principal> principal,
-				@Nullable String protocol, @Nullable InetSocketAddress remoteAddress,
-				Map<String, Object> attributes, @Nullable String logPrefix) {
-
-		this(uri, headers, EMPTY_COOKIES, principal, protocol, remoteAddress, attributes, logPrefix);
-	}
-
-	/**
-	 * Constructor targeting server-side use with extra information such as the
-	 * cookies, remote address, attributes, and a log prefix.
-	 * @param uri the endpoint URL
-	 * @param headers server request headers
-	 * @param cookies server request cookies
-	 * @param principal the principal for the session
-	 * @param protocol the negotiated sub-protocol (may be {@code null})
-	 * @param remoteAddress the remote address of the client
-	 * @param attributes initial attributes for the WebSocket session
-	 * @param logPrefix the log prefix for the handshake request.
-	 * @since 5.3.5
-	 */
-	public HandshakeInfo(URI uri, HttpHeaders headers, MultiValueMap<String, HttpCookie> cookies,
-				Mono<Principal> principal, @Nullable String protocol, @Nullable InetSocketAddress remoteAddress,
-				Map<String, Object> attributes, @Nullable String logPrefix) {
+			@Nullable String protocol, @Nullable InetSocketAddress remoteAddress,
+			Map<String, Object> attributes, @Nullable String logPrefix) {
 
 		Assert.notNull(uri, "URI is required");
 		Assert.notNull(headers, "HttpHeaders are required");
-		Assert.notNull(cookies, "'cookies' are required");
 		Assert.notNull(principal, "Principal is required");
-		Assert.notNull(attributes, "'attributes' are required");
+		Assert.notNull(attributes, "'attributes' is required");
 
 		this.uri = uri;
 		this.headers = headers;
-		this.cookies = cookies;
 		this.principalMono = principal;
 		this.protocol = protocol;
 		this.remoteAddress = remoteAddress;
@@ -140,25 +108,15 @@ public class HandshakeInfo {
 	}
 
 	/**
-	 * Return the HTTP headers from the handshake request, either server request
-	 * headers for a server session or the client response headers for a client
-	 * session.
+	 * Return the handshake HTTP headers. Those are the request headers for a
+	 * server session and the response headers for a client session.
 	 */
 	public HttpHeaders getHeaders() {
 		return this.headers;
 	}
 
 	/**
-	 * For a server session this returns the server request cookies from the
-	 * handshake request. For a client session, it is an empty map.
-	 * @since 5.3.5
-	 */
-	public MultiValueMap<String, HttpCookie> getCookies() {
-		return this.cookies;
-	}
-
-	/**
-	 * Return the principal associated with the handshake request, if any.
+	 * Return the principal associated with the handshake HTTP request.
 	 */
 	public Mono<Principal> getPrincipal() {
 		return this.principalMono;
@@ -175,8 +133,8 @@ public class HandshakeInfo {
 	}
 
 	/**
-	 * For a server session this is the remote address where the handshake
-	 * request came from. For a client session, it is {@code null}.
+	 * For a server-side session this is the remote address where the handshake
+	 * request came from.
 	 * @since 5.1
 	 */
 	@Nullable
@@ -185,7 +143,8 @@ public class HandshakeInfo {
 	}
 
 	/**
-	 * Attributes extracted from the handshake request to add to the session.
+	 * Attributes extracted from the handshake request to be added to the
+	 * WebSocket session.
 	 * @since 5.1
 	 */
 	public Map<String, Object> getAttributes() {
@@ -205,7 +164,7 @@ public class HandshakeInfo {
 
 	@Override
 	public String toString() {
-		return "HandshakeInfo[uri=" + this.uri + "]";
+		return "HandshakeInfo[uri=" + this.uri + ", headers=" + this.headers + "]";
 	}
 
 }

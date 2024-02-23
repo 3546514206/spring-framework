@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.transaction.annotation;
 
-import java.util.Collection;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
@@ -32,14 +30,16 @@ import org.springframework.transaction.config.TransactionManagementConfigUtils;
 import org.springframework.transaction.event.TransactionalEventListenerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.util.Collection;
+
 /**
  * Abstract base {@code @Configuration} class providing common structure for enabling
  * Spring's annotation-driven transaction management capability.
  *
  * @author Chris Beams
  * @author Stephane Nicoll
- * @since 3.1
  * @see EnableTransactionManagement
+ * @since 3.1
  */
 @Configuration
 public abstract class AbstractTransactionManagementConfiguration implements ImportAware {
@@ -53,11 +53,16 @@ public abstract class AbstractTransactionManagementConfiguration implements Impo
 	@Nullable
 	protected TransactionManager txManager;
 
+	@Bean(name = TransactionManagementConfigUtils.TRANSACTIONAL_EVENT_LISTENER_FACTORY_BEAN_NAME)
+	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+	public static TransactionalEventListenerFactory transactionalEventListenerFactory() {
+		return new TransactionalEventListenerFactory();
+	}
 
 	@Override
 	public void setImportMetadata(AnnotationMetadata importMetadata) {
 		this.enableTx = AnnotationAttributes.fromMap(
-				importMetadata.getAnnotationAttributes(EnableTransactionManagement.class.getName()));
+				importMetadata.getAnnotationAttributes(EnableTransactionManagement.class.getName(), false));
 		if (this.enableTx == null) {
 			throw new IllegalArgumentException(
 					"@EnableTransactionManagement is not present on importing class " + importMetadata.getClassName());
@@ -74,13 +79,6 @@ public abstract class AbstractTransactionManagementConfiguration implements Impo
 		}
 		TransactionManagementConfigurer configurer = configurers.iterator().next();
 		this.txManager = configurer.annotationDrivenTransactionManager();
-	}
-
-
-	@Bean(name = TransactionManagementConfigUtils.TRANSACTIONAL_EVENT_LISTENER_FACTORY_BEAN_NAME)
-	@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
-	public static TransactionalEventListenerFactory transactionalEventListenerFactory() {
-		return new RestrictedTransactionalEventListenerFactory();
 	}
 
 }

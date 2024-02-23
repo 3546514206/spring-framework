@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,37 @@
 
 package org.springframework.http.codec;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.io.buffer.AbstractLeakCheckingTests;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.core.ResolvableType;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.io.buffer.AbstractLeakCheckingTests;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Sebastien Deleuze
  */
-class FormHttpMessageReaderTests extends AbstractLeakCheckingTests {
+public class FormHttpMessageReaderTests extends AbstractLeakCheckingTests {
 
 	private final FormHttpMessageReader reader = new FormHttpMessageReader();
 
 
 	@Test
-	void canRead() {
+	public void canRead() {
 		assertThat(this.reader.canRead(
 				ResolvableType.forClassWithGenerics(MultiValueMap.class, String.class, String.class),
 				MediaType.APPLICATION_FORM_URLENCODED)).isTrue();
@@ -74,33 +73,37 @@ class FormHttpMessageReaderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void readFormAsMono() {
+	public void readFormAsMono() {
 		String body = "name+1=value+1&name+2=value+2%2B1&name+2=value+2%2B2&name+3";
 		MockServerHttpRequest request = request(body);
 		MultiValueMap<String, String> result = this.reader.readMono(null, request, null).block();
 
-		assertThat(result).as("Invalid result").hasSize(3);
+		assertThat(result.size()).as("Invalid result").isEqualTo(3);
 		assertThat(result.getFirst("name 1")).as("Invalid result").isEqualTo("value 1");
 		List<String> values = result.get("name 2");
-		assertThat(values).as("Invalid result").containsExactly("value 2+1", "value 2+2");
+		assertThat(values.size()).as("Invalid result").isEqualTo(2);
+		assertThat(values.get(0)).as("Invalid result").isEqualTo("value 2+1");
+		assertThat(values.get(1)).as("Invalid result").isEqualTo("value 2+2");
 		assertThat(result.getFirst("name 3")).as("Invalid result").isNull();
 	}
 
 	@Test
-	void readFormAsFlux() {
+	public void readFormAsFlux() {
 		String body = "name+1=value+1&name+2=value+2%2B1&name+2=value+2%2B2&name+3";
 		MockServerHttpRequest request = request(body);
 		MultiValueMap<String, String> result = this.reader.read(null, request, null).single().block();
 
-		assertThat(result).as("Invalid result").hasSize(3);
+		assertThat(result.size()).as("Invalid result").isEqualTo(3);
 		assertThat(result.getFirst("name 1")).as("Invalid result").isEqualTo("value 1");
 		List<String> values = result.get("name 2");
-		assertThat(values).as("Invalid result").containsExactly("value 2+1", "value 2+2");
+		assertThat(values.size()).as("Invalid result").isEqualTo(2);
+		assertThat(values.get(0)).as("Invalid result").isEqualTo("value 2+1");
+		assertThat(values.get(1)).as("Invalid result").isEqualTo("value 2+2");
 		assertThat(result.getFirst("name 3")).as("Invalid result").isNull();
 	}
 
 	@Test
-	void readFormError() {
+	public void readFormError() {
 		DataBuffer fooBuffer = stringBuffer("name=value");
 		Flux<DataBuffer> body =
 				Flux.just(fooBuffer).concatWith(Flux.error(new RuntimeException()));
@@ -120,7 +123,7 @@ class FormHttpMessageReaderTests extends AbstractLeakCheckingTests {
 	private MockServerHttpRequest request(Publisher<? extends DataBuffer> body) {
 		return MockServerHttpRequest
 					.method(HttpMethod.GET, "/")
-					.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+					.header(HttpHeaders.CONTENT_TYPE,  MediaType.APPLICATION_FORM_URLENCODED_VALUE)
 					.body(body);
 	}
 

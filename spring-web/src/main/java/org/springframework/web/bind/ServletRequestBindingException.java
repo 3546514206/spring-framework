@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,7 @@
 
 package org.springframework.web.bind;
 
-import jakarta.servlet.ServletException;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ProblemDetail;
-import org.springframework.lang.Nullable;
-import org.springframework.web.ErrorResponse;
+import org.springframework.web.util.NestedServletException;
 
 /**
  * Fatal binding exception, thrown when we want to
@@ -36,90 +30,23 @@ import org.springframework.web.ErrorResponse;
  * @author Juergen Hoeller
  */
 @SuppressWarnings("serial")
-public class ServletRequestBindingException extends ServletException implements ErrorResponse {
-
-	private final ProblemDetail body = ProblemDetail.forStatus(getStatusCode());
-
-	private final String messageDetailCode;
-
-	@Nullable
-	private final Object[] messageDetailArguments;
-
+public class ServletRequestBindingException extends NestedServletException {
 
 	/**
-	 * Constructor with a message only.
+	 * Constructor for ServletRequestBindingException.
 	 * @param msg the detail message
 	 */
 	public ServletRequestBindingException(String msg) {
-		this(msg, null, null);
+		super(msg);
 	}
 
 	/**
-	 * Constructor with a message and a cause.
+	 * Constructor for ServletRequestBindingException.
 	 * @param msg the detail message
 	 * @param cause the root cause
 	 */
 	public ServletRequestBindingException(String msg, Throwable cause) {
-		this(msg, cause, null, null);
-	}
-
-	/**
-	 * Constructor for ServletRequestBindingException.
-	 * @param msg the detail message
-	 * @param messageDetailCode the code to use to resolve the problem "detail"
-	 * through a {@link org.springframework.context.MessageSource}
-	 * @param messageDetailArguments the arguments to make available when
-	 * resolving the problem "detail" through a {@code MessageSource}
-	 * @since 6.0
-	 */
-	protected ServletRequestBindingException(
-			String msg, @Nullable String messageDetailCode, @Nullable Object[] messageDetailArguments) {
-
-		this(msg, null, messageDetailCode, messageDetailArguments);
-	}
-
-	/**
-	 * Constructor for ServletRequestBindingException.
-	 * @param msg the detail message
-	 * @param cause the root cause
-	 * @param messageDetailCode the code to use to resolve the problem "detail"
-	 * through a {@link org.springframework.context.MessageSource}
-	 * @param messageDetailArguments the arguments to make available when
-	 * resolving the problem "detail" through a {@code MessageSource}
-	 * @since 6.0
-	 */
-	protected ServletRequestBindingException(String msg, @Nullable Throwable cause,
-			@Nullable String messageDetailCode, @Nullable Object[] messageDetailArguments) {
-
 		super(msg, cause);
-		this.messageDetailCode = initMessageDetailCode(messageDetailCode);
-		this.messageDetailArguments = messageDetailArguments;
-	}
-
-	private String initMessageDetailCode(@Nullable String messageDetailCode) {
-		return (messageDetailCode != null ?
-				messageDetailCode : ErrorResponse.getDefaultDetailMessageCode(getClass(), null));
-	}
-
-
-	@Override
-	public HttpStatusCode getStatusCode() {
-		return HttpStatus.BAD_REQUEST;
-	}
-
-	@Override
-	public ProblemDetail getBody() {
-		return this.body;
-	}
-
-	@Override
-	public String getDetailMessageCode() {
-		return this.messageDetailCode;
-	}
-
-	@Override
-	public Object[] getDetailMessageArguments() {
-		return this.messageDetailArguments;
 	}
 
 }

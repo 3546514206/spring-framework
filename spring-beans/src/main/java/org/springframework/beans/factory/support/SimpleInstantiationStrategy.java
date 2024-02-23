@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.beans.factory.support;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanFactory;
@@ -27,6 +23,13 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 
 /**
  * Simple object instantiation strategy for use in a BeanFactory.
@@ -36,7 +39,6 @@ import org.springframework.util.StringUtils;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @author Stephane Nicoll
  * @since 1.1
  */
 public class SimpleInstantiationStrategy implements InstantiationStrategy {
@@ -54,15 +56,6 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 		return currentlyInvokedFactoryMethod.get();
 	}
 
-	/**
-	 * Set the factory method currently being invoked or {@code null} to reset.
-	 * @param method the factory method currently being invoked or {@code null}
-	 * @since 6.0
-	 */
-	public static void setCurrentlyInvokedFactoryMethod(@Nullable Method method) {
-		currentlyInvokedFactoryMethod.set(method);
-	}
-
 
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
@@ -72,12 +65,17 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			synchronized (bd.constructorArgumentLock) {
 				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse == null) {
-					Class<?> clazz = bd.getBeanClass();
+					final Class<?> clazz = bd.getBeanClass();
 					if (clazz.isInterface()) {
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
 					try {
-						constructorToUse = clazz.getDeclaredConstructor();
+						if (System.getSecurityManager() != null) {
+							constructorToUse = AccessController.doPrivileged((PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
+						}
+						else {
+							constructorToUse = clazz.getDeclaredConstructor();
+						}
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
 					}
 					catch (Throwable ex) {
@@ -88,7 +86,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
-			// Must generate CGLIB subclass.
+			// Must generate CGLIB subclass. 基于CGLI生成
 			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}
@@ -105,9 +103,16 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
-			Constructor<?> ctor, Object... args) {
+			final Constructor<?> ctor, Object... args) {
 
 		if (!bd.hasMethodOverrides()) {
+			if (System.getSecurityManager() != null) {
+				// use own privileged to change accessibility (when security is on)
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(ctor);
+					return null;
+				});
+			}
 			return BeanUtils.instantiateClass(ctor, args);
 		}
 		else {
@@ -129,10 +134,18 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
-			@Nullable Object factoryBean, Method factoryMethod, Object... args) {
+			@Nullable Object factoryBean, final Method factoryMethod, Object... args) {
 
 		try {
-			ReflectionUtils.makeAccessible(factoryMethod);
+			if (System.getSecurityManager() != null) {
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(factoryMethod);
+					return null;
+				});
+			}
+			else {
+				ReflectionUtils.makeAccessible(factoryMethod);
+			}
 
 			Method priorInvokedFactoryMethod = currentlyInvokedFactoryMethod.get();
 			try {
@@ -153,11 +166,6 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			}
 		}
 		catch (IllegalArgumentException ex) {
-			if (factoryBean != null && !factoryMethod.getDeclaringClass().isAssignableFrom(factoryBean.getClass())) {
-				throw new BeanInstantiationException(factoryMethod,
-						"Illegal factory instance for factory method '" + factoryMethod.getName() + "'; " +
-						"instance: " + factoryBean.getClass().getName(), ex);
-			}
 			throw new BeanInstantiationException(factoryMethod,
 					"Illegal arguments to factory method '" + factoryMethod.getName() + "'; " +
 					"args: " + StringUtils.arrayToCommaDelimitedString(args), ex);
@@ -167,10 +175,9 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					"Cannot access factory method '" + factoryMethod.getName() + "'; is it public?", ex);
 		}
 		catch (InvocationTargetException ex) {
-			String msg = "Factory method '" + factoryMethod.getName() + "' threw exception with message: " +
-					ex.getTargetException().getMessage();
-			if (bd.getFactoryBeanName() != null && owner instanceof ConfigurableBeanFactory cbf &&
-					cbf.isCurrentlyInCreation(bd.getFactoryBeanName())) {
+			String msg = "Factory method '" + factoryMethod.getName() + "' threw exception";
+			if (bd.getFactoryBeanName() != null && owner instanceof ConfigurableBeanFactory &&
+					((ConfigurableBeanFactory) owner).isCurrentlyInCreation(bd.getFactoryBeanName())) {
 				msg = "Circular reference involving containing bean '" + bd.getFactoryBeanName() + "' - consider " +
 						"declaring the factory method as static for independence from its containing instance. " + msg;
 			}

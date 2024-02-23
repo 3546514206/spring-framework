@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,31 @@
 
 package org.springframework.web.servlet.tags;
 
-import jakarta.servlet.jsp.JspException;
-import jakarta.servlet.jsp.PageContext;
-import jakarta.servlet.jsp.tagext.Tag;
-import jakarta.servlet.jsp.tagext.TagSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.test.MockBodyContent;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 
-import org.springframework.web.testfixture.servlet.MockBodyContent;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.PageContext;
+import javax.servlet.jsp.tagext.Tag;
+import javax.servlet.jsp.tagext.TagSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ArgumentTag}
+ * Unit tests for {@link ArgumentTag}
  *
  * @author Nicholas Williams
  */
-class ArgumentTagTests extends AbstractTagTests {
+public class ArgumentTagTests extends AbstractTagTests {
 
 	private ArgumentTag tag;
 
 	private MockArgumentSupportTag parent;
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() throws Exception {
 		PageContext context = createPageContext();
 		parent = new MockArgumentSupportTag();
 		tag = new ArgumentTag();
@@ -49,7 +49,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void argumentWithStringValue() throws JspException {
+	public void argumentWithStringValue() throws JspException {
 		tag.setValue("value1");
 
 		int action = tag.doEndTag();
@@ -59,7 +59,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void argumentWithImplicitNullValue() throws JspException {
+	public void argumentWithImplicitNullValue() throws JspException {
 		int action = tag.doEndTag();
 
 		assertThat(action).isEqualTo(Tag.EVAL_PAGE);
@@ -67,7 +67,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void argumentWithExplicitNullValue() throws JspException {
+	public void argumentWithExplicitNullValue() throws JspException {
 		tag.setValue(null);
 
 		int action = tag.doEndTag();
@@ -77,7 +77,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void argumentWithBodyValue() throws JspException {
+	public void argumentWithBodyValue() throws JspException {
 		tag.setBodyContent(new MockBodyContent("value2",
 				new MockHttpServletResponse()));
 
@@ -88,7 +88,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@Test
-	void argumentWithValueThenReleaseThenBodyValue() throws JspException {
+	public void argumentWithValueThenReleaseThenBodyValue() throws JspException {
 		tag.setValue("value3");
 
 		int action = tag.doEndTag();
@@ -111,7 +111,7 @@ class ArgumentTagTests extends AbstractTagTests {
 	}
 
 	@SuppressWarnings("serial")
-	private static class MockArgumentSupportTag extends TagSupport implements ArgumentAware {
+	private class MockArgumentSupportTag extends TagSupport implements ArgumentAware {
 
 		Object argument;
 

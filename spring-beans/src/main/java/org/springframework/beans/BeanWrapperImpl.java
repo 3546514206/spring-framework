@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.beans;
 
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Method;
-
-import org.apache.commons.logging.LogFactory;
-
 import org.springframework.core.ResolvableType;
+import org.springframework.core.convert.Property;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Method;
+import java.security.*;
 
 /**
  * Default {@link BeanWrapper} implementation that should be sufficient
@@ -66,6 +65,12 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 	@Nullable
 	private CachedIntrospectionResults cachedIntrospectionResults;
 
+	/**
+	 * The security context used for invoking the property methods.
+	 */
+	@Nullable
+	private AccessControlContext acc;
+
 
 	/**
 	 * Create a new empty BeanWrapperImpl. Wrapped instance needs to be set afterwards.
@@ -88,7 +93,8 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 
 	/**
 	 * Create a new BeanWrapperImpl for the given object.
-	 * @param object the object wrapped by this BeanWrapper
+	 *
+	 * @param object object wrapped by this BeanWrapper
 	 */
 	public BeanWrapperImpl(Object object) {
 		super(object);
@@ -105,7 +111,7 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 	/**
 	 * Create a new BeanWrapperImpl for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this BeanWrapper
+	 * @param object object wrapped by this BeanWrapper
 	 * @param nestedPath the nested path of the object
 	 * @param rootObject the root object at the top of the path
 	 */
@@ -116,12 +122,13 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 	/**
 	 * Create a new BeanWrapperImpl for the given object,
 	 * registering a nested path that the object is in.
-	 * @param object the object wrapped by this BeanWrapper
+	 * @param object object wrapped by this BeanWrapper
 	 * @param nestedPath the nested path of the object
 	 * @param parent the containing BeanWrapper (must not be {@code null})
 	 */
 	private BeanWrapperImpl(Object object, String nestedPath, BeanWrapperImpl parent) {
 		super(object, nestedPath, parent);
+		setSecurityContext(parent.acc);
 	}
 
 
@@ -166,6 +173,23 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 		return this.cachedIntrospectionResults;
 	}
 
+	/**
+	 * Set the security context used during the invocation of the wrapped instance methods.
+	 * Can be null.
+	 */
+	public void setSecurityContext(@Nullable AccessControlContext acc) {
+		this.acc = acc;
+	}
+
+	/**
+	 * Return the security context used during the invocation of the wrapped instance methods.
+	 * Can be null.
+	 */
+	@Nullable
+	public AccessControlContext getSecurityContext() {
+		return this.acc;
+	}
+
 
 	/**
 	 * Convert the given value for the specified property to the latter's type.
@@ -185,15 +209,23 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 			throw new InvalidPropertyException(getRootClass(), getNestedPath() + propertyName,
 					"No property '" + propertyName + "' found");
 		}
-		TypeDescriptor td = ((GenericTypeAwarePropertyDescriptor) pd).getTypeDescriptor();
+		TypeDescriptor td = cachedIntrospectionResults.getTypeDescriptor(pd);
+		if (td == null) {
+			td = cachedIntrospectionResults.addTypeDescriptor(pd, new TypeDescriptor(property(pd)));
+		}
 		return convertForProperty(propertyName, null, value, td);
+	}
+
+	private Property property(PropertyDescriptor pd) {
+		GenericTypeAwarePropertyDescriptor gpd = (GenericTypeAwarePropertyDescriptor) pd;
+		return new Property(gpd.getBeanClass(), gpd.getReadMethod(), gpd.getWriteMethod(), gpd.getName());
 	}
 
 	@Override
 	@Nullable
 	protected BeanPropertyHandler getLocalPropertyHandler(String propertyName) {
 		PropertyDescriptor pd = getCachedIntrospectionResults().getPropertyDescriptor(propertyName);
-		return (pd != null ? new BeanPropertyHandler((GenericTypeAwarePropertyDescriptor) pd) : null);
+		return (pd != null ? new BeanPropertyHandler(pd) : null);
 	}
 
 	@Override
@@ -228,73 +260,74 @@ public class BeanWrapperImpl extends AbstractNestablePropertyAccessor implements
 
 	private class BeanPropertyHandler extends PropertyHandler {
 
-		private final GenericTypeAwarePropertyDescriptor pd;
+		private final PropertyDescriptor pd;
 
-		public BeanPropertyHandler(GenericTypeAwarePropertyDescriptor pd) {
+		public BeanPropertyHandler(PropertyDescriptor pd) {
 			super(pd.getPropertyType(), pd.getReadMethod() != null, pd.getWriteMethod() != null);
 			this.pd = pd;
 		}
 
 		@Override
-		public TypeDescriptor toTypeDescriptor() {
-			return this.pd.getTypeDescriptor();
-		}
-
-		@Override
 		public ResolvableType getResolvableType() {
-			return this.pd.getReadMethodType();
+			return ResolvableType.forMethodReturnType(this.pd.getReadMethod());
 		}
 
 		@Override
-		public TypeDescriptor getMapValueType(int nestingLevel) {
-			return new TypeDescriptor(
-					this.pd.getReadMethodType().getNested(nestingLevel).asMap().getGeneric(1),
-					null, this.pd.getTypeDescriptor().getAnnotations());
-		}
-
-		@Override
-		public TypeDescriptor getCollectionType(int nestingLevel) {
-			return new TypeDescriptor(
-					this.pd.getReadMethodType().getNested(nestingLevel).asCollection().getGeneric(),
-					null, this.pd.getTypeDescriptor().getAnnotations());
+		public TypeDescriptor toTypeDescriptor() {
+			return new TypeDescriptor(property(this.pd));
 		}
 
 		@Override
 		@Nullable
 		public TypeDescriptor nested(int level) {
-			return this.pd.getTypeDescriptor().nested(level);
+			return TypeDescriptor.nested(property(this.pd), level);
 		}
 
 		@Override
 		@Nullable
 		public Object getValue() throws Exception {
-			Method readMethod = this.pd.getReadMethod();
-			Assert.state(readMethod != null, "No read method available");
-			ReflectionUtils.makeAccessible(readMethod);
-			return readMethod.invoke(getWrappedInstance(), (Object[]) null);
-		}
-
-		@Override
-		public void setValue(@Nullable Object value) throws Exception {
-			Method writeMethod = this.pd.getWriteMethodForActualAccess();
-			ReflectionUtils.makeAccessible(writeMethod);
-			writeMethod.invoke(getWrappedInstance(), value);
-		}
-
-		@Override
-		public boolean setValueFallbackIfPossible(@Nullable Object value) {
-			Method writeMethod = this.pd.getWriteMethodFallback(value != null ? value.getClass() : null);
-			if (writeMethod != null) {
-				ReflectionUtils.makeAccessible(writeMethod);
+			final Method readMethod = this.pd.getReadMethod();
+			if (System.getSecurityManager() != null) {
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(readMethod);
+					return null;
+				});
 				try {
-					writeMethod.invoke(getWrappedInstance(), value);
-					return true;
+					return AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () ->
+							readMethod.invoke(getWrappedInstance(), (Object[]) null), acc);
 				}
-				catch (Exception ex) {
-					LogFactory.getLog(BeanPropertyHandler.class).debug("Write method fallback failed", ex);
+				catch (PrivilegedActionException pae) {
+					throw pae.getException();
 				}
 			}
-			return false;
+			else {
+				ReflectionUtils.makeAccessible(readMethod);
+				return readMethod.invoke(getWrappedInstance(), (Object[]) null);
+			}
+		}
+
+		@Override
+		public void setValue(final @Nullable Object value) throws Exception {
+			final Method writeMethod = (this.pd instanceof GenericTypeAwarePropertyDescriptor ?
+					((GenericTypeAwarePropertyDescriptor) this.pd).getWriteMethodForActualAccess() :
+					this.pd.getWriteMethod());
+			if (System.getSecurityManager() != null) {
+				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					ReflectionUtils.makeAccessible(writeMethod);
+					return null;
+				});
+				try {
+					AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () ->
+							writeMethod.invoke(getWrappedInstance(), value), acc);
+				}
+				catch (PrivilegedActionException ex) {
+					throw ex.getException();
+				}
+			}
+			else {
+				ReflectionUtils.makeAccessible(writeMethod);
+				writeMethod.invoke(getWrappedInstance(), value);
+			}
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package org.springframework.test.context.transaction.ejb;
 
-import jakarta.ejb.EJB;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import javax.ejb.EJB;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringJUnitConfig
 @Transactional
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
-@TestMethodOrder(MethodOrderer.MethodName.class)
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
 abstract class AbstractEjbTxDaoTests {
 
 	protected static final String TEST_NAME = "test-name";

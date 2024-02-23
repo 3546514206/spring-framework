@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.context.annotation.spr12334;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -29,51 +25,44 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
-
 /**
  * @author Juergen Hoeller
  * @author Alex Pogrebnyak
- * @author Sam Brannen
  */
-class Spr12334Tests {
+public class Spr12334Tests {
 
 	@Test
-	void shouldNotScanTwice() {
-		TestImport.scanned.set(0);
+	public void shouldNotScanTwice() {
+		TestImport.scanned = false;
 
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.scan(TestImport.class.getPackage().getName());
 		context.refresh();
-		assertThat(TestImport.scanned).hasValue(1);
-		assertThatNoException().isThrownBy(() -> context.getBean(TestConfiguration.class));
-		context.close();
+		context.getBean(TestConfiguration.class);
 	}
 
 
-	@Retention(RetentionPolicy.RUNTIME)
 	@Import(TestImport.class)
-	@interface AnotherImport {
+	public @interface AnotherImport {
 	}
 
 
 	@Configuration
 	@AnotherImport
-	static class TestConfiguration {
+	public static class TestConfiguration {
 	}
 
 
-	static class TestImport implements ImportBeanDefinitionRegistrar {
+	public static class TestImport implements ImportBeanDefinitionRegistrar {
 
-		private static AtomicInteger scanned = new AtomicInteger();
+		private static boolean scanned = false;
 
 		@Override
-		public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
-			if (scanned.get() > 0) {
+		public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry)  {
+			if (scanned) {
 				throw new IllegalStateException("Already scanned");
 			}
-			scanned.incrementAndGet();
+			scanned = true;
 		}
 	}
 

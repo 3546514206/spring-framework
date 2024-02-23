@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 package org.springframework.context.expression;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.testfixture.env.MockPropertySource;
+import org.springframework.mock.env.MockPropertySource;
+import org.springframework.tests.sample.beans.TestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
@@ -34,10 +33,10 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ge
  *
  * @author Chris Beams
  */
-class EnvironmentAccessorIntegrationTests {
+public class EnvironmentAccessorIntegrationTests {
 
 	@Test
-	void braceAccess() {
+	public void braceAccess() {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		bf.registerBeanDefinition("testBean",
 				genericBeanDefinition(TestBean.class)

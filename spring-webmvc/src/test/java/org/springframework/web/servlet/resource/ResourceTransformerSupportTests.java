@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,30 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.web.servlet.resource;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ResourceTransformerSupport}.
+ * Unit tests for {@code ResourceTransformerSupport}.
  *
  * @author Brian Clozel
  * @author Rossen Stoyanchev
  */
-class ResourceTransformerSupportTests {
+public class ResourceTransformerSupportTests {
 
 	private ResourceTransformerChain transformerChain;
 
@@ -46,7 +44,7 @@ class ResourceTransformerSupportTests {
 
 
 	@BeforeEach
-	void setUp() {
+	public void setUp() {
 		VersionResourceResolver versionResolver = new VersionResourceResolver();
 		versionResolver.setStrategyMap(Collections.singletonMap("/**", new ContentVersionStrategy()));
 		PathResourceResolver pathResolver = new PathResourceResolver();
@@ -72,7 +70,7 @@ class ResourceTransformerSupportTests {
 
 
 	@Test
-	void resolveUrlPath() {
+	public void resolveUrlPath() {
 		this.request.setRequestURI("/context/servlet/resources/main.css");
 		this.request.setContextPath("/context");
 		this.request.setServletPath("/servlet");
@@ -84,7 +82,7 @@ class ResourceTransformerSupportTests {
 	}
 
 	@Test
-	void resolveUrlPathWithRelativePath() {
+	public void resolveUrlPathWithRelativePath() {
 		Resource resource = getResource("main.css");
 		String actual = this.transformer.resolveUrlPath("bar.css", this.request, resource, this.transformerChain);
 
@@ -92,7 +90,7 @@ class ResourceTransformerSupportTests {
 	}
 
 	@Test
-	void resolveUrlPathWithRelativePathInParentDirectory() {
+	public void resolveUrlPathWithRelativePathInParentDirectory() {
 		Resource resource = getResource("images/image.png");
 		String actual = this.transformer.resolveUrlPath("../bar.css", this.request, resource, this.transformerChain);
 
@@ -100,7 +98,7 @@ class ResourceTransformerSupportTests {
 	}
 
 	@Test
-	void toAbsolutePath() {
+	public void toAbsolutePath() {
 		String absolute = this.transformer.toAbsolutePath("img/image.png",
 				new MockHttpServletRequest("GET", "/resources/style.css"));
 		assertThat(absolute).isEqualTo("/resources/img/image.png");

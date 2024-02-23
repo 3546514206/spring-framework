@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,16 @@
 
 package org.springframework.web.socket.sockjs.transport.session;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+import org.springframework.web.socket.*;
+import org.springframework.web.socket.adapter.NativeWebSocketSession;
+import org.springframework.web.socket.sockjs.SockJsTransportFailureException;
+import org.springframework.web.socket.sockjs.frame.SockJsFrame;
+import org.springframework.web.socket.sockjs.transport.SockJsServiceConfig;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -24,20 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingDeque;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketExtension;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.adapter.NativeWebSocketSession;
-import org.springframework.web.socket.sockjs.SockJsTransportFailureException;
-import org.springframework.web.socket.sockjs.frame.SockJsFrame;
-import org.springframework.web.socket.sockjs.transport.SockJsServiceConfig;
 
 /**
  * A SockJS session for use with the WebSocket transport.
@@ -139,15 +135,15 @@ public class WebSocketServerSockJsSession extends AbstractSockJsSession implemen
 	@Override
 	public Object getNativeSession() {
 		Assert.state(this.webSocketSession != null, "WebSocketSession not yet initialized");
-		return (this.webSocketSession instanceof NativeWebSocketSession nativeWsSession ?
-				nativeWsSession.getNativeSession() : this.webSocketSession);
+		return (this.webSocketSession instanceof NativeWebSocketSession ?
+				((NativeWebSocketSession) this.webSocketSession).getNativeSession() : this.webSocketSession);
 	}
 
 	@Override
 	@Nullable
 	public <T> T getNativeSession(@Nullable Class<T> requiredType) {
-		return (this.webSocketSession instanceof NativeWebSocketSession nativeWsSession ?
-				nativeWsSession.getNativeSession(requiredType) : null);
+		return (this.webSocketSession instanceof NativeWebSocketSession ?
+				((NativeWebSocketSession) this.webSocketSession).getNativeSession(requiredType) : null);
 	}
 
 
@@ -159,14 +155,13 @@ public class WebSocketServerSockJsSession extends AbstractSockJsSession implemen
 				delegateConnectionEstablished();
 				this.webSocketSession.sendMessage(new TextMessage(SockJsFrame.openFrame().getContent()));
 
-				// Flush any messages cached in the meantime
+				// Flush any messages cached in the mean time
 				while (!this.initSessionCache.isEmpty()) {
 					writeFrame(SockJsFrame.messageFrame(getMessageCodec(), this.initSessionCache.poll()));
 				}
 				scheduleHeartbeat();
 				this.openFrameSent = true;
-			}
-			catch (Exception ex) {
+			} catch (Throwable ex) {
 				tryCloseWithSockJsTransportError(ex, CloseStatus.SERVER_ERROR);
 			}
 		}
@@ -185,8 +180,7 @@ public class WebSocketServerSockJsSession extends AbstractSockJsSession implemen
 		String[] messages;
 		try {
 			messages = getSockJsServiceConfig().getMessageCodec().decode(payload);
-		}
-		catch (Exception ex) {
+		} catch (Throwable ex) {
 			logger.error("Broken data received. Terminating WebSocket connection abruptly", ex);
 			tryCloseWithSockJsTransportError(ex, CloseStatus.BAD_DATA);
 			return;

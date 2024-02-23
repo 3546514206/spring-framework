@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,12 @@ package org.springframework.cache.config;
 
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.context.testfixture.cache.AbstractCacheAnnotationTests;
 
 /**
  * @author Costin Leau
  * @author Chris Beams
  */
-class AnnotationDrivenCacheConfigTests extends AbstractCacheAnnotationTests {
+public class AnnotationDrivenCacheConfigTests extends AbstractCacheAnnotationTests {
 
 	@Override
 	protected ConfigurableApplicationContext getApplicationContext() {

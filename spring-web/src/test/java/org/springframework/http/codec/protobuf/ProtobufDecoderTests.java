@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,23 @@
 
 package org.springframework.http.codec.protobuf;
 
-import java.io.IOException;
-import java.util.Arrays;
-
 import com.google.protobuf.Message;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.codec.AbstractDecoderTests;
+import org.springframework.core.codec.DecodingException;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.MediaType;
+import org.springframework.protobuf.Msg;
+import org.springframework.protobuf.SecondMsg;
+import org.springframework.util.MimeType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.DecodingException;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.testfixture.codec.AbstractDecoderTests;
-import org.springframework.http.MediaType;
-import org.springframework.protobuf.Msg;
-import org.springframework.protobuf.SecondMsg;
+import java.io.IOException;
+import java.util.Arrays;
 
 import static java.util.Collections.emptyMap;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,11 +41,13 @@ import static org.springframework.core.ResolvableType.forClass;
 import static org.springframework.core.io.buffer.DataBufferUtils.release;
 
 /**
- * Tests for {@link ProtobufDecoder}.
+ * Unit tests for {@link ProtobufDecoder}.
  *
  * @author Sebastien Deleuze
  */
-class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
+public class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
+
+	private final static MimeType PROTOBUF_MIME_TYPE = new MimeType("application", "x-protobuf");
 
 	private final SecondMsg secondMsg = SecondMsg.newBuilder().setBlah(123).build();
 
@@ -61,22 +63,23 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 
 
 	@Test
-	void extensionRegistryNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new ProtobufDecoder(null));
+	public void extensionRegistryNull() {
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				new ProtobufDecoder(null));
 	}
 
-	@Test
 	@Override
+	@Test
 	public void canDecode() {
 		assertThat(this.decoder.canDecode(forClass(Msg.class), null)).isTrue();
-		assertThat(this.decoder.canDecode(forClass(Msg.class), MediaType.APPLICATION_PROTOBUF)).isTrue();
+		assertThat(this.decoder.canDecode(forClass(Msg.class), PROTOBUF_MIME_TYPE)).isTrue();
 		assertThat(this.decoder.canDecode(forClass(Msg.class), MediaType.APPLICATION_OCTET_STREAM)).isTrue();
 		assertThat(this.decoder.canDecode(forClass(Msg.class), MediaType.APPLICATION_JSON)).isFalse();
-		assertThat(this.decoder.canDecode(forClass(Object.class), MediaType.APPLICATION_PROTOBUF)).isFalse();
+		assertThat(this.decoder.canDecode(forClass(Object.class), PROTOBUF_MIME_TYPE)).isFalse();
 	}
 
-	@Test
 	@Override
+	@Test
 	public void decodeToMono() {
 		Mono<DataBuffer> input = dataBuffer(this.testMsg1);
 
@@ -86,7 +89,7 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 	}
 
 	@Test
-	void decodeChunksToMono() {
+	public void decodeChunksToMono() {
 		byte[] full = this.testMsg1.toByteArray();
 		byte[] chunk1 = Arrays.copyOfRange(full, 0, full.length / 2);
 		byte[] chunk2 = Arrays.copyOfRange(full, chunk1.length, full.length);
@@ -103,9 +106,8 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 				.verifyComplete());
 	}
 
-	@Test
 	@Override
-	@SuppressWarnings("deprecation")
+	@Test
 	public void decode() {
 		Flux<DataBuffer> input = Flux.just(this.testMsg1, this.testMsg2)
 				.flatMap(msg -> Mono.defer(() -> {
@@ -127,8 +129,9 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void decodeSplitChunks() {
+
+
 		Flux<DataBuffer> input = Flux.just(this.testMsg1, this.testMsg2)
 				.flatMap(msg -> Mono.defer(() -> {
 					DataBuffer buffer = this.bufferFactory.allocateBuffer();
@@ -159,11 +162,13 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 	}
 
 	@Test  // SPR-17429
-	@SuppressWarnings("deprecation")
 	public void decodeSplitMessageSize() {
 		this.decoder.setMaxMessageSize(100009);
-		Msg bigMessage = Msg.newBuilder().setFoo("azertyuiop".repeat(10000))
-				.setBlah(secondMsg2).build();
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < 10000; i++) {
+			builder.append("azertyuiop");
+		}
+		Msg bigMessage = Msg.newBuilder().setFoo(builder.toString()).setBlah(secondMsg2).build();
 
 		Flux<DataBuffer> input = Flux.just(bigMessage, bigMessage)
 				.flatMap(msg -> Mono.defer(() -> {
@@ -195,7 +200,6 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void decodeMergedChunks() throws IOException {
 		DataBuffer buffer = this.bufferFactory.allocateBuffer();
 		this.testMsg1.writeDelimitedTo(buffer.asOutputStream());
@@ -211,11 +215,12 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 	}
 
 	@Test
-	void exceedMaxSize() {
+	public void exceedMaxSize() {
 		this.decoder.setMaxMessageSize(1);
 		Mono<DataBuffer> input = dataBuffer(this.testMsg1);
 
-		testDecode(input, Msg.class, step -> step.verifyError(DecodingException.class));
+		testDecode(input, Msg.class, step -> step
+				.verifyError(DecodingException.class));
 	}
 
 	private Mono<DataBuffer> dataBuffer(Msg msg) {
@@ -226,5 +231,6 @@ class ProtobufDecoderTests extends AbstractDecoderTests<ProtobufDecoder> {
 			return buffer;
 		});
 	}
+
 
 }

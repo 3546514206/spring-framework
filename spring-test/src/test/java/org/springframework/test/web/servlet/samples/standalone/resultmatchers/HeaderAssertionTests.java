@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 
 package org.springframework.test.web.servlet.samples.standalone.resultmatchers;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -34,17 +28,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.request.WebRequest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.startsWith;
-import static org.springframework.http.HttpHeaders.IF_MODIFIED_SINCE;
-import static org.springframework.http.HttpHeaders.LAST_MODIFIED;
-import static org.springframework.http.HttpHeaders.VARY;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.http.HttpHeaders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -103,6 +94,7 @@ public class HeaderAssertionTests {
 		this.mockMvc.perform(get("/persons/1")).andExpect(header().stringValues(VARY, "foo", "bar"));
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
 	public void multiStringHeaderValueWithMatchers() throws Exception {
 		this.mockMvc.perform(get("/persons/1"))
@@ -158,7 +150,7 @@ public class HeaderAssertionTests {
 	}
 
 	@Test
-	public void existsFail() {
+	public void existsFail() throws Exception {
 		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
 				this.mockMvc.perform(get("/persons/1")).andExpect(header().exists("X-Custom-Header")));
 	}
@@ -169,13 +161,13 @@ public class HeaderAssertionTests {
 	}
 
 	@Test // SPR-10771
-	public void doesNotExistFail() {
+	public void doesNotExistFail() throws Exception {
 		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
 				this.mockMvc.perform(get("/persons/1")).andExpect(header().doesNotExist(LAST_MODIFIED)));
 	}
 
 	@Test
-	public void longValueWithIncorrectResponseHeaderValue() {
+	public void longValueWithIncorrectResponseHeaderValue() throws Exception {
 		assertThatExceptionOfType(AssertionError.class).isThrownBy(() ->
 				this.mockMvc.perform(get("/persons/1")).andExpect(header().longValue("X-Rate-Limiting", 1)));
 	}
@@ -213,8 +205,7 @@ public class HeaderAssertionTests {
 	}
 
 	private void assertMessageContains(AssertionError error, String expected) {
-		assertThat(error.getMessage()).as("Failure message should contain [" + expected + "], actual is [" + error.getMessage() + "]")
-				.contains(expected);
+		assertThat(error.getMessage().contains(expected)).as("Failure message should contain [" + expected + "], actual is [" + error.getMessage() + "]").isTrue();
 	}
 
 

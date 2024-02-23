@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.web.cors.reactive;
 
-import java.net.URI;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -25,6 +23,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
 
 /**
  * Utility class for CORS reactive request handling based on the
@@ -45,14 +45,12 @@ public abstract class CorsUtils {
 	}
 
 	/**
-	 * Returns {@code true} if the request is a valid CORS pre-flight one by checking {@code OPTIONS} method with
-	 * {@code Origin} and {@code Access-Control-Request-Method} headers presence.
+	 * Returns {@code true} if the request is a valid CORS pre-flight one.
+	 * To be used in combination with {@link #isCorsRequest(ServerHttpRequest)} since
+	 * regular CORS checks are not invoked here for performance reasons.
 	 */
 	public static boolean isPreFlightRequest(ServerHttpRequest request) {
-		HttpHeaders headers = request.getHeaders();
-		return (request.getMethod() == HttpMethod.OPTIONS
-				&& headers.containsKey(HttpHeaders.ORIGIN)
-				&& headers.containsKey(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD));
+		return (request.getMethod() == HttpMethod.OPTIONS && request.getHeaders().containsKey(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD));
 	}
 
 	/**
@@ -63,6 +61,7 @@ public abstract class CorsUtils {
 	 * {@code "Forwarded"} and {@code "X-Forwarded-*"} headers that specify the
 	 * client-originated address. Consider using the {@code ForwardedHeaderFilter}
 	 * to extract and use, or to discard such headers.
+	 *
 	 * @return {@code true} if the request is a same-origin one, {@code false} in case
 	 * of a cross-origin request
 	 * @deprecated as of 5.2, same-origin checks are performed directly by {@link #isCorsRequest}

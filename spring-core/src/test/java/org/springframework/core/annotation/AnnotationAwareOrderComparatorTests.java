@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ package org.springframework.core.annotation;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.annotation.Priority;
+import javax.annotation.Priority;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +42,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(new B());
 		list.add(new A());
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).hasExactlyElementsOfTypes(A.class, B.class);
+		assertThat(list.get(0) instanceof A).isTrue();
+		assertThat(list.get(1) instanceof B).isTrue();
 	}
 
 	@Test
@@ -50,7 +52,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(new B2());
 		list.add(new A2());
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).hasExactlyElementsOfTypes(A2.class, B2.class);
+		assertThat(list.get(0) instanceof A2).isTrue();
+		assertThat(list.get(1) instanceof B2).isTrue();
 	}
 
 	@Test
@@ -59,7 +62,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(new B());
 		list.add(new A2());
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).hasExactlyElementsOfTypes(A2.class, B.class);
+		assertThat(list.get(0) instanceof A2).isTrue();
+		assertThat(list.get(1) instanceof B).isTrue();
 	}
 
 	@Test
@@ -68,7 +72,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(new B());
 		list.add(new C());
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).hasExactlyElementsOfTypes(C.class, B.class);
+		assertThat(list.get(0) instanceof C).isTrue();
+		assertThat(list.get(1) instanceof B).isTrue();
 	}
 
 	@Test
@@ -77,7 +82,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(B.class);
 		list.add(A.class);
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).containsExactly(A.class, B.class);
+		assertThat(list.get(0)).isEqualTo(A.class);
+		assertThat(list.get(1)).isEqualTo(B.class);
 	}
 
 	@Test
@@ -86,7 +92,8 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(B.class);
 		list.add(C.class);
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).containsExactly(C.class, B.class);
+		assertThat(list.get(0)).isEqualTo(C.class);
+		assertThat(list.get(1)).isEqualTo(B.class);
 	}
 
 	@Test
@@ -97,8 +104,12 @@ class AnnotationAwareOrderComparatorTests {
 		list.add(null);
 		list.add(A.class);
 		AnnotationAwareOrderComparator.sort(list);
-		assertThat(list).containsExactly(A.class, B.class, null, null);
+		assertThat(list.get(0)).isEqualTo(A.class);
+		assertThat(list.get(1)).isEqualTo(B.class);
+		assertThat(list.get(2)).isNull();
+		assertThat(list.get(3)).isNull();
 	}
+
 
 	@Order(1)
 	private static class A {

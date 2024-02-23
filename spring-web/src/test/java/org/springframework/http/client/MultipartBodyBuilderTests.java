@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Arjen Poutsma
  */
-class MultipartBodyBuilderTests {
+public class MultipartBodyBuilderTests {
 
 	@Test
-	void builder() {
+	public void builder() {
 
 		MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -56,11 +56,11 @@ class MultipartBodyBuilderTests {
 
 		Publisher<String> publisher = Flux.just("foo", "bar", "baz");
 		builder.asyncPart("publisherClass", publisher, String.class).header("baz", "qux");
-		builder.asyncPart("publisherPtr", publisher, new ParameterizedTypeReference<>() {}).header("baz", "qux");
+		builder.asyncPart("publisherPtr", publisher, new ParameterizedTypeReference<String>() {}).header("baz", "qux");
 
 		MultiValueMap<String, HttpEntity<?>> result = builder.build();
 
-		assertThat(result).hasSize(5);
+		assertThat(result.size()).isEqualTo(5);
 		HttpEntity<?> resultEntity = result.getFirst("key");
 		assertThat(resultEntity).isNotNull();
 		assertThat(resultEntity.getBody()).isEqualTo(multipartData);

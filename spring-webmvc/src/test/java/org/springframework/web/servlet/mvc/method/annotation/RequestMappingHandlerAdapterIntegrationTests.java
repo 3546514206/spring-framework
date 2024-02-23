@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,65 +16,32 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.awt.Color;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.Method;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockMultipartFile;
+import org.springframework.mock.web.test.MockMultipartHttpServletRequest;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestAttribute;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.SessionAttribute;
-import org.springframework.web.bind.annotation.SessionAttributes;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.support.ConfigurableWebBindingInitializer;
 import org.springframework.web.bind.support.SessionStatus;
 import org.springframework.web.bind.support.WebArgumentResolver;
-import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -82,14 +49,22 @@ import org.springframework.web.context.support.GenericWebApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.InvocableHandlerMethod;
-import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockMultipartFile;
-import org.springframework.web.testfixture.servlet.MockMultipartHttpServletRequest;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import java.awt.*;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.security.Principal;
+import java.text.SimpleDateFormat;
+import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -102,23 +77,24 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @see HandlerMethodAnnotationDetectionTests
  * @see ServletAnnotationControllerHandlerMethodTests
  */
-class RequestMappingHandlerAdapterIntegrationTests {
+public class RequestMappingHandlerAdapterIntegrationTests {
 
 	private final Object handler = new Handler();
 
-	private final MockHttpServletRequest request = new MockHttpServletRequest();
-	private final MockHttpServletResponse response = new MockHttpServletResponse();
 	private RequestMappingHandlerAdapter handlerAdapter;
+
+	private MockHttpServletRequest request;
+
+	private MockHttpServletResponse response;
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		ConfigurableWebBindingInitializer bindingInitializer = new ConfigurableWebBindingInitializer();
 		bindingInitializer.setValidator(new StubValidator());
 
 		List<HandlerMethodArgumentResolver> customResolvers = new ArrayList<>();
 		customResolvers.add(new ServletWebArgumentResolverAdapter(new ColorArgumentResolver()));
-		customResolvers.add(new CustomPrincipalArgumentResolver());
 
 		GenericWebApplicationContext context = new GenericWebApplicationContext();
 		context.refresh();
@@ -130,6 +106,9 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		handlerAdapter.setBeanFactory(context.getBeanFactory());
 		handlerAdapter.afterPropertiesSet();
 
+		request = new MockHttpServletRequest();
+		response = new MockHttpServletResponse();
+
 		request.setMethod("POST");
 
 		// Expose request to the current thread (for SpEL expressions)
@@ -137,17 +116,17 @@ class RequestMappingHandlerAdapterIntegrationTests {
 	}
 
 	@AfterEach
-	void teardown() {
+	public void teardown() {
 		RequestContextHolder.resetRequestAttributes();
 	}
 
 
 	@Test
-	void handle() throws Exception {
+	public void handle() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {int.class, String.class, String.class, String.class, Map.class,
 				Date.class, Map.class, String.class, String.class, TestBean.class, Errors.class, TestBean.class,
 				Color.class, HttpServletRequest.class, HttpServletResponse.class, TestBean.class, TestBean.class,
-				User.class, OtherUser.class, Principal.class, Model.class, UriComponentsBuilder.class};
+				User.class, OtherUser.class, Model.class, UriComponentsBuilder.class};
 
 		String datePattern = "yyyy.MM.dd";
 		String formattedDate = "2011.03.16";
@@ -163,7 +142,7 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		request.addParameter("paramByConvention", "paramByConventionValue");
 		request.addParameter("age", "25");
 		request.setCookies(new Cookie("cookie", "99"));
-		request.setContent("Hello World".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello World".getBytes("UTF-8"));
 		request.setUserPrincipal(new User());
 		request.setContextPath("/contextPath");
 		request.setServletPath("/main");
@@ -213,19 +192,18 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		bindingResult = (BindingResult) model.get(BindingResult.MODEL_KEY_PREFIX + conventionAttrName);
 		assertThat(bindingResult.getTarget()).isSameAs(modelAttrByConvention);
 
-		assertThat(model.get("customArg")).isInstanceOf(Color.class);
+		assertThat(model.get("customArg") instanceof Color).isTrue();
 		assertThat(model.get("user").getClass()).isEqualTo(User.class);
 		assertThat(model.get("otherUser").getClass()).isEqualTo(OtherUser.class);
-		assertThat(((Principal) model.get("customUser")).getName()).isEqualTo("Custom User");
 
 		assertThat(model.get("sessionAttribute")).isSameAs(sessionAttribute);
 		assertThat(model.get("requestAttribute")).isSameAs(requestAttribute);
 
-		assertThat(model.get("url")).isEqualTo(URI.create("http://localhost/contextPath/main/path"));
+		assertThat(model.get("url")).isEqualTo(new URI("http://localhost/contextPath/main/path"));
 	}
 
 	@Test
-	void handleInInterface() throws Exception {
+	public void handleInInterface() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {int.class, String.class, String.class, String.class, Map.class,
 				Date.class, Map.class, String.class, String.class, TestBean.class, Errors.class, TestBean.class,
 				Color.class, HttpServletRequest.class, HttpServletResponse.class, TestBean.class, TestBean.class,
@@ -245,7 +223,7 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		request.addParameter("paramByConvention", "paramByConventionValue");
 		request.addParameter("age", "25");
 		request.setCookies(new Cookie("cookie", "99"));
-		request.setContent("Hello World".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello World".getBytes("UTF-8"));
 		request.setUserPrincipal(new User());
 		request.setContextPath("/contextPath");
 		request.setServletPath("/main");
@@ -295,55 +273,55 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		bindingResult = (BindingResult) model.get(BindingResult.MODEL_KEY_PREFIX + conventionAttrName);
 		assertThat(bindingResult.getTarget()).isSameAs(modelAttrByConvention);
 
-		assertThat(model.get("customArg")).isInstanceOf(Color.class);
+		assertThat(model.get("customArg") instanceof Color).isTrue();
 		assertThat(model.get("user").getClass()).isEqualTo(User.class);
 		assertThat(model.get("otherUser").getClass()).isEqualTo(OtherUser.class);
 
 		assertThat(model.get("sessionAttribute")).isSameAs(sessionAttribute);
 		assertThat(model.get("requestAttribute")).isSameAs(requestAttribute);
 
-		assertThat(model.get("url")).isEqualTo(URI.create("http://localhost/contextPath/main/path"));
+		assertThat(model.get("url")).isEqualTo(new URI("http://localhost/contextPath/main/path"));
 	}
 
 	@Test
-	void handleRequestBody() throws Exception {
+	public void handleRequestBody() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {byte[].class};
 
 		request.setMethod("POST");
 		request.addHeader("Content-Type", "text/plain; charset=utf-8");
-		request.setContent("Hello Server".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello Server".getBytes("UTF-8"));
 
 		HandlerMethod handlerMethod = handlerMethod("handleRequestBody", parameterTypes);
 
 		ModelAndView mav = handlerAdapter.handle(request, response, handlerMethod);
 
 		assertThat(mav).isNull();
-		assertThat(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8)).isEqualTo("Handled requestBody=[Hello Server]");
+		assertThat(new String(response.getContentAsByteArray(), "UTF-8")).isEqualTo("Handled requestBody=[Hello Server]");
 		assertThat(response.getStatus()).isEqualTo(HttpStatus.ACCEPTED.value());
 	}
 
 	@Test
-	void handleAndValidateRequestBody() throws Exception {
+	public void handleAndValidateRequestBody() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {TestBean.class, Errors.class};
 
 		request.addHeader("Content-Type", "text/plain; charset=utf-8");
-		request.setContent("Hello Server".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello Server".getBytes("UTF-8"));
 
 		HandlerMethod handlerMethod = handlerMethod("handleAndValidateRequestBody", parameterTypes);
 
 		ModelAndView mav = handlerAdapter.handle(request, response, handlerMethod);
 
 		assertThat(mav).isNull();
-		assertThat(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8)).isEqualTo("Error count [1]");
+		assertThat(new String(response.getContentAsByteArray(), "UTF-8")).isEqualTo("Error count [1]");
 		assertThat(response.getStatus()).isEqualTo(HttpStatus.ACCEPTED.value());
 	}
 
 	@Test
-	void handleHttpEntity() throws Exception {
+	public void handleHttpEntity() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {HttpEntity.class};
 
 		request.addHeader("Content-Type", "text/plain; charset=utf-8");
-		request.setContent("Hello Server".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello Server".getBytes("UTF-8"));
 
 		HandlerMethod handlerMethod = handlerMethod("handleHttpEntity", parameterTypes);
 
@@ -351,32 +329,32 @@ class RequestMappingHandlerAdapterIntegrationTests {
 
 		assertThat(mav).isNull();
 		assertThat(response.getStatus()).isEqualTo(HttpStatus.ACCEPTED.value());
-		assertThat(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8)).isEqualTo("Handled requestBody=[Hello Server]");
+		assertThat(new String(response.getContentAsByteArray(), "UTF-8")).isEqualTo("Handled requestBody=[Hello Server]");
 		assertThat(response.getHeader("header")).isEqualTo("headerValue");
-		// set because of @SessionAttributes
+		// set because of @SesstionAttributes
 		assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
 	}
 
 	// SPR-13867
 	@Test
-	void handleHttpEntityWithCacheControl() throws Exception {
+	public void handleHttpEntityWithCacheControl() throws Exception {
 		Class<?>[] parameterTypes = new Class<?>[] {HttpEntity.class};
 		request.addHeader("Content-Type", "text/plain; charset=utf-8");
-		request.setContent("Hello Server".getBytes(StandardCharsets.UTF_8));
+		request.setContent("Hello Server".getBytes("UTF-8"));
 
 		HandlerMethod handlerMethod = handlerMethod("handleHttpEntityWithCacheControl", parameterTypes);
 		ModelAndView mav = handlerAdapter.handle(request, response, handlerMethod);
 
 		assertThat(mav).isNull();
 		assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
-		assertThat(new String(response.getContentAsByteArray(), StandardCharsets.UTF_8)).isEqualTo("Handled requestBody=[Hello Server]");
+		assertThat(new String(response.getContentAsByteArray(), "UTF-8")).isEqualTo("Handled requestBody=[Hello Server]");
 		assertThat(response.getHeaderValues("Cache-Control")).containsExactly("max-age=3600");
 	}
 
 	@Test
-	void handleRequestPart() throws Exception {
+	public void handleRequestPart() throws Exception {
 		MockMultipartHttpServletRequest multipartRequest = new MockMultipartHttpServletRequest();
-		multipartRequest.addFile(new MockMultipartFile("requestPart", "", "text/plain", "content".getBytes(StandardCharsets.UTF_8)));
+		multipartRequest.addFile(new MockMultipartFile("requestPart", "", "text/plain", "content".getBytes("UTF-8")));
 
 		HandlerMethod handlerMethod = handlerMethod("handleRequestPart", String.class, Model.class);
 		ModelAndView mav = handlerAdapter.handle(multipartRequest, response, handlerMethod);
@@ -386,9 +364,9 @@ class RequestMappingHandlerAdapterIntegrationTests {
 	}
 
 	@Test
-	void handleAndValidateRequestPart() throws Exception {
+	public void handleAndValidateRequestPart() throws Exception {
 		MockMultipartHttpServletRequest multipartRequest = new MockMultipartHttpServletRequest();
-		multipartRequest.addFile(new MockMultipartFile("requestPart", "", "text/plain", "content".getBytes(StandardCharsets.UTF_8)));
+		multipartRequest.addFile(new MockMultipartFile("requestPart", "", "text/plain", "content".getBytes("UTF-8")));
 
 		HandlerMethod handlerMethod = handlerMethod("handleAndValidateRequestPart", String.class, Errors.class, Model.class);
 		ModelAndView mav = handlerAdapter.handle(multipartRequest, response, handlerMethod);
@@ -398,7 +376,7 @@ class RequestMappingHandlerAdapterIntegrationTests {
 	}
 
 	@Test
-	void handleAndCompleteSession() throws Exception {
+	public void handleAndCompleteSession() throws Exception {
 		HandlerMethod handlerMethod = handlerMethod("handleAndCompleteSession", SessionStatus.class);
 		handlerAdapter.handle(request, response, handlerMethod);
 
@@ -479,24 +457,16 @@ class RequestMappingHandlerAdapterIntegrationTests {
 				HttpServletResponse response,
 				@SessionAttribute TestBean sessionAttribute,
 				@RequestAttribute TestBean requestAttribute,
-				@Nullable User user, // gh-26117, gh-26117 (for @Nullable)
+				User user,
 				@ModelAttribute OtherUser otherUser,
-				@AuthenticationPrincipal Principal customUser, // gh-25780
 				Model model,
 				UriComponentsBuilder builder) {
 
-			model.addAttribute("cookie", cookieV)
-					.addAttribute("pathvar", pathvarV)
-					.addAttribute("header", headerV)
-					.addAttribute("systemHeader", systemHeader)
-					.addAttribute("headerMap", headerMap)
-					.addAttribute("dateParam", dateParam)
-					.addAttribute("paramMap", paramMap)
-					.addAttribute("paramByConvention", paramByConvention)
-					.addAttribute("value", value)
-					.addAttribute("customArg", customArg)
-					.addAttribute(user)
-					.addAttribute("customUser", customUser)
+			model.addAttribute("cookie", cookieV).addAttribute("pathvar", pathvarV).addAttribute("header", headerV)
+					.addAttribute("systemHeader", systemHeader).addAttribute("headerMap", headerMap)
+					.addAttribute("dateParam", dateParam).addAttribute("paramMap", paramMap)
+					.addAttribute("paramByConvention", paramByConvention).addAttribute("value", value)
+					.addAttribute("customArg", customArg).addAttribute(user)
 					.addAttribute("sessionAttribute", sessionAttribute)
 					.addAttribute("requestAttribute", requestAttribute)
 					.addAttribute("url", builder.path("/path").build().toUri());
@@ -531,15 +501,10 @@ class RequestMappingHandlerAdapterIntegrationTests {
 				Model model,
 				UriComponentsBuilder builder) {
 
-			model.addAttribute("cookie", cookieV)
-					.addAttribute("pathvar", pathvarV)
-					.addAttribute("header", headerV)
-					.addAttribute("systemHeader", systemHeader)
-					.addAttribute("headerMap", headerMap)
-					.addAttribute("dateParam", dateParam)
-					.addAttribute("paramMap", paramMap)
-					.addAttribute("paramByConvention", paramByConvention)
-					.addAttribute("value", value)
+			model.addAttribute("cookie", cookieV).addAttribute("pathvar", pathvarV).addAttribute("header", headerV)
+					.addAttribute("systemHeader", systemHeader).addAttribute("headerMap", headerMap)
+					.addAttribute("dateParam", dateParam).addAttribute("paramMap", paramMap)
+					.addAttribute("paramByConvention", paramByConvention).addAttribute("value", value)
 					.addAttribute("customArg", customArg).addAttribute(user)
 					.addAttribute("sessionAttribute", sessionAttribute)
 					.addAttribute("requestAttribute", requestAttribute)
@@ -553,8 +518,8 @@ class RequestMappingHandlerAdapterIntegrationTests {
 
 		@ResponseStatus(HttpStatus.ACCEPTED)
 		@ResponseBody
-		public String handleRequestBody(@RequestBody byte[] bytes) {
-			String requestBody = new String(bytes, StandardCharsets.UTF_8);
+		public String handleRequestBody(@RequestBody byte[] bytes) throws Exception {
+			String requestBody = new String(bytes, "UTF-8");
 			return "Handled requestBody=[" + requestBody + "]";
 		}
 
@@ -564,15 +529,15 @@ class RequestMappingHandlerAdapterIntegrationTests {
 			return "Error count [" + errors.getErrorCount() + "]";
 		}
 
-		public ResponseEntity<String> handleHttpEntity(HttpEntity<byte[]> httpEntity) {
-			String responseBody = "Handled requestBody=[" + new String(httpEntity.getBody(), StandardCharsets.UTF_8) + "]";
+		public ResponseEntity<String> handleHttpEntity(HttpEntity<byte[]> httpEntity) throws Exception {
+			String responseBody = "Handled requestBody=[" + new String(httpEntity.getBody(), "UTF-8") + "]";
 			return ResponseEntity.accepted()
 					.header("header", "headerValue")
 					.body(responseBody);
 		}
 
-		public ResponseEntity<String> handleHttpEntityWithCacheControl(HttpEntity<byte[]> httpEntity) {
-			String responseBody = "Handled requestBody=[" + new String(httpEntity.getBody(), StandardCharsets.UTF_8) + "]";
+		public ResponseEntity<String> handleHttpEntityWithCacheControl(HttpEntity<byte[]> httpEntity) throws Exception {
+			String responseBody = "Handled requestBody=[" + new String(httpEntity.getBody(), "UTF-8") + "]";
 			return ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS)).body(responseBody);
 		}
 
@@ -581,7 +546,7 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		}
 
 		public void handleAndValidateRequestPart(@RequestPart @Valid String requestPart,
-				Errors errors, Model model) {
+				Errors errors, Model model) throws Exception {
 
 			model.addAttribute("error count", errors.getErrorCount());
 		}
@@ -614,6 +579,7 @@ class RequestMappingHandlerAdapterIntegrationTests {
 		}
 	}
 
+
 	private static class User implements Principal {
 
 		@Override
@@ -630,27 +596,5 @@ class RequestMappingHandlerAdapterIntegrationTests {
 			return "other user";
 		}
 	}
-
-	private static class CustomPrincipalArgumentResolver implements HandlerMethodArgumentResolver {
-
-		@Override
-		public boolean supportsParameter(MethodParameter parameter) {
-			return (Principal.class.isAssignableFrom(parameter.getParameterType()) &&
-					parameter.hasParameterAnnotation(AuthenticationPrincipal.class));
-		}
-
-		@Nullable
-		@Override
-		public Object resolveArgument(
-				MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
-				NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) {
-
-			return (Principal) () -> "Custom User";
-		}
-	}
-
-	@Target(ElementType.PARAMETER)
-	@Retention(RetentionPolicy.RUNTIME)
-	@interface AuthenticationPrincipal {}
 
 }

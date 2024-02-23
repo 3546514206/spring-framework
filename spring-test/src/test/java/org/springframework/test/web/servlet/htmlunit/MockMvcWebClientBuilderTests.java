@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,25 @@
 
 package org.springframework.test.web.servlet.htmlunit;
 
-import java.io.IOException;
-import java.net.URL;
-
 import com.gargoylesoftware.htmlunit.HttpMethod;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.WebResponse;
 import com.gargoylesoftware.htmlunit.util.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.tests.TestGroup;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URL;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -77,6 +72,10 @@ class MockMvcWebClientBuilderTests {
 		WebClient client = MockMvcWebClientBuilder.mockMvcSetup(this.mockMvc).build();
 
 		assertMockMvcUsed(client, "http://localhost/test");
+
+		if (TestGroup.PERFORMANCE.isActive()) {
+			assertMockMvcNotUsed(client, "https://spring.io/");
+		}
 	}
 
 	@Test
@@ -85,6 +84,10 @@ class MockMvcWebClientBuilderTests {
 		WebClient client = MockMvcWebClientBuilder.mockMvcSetup(this.mockMvc).withDelegate(otherClient).build();
 
 		assertMockMvcUsed(client, "http://localhost/test");
+
+		if (TestGroup.PERFORMANCE.isActive()) {
+			assertMockMvcNotUsed(client, "https://spring.io/");
+		}
 	}
 
 	@Test // SPR-14066
@@ -103,7 +106,7 @@ class MockMvcWebClientBuilderTests {
 		WebClient client = MockMvcWebClientBuilder.mockMvcSetup(this.mockMvc).build();
 
 		assertThat(getResponse(client, "http://localhost/").getContentAsString()).isEqualTo("NA");
-		assertThat(postResponse(client, "http://localhost/", "cookie=foo").getContentAsString()).isEqualTo("Set");
+		assertThat(postResponse(client, "http://localhost/?cookie=foo").getContentAsString()).isEqualTo("Set");
 		assertThat(getResponse(client, "http://localhost/").getContentAsString()).isEqualTo("foo");
 		assertThat(deleteResponse(client, "http://localhost/").getContentAsString()).isEqualTo("Delete");
 		assertThat(getResponse(client, "http://localhost/").getContentAsString()).isEqualTo("NA");
@@ -113,14 +116,16 @@ class MockMvcWebClientBuilderTests {
 		assertThat(getResponse(client, url).getContentAsString()).isEqualTo("mvc");
 	}
 
+	private void assertMockMvcNotUsed(WebClient client, String url) throws Exception {
+		assertThat(getResponse(client, url).getContentAsString()).isNotEqualTo("mvc");
+	}
+
 	private WebResponse getResponse(WebClient client, String url) throws IOException {
 		return createResponse(client, new WebRequest(new URL(url)));
 	}
 
-	private WebResponse postResponse(WebClient client, String url, String body) throws IOException {
-		WebRequest request = new WebRequest(new URL(url), HttpMethod.POST);
-		request.setRequestBody(body);
-		return createResponse(client, request);
+	private WebResponse postResponse(WebClient client, String url) throws IOException {
+		return createResponse(client, new WebRequest(new URL(url), HttpMethod.POST));
 	}
 
 	private WebResponse deleteResponse(WebClient client, String url) throws IOException {
@@ -158,13 +163,13 @@ class MockMvcWebClientBuilderTests {
 
 		@PostMapping(path = "/", produces = "text/plain")
 		String setCookie(@RequestParam String cookie, HttpServletResponse response) {
-			response.addCookie(new jakarta.servlet.http.Cookie(COOKIE_NAME, cookie));
+			response.addCookie(new javax.servlet.http.Cookie(COOKIE_NAME, cookie));
 			return "Set";
 		}
 
 		@DeleteMapping(path = "/", produces = "text/plain")
 		String deleteCookie(HttpServletResponse response) {
-			jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(COOKIE_NAME, "");
+			javax.servlet.http.Cookie cookie = new javax.servlet.http.Cookie(COOKIE_NAME, "");
 			cookie.setMaxAge(0);
 			response.addCookie(cookie);
 			return "Delete";

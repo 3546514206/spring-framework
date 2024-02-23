@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.springframework.util.xml;
 
+import org.springframework.lang.Nullable;
+import org.springframework.util.StringUtils;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.ext.Locator2;
+import org.xml.sax.helpers.AttributesImpl;
+
 import javax.xml.namespace.QName;
 import javax.xml.stream.Location;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
-
-import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
-import org.xml.sax.ext.Locator2;
-import org.xml.sax.helpers.AttributesImpl;
-
-import org.springframework.lang.Nullable;
-import org.springframework.util.StringUtils;
 
 /**
  * SAX {@code XMLReader} that reads from a StAX {@code XMLStreamReader}. Reads from an
@@ -84,29 +82,41 @@ class StaxStreamXMLReader extends AbstractStaxXMLReader {
 				documentStarted = true;
 			}
 			switch (eventType) {
-				case XMLStreamConstants.START_ELEMENT -> {
+				case XMLStreamConstants.START_ELEMENT:
 					elementDepth++;
 					handleStartElement();
-				}
-				case XMLStreamConstants.END_ELEMENT -> {
+					break;
+				case XMLStreamConstants.END_ELEMENT:
 					elementDepth--;
 					if (elementDepth >= 0) {
 						handleEndElement();
 					}
-				}
-				case XMLStreamConstants.PROCESSING_INSTRUCTION -> handleProcessingInstruction();
-				case XMLStreamConstants.CHARACTERS, XMLStreamConstants.SPACE, XMLStreamConstants.CDATA -> handleCharacters();
-				case XMLStreamConstants.START_DOCUMENT -> {
+					break;
+				case XMLStreamConstants.PROCESSING_INSTRUCTION:
+					handleProcessingInstruction();
+					break;
+				case XMLStreamConstants.CHARACTERS:
+				case XMLStreamConstants.SPACE:
+				case XMLStreamConstants.CDATA:
+					handleCharacters();
+					break;
+				case XMLStreamConstants.START_DOCUMENT:
 					handleStartDocument();
 					documentStarted = true;
-				}
-				case XMLStreamConstants.END_DOCUMENT -> {
+					break;
+				case XMLStreamConstants.END_DOCUMENT:
 					handleEndDocument();
 					documentEnded = true;
-				}
-				case XMLStreamConstants.COMMENT -> handleComment();
-				case XMLStreamConstants.DTD -> handleDtd();
-				case XMLStreamConstants.ENTITY_REFERENCE -> handleEntityReference();
+					break;
+				case XMLStreamConstants.COMMENT:
+					handleComment();
+					break;
+				case XMLStreamConstants.DTD:
+					handleDtd();
+					break;
+				case XMLStreamConstants.ENTITY_REFERENCE:
+					handleEntityReference();
+					break;
 			}
 			if (this.reader.hasNext() && elementDepth >= 0) {
 				eventType = this.reader.next();
@@ -128,19 +138,19 @@ class StaxStreamXMLReader extends AbstractStaxXMLReader {
 			}
 			this.encoding = this.reader.getCharacterEncodingScheme();
 		}
-
-		ContentHandler contentHandler = getContentHandler();
-		if (contentHandler != null) {
+		if (getContentHandler() != null) {
 			final Location location = this.reader.getLocation();
-			contentHandler.setDocumentLocator(new Locator2() {
+			getContentHandler().setDocumentLocator(new Locator2() {
 				@Override
 				public int getColumnNumber() {
 					return (location != null ? location.getColumnNumber() : -1);
 				}
+
 				@Override
 				public int getLineNumber() {
 					return (location != null ? location.getLineNumber() : -1);
 				}
+
 				@Override
 				@Nullable
 				public String getPublicId() {
@@ -151,17 +161,19 @@ class StaxStreamXMLReader extends AbstractStaxXMLReader {
 				public String getSystemId() {
 					return (location != null ? location.getSystemId() : null);
 				}
+
 				@Override
 				public String getXMLVersion() {
 					return xmlVersion;
 				}
+
 				@Override
 				@Nullable
 				public String getEncoding() {
 					return encoding;
 				}
 			});
-			contentHandler.startDocument();
+			getContentHandler().startDocument();
 			if (this.reader.standaloneSet()) {
 				setStandalone(this.reader.isStandalone());
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,21 @@
 
 package org.springframework.web.servlet.resource;
 
-import java.io.IOException;
-
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.util.UrlPathHelper;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import java.io.IOException;
 
 /**
  * A filter that wraps the {@link HttpServletResponse} and overrides its
@@ -54,15 +52,13 @@ public class ResourceUrlEncodingFilter extends GenericFilterBean {
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 
-		if (!(request instanceof HttpServletRequest httpRequest) || !(response instanceof HttpServletResponse httpResponse)) {
+		if (!(request instanceof HttpServletRequest) || !(response instanceof HttpServletResponse)) {
 			throw new ServletException("ResourceUrlEncodingFilter only supports HTTP requests");
 		}
-
 		ResourceUrlEncodingRequestWrapper wrappedRequest =
-				new ResourceUrlEncodingRequestWrapper(httpRequest);
+				new ResourceUrlEncodingRequestWrapper((HttpServletRequest) request);
 		ResourceUrlEncodingResponseWrapper wrappedResponse =
-				new ResourceUrlEncodingResponseWrapper(wrappedRequest, httpResponse);
-
+				new ResourceUrlEncodingResponseWrapper(wrappedRequest, (HttpServletResponse) response);
 		filterChain.doFilter(wrappedRequest, wrappedResponse);
 	}
 
@@ -85,8 +81,8 @@ public class ResourceUrlEncodingFilter extends GenericFilterBean {
 		public void setAttribute(String name, Object value) {
 			super.setAttribute(name, value);
 			if (ResourceUrlProviderExposingInterceptor.RESOURCE_URL_PROVIDER_ATTR.equals(name)) {
-				if (value instanceof ResourceUrlProvider urlProvider) {
-					initLookupPath(urlProvider);
+				if (value instanceof ResourceUrlProvider) {
+					initLookupPath((ResourceUrlProvider) value);
 				}
 			}
 		}
@@ -102,7 +98,7 @@ public class ResourceUrlEncodingFilter extends GenericFilterBean {
 					throw new LookupPathIndexException(lookupPath, requestUri);
 				}
 				this.prefixLookupPath = requestUri.substring(0, this.indexLookupPath);
-				if (StringUtils.matchesCharacter(lookupPath, '/') && !StringUtils.matchesCharacter(requestUri, '/')) {
+				if ("/".equals(lookupPath) && !"/".equals(requestUri)) {
 					String contextPath = pathHelper.getContextPath(this);
 					if (requestUri.equals(contextPath)) {
 						this.indexLookupPath = requestUri.length();

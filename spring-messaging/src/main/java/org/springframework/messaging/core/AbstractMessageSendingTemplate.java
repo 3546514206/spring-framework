@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,8 @@
 
 package org.springframework.messaging.core;
 
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -31,14 +28,16 @@ import org.springframework.messaging.converter.SimpleMessageConverter;
 import org.springframework.messaging.converter.SmartMessageConverter;
 import org.springframework.util.Assert;
 
+import java.util.Map;
+
 /**
  * Abstract base class for implementations of {@link MessageSendingOperations}.
  *
+ * @param <D> the destination type
  * @author Mark Fisher
  * @author Rossen Stoyanchev
  * @author Stephane Nicoll
  * @since 4.0
- * @param <D> the destination type
  */
 public abstract class AbstractMessageSendingTemplate<D> implements MessageSendingOperations<D> {
 
@@ -155,8 +154,9 @@ public abstract class AbstractMessageSendingTemplate<D> implements MessageSendin
 	 * Convert the given Object to serialized form, possibly using a
 	 * {@link MessageConverter}, wrap it as a message with the given
 	 * headers and apply the given post processor.
-	 * @param payload the Object to use as payload
-	 * @param headers the headers for the message to send
+	 *
+	 * @param payload       the Object to use as payload
+	 * @param headers       headers for the message to send
 	 * @param postProcessor the post processor to apply to the message
 	 * @return the converted message
 	 */
@@ -168,13 +168,17 @@ public abstract class AbstractMessageSendingTemplate<D> implements MessageSendin
 
 		Map<String, Object> headersToUse = processHeadersToSend(headers);
 		if (headersToUse != null) {
-			messageHeaders = (headersToUse instanceof MessageHeaders _messageHeaders ?
-					_messageHeaders : new MessageHeaders(headersToUse));
+			if (headersToUse instanceof MessageHeaders) {
+				messageHeaders = (MessageHeaders) headersToUse;
+			}
+			else {
+				messageHeaders = new MessageHeaders(headersToUse);
+			}
 		}
 
 		MessageConverter converter = getMessageConverter();
-		Message<?> message = (converter instanceof SmartMessageConverter smartMessageConverter ?
-				smartMessageConverter.toMessage(payload, messageHeaders, conversionHint) :
+		Message<?> message = (converter instanceof SmartMessageConverter ?
+				((SmartMessageConverter) converter).toMessage(payload, messageHeaders, conversionHint) :
 				converter.toMessage(payload, messageHeaders));
 		if (message == null) {
 			String payloadType = payload.getClass().getName();

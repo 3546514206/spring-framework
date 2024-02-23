@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,33 @@
 
 package org.springframework.web.reactive.socket.server.support;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.function.Supplier;
-
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
 import org.springframework.lang.Nullable;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.mock.web.test.server.MockWebSession;
 import org.springframework.web.reactive.socket.HandshakeInfo;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.server.RequestUpgradeStrategy;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-import org.springframework.web.testfixture.server.MockWebSession;
+import reactor.core.publisher.Mono;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link HandshakeWebSocketService}.
+ * Unit tests for {@link HandshakeWebSocketService}.
  *
  * @author Rossen Stoyanchev
  */
-class HandshakeWebSocketServiceTests {
+public class HandshakeWebSocketServiceTests {
 
 	@Test
-	void sessionAttributePredicate() {
+	public void sessionAttributePredicate() {
 		MockWebSession session = new MockWebSession();
 		session.getAttributes().put("a1", "v1");
 		session.getAttributes().put("a2", "v2");
@@ -58,7 +57,7 @@ class HandshakeWebSocketServiceTests {
 		HandshakeWebSocketService service = new HandshakeWebSocketService(upgradeStrategy);
 		service.setSessionAttributePredicate(name -> Arrays.asList("a1", "a3", "a5").contains(name));
 
-		service.handleRequest(exchange, mock()).block();
+		service.handleRequest(exchange, mock(WebSocketHandler.class)).block();
 
 		HandshakeInfo info = upgradeStrategy.handshakeInfo;
 		assertThat(info).isNotNull();
@@ -87,7 +86,7 @@ class HandshakeWebSocketServiceTests {
 
 		@Override
 		public Mono<Void> upgrade(ServerWebExchange exchange, WebSocketHandler webSocketHandler,
-				@Nullable String subProtocol, Supplier<HandshakeInfo> handshakeInfoFactory) {
+				@Nullable  String subProtocol, Supplier<HandshakeInfo> handshakeInfoFactory) {
 
 			this.handshakeInfo = handshakeInfoFactory.get();
 			return Mono.empty();

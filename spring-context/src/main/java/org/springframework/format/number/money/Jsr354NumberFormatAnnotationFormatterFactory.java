@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,6 @@
 
 package org.springframework.format.number.money;
 
-import java.text.ParseException;
-import java.util.Collections;
-import java.util.Currency;
-import java.util.Locale;
-import java.util.Set;
-
-import javax.money.CurrencyUnit;
-import javax.money.Monetary;
-import javax.money.MonetaryAmount;
-
 import org.springframework.context.support.EmbeddedValueResolutionSupport;
 import org.springframework.format.AnnotationFormatterFactory;
 import org.springframework.format.Formatter;
@@ -38,13 +28,22 @@ import org.springframework.format.number.NumberStyleFormatter;
 import org.springframework.format.number.PercentStyleFormatter;
 import org.springframework.util.StringUtils;
 
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.MonetaryAmount;
+import java.text.ParseException;
+import java.util.Collections;
+import java.util.Currency;
+import java.util.Locale;
+import java.util.Set;
+
 /**
  * Formats {@link javax.money.MonetaryAmount} fields annotated
  * with Spring's common {@link NumberFormat} annotation.
  *
  * @author Juergen Hoeller
- * @since 4.2
  * @see NumberFormat
+ * @since 4.2
  */
 public class Jsr354NumberFormatAnnotationFormatterFactory extends EmbeddedValueResolutionSupport
 		implements AnnotationFormatterFactory<NumberFormat> {
@@ -53,8 +52,9 @@ public class Jsr354NumberFormatAnnotationFormatterFactory extends EmbeddedValueR
 
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Set<Class<?>> getFieldTypes() {
-		return Collections.singleton(MonetaryAmount.class);
+		return (Set) Collections.singleton(MonetaryAmount.class);
 	}
 
 	@Override

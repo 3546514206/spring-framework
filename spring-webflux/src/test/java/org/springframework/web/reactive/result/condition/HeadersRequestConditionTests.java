@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package org.springframework.web.reactive.result.condition;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.web.server.ServerWebExchange;
+
 import java.util.Collection;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest.get;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
 
 /**
- * Tests for {@link HeadersRequestCondition}.
+ * Unit tests for {@link HeadersRequestCondition}.
  *
  * @author Rossen Stoyanchev
  */
-class HeadersRequestConditionTests {
+public class HeadersRequestConditionTests {
 
 	@Test
-	void headerEquals() {
+	public void headerEquals() {
 		assertThat(new HeadersRequestCondition("foo")).isEqualTo(new HeadersRequestCondition("foo"));
 		assertThat(new HeadersRequestCondition("FOO")).isEqualTo(new HeadersRequestCondition("foo"));
 		assertThat(new HeadersRequestCondition("bar")).isNotEqualTo(new HeadersRequestCondition("foo"));
@@ -43,7 +42,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerPresent() {
+	public void headerPresent() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("Accept", ""));
 		HeadersRequestCondition condition = new HeadersRequestCondition("accept");
 
@@ -51,7 +50,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerPresentNoMatch() {
+	public void headerPresentNoMatch() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("bar", ""));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo");
 
@@ -59,7 +58,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerNotPresent() {
+	public void headerNotPresent() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("!accept");
 
@@ -67,7 +66,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerValueMatch() {
+	public void headerValueMatch() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "bar"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo=bar");
 
@@ -75,7 +74,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerValueNoMatch() {
+	public void headerValueNoMatch() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "bazz"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo=bar");
 
@@ -83,7 +82,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerCaseSensitiveValueMatch() {
+	public void headerCaseSensitiveValueMatch() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "bar"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo=Bar");
 
@@ -91,7 +90,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerValueMatchNegated() {
+	public void headerValueMatchNegated() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "baz"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo!=bar");
 
@@ -99,7 +98,7 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void headerValueNoMatchNegated() {
+	public void headerValueNoMatchNegated() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "bar"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo!=bar");
 
@@ -107,17 +106,17 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void compareTo() {
+	public void compareTo() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/"));
 
 		HeadersRequestCondition condition1 = new HeadersRequestCondition("foo", "bar", "baz");
 		HeadersRequestCondition condition2 = new HeadersRequestCondition("foo=a", "bar");
 
 		int result = condition1.compareTo(condition2, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isLessThan(0);
+		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
 
 		result = condition2.compareTo(condition1, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isGreaterThan(0);
+		assertThat(result > 0).as("Invalid comparison result: " + result).isTrue();
 	}
 
 	@Test // SPR-16674
@@ -128,11 +127,11 @@ class HeadersRequestConditionTests {
 		HeadersRequestCondition condition2 = new HeadersRequestCondition("foo");
 
 		int result = condition1.compareTo(condition2, exchange);
-		assertThat(result).as("Invalid comparison result: " + result).isLessThan(0);
+		assertThat(result < 0).as("Invalid comparison result: " + result).isTrue();
 	}
 
 	@Test
-	void compareToWithNegatedMatch() {
+	public void compareToWithNegatedMatch() {
 		ServerWebExchange exchange = MockServerWebExchange.from(get("/"));
 
 		HeadersRequestCondition condition1 = new HeadersRequestCondition("foo!=a");
@@ -142,17 +141,17 @@ class HeadersRequestConditionTests {
 	}
 
 	@Test
-	void combine() {
+	public void combine() {
 		HeadersRequestCondition condition1 = new HeadersRequestCondition("foo=bar");
 		HeadersRequestCondition condition2 = new HeadersRequestCondition("foo=baz");
 
 		HeadersRequestCondition result = condition1.combine(condition2);
 		Collection<?> conditions = result.getContent();
-		assertThat(conditions).hasSize(2);
+		assertThat(conditions.size()).isEqualTo(2);
 	}
 
 	@Test
-	void getMatchingCondition() {
+	public void getMatchingCondition() {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/").header("foo", "bar"));
 		HeadersRequestCondition condition = new HeadersRequestCondition("foo");
 

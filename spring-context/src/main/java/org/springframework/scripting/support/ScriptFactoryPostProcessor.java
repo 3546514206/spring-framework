@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package org.springframework.scripting.support;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +40,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessorAdapter;
 import org.springframework.beans.factory.support.BeanDefinitionValidationException;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
@@ -134,11 +134,10 @@ import org.springframework.util.StringUtils;
  * @author Rob Harrop
  * @author Rick Evans
  * @author Mark Fisher
- * @author Sam Brannen
  * @since 2.0
  */
-public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPostProcessor,
-		BeanClassLoaderAware, BeanFactoryAware, ResourceLoaderAware, DisposableBean, Ordered {
+public class ScriptFactoryPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
+		implements BeanClassLoaderAware, BeanFactoryAware, ResourceLoaderAware, DisposableBean, Ordered {
 
 	/**
 	 * The {@link org.springframework.core.io.Resource}-style prefix that denotes
@@ -189,7 +188,7 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	final DefaultListableBeanFactory scriptBeanFactory = new DefaultListableBeanFactory();
 
 	/** Map from bean name String to ScriptSource object. */
-	private final Map<String, ScriptSource> scriptSourceCache = new ConcurrentHashMap<>();
+	private final Map<String, ScriptSource> scriptSourceCache = new HashMap<>();
 
 
 	/**
@@ -219,11 +218,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (!(beanFactory instanceof ConfigurableBeanFactory cbf)) {
+		if (!(beanFactory instanceof ConfigurableBeanFactory)) {
 			throw new IllegalStateException("ScriptFactoryPostProcessor doesn't work with " +
 					"non-ConfigurableBeanFactory: " + beanFactory.getClass());
 		}
-		this.beanFactory = cbf;
+		this.beanFactory = (ConfigurableBeanFactory) beanFactory;
 
 		// Required so that references (up container hierarchies) are correctly resolved.
 		this.scriptBeanFactory.setParentBeanFactory(this.beanFactory);
@@ -282,8 +281,8 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 			}
 		}
 		catch (Exception ex) {
-			if (ex instanceof BeanCreationException bce &&
-					bce.getMostSpecificCause() instanceof BeanCurrentlyInCreationException) {
+			if (ex instanceof BeanCreationException &&
+					((BeanCreationException) ex).getMostSpecificCause() instanceof BeanCurrentlyInCreationException) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Could not determine scripted object type for bean '" + beanName + "': " +
 							ex.getMessage());
@@ -406,11 +405,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	protected long resolveRefreshCheckDelay(BeanDefinition beanDefinition) {
 		long refreshCheckDelay = this.defaultRefreshCheckDelay;
 		Object attributeValue = beanDefinition.getAttribute(REFRESH_CHECK_DELAY_ATTRIBUTE);
-		if (attributeValue instanceof Number number) {
-			refreshCheckDelay = number.longValue();
+		if (attributeValue instanceof Number) {
+			refreshCheckDelay = ((Number) attributeValue).longValue();
 		}
-		else if (attributeValue instanceof String text) {
-			refreshCheckDelay = Long.parseLong(text);
+		else if (attributeValue instanceof String) {
+			refreshCheckDelay = Long.parseLong((String) attributeValue);
 		}
 		else if (attributeValue != null) {
 			throw new BeanDefinitionStoreException("Invalid refresh check delay attribute [" +
@@ -423,11 +422,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	protected boolean resolveProxyTargetClass(BeanDefinition beanDefinition) {
 		boolean proxyTargetClass = this.defaultProxyTargetClass;
 		Object attributeValue = beanDefinition.getAttribute(PROXY_TARGET_CLASS_ATTRIBUTE);
-		if (attributeValue instanceof Boolean boo) {
-			proxyTargetClass = boo;
+		if (attributeValue instanceof Boolean) {
+			proxyTargetClass = (Boolean) attributeValue;
 		}
-		else if (attributeValue instanceof String text) {
-			proxyTargetClass = Boolean.parseBoolean(text);
+		else if (attributeValue instanceof String) {
+			proxyTargetClass = Boolean.parseBoolean((String) attributeValue);
 		}
 		else if (attributeValue != null) {
 			throw new BeanDefinitionStoreException("Invalid proxy target class attribute [" +
@@ -461,8 +460,14 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	 * @see #convertToScriptSource
 	 */
 	protected ScriptSource getScriptSource(String beanName, String scriptSourceLocator) {
-		return this.scriptSourceCache.computeIfAbsent(beanName, key ->
-				convertToScriptSource(beanName, scriptSourceLocator, this.resourceLoader));
+		synchronized (this.scriptSourceCache) {
+			ScriptSource scriptSource = this.scriptSourceCache.get(beanName);
+			if (scriptSource == null) {
+				scriptSource = convertToScriptSource(beanName, scriptSourceLocator, this.resourceLoader);
+				this.scriptSourceCache.put(beanName, scriptSource);
+			}
+			return scriptSource;
+		}
 	}
 
 	/**
@@ -510,7 +515,7 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 			Signature signature = new Signature(setterName, Type.VOID_TYPE, new Type[] {Type.getType(propertyType)});
 			maker.add(signature, new Type[0]);
 		}
-		if (StringUtils.hasText(bd.getInitMethodName())) {
+		if (bd.getInitMethodName() != null) {
 			Signature signature = new Signature(bd.getInitMethodName(), Type.VOID_TYPE, new Type[0]);
 			maker.add(signature, new Type[0]);
 		}

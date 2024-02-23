@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,27 @@
 
 package org.springframework.messaging.converter;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.*;
+import org.springframework.core.GenericTypeResolver;
+import org.springframework.core.MethodParameter;
+import org.springframework.lang.Nullable;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.util.Assert;
+import org.springframework.util.MimeType;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.fasterxml.jackson.annotation.JsonView;
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-
-import org.springframework.core.MethodParameter;
-import org.springframework.lang.Nullable;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHeaders;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.MimeType;
 
 /**
  * A Jackson 2 based {@link MessageConverter} implementation.
@@ -52,15 +47,14 @@ import org.springframework.util.MimeType;
  * <li>{@link DeserializationFeature#FAIL_ON_UNKNOWN_PROPERTIES} is disabled</li>
  * </ul>
  *
+ * <p>Compatible with Jackson 2.9 and higher, as of Spring 5.1.
+ *
  * @author Rossen Stoyanchev
  * @author Juergen Hoeller
  * @author Sebastien Deleuze
  * @since 4.0
  */
 public class MappingJackson2MessageConverter extends AbstractMessageConverter {
-
-	private static final MimeType[] DEFAULT_MIME_TYPES = new MimeType[] {
-			new MimeType("application", "json"), new MimeType("application", "*+json")};
 
 	private ObjectMapper objectMapper;
 
@@ -69,61 +63,43 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 
 
 	/**
-	 * Construct a {@code MappingJackson2MessageConverter} with a default {@link ObjectMapper},
-	 * supporting the {@code application/json} MIME type with {@code UTF-8} character set.
+	 * Construct a {@code MappingJackson2MessageConverter} supporting
+	 * the {@code application/json} MIME type with {@code UTF-8} character set.
 	 */
 	public MappingJackson2MessageConverter() {
-		this(DEFAULT_MIME_TYPES);
+		super(new MimeType("application", "json"));
+		this.objectMapper = initObjectMapper();
 	}
 
 	/**
-	 * Construct a {@code MappingJackson2MessageConverter} with a default {@link ObjectMapper},
-	 * supporting one or more custom MIME types.
+	 * Construct a {@code MappingJackson2MessageConverter} supporting
+	 * one or more custom MIME types.
 	 * @param supportedMimeTypes the supported MIME types
 	 * @since 4.1.5
 	 */
-	@SuppressWarnings("deprecation")  // on Jackson 2.13: configure(MapperFeature, boolean)
 	public MappingJackson2MessageConverter(MimeType... supportedMimeTypes) {
-		super(supportedMimeTypes);
-		this.objectMapper = new ObjectMapper();
-		this.objectMapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, false);
-		this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		super(Arrays.asList(supportedMimeTypes));
+		this.objectMapper = initObjectMapper();
 	}
 
-	/**
-	 * Construct a {@code MappingJackson2MessageConverter} with a custom {@link ObjectMapper},
-	 * supporting the {@code application/json} MIME type with {@code UTF-8} character set.
-	 * @param objectMapper the {@code ObjectMapper} to use
-	 * @since 6.1
-	 */
-	public MappingJackson2MessageConverter(ObjectMapper objectMapper) {
-		this(objectMapper, DEFAULT_MIME_TYPES);
-	}
 
-	/**
-	 * Construct a {@code MappingJackson2MessageConverter} with a custom {@link ObjectMapper},
-	 * supporting one or more custom MIME types.
-	 * @param objectMapper the {@code ObjectMapper} to use
-	 * @param supportedMimeTypes the supported MIME types
-	 * @since 6.1
-	 */
-	public MappingJackson2MessageConverter(ObjectMapper objectMapper, MimeType... supportedMimeTypes) {
-		super(supportedMimeTypes);
-		Assert.notNull(objectMapper, "ObjectMapper must not be null");
-		this.objectMapper = objectMapper;
+	private ObjectMapper initObjectMapper() {
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, false);
+		objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		return objectMapper;
 	}
-
 
 	/**
 	 * Set the {@code ObjectMapper} for this converter.
-	 * <p>If not set, a default {@link ObjectMapper#ObjectMapper() ObjectMapper} is used.
+	 * If not set, a default {@link ObjectMapper#ObjectMapper() ObjectMapper} is used.
 	 * <p>Setting a custom-configured {@code ObjectMapper} is one way to take further
 	 * control of the JSON serialization process. For example, an extended
 	 * {@link com.fasterxml.jackson.databind.ser.SerializerFactory} can be
 	 * configured that provides custom serializers for specific types. The other
 	 * option for refining the serialization process is to use Jackson's provided
 	 * annotations on the types to be serialized, in which case a custom-configured
-	 * {@code ObjectMapper} is unnecessary.
+	 * ObjectMapper is unnecessary.
 	 */
 	public void setObjectMapper(ObjectMapper objectMapper) {
 		Assert.notNull(objectMapper, "ObjectMapper must not be null");
@@ -140,7 +116,7 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 
 	/**
 	 * Whether to use the {@link DefaultPrettyPrinter} when writing JSON.
-	 * <p>This is a shortcut for setting up an {@code ObjectMapper} as follows:
+	 * This is a shortcut for setting up an {@code ObjectMapper} as follows:
 	 * <pre class="code">
 	 * ObjectMapper mapper = new ObjectMapper();
 	 * mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -157,7 +133,6 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 			this.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, this.prettyPrint);
 		}
 	}
-
 
 	@Override
 	protected boolean canConvertFrom(Message<?> message, @Nullable Class<?> targetClass) {
@@ -226,27 +201,23 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 	@Override
 	@Nullable
 	protected Object convertFromInternal(Message<?> message, Class<?> targetClass, @Nullable Object conversionHint) {
-		JavaType javaType = this.objectMapper.constructType(getResolvedType(targetClass, conversionHint));
+		JavaType javaType = getJavaType(targetClass, conversionHint);
 		Object payload = message.getPayload();
 		Class<?> view = getSerializationView(conversionHint);
+		// Note: in the view case, calling withType instead of forType for compatibility with Jackson <2.5
 		try {
-			if (ClassUtils.isAssignableValue(targetClass, payload)) {
-				return payload;
-			}
-			else if (payload instanceof byte[] bytes) {
+			if (payload instanceof byte[]) {
 				if (view != null) {
-					return this.objectMapper.readerWithView(view).forType(javaType).readValue(bytes);
+					return this.objectMapper.readerWithView(view).forType(javaType).readValue((byte[]) payload);
+				} else {
+					return this.objectMapper.readValue((byte[]) payload, javaType);
 				}
-				else {
-					return this.objectMapper.readValue(bytes, javaType);
-				}
-			}
-			else {
-				// Assuming a text-based source payload
+			} else if (targetClass.isInstance(payload)) {
+				return payload;
+			} else {
 				if (view != null) {
 					return this.objectMapper.readerWithView(view).forType(javaType).readValue(payload.toString());
-				}
-				else {
+				} else {
 					return this.objectMapper.readValue(payload.toString(), javaType);
 				}
 			}
@@ -254,6 +225,21 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 		catch (IOException ex) {
 			throw new MessageConversionException(message, "Could not read JSON: " + ex.getMessage(), ex);
 		}
+	}
+
+	private JavaType getJavaType(Class<?> targetClass, @Nullable Object conversionHint) {
+		if (conversionHint instanceof MethodParameter) {
+			MethodParameter param = (MethodParameter) conversionHint;
+			param = param.nestedIfOptional();
+			if (Message.class.isAssignableFrom(param.getParameterType())) {
+				param = param.nested();
+			}
+			Type genericParameterType = param.getNestedGenericParameterType();
+			Class<?> contextClass = param.getContainingClass();
+			Type type = GenericTypeResolver.resolveType(genericParameterType, contextClass);
+			return this.objectMapper.getTypeFactory().constructType(type);
+		}
+		return this.objectMapper.constructType(targetClass);
 	}
 
 	@Override
@@ -266,19 +252,16 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 			if (byte[].class == getSerializedPayloadClass()) {
 				ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
 				JsonEncoding encoding = getJsonEncoding(getMimeType(headers));
-				try (JsonGenerator generator = this.objectMapper.getFactory().createGenerator(out, encoding)) {
-					if (view != null) {
-						this.objectMapper.writerWithView(view).writeValue(generator, payload);
-					}
-					else {
-						this.objectMapper.writeValue(generator, payload);
-					}
-					payload = out.toByteArray();
+				JsonGenerator generator = this.objectMapper.getFactory().createGenerator(out, encoding);
+				if (view != null) {
+					this.objectMapper.writerWithView(view).writeValue(generator, payload);
+				} else {
+					this.objectMapper.writeValue(generator, payload);
 				}
+				payload = out.toByteArray();
 			}
 			else {
-				// Assuming a text-based target payload
-				Writer writer = new StringWriter(1024);
+				Writer writer = new StringWriter();
 				if (view != null) {
 					this.objectMapper.writerWithView(view).writeValue(writer, payload);
 				}
@@ -303,18 +286,19 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 	 */
 	@Nullable
 	protected Class<?> getSerializationView(@Nullable Object conversionHint) {
-		if (conversionHint instanceof MethodParameter param) {
+		if (conversionHint instanceof MethodParameter) {
+			MethodParameter param = (MethodParameter) conversionHint;
 			JsonView annotation = (param.getParameterIndex() >= 0 ?
 					param.getParameterAnnotation(JsonView.class) : param.getMethodAnnotation(JsonView.class));
 			if (annotation != null) {
 				return extractViewClass(annotation, conversionHint);
 			}
 		}
-		else if (conversionHint instanceof JsonView jsonView) {
-			return extractViewClass(jsonView, conversionHint);
+		else if (conversionHint instanceof JsonView) {
+			return extractViewClass((JsonView) conversionHint, conversionHint);
 		}
-		else if (conversionHint instanceof Class<?> clazz) {
-			return clazz;
+		else if (conversionHint instanceof Class) {
+			return (Class<?>) conversionHint;
 		}
 
 		// No JSON view specified...
@@ -336,7 +320,7 @@ public class MappingJackson2MessageConverter extends AbstractMessageConverter {
 	 * @return the JSON encoding to use (never {@code null})
 	 */
 	protected JsonEncoding getJsonEncoding(@Nullable MimeType contentType) {
-		if (contentType != null && contentType.getCharset() != null) {
+		if (contentType != null && (contentType.getCharset() != null)) {
 			Charset charset = contentType.getCharset();
 			for (JsonEncoding encoding : JsonEncoding.values()) {
 				if (charset.name().equals(encoding.getJavaName())) {

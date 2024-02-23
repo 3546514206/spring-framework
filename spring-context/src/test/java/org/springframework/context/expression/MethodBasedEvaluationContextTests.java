@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,22 +25,21 @@ import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.util.ReflectionUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.BOOLEAN;
 
 /**
- * Tests for {@link MethodBasedEvaluationContext}.
+ * Unit tests for {@link MethodBasedEvaluationContext}.
  *
  * @author Stephane Nicoll
  * @author Juergen Hoeller
  * @author Sergey Podgurskiy
  */
-class MethodBasedEvaluationContextTests {
+public class MethodBasedEvaluationContextTests {
 
 	private final ParameterNameDiscoverer paramDiscover = new DefaultParameterNameDiscoverer();
 
 
 	@Test
-	void simpleArguments() {
+	public void simpleArguments() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", String.class, Boolean.class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, "test", true);
 
@@ -48,16 +47,16 @@ class MethodBasedEvaluationContextTests {
 		assertThat(context.lookupVariable("p0")).isEqualTo("test");
 		assertThat(context.lookupVariable("foo")).isEqualTo("test");
 
-		assertThat(context.lookupVariable("a1")).asInstanceOf(BOOLEAN).isTrue();
-		assertThat(context.lookupVariable("p1")).asInstanceOf(BOOLEAN).isTrue();
-		assertThat(context.lookupVariable("flag")).asInstanceOf(BOOLEAN).isTrue();
+		assertThat(context.lookupVariable("a1")).isEqualTo(true);
+		assertThat(context.lookupVariable("p1")).isEqualTo(true);
+		assertThat(context.lookupVariable("flag")).isEqualTo(true);
 
 		assertThat(context.lookupVariable("a2")).isNull();
 		assertThat(context.lookupVariable("p2")).isNull();
 	}
 
 	@Test
-	void nullArgument() {
+	public void nullArgument() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", String.class, Boolean.class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, null, null);
 
@@ -71,7 +70,7 @@ class MethodBasedEvaluationContextTests {
 	}
 
 	@Test
-	void varArgEmpty() {
+	public void varArgEmpty() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", Boolean.class, String[].class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, new Object[] {null});
 
@@ -85,7 +84,7 @@ class MethodBasedEvaluationContextTests {
 	}
 
 	@Test
-	void varArgNull() {
+	public void varArgNull() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", Boolean.class, String[].class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, null, null);
 
@@ -99,7 +98,7 @@ class MethodBasedEvaluationContextTests {
 	}
 
 	@Test
-	void varArgSingle() {
+	public void varArgSingle() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", Boolean.class, String[].class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, null, "hello");
 
@@ -113,7 +112,7 @@ class MethodBasedEvaluationContextTests {
 	}
 
 	@Test
-	void varArgMultiple() {
+	public void varArgMultiple() {
 		Method method = ReflectionUtils.findMethod(SampleMethods.class, "hello", Boolean.class, String[].class);
 		MethodBasedEvaluationContext context = createEvaluationContext(method, null, "hello", "hi");
 

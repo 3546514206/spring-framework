@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.springframework.test.context.jdbc;
 
 import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
@@ -31,8 +30,8 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
  * @since 4.1
  */
 @SpringJUnitConfig(EmptyDatabaseConfig.class)
-@TestMethodOrder(MethodOrderer.MethodName.class)
-@Sql({ "recreate-schema.sql", "data.sql" })
+@TestMethodOrder(MethodOrderer.Alphanumeric.class)
+@Sql({ "schema.sql", "data.sql" })
 @DirtiesContext
 class TransactionalSqlScriptsTests extends AbstractTransactionalTests {
 
@@ -45,22 +44,6 @@ class TransactionalSqlScriptsTests extends AbstractTransactionalTests {
 	@Sql({ "recreate-schema.sql", "data.sql", "data-add-dogbert.sql" })
 	void methodLevelScripts() {
 		assertNumUsers(2);
-	}
-
-	@Nested
-	class NestedTransactionalSqlScriptsTests {
-
-		@Test
-		void classLevelScripts() {
-			assertNumUsers(1);
-		}
-
-		@Test
-		@Sql({ "recreate-schema.sql", "data.sql", "data-add-dogbert.sql" })
-		void methodLevelScripts() {
-			assertNumUsers(2);
-		}
-
 	}
 
 }

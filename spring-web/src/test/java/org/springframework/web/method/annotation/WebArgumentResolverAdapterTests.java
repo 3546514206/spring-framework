@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,14 @@ package org.springframework.web.method.annotation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.MethodParameter;
+import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.web.bind.support.WebArgumentResolver;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -40,32 +37,34 @@ import static org.mockito.Mockito.verify;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  */
-class WebArgumentResolverAdapterTests {
+public class WebArgumentResolverAdapterTests {
 
-	private WebArgumentResolver adaptee = mock();
+	private TestWebArgumentResolverAdapter adapter;
 
-	private TestWebArgumentResolverAdapter adapter = new TestWebArgumentResolverAdapter(adaptee);
-
-	private NativeWebRequest webRequest = new ServletWebRequest(new MockHttpServletRequest());
+	private WebArgumentResolver adaptee;
 
 	private MethodParameter parameter;
 
+	private NativeWebRequest webRequest;
 
 	@BeforeEach
-	void setUp() throws Exception {
-		parameter = new MethodParameter(getClass().getMethod("handle", int.class), 0);
+	public void setUp() throws Exception {
+		adaptee = mock(WebArgumentResolver.class);
+		adapter = new TestWebArgumentResolverAdapter(adaptee);
+		parameter = new MethodParameter(getClass().getMethod("handle", Integer.TYPE), 0);
+		webRequest = new ServletWebRequest(new MockHttpServletRequest());
 
 		// Expose request to the current thread (for SpEL expressions)
 		RequestContextHolder.setRequestAttributes(webRequest);
 	}
 
 	@AfterEach
-	void resetRequestContextHolder() {
+	public void resetRequestContextHolder() {
 		RequestContextHolder.resetRequestAttributes();
 	}
 
 	@Test
-	void supportsParameter() throws Exception {
+	public void supportsParameter() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn(42);
 
 		assertThat(adapter.supportsParameter(parameter)).as("Parameter not supported").isTrue();
@@ -74,7 +73,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void supportsParameterUnresolved() throws Exception {
+	public void supportsParameterUnresolved() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn(WebArgumentResolver.UNRESOLVED);
 
 		assertThat(adapter.supportsParameter(parameter)).as("Parameter supported").isFalse();
@@ -83,7 +82,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void supportsParameterWrongType() throws Exception {
+	public void supportsParameterWrongType() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn("Foo");
 
 		assertThat(adapter.supportsParameter(parameter)).as("Parameter supported").isFalse();
@@ -92,7 +91,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void supportsParameterThrowsException() throws Exception {
+	public void supportsParameterThrowsException() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willThrow(new Exception());
 
 		assertThat(adapter.supportsParameter(parameter)).as("Parameter supported").isFalse();
@@ -101,7 +100,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void resolveArgument() throws Exception {
+	public void resolveArgument() throws Exception {
 		int expected = 42;
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn(expected);
 
@@ -110,7 +109,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void resolveArgumentUnresolved() throws Exception {
+	public void resolveArgumentUnresolved() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn(WebArgumentResolver.UNRESOLVED);
 
 		assertThatIllegalStateException().isThrownBy(() ->
@@ -118,7 +117,7 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void resolveArgumentWrongType() throws Exception {
+	public void resolveArgumentWrongType() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willReturn("Foo");
 
 		assertThatIllegalStateException().isThrownBy(() ->
@@ -126,10 +125,11 @@ class WebArgumentResolverAdapterTests {
 	}
 
 	@Test
-	void resolveArgumentThrowsException() throws Exception {
+	public void resolveArgumentThrowsException() throws Exception {
 		given(adaptee.resolveArgument(parameter, webRequest)).willThrow(new Exception());
 
-		assertThatException().isThrownBy(() -> adapter.resolveArgument(parameter, null, webRequest, null));
+		assertThatExceptionOfType(Exception.class).isThrownBy(() ->
+				adapter.resolveArgument(parameter, null, webRequest, null));
 	}
 
 	public void handle(int param) {
@@ -137,7 +137,7 @@ class WebArgumentResolverAdapterTests {
 
 	private class TestWebArgumentResolverAdapter extends AbstractWebArgumentResolverAdapter {
 
-		TestWebArgumentResolverAdapter(WebArgumentResolver adaptee) {
+		public TestWebArgumentResolverAdapter(WebArgumentResolver adaptee) {
 			super(adaptee);
 		}
 

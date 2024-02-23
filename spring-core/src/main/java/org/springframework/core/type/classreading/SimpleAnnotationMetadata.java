@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,21 @@
 
 package org.springframework.core.type.classreading;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.springframework.asm.Opcodes;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.lang.Nullable;
-import org.springframework.util.StringUtils;
+
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * {@link AnnotationMetadata} created from a
  * {@link SimpleAnnotationMetadataReadingVisitor}.
  *
  * @author Phillip Webb
- * @author Sam Brannen
- * @author Juergen Hoeller
  * @since 5.2
  */
 final class SimpleAnnotationMetadata implements AnnotationMetadata {
@@ -50,21 +47,21 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	private final boolean independentInnerClass;
 
-	private final Set<String> interfaceNames;
+	private final String[] interfaceNames;
 
-	private final Set<String> memberClassNames;
+	private final String[] memberClassNames;
 
-	private final Set<MethodMetadata> declaredMethods;
+	private final MethodMetadata[] annotatedMethods;
 
-	private final MergedAnnotations mergedAnnotations;
+	private final MergedAnnotations annotations;
 
 	@Nullable
 	private Set<String> annotationTypes;
 
 
 	SimpleAnnotationMetadata(String className, int access, @Nullable String enclosingClassName,
-			@Nullable String superClassName, boolean independentInnerClass, Set<String> interfaceNames,
-			Set<String> memberClassNames, Set<MethodMetadata> declaredMethods, MergedAnnotations mergedAnnotations) {
+			@Nullable String superClassName, boolean independentInnerClass, String[] interfaceNames,
+			String[] memberClassNames, MethodMetadata[] annotatedMethods, MergedAnnotations annotations) {
 
 		this.className = className;
 		this.access = access;
@@ -73,8 +70,8 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 		this.independentInnerClass = independentInnerClass;
 		this.interfaceNames = interfaceNames;
 		this.memberClassNames = memberClassNames;
-		this.declaredMethods = declaredMethods;
-		this.mergedAnnotations = mergedAnnotations;
+		this.annotatedMethods = annotatedMethods;
+		this.annotations = annotations;
 	}
 
 	@Override
@@ -121,17 +118,12 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	@Override
 	public String[] getInterfaceNames() {
-		return StringUtils.toStringArray(this.interfaceNames);
+		return this.interfaceNames.clone();
 	}
 
 	@Override
 	public String[] getMemberClassNames() {
-		return StringUtils.toStringArray(this.memberClassNames);
-	}
-
-	@Override
-	public MergedAnnotations getAnnotations() {
-		return this.mergedAnnotations;
+		return this.memberClassNames.clone();
 	}
 
 	@Override
@@ -147,34 +139,22 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	@Override
 	public Set<MethodMetadata> getAnnotatedMethods(String annotationName) {
-		Set<MethodMetadata> result = new LinkedHashSet<>(4);
-		for (MethodMetadata annotatedMethod : this.declaredMethods) {
-			if (annotatedMethod.isAnnotated(annotationName)) {
-				result.add(annotatedMethod);
+		Set<MethodMetadata> annotatedMethods = null;
+		for (int i = 0; i < this.annotatedMethods.length; i++) {
+			if (this.annotatedMethods[i].isAnnotated(annotationName)) {
+				if (annotatedMethods == null) {
+					annotatedMethods = new LinkedHashSet<>(4);
+				}
+				annotatedMethods.add(this.annotatedMethods[i]);
 			}
 		}
-		return Collections.unmodifiableSet(result);
+		return annotatedMethods != null ? annotatedMethods : Collections.emptySet();
 	}
 
 	@Override
-	public Set<MethodMetadata> getDeclaredMethods() {
-		return Collections.unmodifiableSet(this.declaredMethods);
+	public MergedAnnotations getAnnotations() {
+		return this.annotations;
 	}
 
-
-	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof SimpleAnnotationMetadata that && this.className.equals(that.className)));
-	}
-
-	@Override
-	public int hashCode() {
-		return this.className.hashCode();
-	}
-
-	@Override
-	public String toString() {
-		return this.className;
-	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Mark Fisher
  * @since 3.0
  */
-class QuartzSchedulerLifecycleTests {
+public class QuartzSchedulerLifecycleTests {
 
 	@Test  // SPR-6354
 	public void destroyLazyInitSchedulerWithDefaultShutdownOrderDoesNotHang() {
@@ -39,8 +39,8 @@ class QuartzSchedulerLifecycleTests {
 		sw.start("lazyScheduler");
 		context.close();
 		sw.stop();
-		assertThat(sw.getTotalTimeMillis()).as("Quartz Scheduler with lazy-init is hanging on destruction: " +
-				sw.getTotalTimeMillis()).isLessThan(500);
+		assertThat(sw.getTotalTimeMillis() < 500).as("Quartz Scheduler with lazy-init is hanging on destruction: " +
+				sw.getTotalTimeMillis()).isTrue();
 	}
 
 	@Test  // SPR-6354
@@ -52,8 +52,8 @@ class QuartzSchedulerLifecycleTests {
 		sw.start("lazyScheduler");
 		context.close();
 		sw.stop();
-		assertThat(sw.getTotalTimeMillis()).as("Quartz Scheduler with lazy-init is hanging on destruction: " +
-				sw.getTotalTimeMillis()).isLessThan(500);
+		assertThat(sw.getTotalTimeMillis() < 500).as("Quartz Scheduler with lazy-init is hanging on destruction: " +
+				sw.getTotalTimeMillis()).isTrue();
 	}
 
 }

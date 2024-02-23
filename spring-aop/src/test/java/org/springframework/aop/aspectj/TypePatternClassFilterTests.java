@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,18 @@
 package org.springframework.aop.aspectj;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.testfixture.beans.CountingTestBean;
-import org.springframework.beans.testfixture.beans.IOther;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
-import org.springframework.beans.testfixture.beans.subpkg.DeepBean;
+import org.springframework.tests.sample.beans.CountingTestBean;
+import org.springframework.tests.sample.beans.IOther;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
+import org.springframework.tests.sample.beans.subpkg.DeepBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.*;
 
 /**
- * Tests for {@link TypePatternClassFilter}.
+ * Unit tests for the {@link TypePatternClassFilter} class.
  *
  * @author Rod Johnson
  * @author Rick Evans
@@ -51,13 +48,13 @@ class TypePatternClassFilterTests {
 	}
 
 	@Test
-	void invocationOfMatchesMethodBlowsUpWhenNoTypePatternHasBeenSet() {
+	void invocationOfMatchesMethodBlowsUpWhenNoTypePatternHasBeenSet() throws Exception {
 		assertThatIllegalStateException().isThrownBy(() -> new TypePatternClassFilter().matches(String.class));
 	}
 
 	@Test
 	void validPatternMatching() {
-		TypePatternClassFilter tpcf = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
+		TypePatternClassFilter tpcf = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
 
 		assertThat(tpcf.matches(TestBean.class)).as("Must match: in package").isTrue();
 		assertThat(tpcf.matches(ITestBean.class)).as("Must match: in package").isTrue();
@@ -70,7 +67,7 @@ class TypePatternClassFilterTests {
 
 	@Test
 	void subclassMatching() {
-		TypePatternClassFilter tpcf = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.ITestBean+");
+		TypePatternClassFilter tpcf = new TypePatternClassFilter("org.springframework.tests.sample.beans.ITestBean+");
 
 		assertThat(tpcf.matches(TestBean.class)).as("Must match: in package").isTrue();
 		assertThat(tpcf.matches(ITestBean.class)).as("Must match: in package").isTrue();
@@ -98,8 +95,8 @@ class TypePatternClassFilterTests {
 
 	@Test
 	void testEquals() {
-		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
-		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
+		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
+		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
 		TypePatternClassFilter filter3 = new TypePatternClassFilter("org.springframework.tests.*");
 
 		assertThat(filter1).isEqualTo(filter2);
@@ -108,8 +105,8 @@ class TypePatternClassFilterTests {
 
 	@Test
 	void testHashCode() {
-		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
-		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
+		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
+		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
 		TypePatternClassFilter filter3 = new TypePatternClassFilter("org.springframework.tests.*");
 
 		assertThat(filter1.hashCode()).isEqualTo(filter2.hashCode());
@@ -118,11 +115,11 @@ class TypePatternClassFilterTests {
 
 	@Test
 	void testToString() {
-		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
-		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.beans.testfixture.beans.*");
+		TypePatternClassFilter filter1 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
+		TypePatternClassFilter filter2 = new TypePatternClassFilter("org.springframework.tests.sample.beans.*");
 
 		assertThat(filter1.toString())
-			.isEqualTo("org.springframework.aop.aspectj.TypePatternClassFilter: org.springframework.beans.testfixture.beans.*");
+				.isEqualTo("org.springframework.aop.aspectj.TypePatternClassFilter: org.springframework.tests.sample.beans.*");
 		assertThat(filter1.toString()).isEqualTo(filter2.toString());
 	}
 

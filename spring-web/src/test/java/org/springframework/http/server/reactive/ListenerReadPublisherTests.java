@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link AbstractListenerReadPublisher}.
+ * Unit tests for {@link AbstractListenerReadPublisher}.
  *
  * @author Violeta Georgieva
  * @author Rossen Stoyanchev
  */
-class ListenerReadPublisherTests {
+public class ListenerReadPublisherTests {
 
 	private final TestListenerReadPublisher publisher = new TestListenerReadPublisher();
 
@@ -40,13 +40,13 @@ class ListenerReadPublisherTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.publisher.subscribe(this.subscriber);
 	}
 
 
 	@Test
-	void twoReads() {
+	public void twoReads() {
 
 		this.subscriber.getSubscription().request(2);
 		this.publisher.onDataAvailable();
@@ -104,11 +104,8 @@ class ListenerReadPublisherTests {
 
 		@Override
 		protected DataBuffer read() {
-			if (this.discardCalls != 0) {
-				return null;
-			}
 			this.readCalls++;
-			return mock();
+			return mock(DataBuffer.class);
 		}
 
 		@Override

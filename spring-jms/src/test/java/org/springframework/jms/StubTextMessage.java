@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package org.springframework.jms;
 import java.util.Enumeration;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.TextMessage;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.TextMessage;
 
 /**
  * Stub JMS Message implementation intended for testing purposes only.
@@ -67,58 +67,58 @@ public class StubTextMessage implements TextMessage {
 
 
 	@Override
-	public String getText() {
+	public String getText() throws JMSException {
 		return this.text;
 	}
 
 	@Override
-	public void setText(String text) {
+	public void setText(String text) throws JMSException {
 		this.text = text;
 	}
 
 	@Override
-	public void acknowledge() {
+	public void acknowledge() throws JMSException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public void clearBody() {
+	public void clearBody() throws JMSException {
 		this.text = null;
 	}
 
 	@Override
-	public void clearProperties() {
+	public void clearProperties() throws JMSException {
 		this.properties.clear();
 	}
 
 	@Override
-	public boolean getBooleanProperty(String name) {
+	public boolean getBooleanProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Boolean b) ? b : false;
+		return (value instanceof Boolean) ? ((Boolean) value).booleanValue() : false;
 	}
 
 	@Override
-	public byte getByteProperty(String name) {
+	public byte getByteProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Byte b) ? b : 0;
+		return (value instanceof Byte) ? ((Byte) value).byteValue() : 0;
 	}
 
 	@Override
-	public double getDoubleProperty(String name) {
+	public double getDoubleProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Double d) ? d : 0;
+		return (value instanceof Double) ? ((Double) value).doubleValue() : 0;
 	}
 
 	@Override
-	public float getFloatProperty(String name) {
+	public float getFloatProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Float f) ? f : 0;
+		return (value instanceof Float) ? ((Float) value).floatValue() : 0;
 	}
 
 	@Override
-	public int getIntProperty(String name) {
+	public int getIntProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Integer i) ? i : 0;
+		return (value instanceof Integer) ? ((Integer) value).intValue() : 0;
 	}
 
 	@Override
@@ -127,7 +127,7 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public byte[] getJMSCorrelationIDAsBytes() {
+	public byte[] getJMSCorrelationIDAsBytes() throws JMSException {
 		return this.correlationId.getBytes();
 	}
 
@@ -177,14 +177,14 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public long getJMSDeliveryTime() {
+	public long getJMSDeliveryTime() throws JMSException {
 		return this.deliveryTime;
 	}
 
 	@Override
-	public long getLongProperty(String name) {
+	public long getLongProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Long l) ? l : 0;
+		return (value instanceof Long) ? ((Long) value).longValue() : 0;
 	}
 
 	@Override
@@ -193,49 +193,49 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public Enumeration<?> getPropertyNames() {
+	public Enumeration<?> getPropertyNames() throws JMSException {
 		return this.properties.keys();
 	}
 
 	@Override
-	public short getShortProperty(String name) {
+	public short getShortProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof Short s) ? s : 0;
+		return (value instanceof Short) ? ((Short) value).shortValue() : 0;
 	}
 
 	@Override
-	public String getStringProperty(String name) {
+	public String getStringProperty(String name) throws JMSException {
 		Object value = this.properties.get(name);
-		return (value instanceof String text) ? text : null;
+		return (value instanceof String) ? (String) value : null;
 	}
 
 	@Override
-	public boolean propertyExists(String name) {
+	public boolean propertyExists(String name) throws JMSException {
 		return this.properties.containsKey(name);
 	}
 
 	@Override
-	public void setBooleanProperty(String name, boolean value) {
+	public void setBooleanProperty(String name, boolean value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public void setByteProperty(String name, byte value) {
+	public void setByteProperty(String name, byte value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public void setDoubleProperty(String name, double value) {
+	public void setDoubleProperty(String name, double value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public void setFloatProperty(String name, float value) {
+	public void setFloatProperty(String name, float value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public void setIntProperty(String name, int value) {
+	public void setIntProperty(String name, int value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
@@ -245,37 +245,37 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public void setJMSCorrelationIDAsBytes(byte[] correlationID) {
+	public void setJMSCorrelationIDAsBytes(byte[] correlationID) throws JMSException {
 		this.correlationId = new String(correlationID);
 	}
 
 	@Override
-	public void setJMSDeliveryMode(int deliveryMode) {
+	public void setJMSDeliveryMode(int deliveryMode) throws JMSException {
 		this.deliveryMode = deliveryMode;
 	}
 
 	@Override
-	public void setJMSDestination(Destination destination) {
+	public void setJMSDestination(Destination destination) throws JMSException {
 		this.destination = destination;
 	}
 
 	@Override
-	public void setJMSExpiration(long expiration) {
+	public void setJMSExpiration(long expiration) throws JMSException {
 		this.expiration = expiration;
 	}
 
 	@Override
-	public void setJMSMessageID(String id) {
+	public void setJMSMessageID(String id) throws JMSException {
 		this.messageId = id;
 	}
 
 	@Override
-	public void setJMSPriority(int priority) {
+	public void setJMSPriority(int priority) throws JMSException {
 		this.priority = priority;
 	}
 
 	@Override
-	public void setJMSRedelivered(boolean redelivered) {
+	public void setJMSRedelivered(boolean redelivered) throws JMSException {
 		this.redelivered = redelivered;
 	}
 
@@ -285,7 +285,7 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public void setJMSTimestamp(long timestamp) {
+	public void setJMSTimestamp(long timestamp) throws JMSException {
 		this.timestamp = timestamp;
 	}
 
@@ -295,12 +295,12 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public void setJMSDeliveryTime(long deliveryTime) {
+	public void setJMSDeliveryTime(long deliveryTime) throws JMSException {
 		this.deliveryTime = deliveryTime;
 	}
 
 	@Override
-	public void setLongProperty(String name, long value) {
+	public void setLongProperty(String name, long value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
@@ -310,22 +310,22 @@ public class StubTextMessage implements TextMessage {
 	}
 
 	@Override
-	public void setShortProperty(String name, short value) {
+	public void setShortProperty(String name, short value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public void setStringProperty(String name, String value) {
+	public void setStringProperty(String name, String value) throws JMSException {
 		this.properties.put(name, value);
 	}
 
 	@Override
-	public <T> T getBody(Class<T> c) {
+	public <T> T getBody(Class<T> c) throws JMSException {
 		return null;
 	}
 
 	@Override
-	public boolean isBodyAssignableTo(Class c) {
+	public boolean isBodyAssignableTo(Class c) throws JMSException {
 		return false;
 	}
 

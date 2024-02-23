@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,56 +16,28 @@
 
 package org.springframework.orm.hibernate5;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
-import jakarta.persistence.PersistenceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.HibernateException;
-import org.hibernate.JDBCException;
-import org.hibernate.NonUniqueObjectException;
-import org.hibernate.NonUniqueResultException;
-import org.hibernate.ObjectDeletedException;
-import org.hibernate.PersistentObjectException;
-import org.hibernate.PessimisticLockException;
-import org.hibernate.PropertyValueException;
-import org.hibernate.QueryException;
 import org.hibernate.QueryTimeoutException;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.StaleObjectStateException;
-import org.hibernate.StaleStateException;
-import org.hibernate.TransientObjectException;
-import org.hibernate.UnresolvableObjectException;
-import org.hibernate.WrongClassException;
+import org.hibernate.*;
 import org.hibernate.cfg.Environment;
 import org.hibernate.dialect.lock.OptimisticEntityLockException;
 import org.hibernate.dialect.lock.PessimisticEntityLockException;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.exception.ConstraintViolationException;
-import org.hibernate.exception.DataException;
-import org.hibernate.exception.JDBCConnectionException;
-import org.hibernate.exception.LockAcquisitionException;
-import org.hibernate.exception.SQLGrammarException;
+import org.hibernate.exception.*;
 import org.hibernate.service.UnknownServiceException;
-
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.*;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
+
+import javax.persistence.PersistenceException;
+import javax.sql.DataSource;
+import java.lang.reflect.Method;
+import java.util.Map;
 
 /**
  * Helper class featuring methods for Hibernate Session handling.
@@ -93,6 +65,39 @@ public abstract class SessionFactoryUtils {
 	static final Log logger = LogFactory.getLog(SessionFactoryUtils.class);
 
 
+	private static Method getFlushMode;
+
+	static {
+		try {
+			// Hibernate 5.2+ getHibernateFlushMode()
+			getFlushMode = Session.class.getMethod("getHibernateFlushMode");
+		}
+		catch (NoSuchMethodException ex) {
+			try {
+				// Hibernate 5.0/5.1 getFlushMode() with FlushMode return type
+				getFlushMode = Session.class.getMethod("getFlushMode");
+			}
+			catch (NoSuchMethodException ex2) {
+				throw new IllegalStateException("No compatible Hibernate getFlushMode signature found", ex2);
+			}
+		}
+		// Check that it is the Hibernate FlushMode type, not JPA's...
+		Assert.state(FlushMode.class == getFlushMode.getReturnType(), "Could not find Hibernate getFlushMode method");
+	}
+
+
+	/**
+	 * Get the native Hibernate FlushMode, adapting between Hibernate 5.0/5.1 and 5.2+.
+	 * @param session the Hibernate Session to get the flush mode from
+	 * @return the FlushMode (never {@code null})
+	 * @since 4.3
+	 */
+	static FlushMode getFlushMode(Session session) {
+		FlushMode flushMode = (FlushMode) ReflectionUtils.invokeMethod(getFlushMode, session);
+		Assert.state(flushMode != null, "No FlushMode from Session");
+		return flushMode;
+	}
+
 	/**
 	 * Trigger a flush on the given Hibernate Session, converting regular
 	 * {@link HibernateException} instances as well as Hibernate 5.2's
@@ -116,8 +121,8 @@ public abstract class SessionFactoryUtils {
 			throw convertHibernateAccessException(ex);
 		}
 		catch (PersistenceException ex) {
-			if (ex.getCause() instanceof HibernateException hibernateException) {
-				throw convertHibernateAccessException(hibernateException);
+			if (ex.getCause() instanceof HibernateException) {
+				throw convertHibernateAccessException((HibernateException) ex.getCause());
 			}
 			throw ex;
 		}
@@ -133,12 +138,11 @@ public abstract class SessionFactoryUtils {
 	public static void closeSession(@Nullable Session session) {
 		if (session != null) {
 			try {
-				if (session.isOpen()) {
-					session.close();
-				}
-			}
-			catch (Throwable ex) {
-				logger.error("Failed to release Hibernate Session", ex);
+				session.close();
+			} catch (HibernateException ex) {
+				logger.debug("Could not close Hibernate Session", ex);
+			} catch (Throwable ex) {
+				logger.debug("Unexpected exception on closing Hibernate Session", ex);
 			}
 		}
 	}
@@ -156,12 +160,13 @@ public abstract class SessionFactoryUtils {
 			Map<?, ?> props = (Map<?, ?>) ReflectionUtils.invokeMethod(getProperties, sessionFactory);
 			if (props != null) {
 				Object dataSourceValue = props.get(Environment.DATASOURCE);
-				if (dataSourceValue instanceof DataSource dataSource) {
-					return dataSource;
+				if (dataSourceValue instanceof DataSource) {
+					return (DataSource) dataSourceValue;
 				}
 			}
 		}
-		if (sessionFactory instanceof SessionFactoryImplementor sfi) {
+		if (sessionFactory instanceof SessionFactoryImplementor) {
+			SessionFactoryImplementor sfi = (SessionFactoryImplementor) sessionFactory;
 			try {
 				ConnectionProvider cp = sfi.getServiceRegistry().getService(ConnectionProvider.class);
 				if (cp != null) {
@@ -189,32 +194,38 @@ public abstract class SessionFactoryUtils {
 		if (ex instanceof JDBCConnectionException) {
 			return new DataAccessResourceFailureException(ex.getMessage(), ex);
 		}
-		if (ex instanceof SQLGrammarException hibJdbcEx) {
-			return new InvalidDataAccessResourceUsageException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() + "]", ex);
+		if (ex instanceof SQLGrammarException) {
+			SQLGrammarException jdbcEx = (SQLGrammarException) ex;
+			return new InvalidDataAccessResourceUsageException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
-		if (ex instanceof QueryTimeoutException hibJdbcEx) {
-			return new org.springframework.dao.QueryTimeoutException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() + "]", ex);
+		if (ex instanceof QueryTimeoutException) {
+			QueryTimeoutException jdbcEx = (QueryTimeoutException) ex;
+			return new org.springframework.dao.QueryTimeoutException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
-		if (ex instanceof LockAcquisitionException hibJdbcEx) {
-			return new CannotAcquireLockException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() + "]", ex);
+		if (ex instanceof LockAcquisitionException) {
+			LockAcquisitionException jdbcEx = (LockAcquisitionException) ex;
+			return new CannotAcquireLockException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
-		if (ex instanceof PessimisticLockException hibJdbcEx) {
-			return new PessimisticLockingFailureException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() + "]", ex);
+		if (ex instanceof PessimisticLockException) {
+			PessimisticLockException jdbcEx = (PessimisticLockException) ex;
+			return new PessimisticLockingFailureException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
-		if (ex instanceof ConstraintViolationException hibJdbcEx) {
-			return new DataIntegrityViolationException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() +
-					"]; constraint [" + hibJdbcEx.getConstraintName() + "]", ex);
+		if (ex instanceof ConstraintViolationException) {
+			ConstraintViolationException jdbcEx = (ConstraintViolationException) ex;
+			return new DataIntegrityViolationException(ex.getMessage()  + "; SQL [" + jdbcEx.getSQL() +
+					"]; constraint [" + jdbcEx.getConstraintName() + "]", ex);
 		}
-		if (ex instanceof DataException hibJdbcEx) {
-			return new DataIntegrityViolationException(ex.getMessage() + "; SQL [" + hibJdbcEx.getSQL() + "]", ex);
+		if (ex instanceof DataException) {
+			DataException jdbcEx = (DataException) ex;
+			return new DataIntegrityViolationException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
-		if (ex instanceof JDBCException hibJdbcEx) {
-			return new HibernateJdbcException(hibJdbcEx);
+		if (ex instanceof JDBCException) {
+			return new HibernateJdbcException((JDBCException) ex);
 		}
 		// end of JDBCException (subclass) handling
 
-		if (ex instanceof QueryException queryException) {
-			return new HibernateQueryException(queryException);
+		if (ex instanceof QueryException) {
+			return new HibernateQueryException((QueryException) ex);
 		}
 		if (ex instanceof NonUniqueResultException) {
 			return new IncorrectResultSizeDataAccessException(ex.getMessage(), 1, ex);
@@ -234,20 +245,20 @@ public abstract class SessionFactoryUtils {
 		if (ex instanceof ObjectDeletedException) {
 			return new InvalidDataAccessApiUsageException(ex.getMessage(), ex);
 		}
-		if (ex instanceof UnresolvableObjectException unresolvableObjectException) {
-			return new HibernateObjectRetrievalFailureException(unresolvableObjectException);
+		if (ex instanceof UnresolvableObjectException) {
+			return new HibernateObjectRetrievalFailureException((UnresolvableObjectException) ex);
 		}
-		if (ex instanceof WrongClassException wrongClassException) {
-			return new HibernateObjectRetrievalFailureException(wrongClassException);
+		if (ex instanceof WrongClassException) {
+			return new HibernateObjectRetrievalFailureException((WrongClassException) ex);
 		}
-		if (ex instanceof StaleObjectStateException staleObjectStateException) {
-			return new HibernateOptimisticLockingFailureException(staleObjectStateException);
+		if (ex instanceof StaleObjectStateException) {
+			return new HibernateOptimisticLockingFailureException((StaleObjectStateException) ex);
 		}
-		if (ex instanceof StaleStateException staleStateException) {
-			return new HibernateOptimisticLockingFailureException(staleStateException);
+		if (ex instanceof StaleStateException) {
+			return new HibernateOptimisticLockingFailureException((StaleStateException) ex);
 		}
-		if (ex instanceof OptimisticEntityLockException optimisticEntityLockException) {
-			return new HibernateOptimisticLockingFailureException(optimisticEntityLockException);
+		if (ex instanceof OptimisticEntityLockException) {
+			return new HibernateOptimisticLockingFailureException((OptimisticEntityLockException) ex);
 		}
 		if (ex instanceof PessimisticEntityLockException) {
 			if (ex.getCause() instanceof LockAcquisitionException) {

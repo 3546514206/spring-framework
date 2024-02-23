@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ public class AdvisorEntry implements ParseState.Entry {
 
 
 	/**
-	 * Create a new {@code AdvisorEntry} instance.
+	 * Creates a new instance of the {@link AdvisorEntry} class.
+	 *
 	 * @param name the bean name of the advisor
 	 */
 	public AdvisorEntry(String name) {
 		this.name = name;
 	}
-
 
 	@Override
 	public String toString() {

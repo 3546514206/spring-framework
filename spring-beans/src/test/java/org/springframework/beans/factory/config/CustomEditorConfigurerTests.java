@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,15 @@
 
 package org.springframework.beans.factory.config;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.PropertyEditorRegistrar;
+import org.springframework.beans.PropertyEditorRegistry;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.tests.sample.beans.TestBean;
+
 import java.beans.PropertyEditor;
 import java.beans.PropertyEditorSupport;
 import java.text.DateFormat;
@@ -25,15 +34,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.MutablePropertyValues;
-import org.springframework.beans.PropertyEditorRegistrar;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.beans.propertyeditors.CustomDateEditor;
-import org.springframework.beans.testfixture.beans.TestBean;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -41,15 +41,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @since 31.07.2004
  */
-class CustomEditorConfigurerTests {
+public class CustomEditorConfigurerTests {
 
 	@Test
-	void testCustomEditorConfigurerWithPropertyEditorRegistrar() throws ParseException {
+	public void testCustomEditorConfigurerWithPropertyEditorRegistrar() throws ParseException {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		CustomEditorConfigurer cec = new CustomEditorConfigurer();
 		final DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT, Locale.GERMAN);
 		cec.setPropertyEditorRegistrars(new PropertyEditorRegistrar[] {
-				registry -> registry.registerCustomEditor(Date.class, new CustomDateEditor(df, true))});
+				new PropertyEditorRegistrar() {
+					@Override
+					public void registerCustomEditors(PropertyEditorRegistry registry) {
+						registry.registerCustomEditor(Date.class, new CustomDateEditor(df, true));
+					}
+				}});
 		cec.postProcessBeanFactory(bf);
 
 		MutablePropertyValues pvs = new MutablePropertyValues();
@@ -70,7 +75,7 @@ class CustomEditorConfigurerTests {
 	}
 
 	@Test
-	void testCustomEditorConfigurerWithEditorAsClass() throws ParseException {
+	public void testCustomEditorConfigurerWithEditorAsClass() throws ParseException {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		CustomEditorConfigurer cec = new CustomEditorConfigurer();
 		Map<Class<?>, Class<? extends PropertyEditor>> editors = new HashMap<>();
@@ -90,7 +95,7 @@ class CustomEditorConfigurerTests {
 	}
 
 	@Test
-	void testCustomEditorConfigurerWithRequiredTypeArray() {
+	public void testCustomEditorConfigurerWithRequiredTypeArray() throws ParseException {
 		DefaultListableBeanFactory bf = new DefaultListableBeanFactory();
 		CustomEditorConfigurer cec = new CustomEditorConfigurer();
 		Map<Class<?>, Class<? extends PropertyEditor>> editors = new HashMap<>();

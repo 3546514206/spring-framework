@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for overloaded advice.
@@ -29,26 +29,32 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Adrian Colyer
  * @author Chris Beams
  */
-class OverloadedAdviceTests {
+public class OverloadedAdviceTests {
 
 	@Test
-	@SuppressWarnings("resource")
-	void testExceptionOnConfigParsingWithMismatchedAdviceMethod() {
-		assertThatExceptionOfType(BeanCreationException.class)
-			.isThrownBy(() -> new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass()))
-			.havingRootCause()
-				.isInstanceOf(IllegalArgumentException.class)
-				.as("invalidAbsoluteTypeName should be detected by AJ").withMessageContaining("invalidAbsoluteTypeName");
+	public void testExceptionOnConfigParsingWithMismatchedAdviceMethod() {
+		try {
+			new ClassPathXmlApplicationContext(getClass().getSimpleName() + ".xml", getClass());
+		}
+		catch (BeanCreationException ex) {
+			Throwable cause = ex.getRootCause();
+			boolean condition = cause instanceof IllegalArgumentException;
+			assertThat(condition).as("Should be IllegalArgumentException").isTrue();
+			assertThat(cause.getMessage().contains("invalidAbsoluteTypeName")).as("invalidAbsoluteTypeName should be detected by AJ").isTrue();
+		}
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void testExceptionOnConfigParsingWithAmbiguousAdviceMethod() {
-		assertThatExceptionOfType(BeanCreationException.class)
-			.isThrownBy(() -> new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-ambiguous.xml", getClass()))
-			.havingRootCause()
-				.isInstanceOf(IllegalArgumentException.class)
-				.withMessageContaining("Cannot resolve method 'myBeforeAdvice' to a unique method");
+	public void testExceptionOnConfigParsingWithAmbiguousAdviceMethod() {
+		try {
+			new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-ambiguous.xml", getClass());
+		}
+		catch (BeanCreationException ex) {
+			Throwable cause = ex.getRootCause();
+			boolean condition = cause instanceof IllegalArgumentException;
+			assertThat(condition).as("Should be IllegalArgumentException").isTrue();
+			assertThat(cause.getMessage().contains("Cannot resolve method 'myBeforeAdvice' to a unique method")).as("Cannot resolve method 'myBeforeAdvice' to a unique method").isTrue();
+		}
 	}
 
 }

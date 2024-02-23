@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,9 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jca.context.ResourceAdapterApplicationContext;
+import org.springframework.jca.support.SimpleBootstrapContext;
+import org.springframework.jca.work.SimpleTaskWorkManager;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.env.MockPropertySource;
 import org.springframework.mock.web.MockServletConfig;
@@ -87,6 +90,7 @@ import static org.springframework.core.env.EnvironmentSystemIntegrationTests.Con
  * @author Sam Brannen
  * @see org.springframework.context.support.EnvironmentIntegrationTests
  */
+@SuppressWarnings("resource")
 public class EnvironmentSystemIntegrationTests {
 
 	private final ConfigurableEnvironment prodEnv = new StandardEnvironment();
@@ -532,6 +536,22 @@ public class EnvironmentSystemIntegrationTests {
 	}
 
 	@Test
+	void resourceAdapterApplicationContext() {
+		ResourceAdapterApplicationContext ctx = new ResourceAdapterApplicationContext(new SimpleBootstrapContext(new SimpleTaskWorkManager()));
+
+		assertHasStandardEnvironment(ctx);
+
+		registerEnvironmentBeanDefinition(ctx);
+
+		ctx.setEnvironment(prodEnv);
+		ctx.refresh();
+
+		assertHasEnvironment(ctx, prodEnv);
+		assertEnvironmentBeanRegistered(ctx);
+		assertEnvironmentAwareInvoked(ctx, prodEnv);
+	}
+
+	@Test
 	void abstractApplicationContextValidatesRequiredPropertiesOnRefresh() {
 		{
 			ConfigurableApplicationContext ctx = new AnnotationConfigApplicationContext();
@@ -617,7 +637,7 @@ public class EnvironmentSystemIntegrationTests {
 	@Import({DevConfig.class, ProdConfig.class})
 	static class Config {
 		@Bean
-		EnvironmentAwareBean envAwareBean() {
+		public EnvironmentAwareBean envAwareBean() {
 			return new EnvironmentAwareBean();
 		}
 	}

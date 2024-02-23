@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,32 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
+import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.method.ResolvableMethod;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import org.springframework.core.MethodParameter;
-import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.method.ResolvableMethod;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.springframework.web.testfixture.method.MvcAnnotationPredicates.requestParam;
+import static org.springframework.web.method.MvcAnnotationPredicates.requestParam;
 
 /**
- * Tests for {@link RequestParamMapMethodArgumentResolver}.
+ * Unit tests for {@link RequestParamMapMethodArgumentResolver}.
  *
  * @author Rossen Stoyanchev
  */
-class RequestParamMapMethodArgumentResolverTests {
+public class RequestParamMapMethodArgumentResolverTests {
 
 	private final RequestParamMapMethodArgumentResolver resolver =
 			new RequestParamMapMethodArgumentResolver(ReactiveAdapterRegistry.getSharedInstance());
@@ -51,7 +50,7 @@ class RequestParamMapMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 		MethodParameter param = this.testMethod.annot(requestParam().name("")).arg(Map.class);
 		assertThat(this.resolver.supportsParameter(param)).isTrue();
 
@@ -70,7 +69,7 @@ class RequestParamMapMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveMapArgumentWithQueryString() {
+	public void resolveMapArgumentWithQueryString() {
 		MethodParameter param = this.testMethod.annot(requestParam().name("")).arg(Map.class);
 		Object result= resolve(param, MockServerWebExchange.from(MockServerHttpRequest.get("/path?foo=bar")));
 		boolean condition = result instanceof Map;
@@ -79,7 +78,7 @@ class RequestParamMapMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveMultiValueMapArgument() {
+	public void resolveMultiValueMapArgument() {
 		MethodParameter param = this.testMethod.annotPresent(RequestParam.class).arg(MultiValueMap.class);
 		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/path?foo=bar&foo=baz"));
 		Object result= resolve(param, exchange);

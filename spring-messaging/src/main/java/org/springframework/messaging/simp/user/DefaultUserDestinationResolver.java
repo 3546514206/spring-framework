@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,7 @@
 
 package org.springframework.messaging.simp.user;
 
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -30,8 +24,13 @@ import org.springframework.messaging.simp.SimpLogging;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
+import org.springframework.util.PathMatcher;
 import org.springframework.util.StringUtils;
+
+import java.security.Principal;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A default implementation of {@code UserDestinationResolver} that relies
@@ -122,6 +121,29 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 		return this.removeLeadingSlash;
 	}
 
+	/**
+	 * Provide the {@code PathMatcher} in use for working with destinations
+	 * which in turn helps to determine whether the leading slash should be
+	 * kept in actual destinations after removing the
+	 * {@link #setUserDestinationPrefix userDestinationPrefix}.
+	 * <p>By default actual destinations have a leading slash, e.g.
+	 * {@code /queue/position-updates} which makes sense with brokers that
+	 * support destinations with slash as separator. When a {@code PathMatcher}
+	 * is provided that supports an alternative separator, then resulting
+	 * destinations won't have a leading slash, e.g. {@code
+	 * jms.queue.position-updates}.
+	 * @param pathMatcher the PathMatcher used to work with destinations
+	 * @since 4.3
+	 * @deprecated as of 4.3.14 this property is no longer used and is replaced
+	 * by {@link #setRemoveLeadingSlash(boolean)} that indicates more explicitly
+	 * whether to keep the leading slash which may or may not be the case
+	 * regardless of how the {@code PathMatcher} is configured.
+	 */
+	@Deprecated
+	public void setPathMatcher(@Nullable PathMatcher pathMatcher) {
+		// Do nothing
+	}
+
 
 	@Override
 	@Nullable
@@ -131,18 +153,18 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 			return null;
 		}
 		String user = parseResult.getUser();
-		String sourceDest = parseResult.getSourceDestination();
-		Set<String> sessionIds = parseResult.getSessionIds();
+		String sourceDestination = parseResult.getSourceDestination();
 		Set<String> targetSet = new HashSet<>();
-		for (String sessionId : sessionIds) {
-			String actualDest = parseResult.getActualDestination();
-			String targetDest = getTargetDestination(sourceDest, actualDest, sessionId, user);
-			if (targetDest != null) {
-				targetSet.add(targetDest);
+		for (String sessionId : parseResult.getSessionIds()) {
+			String actualDestination = parseResult.getActualDestination();
+			String targetDestination = getTargetDestination(
+					sourceDestination, actualDestination, sessionId, user);
+			if (targetDestination != null) {
+				targetSet.add(targetDestination);
 			}
 		}
-		String subscribeDest = parseResult.getSubscribeDestination();
-		return new UserDestinationResult(sourceDest, targetSet, subscribeDest, user, sessionIds);
+		String subscribeDestination = parseResult.getSubscribeDestination();
+		return new UserDestinationResult(sourceDestination, targetSet, subscribeDestination, user);
 	}
 
 	@Nullable
@@ -154,11 +176,13 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 		}
 		SimpMessageType messageType = SimpMessageHeaderAccessor.getMessageType(headers);
 		if (messageType != null) {
-			return switch (messageType) {
-				case SUBSCRIBE, UNSUBSCRIBE -> parseSubscriptionMessage(message, sourceDestination);
-				case MESSAGE -> parseMessage(headers, sourceDestination);
-				default -> null;
-			};
+			switch (messageType) {
+				case SUBSCRIBE:
+				case UNSUBSCRIBE:
+					return parseSubscriptionMessage(message, sourceDestination);
+				case MESSAGE:
+					return parseMessage(headers, sourceDestination);
+			}
 		}
 		return null;
 	}
@@ -178,7 +202,6 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 		}
 		Principal principal = SimpMessageHeaderAccessor.getUser(headers);
 		String user = (principal != null ? principal.getName() : null);
-		Assert.isTrue(user == null || !user.contains("%2F"), () -> "Invalid sequence \"%2F\" in user name: " + user);
 		Set<String> sessionIds = Collections.singleton(sessionId);
 		return new ParseResult(sourceDestination, actualDestination, sourceDestination, sessionIds, user);
 	}
@@ -217,7 +240,7 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 			}
 			else {
 				Set<SimpSession> sessions = user.getSessions();
-				sessionIds = CollectionUtils.newHashSet(sessions.size());
+				sessionIds = new HashSet<>(sessions.size());
 				for (SimpSession session : sessions) {
 					sessionIds.add(session.getId());
 				}
@@ -282,37 +305,22 @@ public class DefaultUserDestinationResolver implements UserDestinationResolver {
 			this.user = user;
 		}
 
-		/**
-		 * The destination from the source message, e.g. "/user/{user}/queue/position-updates".
-		 */
 		public String getSourceDestination() {
 			return this.sourceDestination;
 		}
 
-		/**
-		 * The actual destination, without any user prefix, e.g. "/queue/position-updates".
-		 */
 		public String getActualDestination() {
 			return this.actualDestination;
 		}
 
-		/**
-		 * The user destination as it would be on a subscription, "/user/queue/position-updates".
-		 */
 		public String getSubscribeDestination() {
 			return this.subscribeDestination;
 		}
 
-		/**
-		 * The session id or id's for the user.
-		 */
 		public Set<String> getSessionIds() {
 			return this.sessionIds;
 		}
 
-		/**
-		 * The name of the user associated with the session.
-		 */
 		@Nullable
 		public String getUser() {
 			return this.user;

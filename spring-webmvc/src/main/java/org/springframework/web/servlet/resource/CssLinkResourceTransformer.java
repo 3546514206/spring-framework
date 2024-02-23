@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,14 @@
 
 package org.springframework.web.servlet.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.lang.Nullable;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.util.StringUtils;
+
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -24,15 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import jakarta.servlet.http.HttpServletRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.core.io.Resource;
-import org.springframework.lang.Nullable;
-import org.springframework.util.FileCopyUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * A {@link ResourceTransformer} implementation that modifies links in a CSS
@@ -72,7 +71,8 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 
 		String filename = resource.getFilename();
 		if (!"css".equals(StringUtils.getFilenameExtension(filename)) ||
-				resource instanceof EncodedResourceResolver.EncodedResource) {
+				resource instanceof EncodedResourceResolver.EncodedResource ||
+				resource instanceof GzipResourceResolver.GzippedResource) {
 			return resource;
 		}
 
@@ -151,6 +151,7 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 				}
 				else {
 					position = extractLink(position, content, result);
+
 				}
 			}
 		}
@@ -163,7 +164,7 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 		}
 
 		/**
-		 * Invoked after a keyword match, after whitespace has been removed, and when
+		 * Invoked after a keyword match, after whitespaces removed, and when
 		 * the next char is neither a single nor double quote.
 		 */
 		protected abstract int extractLink(int index, String content, SortedSet<ContentChunkInfo> linksToAdd);
@@ -179,10 +180,9 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 
 		@Override
 		protected int extractLink(int index, String content, SortedSet<ContentChunkInfo> linksToAdd) {
-			if (content.startsWith("url(", index)) {
-				// Ignore: UrlFunctionLinkParser will handle it.
-			}
-			else if (logger.isTraceEnabled()) {
+			if (content.substring(index, index + 4).equals("url(")) {
+				// Ignore, UrlLinkParser will take care
+			} else if (logger.isTraceEnabled()) {
 				logger.trace("Unexpected syntax for @import link at index " + index);
 			}
 			return index;
@@ -231,8 +231,14 @@ public class CssLinkResourceTransformer extends ResourceTransformerSupport {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ContentChunkInfo that &&
-					this.start == that.start && this.end == that.end));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ContentChunkInfo)) {
+				return false;
+			}
+			ContentChunkInfo otherCci = (ContentChunkInfo) other;
+			return (this.start == otherCci.start && this.end == otherCci.end);
 		}
 
 		@Override

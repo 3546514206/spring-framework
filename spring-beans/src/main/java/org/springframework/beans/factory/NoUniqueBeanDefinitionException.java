@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.beans.factory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -62,7 +61,7 @@ public class NoUniqueBeanDefinitionException extends NoSuchBeanDefinitionExcepti
 		super(type, "expected single matching bean but found " + beanNamesFound.size() + ": " +
 				StringUtils.collectionToCommaDelimitedString(beanNamesFound));
 		this.numberOfBeansFound = beanNamesFound.size();
-		this.beanNamesFound = new ArrayList<>(beanNamesFound);
+		this.beanNamesFound = beanNamesFound;
 	}
 
 	/**
@@ -84,7 +83,7 @@ public class NoUniqueBeanDefinitionException extends NoSuchBeanDefinitionExcepti
 		super(type, "expected single matching bean but found " + beanNamesFound.size() + ": " +
 				StringUtils.collectionToCommaDelimitedString(beanNamesFound));
 		this.numberOfBeansFound = beanNamesFound.size();
-		this.beanNamesFound = new ArrayList<>(beanNamesFound);
+		this.beanNamesFound = beanNamesFound;
 	}
 
 	/**

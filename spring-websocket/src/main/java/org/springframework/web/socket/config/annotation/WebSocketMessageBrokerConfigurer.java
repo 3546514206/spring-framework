@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.springframework.web.socket.config.annotation;
 
 import java.util.List;
 
-import org.springframework.context.SmartLifecycle;
-import org.springframework.lang.Nullable;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.messaging.handler.invocation.HandlerMethodReturnValueHandler;
@@ -54,7 +52,7 @@ public interface WebSocketMessageBrokerConfigurer {
 
 	/**
 	 * Configure the {@link org.springframework.messaging.MessageChannel} used for
-	 * incoming messages from WebSocket clients. By default, the channel is backed
+	 * incoming messages from WebSocket clients. By default the channel is backed
 	 * by a thread pool of size 1. It is recommended to customize thread pool
 	 * settings for production use.
 	 */
@@ -63,7 +61,7 @@ public interface WebSocketMessageBrokerConfigurer {
 
 	/**
 	 * Configure the {@link org.springframework.messaging.MessageChannel} used for
-	 * outbound messages to WebSocket clients. By default, the channel is backed
+	 * outbound messages to WebSocket clients. By default the channel is backed
 	 * by a thread pool of size 1. It is recommended to customize thread pool
 	 * settings for production use.
 	 */
@@ -110,24 +108,6 @@ public interface WebSocketMessageBrokerConfigurer {
 	 * Configure message broker options.
 	 */
 	default void configureMessageBroker(MessageBrokerRegistry registry) {
-	}
-
-	/**
-	 * Return the {@link SmartLifecycle#getPhase() phase} that WebSocket message
-	 * handling beans of type {@link SmartLifecycle} should run in.
-	 * <p>The default implementation returns {@code null} which allows other
-	 * configurers to decide. As soon as any configurer returns a value, that
-	 * value is used. If no configurer returns a value, then by default
-	 * {@link SmartLifecycle#DEFAULT_PHASE} is used.
-	 * <p>It is recommended to use a phase value such as 0 in order to ensure that
-	 * components start before the web server in Spring Boot application. In 6.2.0,
-	 * the default used will change to 0.
-	 * @since 6.1.4
-	 * @see SmartLifecycle
-	 */
-	@Nullable
-	default Integer getPhase() {
-		return null;
 	}
 
 }

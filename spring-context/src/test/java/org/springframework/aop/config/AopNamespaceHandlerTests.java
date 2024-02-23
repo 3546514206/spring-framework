@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,31 +19,30 @@ package org.springframework.aop.config;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.aop.testfixture.advice.CountingBeforeAdvice;
-import org.springframework.beans.testfixture.beans.ITestBean;
-import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.tests.aop.advice.CountingBeforeAdvice;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link AopNamespaceHandler}.
+ * Unit tests for aop namespace.
  *
  * @author Rob Harrop
  * @author Chris Beams
  */
-class AopNamespaceHandlerTests {
+public class AopNamespaceHandlerTests {
 
 	private ApplicationContext context;
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.context = new ClassPathXmlApplicationContext(getClass().getSimpleName() + "-context.xml", getClass());
 	}
 
@@ -53,7 +52,7 @@ class AopNamespaceHandlerTests {
 
 
 	@Test
-	void testIsProxy() {
+	public void testIsProxy() throws Exception {
 		ITestBean bean = getTestBean();
 
 		assertThat(AopUtils.isAopProxy(bean)).as("Bean is not a proxy").isTrue();
@@ -62,11 +61,11 @@ class AopNamespaceHandlerTests {
 		Advised advised = (Advised) bean;
 		Advisor[] advisors = advised.getAdvisors();
 
-		assertThat(advisors).as("Advisors should not be empty").isNotEmpty();
+		assertThat(advisors.length > 0).as("Advisors should not be empty").isTrue();
 	}
 
 	@Test
-	void testAdviceInvokedCorrectly() {
+	public void testAdviceInvokedCorrectly() throws Exception {
 		CountingBeforeAdvice getAgeCounter = (CountingBeforeAdvice) this.context.getBean("getAgeCounter");
 		CountingBeforeAdvice getNameCounter = (CountingBeforeAdvice) this.context.getBean("getNameCounter");
 
@@ -87,7 +86,7 @@ class AopNamespaceHandlerTests {
 	}
 
 	@Test
-	void testAspectApplied() {
+	public void testAspectApplied() throws Exception {
 		ITestBean bean = getTestBean();
 
 		CountingAspectJAdvice advice = (CountingAspectJAdvice) this.context.getBean("countingAdvice");
@@ -107,7 +106,7 @@ class AopNamespaceHandlerTests {
 	}
 
 	@Test
-	void testAspectAppliedForInitializeBeanWithEmptyName() {
+	public void testAspectAppliedForInitializeBeanWithEmptyName() {
 		ITestBean bean = (ITestBean) this.context.getAutowireCapableBeanFactory().initializeBean(new TestBean(), "");
 
 		CountingAspectJAdvice advice = (CountingAspectJAdvice) this.context.getBean("countingAdvice");
@@ -127,7 +126,7 @@ class AopNamespaceHandlerTests {
 	}
 
 	@Test
-	void testAspectAppliedForInitializeBeanWithNullName() {
+	public void testAspectAppliedForInitializeBeanWithNullName() {
 		ITestBean bean = (ITestBean) this.context.getAutowireCapableBeanFactory().initializeBean(new TestBean(), null);
 
 		CountingAspectJAdvice advice = (CountingAspectJAdvice) this.context.getBean("countingAdvice");
@@ -157,11 +156,11 @@ class CountingAspectJAdvice {
 
 	private int aroundCount;
 
-	public void myBeforeAdvice() {
+	public void myBeforeAdvice() throws Throwable {
 		this.beforeCount++;
 	}
 
-	public void myAfterAdvice() {
+	public void myAfterAdvice() throws Throwable {
 		this.afterCount++;
 	}
 

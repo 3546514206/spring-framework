@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package org.springframework.transaction.support;
 
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.scope.ScopedObject;
 import org.springframework.core.InfrastructureProxy;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
+import java.util.List;
+
 /**
  * Utility methods for triggering specific {@link TransactionSynchronization}
  * callback methods on all currently registered synchronizations.
  *
  * @author Juergen Hoeller
- * @since 2.0
  * @see TransactionSynchronization
  * @see TransactionSynchronizationManager#getSynchronizations()
+ * @since 2.0
  */
 public abstract class TransactionSynchronizationUtils {
 
@@ -45,10 +44,11 @@ public abstract class TransactionSynchronizationUtils {
 
 
 	/**
-	 * Check whether the given resource transaction manager refers to the given
+	 * Check whether the given resource transaction managers refers to the given
 	 * (underlying) resource factory.
+	 *
 	 * @see ResourceTransactionManager#getResourceFactory()
-	 * @see InfrastructureProxy#getWrappedObject()
+	 * @see org.springframework.core.InfrastructureProxy#getWrappedObject()
 	 */
 	public static boolean sameResourceFactory(ResourceTransactionManager tm, Object resourceFactory) {
 		return unwrapResourceIfNecessary(tm.getResourceFactory()).equals(unwrapResourceIfNecessary(resourceFactory));
@@ -57,15 +57,14 @@ public abstract class TransactionSynchronizationUtils {
 	/**
 	 * Unwrap the given resource handle if necessary; otherwise return
 	 * the given handle as-is.
-	 * @since 5.3.4
-	 * @see InfrastructureProxy#getWrappedObject()
+	 * @see org.springframework.core.InfrastructureProxy#getWrappedObject()
 	 */
-	public static Object unwrapResourceIfNecessary(Object resource) {
+	static Object unwrapResourceIfNecessary(Object resource) {
 		Assert.notNull(resource, "Resource must not be null");
 		Object resourceRef = resource;
 		// unwrap infrastructure proxy
-		if (resourceRef instanceof InfrastructureProxy infrastructureProxy) {
-			resourceRef = infrastructureProxy.getWrappedObject();
+		if (resourceRef instanceof InfrastructureProxy) {
+			resourceRef = ((InfrastructureProxy) resourceRef).getWrappedObject();
 		}
 		if (aopAvailable) {
 			// now unwrap scoped proxy
@@ -106,9 +105,8 @@ public abstract class TransactionSynchronizationUtils {
 		for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
 			try {
 				synchronization.beforeCompletion();
-			}
-			catch (Throwable ex) {
-				logger.error("TransactionSynchronization.beforeCompletion threw exception", ex);
+			} catch (Throwable tsex) {
+				logger.error("TransactionSynchronization.beforeCompletion threw exception", tsex);
 			}
 		}
 	}
@@ -170,9 +168,8 @@ public abstract class TransactionSynchronizationUtils {
 			for (TransactionSynchronization synchronization : synchronizations) {
 				try {
 					synchronization.afterCompletion(completionStatus);
-				}
-				catch (Throwable ex) {
-					logger.error("TransactionSynchronization.afterCompletion threw exception", ex);
+				} catch (Throwable tsex) {
+					logger.error("TransactionSynchronization.afterCompletion threw exception", tsex);
 				}
 			}
 		}
@@ -185,8 +182,8 @@ public abstract class TransactionSynchronizationUtils {
 	private static class ScopedProxyUnwrapper {
 
 		public static Object unwrapIfNecessary(Object resource) {
-			if (resource instanceof ScopedObject scopedObject) {
-				return scopedObject.getTargetObject();
+			if (resource instanceof ScopedObject) {
+				return ((ScopedObject) resource).getTargetObject();
 			}
 			else {
 				return resource;

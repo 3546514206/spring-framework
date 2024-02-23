@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Rossen Stoyanchev
  * @since 4.0
  */
-class HeadersMethodArgumentResolverTests {
+public class HeadersMethodArgumentResolverTests {
 
 	private final HeadersMethodArgumentResolver resolver = new HeadersMethodArgumentResolver();
 
@@ -50,7 +50,7 @@ class HeadersMethodArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() {
+	public void supportsParameter() {
 
 		assertThat(this.resolver.supportsParameter(
 				this.resolvable.annotPresent(Headers.class).arg(Map.class, String.class, Object.class))).isTrue();
@@ -63,7 +63,7 @@ class HeadersMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentAnnotated() throws Exception {
+	public void resolveArgumentAnnotated() throws Exception {
 		MethodParameter param = this.resolvable.annotPresent(Headers.class).arg(Map.class, String.class, Object.class);
 		Object resolved = this.resolver.resolveArgument(param, this.message);
 
@@ -75,13 +75,13 @@ class HeadersMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentAnnotatedNotMap() {
+	public void resolveArgumentAnnotatedNotMap() throws Exception {
 		assertThatIllegalStateException().isThrownBy(() ->
 				this.resolver.resolveArgument(this.resolvable.annotPresent(Headers.class).arg(String.class), this.message));
 	}
 
 	@Test
-	void resolveArgumentMessageHeaders() throws Exception {
+	public void resolveArgumentMessageHeaders() throws Exception {
 		Object resolved = this.resolver.resolveArgument(this.resolvable.arg(MessageHeaders.class), this.message);
 
 		boolean condition = resolved instanceof MessageHeaders;
@@ -91,7 +91,7 @@ class HeadersMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentMessageHeaderAccessor() throws Exception {
+	public void resolveArgumentMessageHeaderAccessor() throws Exception {
 		MethodParameter param = this.resolvable.arg(MessageHeaderAccessor.class);
 		Object resolved = this.resolver.resolveArgument(param, this.message);
 
@@ -102,7 +102,7 @@ class HeadersMethodArgumentResolverTests {
 	}
 
 	@Test
-	void resolveArgumentMessageHeaderAccessorSubclass() throws Exception {
+	public void resolveArgumentMessageHeaderAccessorSubclass() throws Exception {
 		MethodParameter param = this.resolvable.arg(TestMessageHeaderAccessor.class);
 		Object resolved = this.resolver.resolveArgument(param, this.message);
 

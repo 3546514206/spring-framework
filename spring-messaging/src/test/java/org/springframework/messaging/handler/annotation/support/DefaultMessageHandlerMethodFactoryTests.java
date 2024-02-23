@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.converter.ByteArrayMessageConverter;
@@ -49,16 +50,21 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Stephane Nicoll
  */
-class DefaultMessageHandlerMethodFactoryTests {
+public class DefaultMessageHandlerMethodFactoryTests {
 
 	private final SampleBean sample = new SampleBean();
 
 
 	@Test
-	void customConversion() throws Exception {
+	public void customConversion() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		GenericConversionService conversionService = new GenericConversionService();
-		conversionService.addConverter(SampleBean.class, String.class, source -> "foo bar");
+		conversionService.addConverter(SampleBean.class, String.class, new Converter<SampleBean, String>() {
+			@Override
+			public String convert(SampleBean source) {
+				return "foo bar";
+			}
+		});
 		instance.setConversionService(conversionService);
 		instance.afterPropertiesSet();
 
@@ -70,7 +76,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void customConversionServiceFailure() {
+	public void customConversionServiceFailure() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		GenericConversionService conversionService = new GenericConversionService();
 		assertThat(conversionService.canConvert(Integer.class, String.class)).as("conversion service should fail to convert payload").isFalse();
@@ -85,7 +91,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void customMessageConverterFailure() {
+	public void customMessageConverterFailure() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		MessageConverter messageConverter = new ByteArrayMessageConverter();
 		instance.setMessageConverter(messageConverter);
@@ -99,7 +105,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void customArgumentResolver() throws Exception {
+	public void customArgumentResolver() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		List<HandlerMethodArgumentResolver> customResolvers = new ArrayList<>();
 		customResolvers.add(new CustomHandlerMethodArgumentResolver());
@@ -114,7 +120,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void overrideArgumentResolvers() throws Exception {
+	public void overrideArgumentResolvers() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		List<HandlerMethodArgumentResolver> customResolvers = new ArrayList<>();
 		customResolvers.add(new CustomHandlerMethodArgumentResolver());
@@ -138,7 +144,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void noValidationByDefault() throws Exception {
+	public void noValidationByDefault() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		instance.afterPropertiesSet();
 
@@ -149,7 +155,7 @@ class DefaultMessageHandlerMethodFactoryTests {
 	}
 
 	@Test
-	void customValidation() {
+	public void customValidation() throws Exception {
 		DefaultMessageHandlerMethodFactory instance = createInstance();
 		instance.setValidator(new Validator() {
 			@Override

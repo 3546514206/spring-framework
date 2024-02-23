@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,14 @@
 package org.springframework.web.reactive.result.method.annotation;
 
 
-import java.util.HashSet;
-
 import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.testfixture.beans.TestBean;
+import org.springframework.mock.web.test.server.MockWebSession;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.server.WebSession;
-import org.springframework.web.testfixture.server.MockWebSession;
+
+import java.util.HashSet;
 
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,14 +33,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test fixture with {@link SessionAttributesHandler}.
  * @author Rossen Stoyanchev
  */
-class SessionAttributesHandlerTests {
+public class SessionAttributesHandlerTests {
 
 	private final SessionAttributesHandler sessionAttributesHandler =
 			new SessionAttributesHandler(TestController.class);
 
 
 	@Test
-	void isSessionAttribute() {
+	public void isSessionAttribute() {
 		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("attr1", String.class)).isTrue();
 		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("attr2", String.class)).isTrue();
 		assertThat(this.sessionAttributesHandler.isHandlerSessionAttribute("simple", TestBean.class)).isTrue();
@@ -49,7 +48,7 @@ class SessionAttributesHandlerTests {
 	}
 
 	@Test
-	void retrieveAttributes() {
+	public void retrieveAttributes() {
 		WebSession session = new MockWebSession();
 		session.getAttributes().put("attr1", "value1");
 		session.getAttributes().put("attr2", "value2");
@@ -65,7 +64,7 @@ class SessionAttributesHandlerTests {
 	}
 
 	@Test
-	void cleanupAttributes() {
+	public void cleanupAttributes() {
 		WebSession session = new MockWebSession();
 		session.getAttributes().put("attr1", "value1");
 		session.getAttributes().put("attr2", "value2");
@@ -85,7 +84,7 @@ class SessionAttributesHandlerTests {
 	}
 
 	@Test
-	void storeAttributes() {
+	public void storeAttributes() {
 
 		ModelMap model = new ModelMap();
 		model.put("attr1", "value1");

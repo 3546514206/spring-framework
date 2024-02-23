@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 package org.springframework.beans.factory.config;
-
-import java.util.Comparator;
 
 import org.springframework.beans.BeanMetadataElement;
 import org.springframework.lang.Nullable;
@@ -37,7 +35,7 @@ import org.springframework.util.ObjectUtils;
  * @see BeanDefinition#getPropertyValues
  * @see org.springframework.beans.MutablePropertyValues#addPropertyValue
  */
-public class TypedStringValue implements BeanMetadataElement, Comparable<TypedStringValue> {
+public class TypedStringValue implements BeanMetadataElement {
 
 	@Nullable
 	private String value;
@@ -117,10 +115,10 @@ public class TypedStringValue implements BeanMetadataElement, Comparable<TypedSt
 	 */
 	public Class<?> getTargetType() {
 		Object targetTypeValue = this.targetType;
-		if (!(targetTypeValue instanceof Class<?> clazz)) {
+		if (!(targetTypeValue instanceof Class)) {
 			throw new IllegalStateException("Typed String value does not carry a resolved target type");
 		}
-		return clazz;
+		return (Class<?>) targetTypeValue;
 	}
 
 	/**
@@ -136,8 +134,8 @@ public class TypedStringValue implements BeanMetadataElement, Comparable<TypedSt
 	@Nullable
 	public String getTargetTypeName() {
 		Object targetTypeValue = this.targetType;
-		if (targetTypeValue instanceof Class<?> clazz) {
-			return clazz.getName();
+		if (targetTypeValue instanceof Class) {
+			return ((Class<?>) targetTypeValue).getName();
 		}
 		else {
 			return (String) targetTypeValue;
@@ -145,7 +143,7 @@ public class TypedStringValue implements BeanMetadataElement, Comparable<TypedSt
 	}
 
 	/**
-	 * Return whether this typed String value carries a target type.
+	 * Return whether this typed String value carries a target type .
 	 */
 	public boolean hasTargetType() {
 		return (this.targetType instanceof Class);
@@ -215,21 +213,23 @@ public class TypedStringValue implements BeanMetadataElement, Comparable<TypedSt
 		return this.dynamic;
 	}
 
-	@Override
-	public int compareTo(@Nullable TypedStringValue o) {
-		return Comparator.comparing(TypedStringValue::getValue).compare(this, o);
-	}
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof TypedStringValue that &&
-				ObjectUtils.nullSafeEquals(this.value, that.value) &&
-				ObjectUtils.nullSafeEquals(this.targetType, that.targetType)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof TypedStringValue)) {
+			return false;
+		}
+		TypedStringValue otherValue = (TypedStringValue) other;
+		return (ObjectUtils.nullSafeEquals(this.value, otherValue.value) &&
+				ObjectUtils.nullSafeEquals(this.targetType, otherValue.targetType));
 	}
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHash(this.value, this.targetType);
+		return ObjectUtils.nullSafeHashCode(this.value) * 29 + ObjectUtils.nullSafeHashCode(this.targetType);
 	}
 
 	@Override

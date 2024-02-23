@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.lang.Nullable;
  * @see ScheduledTaskRegistrar#scheduleCronTask(CronTask)
  * @see ScheduledTaskRegistrar#scheduleFixedRateTask(FixedRateTask)
  * @see ScheduledTaskRegistrar#scheduleFixedDelayTask(FixedDelayTask)
- * @see ScheduledFuture
  */
 public final class ScheduledTask {
 
@@ -55,24 +54,11 @@ public final class ScheduledTask {
 
 	/**
 	 * Trigger cancellation of this scheduled task.
-	 * <p>This variant will force interruption of the task if still running.
-	 * @see #cancel(boolean)
 	 */
 	public void cancel() {
-		cancel(true);
-	}
-
-	/**
-	 * Trigger cancellation of this scheduled task.
-	 * @param mayInterruptIfRunning whether to force interruption of the task
-	 * if still running (specify {@code false} to allow the task to complete)
-	 * @since 5.3.18
-	 * @see ScheduledFuture#cancel(boolean)
-	 */
-	public void cancel(boolean mayInterruptIfRunning) {
 		ScheduledFuture<?> future = this.future;
 		if (future != null) {
-			future.cancel(mayInterruptIfRunning);
+			future.cancel(true);
 		}
 	}
 

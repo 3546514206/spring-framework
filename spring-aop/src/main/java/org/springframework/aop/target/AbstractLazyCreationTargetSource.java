@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ package org.springframework.aop.target;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.TargetSource;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link org.springframework.aop.TargetSource} implementation that will
+ * {@link TargetSource} implementation that will
  * lazily create a user-managed object.
  *
  * <p>Creation of the lazy target object is controlled by the user by implementing
@@ -46,7 +45,6 @@ public abstract class AbstractLazyCreationTargetSource implements TargetSource {
 	protected final Log logger = LogFactory.getLog(getClass());
 
 	/** The lazily initialized target object. */
-	@Nullable
 	private Object lazyTarget;
 
 
@@ -72,6 +70,11 @@ public abstract class AbstractLazyCreationTargetSource implements TargetSource {
 		return (this.lazyTarget != null ? this.lazyTarget.getClass() : null);
 	}
 
+	@Override
+	public boolean isStatic() {
+		return false;
+	}
+
 	/**
 	 * Returns the lazy-initialized target object,
 	 * creating it on-the-fly if it doesn't exist already.
@@ -84,6 +87,11 @@ public abstract class AbstractLazyCreationTargetSource implements TargetSource {
 			this.lazyTarget = createObject();
 		}
 		return this.lazyTarget;
+	}
+
+	@Override
+	public void releaseTarget(Object target) throws Exception {
+		// nothing to do
 	}
 
 

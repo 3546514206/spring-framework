@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package org.springframework.web.bind;
 
 import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 
 /**
  * {@link ServletRequestBindingException} subclass that indicates that a path
@@ -32,7 +30,7 @@ import org.springframework.http.HttpStatusCode;
  * @see MissingMatrixVariableException
  */
 @SuppressWarnings("serial")
-public class MissingPathVariableException extends MissingRequestValueException {
+public class MissingPathVariableException extends ServletRequestBindingException {
 
 	private final String variableName;
 
@@ -45,31 +43,16 @@ public class MissingPathVariableException extends MissingRequestValueException {
 	 * @param parameter the method parameter
 	 */
 	public MissingPathVariableException(String variableName, MethodParameter parameter) {
-		this(variableName, parameter, false);
-	}
-
-	/**
-	 * Constructor for use when a value was present but converted to {@code null}.
-	 * @param variableName the name of the missing path variable
-	 * @param parameter the method parameter
-	 * @param missingAfterConversion whether the value became null after conversion
-	 * @since 5.3.6
-	 */
-	public MissingPathVariableException(
-			String variableName, MethodParameter parameter, boolean missingAfterConversion) {
-
-		super("", missingAfterConversion, null, new Object[] {variableName});
+		super("");
 		this.variableName = variableName;
 		this.parameter = parameter;
-		getBody().setDetail("Required path variable '" + this.variableName + "' is not present.");
 	}
 
 
 	@Override
 	public String getMessage() {
-		return "Required URI template variable '" + this.variableName + "' for method parameter type " +
-				this.parameter.getNestedParameterType().getSimpleName() + " is " +
-				(isMissingAfterConversion() ? "present but converted to null" : "not present");
+		return "Missing URI template variable '" + this.variableName +
+				"' for method parameter of type " + this.parameter.getNestedParameterType().getSimpleName();
 	}
 
 	/**
@@ -84,11 +67,6 @@ public class MissingPathVariableException extends MissingRequestValueException {
 	 */
 	public final MethodParameter getParameter() {
 		return this.parameter;
-	}
-
-	@Override
-	public HttpStatusCode getStatusCode() {
-		return (isMissingAfterConversion() ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 
 }

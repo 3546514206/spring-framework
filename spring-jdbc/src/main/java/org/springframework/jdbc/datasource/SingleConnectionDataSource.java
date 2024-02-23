@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@
 
 package org.springframework.jdbc.datasource;
 
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
 
 /**
  * Implementation of {@link SmartDataSource} that wraps a single JDBC Connection
@@ -54,16 +52,12 @@ import org.springframework.util.ObjectUtils;
  * @see java.sql.Connection#close()
  * @see DataSourceUtils#releaseConnection
  */
-public class SingleConnectionDataSource extends DriverManagerDataSource
-		implements SmartDataSource, AutoCloseable, DisposableBean {
+public class SingleConnectionDataSource extends DriverManagerDataSource implements SmartDataSource, DisposableBean {
 
-	/** Create a close-suppressing proxy? */
+	/** Create a close-suppressing proxy?. */
 	private boolean suppressClose;
 
-	/** Explicit rollback before close? */
-	private boolean rollbackBeforeClose;
-
-	/** Override auto-commit state? */
+	/** Override auto-commit state?. */
 	@Nullable
 	private Boolean autoCommit;
 
@@ -75,8 +69,8 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	@Nullable
 	private Connection connection;
 
-	/** Lifecycle lock for the shared Connection. */
-	private final Lock connectionLock = new ReentrantLock();
+	/** Synchronization monitor for the shared Connection. */
+	private final Object connectionMonitor = new Object();
 
 
 	/**
@@ -130,7 +124,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 
 
 	/**
-	 * Specify whether the returned Connection should be a close-suppressing proxy
+	 * Set whether the returned Connection should be a close-suppressing proxy
 	 * or the physical Connection.
 	 */
 	public void setSuppressClose(boolean suppressClose) {
@@ -146,29 +140,10 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	}
 
 	/**
-	 * Specify whether the shared Connection should be explicitly rolled back
-	 * before close (if not in auto-commit mode).
-	 * <p>This is recommended for the Oracle JDBC driver in testing scenarios.
-	 * @since 6.1.2
-	 */
-	public void setRollbackBeforeClose(boolean rollbackBeforeClose) {
-		this.rollbackBeforeClose = rollbackBeforeClose;
-	}
-
-	/**
-	 * Return whether the shared Connection should be explicitly rolled back
-	 * before close (if not in auto-commit mode).
-	 * @since 6.1.2
-	 */
-	protected boolean isRollbackBeforeClose() {
-		return this.rollbackBeforeClose;
-	}
-
-	/**
-	 * Specify whether the returned Connection's "autoCommit" setting should be overridden.
+	 * Set whether the returned Connection's "autoCommit" setting should be overridden.
 	 */
 	public void setAutoCommit(boolean autoCommit) {
-		this.autoCommit = autoCommit;
+		this.autoCommit = (autoCommit);
 	}
 
 	/**
@@ -183,8 +158,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 
 	@Override
 	public Connection getConnection() throws SQLException {
-		this.connectionLock.lock();
-		try {
+		synchronized (this.connectionMonitor) {
 			if (this.connection == null) {
 				// No underlying Connection -> lazy init via DriverManager.
 				initConnection();
@@ -195,9 +169,6 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 						"shouldClose() before closing Connections, or set 'suppressClose' to 'true'");
 			}
 			return this.connection;
-		}
-		finally {
-			this.connectionLock.unlock();
 		}
 	}
 
@@ -222,43 +193,21 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	 */
 	@Override
 	public boolean shouldClose(Connection con) {
-		this.connectionLock.lock();
-		try {
+		synchronized (this.connectionMonitor) {
 			return (con != this.connection && con != this.target);
 		}
-		finally {
-			this.connectionLock.unlock();
-		}
 	}
 
 	/**
 	 * Close the underlying Connection.
 	 * The provider of this DataSource needs to care for proper shutdown.
-	 * <p>As this class implements {@link AutoCloseable}, it can be used
-	 * with a try-with-resource statement.
-	 * @since 6.1.2
-	 */
-	@Override
-	public void close() {
-		destroy();
-	}
-
-	/**
-	 * Close the underlying Connection.
-	 * The provider of this DataSource needs to care for proper shutdown.
-	 * <p>As this bean implements {@link DisposableBean}, a bean factory
-	 * will automatically invoke this on destruction of the bean.
+	 * <p>As this bean implements DisposableBean, a bean factory will
+	 * automatically invoke this on destruction of its cached singletons.
 	 */
 	@Override
 	public void destroy() {
-		this.connectionLock.lock();
-		try {
-			if (this.target != null) {
-				closeConnection(this.target);
-			}
-		}
-		finally {
-			this.connectionLock.unlock();
+		synchronized (this.connectionMonitor) {
+			closeConnection();
 		}
 	}
 
@@ -270,11 +219,8 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 		if (getUrl() == null) {
 			throw new IllegalStateException("'url' property is required for lazily initializing a Connection");
 		}
-		this.connectionLock.lock();
-		try {
-			if (this.target != null) {
-				closeConnection(this.target);
-			}
+		synchronized (this.connectionMonitor) {
+			closeConnection();
 			this.target = getConnectionFromDriver(getUsername(), getPassword());
 			prepareConnection(this.target);
 			if (logger.isDebugEnabled()) {
@@ -282,25 +228,16 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 			}
 			this.connection = (isSuppressClose() ? getCloseSuppressingConnectionProxy(this.target) : this.target);
 		}
-		finally {
-			this.connectionLock.unlock();
-		}
 	}
 
 	/**
 	 * Reset the underlying shared Connection, to be reinitialized on next access.
 	 */
 	public void resetConnection() {
-		this.connectionLock.lock();
-		try {
-			if (this.target != null) {
-				closeConnection(this.target);
-			}
+		synchronized (this.connectionMonitor) {
+			closeConnection();
 			this.target = null;
 			this.connection = null;
-		}
-		finally {
-			this.connectionLock.unlock();
 		}
 	}
 
@@ -320,24 +257,15 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 
 	/**
 	 * Close the underlying shared Connection.
-	 * @since 6.1.2
 	 */
-	protected void closeConnection(Connection con) {
-		if (isRollbackBeforeClose()) {
+	private void closeConnection() {
+		if (this.target != null) {
 			try {
-				if (!con.getAutoCommit()) {
-					con.rollback();
-				}
+				this.target.close();
 			}
 			catch (Throwable ex) {
-				logger.info("Could not roll back shared JDBC Connection before close", ex);
+				logger.info("Could not close shared JDBC Connection", ex);
 			}
-		}
-		try {
-			con.close();
-		}
-		catch (Throwable ex) {
-			logger.info("Could not close shared JDBC Connection", ex);
 		}
 	}
 
@@ -371,28 +299,43 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			// Invocation on ConnectionProxy interface coming in...
 
-			return switch (method.getName()) {
+			if (method.getName().equals("equals")) {
 				// Only consider equal when proxies are identical.
-				case "equals" -> (proxy == args[0]);
+				return (proxy == args[0]);
+			}
+			else if (method.getName().equals("hashCode")) {
 				// Use hashCode of Connection proxy.
-				case "hashCode" -> System.identityHashCode(proxy);
-				// Handle close method: don't pass the call on.
-				case "close" -> null;
-				case "isClosed" -> this.target.isClosed();
-				// Handle getTargetConnection method: return underlying Connection.
-				case "getTargetConnection" -> this.target;
-				case "unwrap" -> (((Class<?>) args[0]).isInstance(proxy) ? proxy : this.target.unwrap((Class<?>) args[0]));
-				case "isWrapperFor" -> (((Class<?>) args[0]).isInstance(proxy) || this.target.isWrapperFor((Class<?>) args[0]));
-				default -> {
-					try {
-						// Invoke method on target Connection.
-						yield method.invoke(this.target, args);
-					}
-					catch (InvocationTargetException ex) {
-						throw ex.getTargetException();
-					}
+				return System.identityHashCode(proxy);
+			}
+			else if (method.getName().equals("unwrap")) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
+					return proxy;
 				}
-			};
+			}
+			else if (method.getName().equals("isWrapperFor")) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
+					return true;
+				}
+			}
+			else if (method.getName().equals("close")) {
+				// Handle close method: don't pass the call on.
+				return null;
+			}
+			else if (method.getName().equals("isClosed")) {
+				return false;
+			}
+			else if (method.getName().equals("getTargetConnection")) {
+				// Handle getTargetConnection method: return underlying Connection.
+				return this.target;
+			}
+
+			// Invoke method on target Connection.
+			try {
+				return method.invoke(this.target, args);
+			}
+			catch (InvocationTargetException ex) {
+				throw ex.getTargetException();
+			}
 		}
 	}
 

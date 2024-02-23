@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,11 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.PatternMatchUtils;
-import org.springframework.util.StringValueResolver;
 
 /**
  * Simple {@link TransactionAttributeSource} implementation that
@@ -46,7 +44,7 @@ import org.springframework.util.StringValueResolver;
  * @see NameMatchTransactionAttributeSource
  */
 public class MethodMapTransactionAttributeSource
-		implements TransactionAttributeSource, EmbeddedValueResolverAware, BeanClassLoaderAware, InitializingBean {
+		implements TransactionAttributeSource, BeanClassLoaderAware, InitializingBean {
 
 	/** Logger available to subclasses. */
 	protected final Log logger = LogFactory.getLog(getClass());
@@ -54,9 +52,6 @@ public class MethodMapTransactionAttributeSource
 	/** Map from method name to attribute value. */
 	@Nullable
 	private Map<String, TransactionAttribute> methodMap;
-
-	@Nullable
-	private StringValueResolver embeddedValueResolver;
 
 	@Nullable
 	private ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader();
@@ -86,11 +81,6 @@ public class MethodMapTransactionAttributeSource
 	 */
 	public void setMethodMap(Map<String, TransactionAttribute> methodMap) {
 		this.methodMap = methodMap;
-	}
-
-	@Override
-	public void setEmbeddedValueResolver(StringValueResolver resolver) {
-		this.embeddedValueResolver = resolver;
 	}
 
 	@Override
@@ -152,7 +142,7 @@ public class MethodMapTransactionAttributeSource
 	public void addTransactionalMethod(Class<?> clazz, String mappedName, TransactionAttribute attr) {
 		Assert.notNull(clazz, "Class must not be null");
 		Assert.notNull(mappedName, "Mapped name must not be null");
-		String name = clazz.getName() + '.' + mappedName;
+		String name = clazz.getName() + '.'  + mappedName;
 
 		Method[] methods = clazz.getDeclaredMethods();
 		List<Method> matchingMethods = new ArrayList<>();
@@ -199,9 +189,6 @@ public class MethodMapTransactionAttributeSource
 		if (logger.isDebugEnabled()) {
 			logger.debug("Adding transactional method [" + method + "] with attribute [" + attr + "]");
 		}
-		if (this.embeddedValueResolver != null && attr instanceof DefaultTransactionAttribute dta) {
-			dta.resolveAttributeStrings(this.embeddedValueResolver);
-		}
 		this.transactionAttributeMap.put(method, attr);
 	}
 
@@ -239,8 +226,14 @@ public class MethodMapTransactionAttributeSource
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof MethodMapTransactionAttributeSource otherTas &&
-				ObjectUtils.nullSafeEquals(this.methodMap, otherTas.methodMap)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof MethodMapTransactionAttributeSource)) {
+			return false;
+		}
+		MethodMapTransactionAttributeSource otherTas = (MethodMapTransactionAttributeSource) other;
+		return ObjectUtils.nullSafeEquals(this.methodMap, otherTas.methodMap);
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,37 +16,29 @@
 
 package org.springframework.http.codec.xml;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import javax.xml.namespace.QName;
-import javax.xml.stream.events.XMLEvent;
-
-import jakarta.xml.bind.annotation.XmlSeeAlso;
 import org.junit.jupiter.api.Test;
-import reactor.core.Exceptions;
+import org.springframework.core.ResolvableType;
+import org.springframework.core.io.buffer.AbstractLeakCheckingTests;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.Pojo;
+import org.springframework.http.codec.xml.jaxb.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.core.ResolvableType;
-import org.springframework.core.codec.DecodingException;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.testfixture.io.buffer.AbstractLeakCheckingTests;
-import org.springframework.http.MediaType;
-import org.springframework.util.MimeType;
-import org.springframework.web.testfixture.xml.Pojo;
+import javax.xml.namespace.QName;
+import javax.xml.stream.events.XMLEvent;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Sebastien Deleuze
  */
-class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
+public class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 
 	private static final String POJO_ROOT = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
 			"<pojo>" +
@@ -67,8 +59,6 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 					"</pojo>" +
 					"<root/>";
 
-	private static final Map<String, Object> HINTS = Collections.emptyMap();
-
 
 	private final Jaxb2XmlDecoder decoder = new Jaxb2XmlDecoder();
 
@@ -76,7 +66,7 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 
 
 	@Test
-	void canDecode() {
+	public void canDecode() {
 		assertThat(this.decoder.canDecode(ResolvableType.forClass(Pojo.class),
 				MediaType.APPLICATION_XML)).isTrue();
 		assertThat(this.decoder.canDecode(ResolvableType.forClass(Pojo.class),
@@ -90,13 +80,14 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void splitOneBranches() {
-		Flux<XMLEvent> xmlEvents = this.xmlEventDecoder.decode(toDataBufferMono(POJO_ROOT), null, null, HINTS);
-		Flux<List<XMLEvent>> result = Jaxb2Helper.split(xmlEvents, Set.of(new QName("pojo")));
+	public void splitOneBranches() {
+		Flux<XMLEvent> xmlEvents = this.xmlEventDecoder
+				.decode(stringBuffer(POJO_ROOT), null, null, Collections.emptyMap());
+		Flux<List<XMLEvent>> result = this.decoder.split(xmlEvents, new QName("pojo"));
 
 		StepVerifier.create(result)
 				.consumeNextWith(events -> {
-					assertThat(events).hasSize(8);
+					assertThat(events.size()).isEqualTo(8);
 					assertStartElement(events.get(0), "pojo");
 					assertStartElement(events.get(1), "foo");
 					assertCharacters(events.get(2), "foofoo");
@@ -111,14 +102,15 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void splitMultipleBranches() {
-		Flux<XMLEvent> xmlEvents = this.xmlEventDecoder.decode(toDataBufferMono(POJO_CHILD), null, null, HINTS);
-		Flux<List<XMLEvent>> result = Jaxb2Helper.split(xmlEvents, Set.of(new QName("pojo")));
+	public void splitMultipleBranches() throws Exception {
+		Flux<XMLEvent> xmlEvents = this.xmlEventDecoder
+				.decode(stringBuffer(POJO_CHILD), null, null, Collections.emptyMap());
+		Flux<List<XMLEvent>> result = this.decoder.split(xmlEvents, new QName("pojo"));
 
 
 		StepVerifier.create(result)
 				.consumeNextWith(events -> {
-					assertThat(events).hasSize(8);
+					assertThat(events.size()).isEqualTo(8);
 					assertStartElement(events.get(0), "pojo");
 					assertStartElement(events.get(1), "foo");
 					assertCharacters(events.get(2), "foo");
@@ -129,7 +121,7 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 					assertEndElement(events.get(7), "pojo");
 				})
 				.consumeNextWith(events -> {
-					assertThat(events).hasSize(8);
+					assertThat(events.size()).isEqualTo(8);
 					assertStartElement(events.get(0), "pojo");
 					assertStartElement(events.get(1), "foo");
 					assertCharacters(events.get(2), "foofoo");
@@ -159,9 +151,10 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void decodeSingleXmlRootElement() {
-		Mono<DataBuffer> source = toDataBufferMono(POJO_ROOT);
-		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(Pojo.class), null, HINTS);
+	public void decodeSingleXmlRootElement() throws Exception {
+		Mono<DataBuffer> source = stringBuffer(POJO_ROOT);
+		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(Pojo.class),
+				null, Collections.emptyMap());
 
 		StepVerifier.create(output)
 				.expectNext(new Pojo("foofoo", "barbar"))
@@ -170,9 +163,10 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void decodeSingleXmlTypeElement() {
-		Mono<DataBuffer> source = toDataBufferMono(POJO_ROOT);
-		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(TypePojo.class), null, HINTS);
+	public void decodeSingleXmlTypeElement() throws Exception {
+		Mono<DataBuffer> source = stringBuffer(POJO_ROOT);
+		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(TypePojo.class),
+				null, Collections.emptyMap());
 
 		StepVerifier.create(output)
 				.expectNext(new TypePojo("foofoo", "barbar"))
@@ -181,9 +175,10 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void decodeMultipleXmlRootElement() {
-		Mono<DataBuffer> source = toDataBufferMono(POJO_CHILD);
-		Flux<Object> output = this.decoder.decode(source, ResolvableType.forClass(Pojo.class), null, HINTS);
+	public void decodeMultipleXmlRootElement() throws Exception {
+		Mono<DataBuffer> source = stringBuffer(POJO_CHILD);
+		Flux<Object> output = this.decoder.decode(source, ResolvableType.forClass(Pojo.class),
+				null, Collections.emptyMap());
 
 		StepVerifier.create(output)
 				.expectNext(new Pojo("foo", "bar"))
@@ -193,9 +188,10 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void decodeMultipleXmlTypeElement() {
-		Mono<DataBuffer> source = toDataBufferMono(POJO_CHILD);
-		Flux<Object> output = this.decoder.decode(source, ResolvableType.forClass(TypePojo.class), null, HINTS);
+	public void decodeMultipleXmlTypeElement() throws Exception {
+		Mono<DataBuffer> source = stringBuffer(POJO_CHILD);
+		Flux<Object> output = this.decoder.decode(source, ResolvableType.forClass(TypePojo.class),
+				null, Collections.emptyMap());
 
 		StepVerifier.create(output)
 				.expectNext(new TypePojo("foo", "bar"))
@@ -205,63 +201,35 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void decodeXmlSeeAlso() {
-		Mono<DataBuffer> source = toDataBufferMono(POJO_CHILD);
-		Flux<Object> output = this.decoder.decode(source, ResolvableType.forClass(Parent.class), null, HINTS);
-
-		StepVerifier.create(output)
-				.expectNext(new Child("foo", "bar"))
-				.expectNext(new Child("foofoo", "barbar"))
-				.expectComplete()
-				.verify();
-
-	}
-
-	@Test
-	void decodeError() {
+	public void decodeError() throws Exception {
 		Flux<DataBuffer> source = Flux.concat(
-				toDataBufferMono("<pojo>"),
+				stringBuffer("<pojo>"),
 				Flux.error(new RuntimeException()));
 
-		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(Pojo.class), null, HINTS);
+		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(Pojo.class),
+				null, Collections.emptyMap());
 
 		StepVerifier.create(output)
 				.expectError(RuntimeException.class)
 				.verify();
 	}
 
-	@Test // gh-24622
-	public void decodeErrorWithXmlNotWellFormed() {
-		Mono<DataBuffer> source = toDataBufferMono("<Response><tag>something</tag</Response>");
-		Mono<Object> result = this.decoder.decodeToMono(source, ResolvableType.forClass(Pojo.class), null, HINTS);
-
-		StepVerifier.create(result).verifyErrorSatisfies(ex ->
-				assertThat(Exceptions.unwrap(ex)).isInstanceOf(DecodingException.class));
-	}
-
 	@Test
-	void decodeNonUtf8() {
-		String xml = "<pojo>" +
-				"<foo>føø</foo>" +
-				"<bar>bär</bar>" +
-				"</pojo>";
-		Mono<DataBuffer> source = Mono.fromCallable(() -> {
-			byte[] bytes = xml.getBytes(StandardCharsets.ISO_8859_1);
-			DataBuffer buffer = this.bufferFactory.allocateBuffer(bytes.length);
-			buffer.write(bytes);
-			return buffer;
-		});
-		MimeType mimeType = new MimeType(MediaType.APPLICATION_XML, StandardCharsets.ISO_8859_1);
-		Mono<Object> output = this.decoder.decodeToMono(source, ResolvableType.forClass(TypePojo.class), mimeType,
-				HINTS);
+	public void toExpectedQName() {
+		assertThat(this.decoder.toQName(Pojo.class)).isEqualTo(new QName("pojo"));
+		assertThat(this.decoder.toQName(TypePojo.class)).isEqualTo(new QName("pojo"));
 
-		StepVerifier.create(output)
-				.expectNext(new TypePojo("føø", "bär"))
-				.expectComplete()
-				.verify();
+		assertThat(this.decoder.toQName(XmlRootElementWithNameAndNamespace.class)).isEqualTo(new QName("namespace", "name"));
+		assertThat(this.decoder.toQName(XmlRootElementWithName.class)).isEqualTo(new QName("namespace", "name"));
+		assertThat(this.decoder.toQName(XmlRootElement.class)).isEqualTo(new QName("namespace", "xmlRootElement"));
+
+		assertThat(this.decoder.toQName(XmlTypeWithNameAndNamespace.class)).isEqualTo(new QName("namespace", "name"));
+		assertThat(this.decoder.toQName(XmlTypeWithName.class)).isEqualTo(new QName("namespace", "name"));
+		assertThat(this.decoder.toQName(XmlType.class)).isEqualTo(new QName("namespace", "xmlType"));
+
 	}
 
-	private Mono<DataBuffer> toDataBufferMono(String value) {
+	private Mono<DataBuffer> stringBuffer(String value) {
 		return Mono.defer(() -> {
 			byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
 			DataBuffer buffer = this.bufferFactory.allocateBuffer(bytes.length);
@@ -270,17 +238,20 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 		});
 	}
 
-	@jakarta.xml.bind.annotation.XmlType
-	@XmlSeeAlso(Child.class)
-	public abstract static class Parent {
+
+	@javax.xml.bind.annotation.XmlType(name = "pojo")
+	public static class TypePojo {
 
 		private String foo;
 
-		public Parent() {
+		private String bar;
+
+		public TypePojo() {
 		}
 
-		public Parent(String foo) {
+		public TypePojo(String foo, String bar) {
 			this.foo = foo;
+			this.bar = bar;
 		}
 
 		public String getFoo() {
@@ -289,20 +260,6 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 
 		public void setFoo(String foo) {
 			this.foo = foo;
-		}
-	}
-
-	@jakarta.xml.bind.annotation.XmlRootElement(name = "pojo")
-	public static class Child extends Parent {
-
-		private String bar;
-
-		public Child() {
-		}
-
-		public Child(String foo, String bar) {
-			super(foo);
-			this.bar = bar;
 		}
 
 		public String getBar() {
@@ -318,17 +275,18 @@ class Jaxb2XmlDecoderTests extends AbstractLeakCheckingTests {
 			if (this == o) {
 				return true;
 			}
-			if (o instanceof Child other) {
-				return getBar().equals(other.getBar()) &&
-						getFoo().equals(other.getFoo());
+			if (o instanceof TypePojo) {
+				TypePojo other = (TypePojo) o;
+				return this.foo.equals(other.foo) && this.bar.equals(other.bar);
 			}
 			return false;
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(getBar(), getFoo());
+			int result = this.foo.hashCode();
+			result = 31 * result + this.bar.hashCode();
+			return result;
 		}
 	}
-
 }

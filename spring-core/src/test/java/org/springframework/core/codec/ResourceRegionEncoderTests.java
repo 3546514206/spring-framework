@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,46 @@
 
 package org.springframework.core.codec;
 
-import java.util.Collections;
-import java.util.function.Consumer;
-
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
-import reactor.core.publisher.BaseSubscriber;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.LeakAwareDataBufferFactory;
+import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.core.io.support.ResourceRegion;
-import org.springframework.core.testfixture.io.buffer.AbstractLeakCheckingTests;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.Collections;
+import java.util.function.Consumer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test cases for {@link ResourceRegionEncoder} class.
+ *
  * @author Brian Clozel
  */
-class ResourceRegionEncoderTests extends AbstractLeakCheckingTests {
+class ResourceRegionEncoderTests {
 
 	private ResourceRegionEncoder encoder = new ResourceRegionEncoder();
+
+	private LeakAwareDataBufferFactory bufferFactory = new LeakAwareDataBufferFactory();
+
+
+	@AfterEach
+	void tearDown() throws Exception {
+		this.bufferFactory.checkForLeaks();
+	}
 
 	@Test
 	void canEncode() {
@@ -63,7 +73,7 @@ class ResourceRegionEncoderTests extends AbstractLeakCheckingTests {
 	}
 
 	@Test
-	void shouldEncodeResourceRegionFileResource() {
+	void shouldEncodeResourceRegionFileResource() throws Exception {
 		ResourceRegion region = new ResourceRegion(
 				new ClassPathResource("ResourceRegionEncoderTests.txt", getClass()), 0, 6);
 		Flux<DataBuffer> result = this.encoder.encode(Mono.just(region), this.bufferFactory,
@@ -181,7 +191,7 @@ class ResourceRegionEncoderTests extends AbstractLeakCheckingTests {
 
 	protected Consumer<DataBuffer> stringConsumer(String expected) {
 		return dataBuffer -> {
-			String value = dataBuffer.toString(UTF_8);
+			String value = DataBufferTestUtils.dumpString(dataBuffer, UTF_8);
 			DataBufferUtils.release(dataBuffer);
 			assertThat(value).isEqualTo(expected);
 		};

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package org.springframework.validation.support;
 
-import java.util.Map;
-
-import org.springframework.lang.Nullable;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.validation.BindingResult;
+
+import java.util.Map;
 
 /**
  * Subclass of {@link org.springframework.ui.ExtendedModelMap} that automatically removes
@@ -40,7 +39,7 @@ import org.springframework.validation.BindingResult;
 public class BindingAwareModelMap extends ExtendedModelMap {
 
 	@Override
-	public Object put(String key, @Nullable Object value) {
+	public Object put(String key, Object value) {
 		removeBindingResultIfNecessary(key, value);
 		return super.put(key, value);
 	}
@@ -51,8 +50,9 @@ public class BindingAwareModelMap extends ExtendedModelMap {
 		super.putAll(map);
 	}
 
-	private void removeBindingResultIfNecessary(Object key, @Nullable Object value) {
-		if (key instanceof String attributeName) {
+	private void removeBindingResultIfNecessary(Object key, Object value) {
+		if (key instanceof String) {
+			String attributeName = (String) key;
 			if (!attributeName.startsWith(BindingResult.MODEL_KEY_PREFIX)) {
 				String bindingResultKey = BindingResult.MODEL_KEY_PREFIX + attributeName;
 				BindingResult bindingResult = (BindingResult) get(bindingResultKey);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,12 +31,12 @@ import static org.mockito.Mockito.mock;
  * @author Juergen Hoeller
  * @since 28.05.2004
  */
-class UserCredentialsDataSourceAdapterTests {
+public class UserCredentialsDataSourceAdapterTests {
 
 	@Test
-	void testStaticCredentials() throws SQLException {
-		DataSource dataSource = mock();
-		Connection connection = mock();
+	public void testStaticCredentials() throws SQLException {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
 		given(dataSource.getConnection("user", "pw")).willReturn(connection);
 
 		UserCredentialsDataSourceAdapter adapter = new UserCredentialsDataSourceAdapter();
@@ -47,9 +47,9 @@ class UserCredentialsDataSourceAdapterTests {
 	}
 
 	@Test
-	void testNoCredentials() throws SQLException {
-		DataSource dataSource = mock();
-		Connection connection = mock();
+	public void testNoCredentials() throws SQLException {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
 		given(dataSource.getConnection()).willReturn(connection);
 		UserCredentialsDataSourceAdapter adapter = new UserCredentialsDataSourceAdapter();
 		adapter.setTargetDataSource(dataSource);
@@ -57,9 +57,9 @@ class UserCredentialsDataSourceAdapterTests {
 	}
 
 	@Test
-	void testThreadBoundCredentials() throws SQLException {
-		DataSource dataSource = mock();
-		Connection connection = mock();
+	public void testThreadBoundCredentials() throws SQLException {
+		DataSource dataSource = mock(DataSource.class);
+		Connection connection = mock(Connection.class);
 		given(dataSource.getConnection("user", "pw")).willReturn(connection);
 
 		UserCredentialsDataSourceAdapter adapter = new UserCredentialsDataSourceAdapter();

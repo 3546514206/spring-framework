@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,34 @@
 
 package org.springframework.web.server.handler;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpResponse;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
+import org.springframework.web.server.*;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
+import reactor.core.publisher.Mono;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Mono;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebExceptionHandler;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
-import org.springframework.web.server.WebHandler;
-import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpResponse;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link FilteringWebHandler}.
- *
+ * Unit tests for {@link FilteringWebHandler}.
  * @author Rossen Stoyanchev
  */
-class FilteringWebHandlerTests {
+public class FilteringWebHandlerTests {
 
-	private static final Log logger = LogFactory.getLog(FilteringWebHandlerTests.class);
+	private static Log logger = LogFactory.getLog(FilteringWebHandlerTests.class);
 
 
 	@Test
-	void multipleFilters() {
+	public void multipleFilters() throws Exception {
 
 		TestFilter filter1 = new TestFilter();
 		TestFilter filter2 = new TestFilter();
@@ -67,7 +61,7 @@ class FilteringWebHandlerTests {
 	}
 
 	@Test
-	void zeroFilters() {
+	public void zeroFilters() throws Exception {
 
 		StubWebHandler targetHandler = new StubWebHandler();
 
@@ -79,7 +73,7 @@ class FilteringWebHandlerTests {
 	}
 
 	@Test
-	void shortcircuitFilter() {
+	public void shortcircuitFilter() throws Exception {
 
 		TestFilter filter1 = new TestFilter();
 		ShortcircuitingFilter filter2 = new ShortcircuitingFilter();
@@ -97,7 +91,7 @@ class FilteringWebHandlerTests {
 	}
 
 	@Test
-	void asyncFilter() {
+	public void asyncFilter() throws Exception {
 
 		AsyncFilter filter = new AsyncFilter();
 		StubWebHandler targetHandler = new StubWebHandler();
@@ -111,7 +105,7 @@ class FilteringWebHandlerTests {
 	}
 
 	@Test
-	void handleErrorFromFilter() {
+	public void handleErrorFromFilter() throws Exception {
 
 		MockServerHttpRequest request = MockServerHttpRequest.get("/").build();
 		MockServerHttpResponse response = new MockServerHttpResponse();

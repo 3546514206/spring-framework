@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,127 +16,43 @@
 
 package org.springframework.context.support;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.crac.CheckpointException;
-import org.crac.Core;
-import org.crac.RestoreException;
-import org.crac.management.CRaCMXBean;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.ApplicationContextException;
-import org.springframework.context.Lifecycle;
-import org.springframework.context.LifecycleProcessor;
-import org.springframework.context.Phased;
-import org.springframework.context.SmartLifecycle;
-import org.springframework.core.NativeDetector;
-import org.springframework.core.SpringProperties;
+import org.springframework.context.*;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
+
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Spring's default implementation of the {@link LifecycleProcessor} strategy.
- *
- * <p>Provides interaction with {@link Lifecycle} and {@link SmartLifecycle} beans in
- * groups for specific phases, on startup/shutdown as well as for explicit start/stop
- * interactions on a {@link org.springframework.context.ConfigurableApplicationContext}.
- *
- * <p>Provides interaction with {@link Lifecycle} and {@link SmartLifecycle} beans in
- * groups for specific phases, on startup/shutdown as well as for explicit start/stop
- * interactions on a {@link org.springframework.context.ConfigurableApplicationContext}.
- *
- * <p>As of 6.1, this also includes support for JVM checkpoint/restore (Project CRaC)
- * when the {@code org.crac:crac} dependency on the classpath.
+ * Default implementation of the {@link LifecycleProcessor} strategy.
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 3.0
  */
 public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactoryAware {
 
-	/**
-	 * Property name for a common context checkpoint: {@value}.
-	 * @since 6.1
-	 * @see #ON_REFRESH_VALUE
-	 * @see org.crac.Core#checkpointRestore()
-	 */
-	public static final String CHECKPOINT_PROPERTY_NAME = "spring.context.checkpoint";
-
-	/**
-	 * Property name for terminating the JVM when the context reaches a specific phase: {@value}.
-	 * @since 6.1
-	 * @see #ON_REFRESH_VALUE
-	 */
-	public static final String EXIT_PROPERTY_NAME = "spring.context.exit";
-
-	/**
-	 * Recognized value for the context checkpoint and exit properties: {@value}.
-	 * @since 6.1
-	 * @see #CHECKPOINT_PROPERTY_NAME
-	 * @see #EXIT_PROPERTY_NAME
-	 */
-	public static final String ON_REFRESH_VALUE = "onRefresh";
-
-
-	private static final boolean checkpointOnRefresh =
-			ON_REFRESH_VALUE.equalsIgnoreCase(SpringProperties.getProperty(CHECKPOINT_PROPERTY_NAME));
-
-	private static final boolean exitOnRefresh =
-			ON_REFRESH_VALUE.equalsIgnoreCase(SpringProperties.getProperty(EXIT_PROPERTY_NAME));
-
 	private final Log logger = LogFactory.getLog(getClass());
 
-	private volatile long timeoutPerShutdownPhase = 10000;
+	private volatile long timeoutPerShutdownPhase = 30000;
 
 	private volatile boolean running;
 
 	@Nullable
 	private volatile ConfigurableListableBeanFactory beanFactory;
 
-	@Nullable
-	private volatile Set<String> stoppedBeans;
-
-	// Just for keeping a strong reference to the registered CRaC Resource, if any
-	@Nullable
-	private Object cracResource;
-
-
-	public DefaultLifecycleProcessor() {
-		if (!NativeDetector.inNativeImage() && ClassUtils.isPresent("org.crac.Core", getClass().getClassLoader())) {
-			this.cracResource = new CracDelegate().registerResource();
-		}
-		else if (checkpointOnRefresh) {
-			throw new IllegalStateException(
-					"Checkpoint on refresh requires a CRaC-enabled JVM and 'org.crac:crac' on the classpath");
-		}
-	}
-
 
 	/**
-	 * Specify the maximum time allotted in milliseconds for the shutdown of any
-	 * phase (group of {@link SmartLifecycle} beans with the same 'phase' value).
-	 * <p>The default value is 10000 milliseconds (10 seconds) as of 6.2.
-	 * @see SmartLifecycle#getPhase()
+	 * Specify the maximum time allotted in milliseconds for the shutdown of
+	 * any phase (group of SmartLifecycle beans with the same 'phase' value).
+	 * <p>The default value is 30 seconds.
 	 */
 	public void setTimeoutPerShutdownPhase(long timeoutPerShutdownPhase) {
 		this.timeoutPerShutdownPhase = timeoutPerShutdownPhase;
@@ -144,11 +60,11 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (!(beanFactory instanceof ConfigurableListableBeanFactory clbf)) {
+		if (!(beanFactory instanceof ConfigurableListableBeanFactory)) {
 			throw new IllegalArgumentException(
 					"DefaultLifecycleProcessor requires a ConfigurableListableBeanFactory: " + beanFactory);
 		}
-		this.beanFactory = clbf;
+		this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
 	}
 
 	private ConfigurableListableBeanFactory getBeanFactory() {
@@ -170,10 +86,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 	 */
 	@Override
 	public void start() {
-		this.stoppedBeans = null;
 		startBeans(false);
-		// If any bean failed to explicitly start, the exception propagates here.
-		// The caller may choose to subsequently call stop() if appropriate.
 		this.running = true;
 	}
 
@@ -193,23 +106,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 
 	@Override
 	public void onRefresh() {
-		if (checkpointOnRefresh) {
-			new CracDelegate().checkpointRestore();
-		}
-		if (exitOnRefresh) {
-			Runtime.getRuntime().halt(0);
-		}
-
-		this.stoppedBeans = null;
-		try {
-			startBeans(true);
-		}
-		catch (ApplicationContextException ex) {
-			// Some bean failed to auto-start within context refresh:
-			// stop already started beans on context refresh failure.
-			stopBeans();
-			throw ex;
-		}
+		startBeans(true);
 		this.running = true;
 	}
 
@@ -227,44 +124,27 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 
 	// Internal helpers
 
-	void stopForRestart() {
-		if (this.running) {
-			this.stoppedBeans = ConcurrentHashMap.newKeySet();
-			stopBeans();
-			this.running = false;
-		}
-	}
-
-	void restartAfterStop() {
-		if (this.stoppedBeans != null) {
-			startBeans(true);
-			this.stoppedBeans = null;
-			this.running = true;
-		}
-	}
-
 	private void startBeans(boolean autoStartupOnly) {
 		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
-		Map<Integer, LifecycleGroup> phases = new TreeMap<>();
-
+		Map<Integer, LifecycleGroup> phases = new HashMap<>();
 		lifecycleBeans.forEach((beanName, bean) -> {
-			if (!autoStartupOnly || isAutoStartupCandidate(beanName, bean)) {
+			if (!autoStartupOnly || (bean instanceof SmartLifecycle && ((SmartLifecycle) bean).isAutoStartup())) {
 				int phase = getPhase(bean);
-				phases.computeIfAbsent(
-						phase,
-						p -> new LifecycleGroup(phase, this.timeoutPerShutdownPhase, lifecycleBeans, autoStartupOnly)
-				).add(beanName, bean);
+				LifecycleGroup group = phases.get(phase);
+				if (group == null) {
+					group = new LifecycleGroup(phase, this.timeoutPerShutdownPhase, lifecycleBeans, autoStartupOnly);
+					phases.put(phase, group);
+				}
+				group.add(beanName, bean);
 			}
 		});
 		if (!phases.isEmpty()) {
-			phases.values().forEach(LifecycleGroup::start);
+			List<Integer> keys = new ArrayList<>(phases.keySet());
+			Collections.sort(keys);
+			for (Integer key : keys) {
+				phases.get(key).start();
+			}
 		}
-	}
-
-	private boolean isAutoStartupCandidate(String beanName, Lifecycle bean) {
-		Set<String> stoppedBeans = this.stoppedBeans;
-		return (stoppedBeans != null ? stoppedBeans.contains(beanName) :
-				(bean instanceof SmartLifecycle smartLifecycle && smartLifecycle.isAutoStartup()));
 	}
 
 	/**
@@ -280,7 +160,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			for (String dependency : dependenciesForBean) {
 				doStart(lifecycleBeans, dependency, autoStartupOnly);
 			}
-			if (!bean.isRunning() && (!autoStartupOnly || toBeStarted(beanName, bean))) {
+			if (!bean.isRunning() &&
+					(!autoStartupOnly || !(bean instanceof SmartLifecycle) || ((SmartLifecycle) bean).isAutoStartup())) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Starting bean '" + beanName + "' of type [" + bean.getClass().getName() + "]");
 				}
@@ -297,24 +178,24 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 		}
 	}
 
-	private boolean toBeStarted(String beanName, Lifecycle bean) {
-		Set<String> stoppedBeans = this.stoppedBeans;
-		return (stoppedBeans != null ? stoppedBeans.contains(beanName) :
-				(!(bean instanceof SmartLifecycle smartLifecycle) || smartLifecycle.isAutoStartup()));
-	}
-
 	private void stopBeans() {
 		Map<String, Lifecycle> lifecycleBeans = getLifecycleBeans();
-		Map<Integer, LifecycleGroup> phases = new TreeMap<>(Comparator.reverseOrder());
+		Map<Integer, LifecycleGroup> phases = new HashMap<>();
 		lifecycleBeans.forEach((beanName, bean) -> {
 			int shutdownPhase = getPhase(bean);
-			phases.computeIfAbsent(
-					shutdownPhase,
-					p -> new LifecycleGroup(shutdownPhase, this.timeoutPerShutdownPhase, lifecycleBeans, false)
-			).add(beanName, bean);
+			LifecycleGroup group = phases.get(shutdownPhase);
+			if (group == null) {
+				group = new LifecycleGroup(shutdownPhase, this.timeoutPerShutdownPhase, lifecycleBeans, false);
+				phases.put(shutdownPhase, group);
+			}
+			group.add(beanName, bean);
 		});
 		if (!phases.isEmpty()) {
-			phases.values().forEach(LifecycleGroup::stop);
+			List<Integer> keys = new ArrayList<>(phases.keySet());
+			keys.sort(Collections.reverseOrder());
+			for (Integer key : keys) {
+				phases.get(key).stop();
+			}
 		}
 	}
 
@@ -335,17 +216,13 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			}
 			try {
 				if (bean.isRunning()) {
-					Set<String> stoppedBeans = this.stoppedBeans;
-					if (stoppedBeans != null) {
-						stoppedBeans.add(beanName);
-					}
-					if (bean instanceof SmartLifecycle smartLifecycle) {
+					if (bean instanceof SmartLifecycle) {
 						if (logger.isTraceEnabled()) {
 							logger.trace("Asking bean '" + beanName + "' of type [" +
 									bean.getClass().getName() + "] to stop");
 						}
 						countDownBeanNames.add(beanName);
-						smartLifecycle.stop(() -> {
+						((SmartLifecycle) bean).stop(() -> {
 							latch.countDown();
 							countDownBeanNames.remove(beanName);
 							if (logger.isDebugEnabled()) {
@@ -397,8 +274,8 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 					(!isFactoryBean || matchesBeanType(Lifecycle.class, beanNameToCheck, beanFactory))) ||
 					matchesBeanType(SmartLifecycle.class, beanNameToCheck, beanFactory)) {
 				Object bean = beanFactory.getBean(beanNameToCheck);
-				if (bean != this && bean instanceof Lifecycle lifecycle) {
-					beans.put(beanNameToRegister, lifecycle);
+				if (bean != this && bean instanceof Lifecycle) {
+					beans.put(beanNameToRegister, (Lifecycle) bean);
 				}
 			}
 		}
@@ -420,15 +297,13 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 	 * @see SmartLifecycle
 	 */
 	protected int getPhase(Lifecycle bean) {
-		return (bean instanceof Phased phased ? phased.getPhase() : 0);
+		return (bean instanceof Phased ? ((Phased) bean).getPhase() : 0);
 	}
 
 
 	/**
 	 * Helper class for maintaining a group of Lifecycle beans that should be started
 	 * and stopped together based on their 'phase' value (or the default value of 0).
-	 * The group is expected to be created in an ad-hoc fashion and group members are
-	 * expected to always have the same 'phase' value.
 	 */
 	private class LifecycleGroup {
 
@@ -467,6 +342,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			if (logger.isDebugEnabled()) {
 				logger.debug("Starting beans in phase " + this.phase);
 			}
+			Collections.sort(this.members);
 			for (LifecycleGroupMember member : this.members) {
 				doStart(this.lifecycleBeans, member.name, this.autoStartupOnly);
 			}
@@ -479,6 +355,7 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			if (logger.isDebugEnabled()) {
 				logger.debug("Stopping beans in phase " + this.phase);
 			}
+			this.members.sort(Collections.reverseOrder());
 			CountDownLatch latch = new CountDownLatch(this.smartMemberCount);
 			Set<String> countDownBeanNames = Collections.synchronizedSet(new LinkedHashSet<>());
 			Set<String> lifecycleBeanNames = new HashSet<>(this.lifecycleBeans.keySet());
@@ -494,9 +371,9 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 			try {
 				latch.await(this.timeout, TimeUnit.MILLISECONDS);
 				if (latch.getCount() > 0 && !countDownBeanNames.isEmpty() && logger.isInfoEnabled()) {
-					logger.info("Shutdown phase " + this.phase + " ends with " + countDownBeanNames.size() +
-							" bean" + (countDownBeanNames.size() > 1 ? "s" : "") +
-							" still running after timeout of " + this.timeout + "ms: " + countDownBeanNames);
+					logger.info("Failed to shut down " + countDownBeanNames.size() + " bean" +
+							(countDownBeanNames.size() > 1 ? "s" : "") + " with phase value " +
+							this.phase + " within timeout of " + this.timeout + ": " + countDownBeanNames);
 				}
 			}
 			catch (InterruptedException ex) {
@@ -507,97 +384,24 @@ public class DefaultLifecycleProcessor implements LifecycleProcessor, BeanFactor
 
 
 	/**
-	 * A simple record of a LifecycleGroup member.
+	 * Adapts the Comparable interface onto the lifecycle phase model.
 	 */
-	private record LifecycleGroupMember(String name, Lifecycle bean) {}
+	private class LifecycleGroupMember implements Comparable<LifecycleGroupMember> {
 
+		private final String name;
 
-	/**
-	 * Inner class to avoid a hard dependency on Project CRaC at runtime.
-	 * @since 6.1
-	 * @see org.crac.Core
-	 */
-	private class CracDelegate {
+		private final Lifecycle bean;
 
-		public Object registerResource() {
-			logger.debug("Registering JVM checkpoint/restore callback for Spring-managed lifecycle beans");
-			CracResourceAdapter resourceAdapter = new CracResourceAdapter();
-			org.crac.Core.getGlobalContext().register(resourceAdapter);
-			return resourceAdapter;
-		}
-
-		public void checkpointRestore() {
-			logger.info("Triggering JVM checkpoint/restore");
-			try {
-				Core.checkpointRestore();
-			}
-			catch (UnsupportedOperationException ex) {
-				throw new ApplicationContextException("CRaC checkpoint not supported on current JVM", ex);
-			}
-			catch (CheckpointException ex) {
-				throw new ApplicationContextException("Failed to take CRaC checkpoint on refresh", ex);
-			}
-			catch (RestoreException ex) {
-				throw new ApplicationContextException("Failed to restore CRaC checkpoint on refresh", ex);
-			}
-		}
-	}
-
-
-	/**
-	 * Resource adapter for Project CRaC, triggering a stop-and-restart cycle
-	 * for Spring-managed lifecycle beans around a JVM checkpoint/restore.
-	 * @since 6.1
-	 * @see #stopForRestart()
-	 * @see #restartAfterStop()
-	 */
-	private class CracResourceAdapter implements org.crac.Resource {
-
-		@Nullable
-		private CyclicBarrier barrier;
-
-		@Override
-		public void beforeCheckpoint(org.crac.Context<? extends org.crac.Resource> context) {
-			// A non-daemon thread for preventing an accidental JVM shutdown before the checkpoint
-			this.barrier = new CyclicBarrier(2);
-
-			Thread thread = new Thread(() -> {
-				awaitPreventShutdownBarrier();
-				// Checkpoint happens here
-				awaitPreventShutdownBarrier();
-			}, "prevent-shutdown");
-
-			thread.setDaemon(false);
-			thread.start();
-			awaitPreventShutdownBarrier();
-
-			logger.debug("Stopping Spring-managed lifecycle beans before JVM checkpoint");
-			stopForRestart();
+		LifecycleGroupMember(String name, Lifecycle bean) {
+			this.name = name;
+			this.bean = bean;
 		}
 
 		@Override
-		public void afterRestore(org.crac.Context<? extends org.crac.Resource> context) {
-			logger.info("Restarting Spring-managed lifecycle beans after JVM restore");
-			restartAfterStop();
-
-			// Barrier for prevent-shutdown thread not needed anymore
-			this.barrier = null;
-
-			if (!checkpointOnRefresh) {
-				logger.info("Spring-managed lifecycle restart completed (restored JVM running for " +
-						CRaCMXBean.getCRaCMXBean().getUptimeSinceRestore() + " ms)");
-			}
-		}
-
-		private void awaitPreventShutdownBarrier() {
-			try {
-				if (this.barrier != null) {
-					this.barrier.await();
-				}
-			}
-			catch (Exception ex) {
-				logger.trace("Exception from prevent-shutdown barrier", ex);
-			}
+		public int compareTo(LifecycleGroupMember other) {
+			int thisPhase = getPhase(this.bean);
+			int otherPhase = getPhase(other.bean);
+			return Integer.compare(thisPhase, otherPhase);
 		}
 	}
 

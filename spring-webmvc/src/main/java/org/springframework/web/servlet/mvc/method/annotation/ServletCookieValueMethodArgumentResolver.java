@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
@@ -27,6 +24,9 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.annotation.AbstractCookieValueMethodArgumentResolver;
 import org.springframework.web.util.UrlPathHelper;
 import org.springframework.web.util.WebUtils;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * An {@link org.springframework.web.method.annotation.AbstractCookieValueMethodArgumentResolver}
@@ -45,23 +45,6 @@ public class ServletCookieValueMethodArgumentResolver extends AbstractCookieValu
 	}
 
 
-	/**
-	 * Whether to apply URL decoding to cookie values via
-	 * {@link UrlPathHelper#decodeRequestString(HttpServletRequest, String)}.
-	 * A shortcut for doing the same by setting a {@link UrlPathHelper} with
-	 * its {@code urlDecode} property set accordingly.
-	 * <p>By default set to "true" in which case cookie values are decoded.
-	 * @since 6.1.2
-	 */
-	public void setUrlDecode(boolean urlDecode) {
-		this.urlPathHelper.setUrlDecode(urlDecode);
-	}
-
-	/**
-	 * Set the {@code UrlPathHelper} to use to decode cookie values with via
-	 * {@link UrlPathHelper#decodeRequestString(HttpServletRequest, String)}.
-	 * For most cases you can use {@link #setUrlDecode(boolean)} instead.
-	 */
 	public void setUrlPathHelper(UrlPathHelper urlPathHelper) {
 		this.urlPathHelper = urlPathHelper;
 	}

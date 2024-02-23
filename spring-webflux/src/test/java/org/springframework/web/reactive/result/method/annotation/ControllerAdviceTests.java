@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,29 @@
 
 package org.springframework.web.reactive.result.method.annotation;
 
-import java.lang.reflect.Method;
-import java.time.Duration;
-import java.util.Collections;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.FatalBeanException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.mock.http.server.reactive.test.MockServerHttpRequest;
+import org.springframework.mock.web.test.server.MockServerWebExchange;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.ClassUtils;
 import org.springframework.validation.Validator;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.support.WebExchangeDataBinder;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.reactive.BindingContext;
 import org.springframework.web.reactive.HandlerResult;
-import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
-import org.springframework.web.testfixture.server.MockServerWebExchange;
+
+import java.lang.reflect.Method;
+import java.time.Duration;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -53,19 +48,19 @@ import static org.mockito.Mockito.mock;
  *
  * @author Rossen Stoyanchev
  */
-class ControllerAdviceTests {
+public class ControllerAdviceTests {
 
 	private final MockServerWebExchange exchange =
 			MockServerWebExchange.from(MockServerHttpRequest.get("/"));
 
 
 	@Test
-	void resolveExceptionGlobalHandler() throws Exception {
+	public void resolveExceptionGlobalHandler() throws Exception {
 		testException(new IllegalAccessException(), "SecondControllerAdvice: IllegalAccessException");
 	}
 
 	@Test
-	void resolveExceptionGlobalHandlerOrdered() throws Exception {
+	public void resolveExceptionGlobalHandlerOrdered() throws Exception {
 		testException(new IllegalStateException(), "OneControllerAdvice: IllegalStateException");
 	}
 
@@ -75,17 +70,16 @@ class ControllerAdviceTests {
 	}
 
 	@Test
-	void resolveExceptionWithAssertionError() throws Exception {
+	public void resolveExceptionWithAssertionError() throws Exception {
 		AssertionError error = new AssertionError("argh");
 		testException(error, error.toString());
 	}
 
 	@Test
-	void resolveExceptionWithAssertionErrorAsRootCause() throws Exception {
-		AssertionError rootCause = new AssertionError("argh");
-		FatalBeanException cause = new FatalBeanException("wrapped", rootCause);
-		Exception exception = new Exception(cause);
-		testException(exception, rootCause.toString());
+	public void resolveExceptionWithAssertionErrorAsRootCause() throws Exception {
+		AssertionError cause = new AssertionError("argh");
+		FatalBeanException exception = new FatalBeanException("wrapped", cause);
+		testException(exception, cause.toString());
 	}
 
 	private void testException(Throwable exception, String expected) throws Exception {
@@ -100,25 +94,25 @@ class ControllerAdviceTests {
 	}
 
 	@Test
-	void modelAttributeAdvice() throws Exception {
+	public void modelAttributeAdvice() throws Exception {
 		ApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class);
 		RequestMappingHandlerAdapter adapter = createAdapter(context);
 		TestController controller = context.getBean(TestController.class);
 
 		Model model = handle(adapter, controller, "handle").getModel();
 
-		assertThat(model.asMap()).hasSize(2);
+		assertThat(model.asMap().size()).isEqualTo(2);
 		assertThat(model.asMap().get("attr1")).isEqualTo("lAttr1");
 		assertThat(model.asMap().get("attr2")).isEqualTo("gAttr2");
 	}
 
 	@Test
-	void initBinderAdvice() throws Exception {
+	public void initBinderAdvice() throws Exception {
 		ApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class);
 		RequestMappingHandlerAdapter adapter = createAdapter(context);
 		TestController controller = context.getBean(TestController.class);
 
-		Validator validator = mock();
+		Validator validator = mock(Validator.class);
 		controller.setValidator(validator);
 
 		BindingContext bindingContext = handle(adapter, controller, "handle").getBindingContext();

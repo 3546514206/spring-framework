@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,7 @@
 
 package org.springframework.messaging.simp.stomp;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
-
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.SimpLogging;
@@ -32,7 +25,13 @@ import org.springframework.messaging.support.MessageHeaderInitializer;
 import org.springframework.messaging.support.NativeMessageHeaderAccessor;
 import org.springframework.util.InvalidMimeTypeException;
 import org.springframework.util.MultiValueMap;
-import org.springframework.util.StreamUtils;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Decodes one or more STOMP frames contained in a {@link ByteBuffer}.
@@ -91,9 +90,9 @@ public class StompDecoder {
 	 * Decodes one or more STOMP frames from the given {@code buffer} and returns
 	 * a list of {@link Message Messages}.
 	 * <p>If the given ByteBuffer contains only partial STOMP frame content and no
-	 * complete STOMP frames, an empty list is returned, and the buffer is reset
+	 * complete STOMP frames, an empty list is returned, and the buffer is reset to
 	 * to where it was.
-	 * <p>If the buffer contains one or more STOMP frames, those are returned and
+	 * <p>If the buffer contains one ore more STOMP frames, those are returned and
 	 * the buffer reset to point to the beginning of the unused partial content.
 	 * <p>The output partialMessageHeaders map is used to store successfully parsed
 	 * headers in case of partial content. The caller can then check if a
@@ -114,10 +113,6 @@ public class StompDecoder {
 			Message<byte[]> message = decodeMessage(byteBuffer, partialMessageHeaders);
 			if (message != null) {
 				messages.add(message);
-				skipEol(byteBuffer);
-				if (!byteBuffer.hasRemaining()) {
-					break;
-				}
 			}
 			else {
 				break;
@@ -132,8 +127,12 @@ public class StompDecoder {
 	@Nullable
 	private Message<byte[]> decodeMessage(ByteBuffer byteBuffer, @Nullable MultiValueMap<String, String> headers) {
 		Message<byte[]> decodedMessage = null;
-		skipEol(byteBuffer);
-		byteBuffer.mark();
+		skipLeadingEol(byteBuffer);
+
+		// Explicit mark/reset access via Buffer base type for compatibility
+		// with covariant return type on JDK 9's ByteBuffer...
+		Buffer buffer = byteBuffer;
+		buffer.mark();
 
 		String command = readCommand(byteBuffer);
 		if (command.length() > 0) {
@@ -143,7 +142,7 @@ public class StompDecoder {
 				StompCommand stompCommand = StompCommand.valueOf(command);
 				headerAccessor = StompHeaderAccessor.create(stompCommand);
 				initHeaders(headerAccessor);
-				readHeaders(byteBuffer, headerAccessor, stompCommand);
+				readHeaders(byteBuffer, headerAccessor);
 				payload = readPayload(byteBuffer, headerAccessor);
 			}
 			if (payload != null) {
@@ -171,7 +170,7 @@ public class StompDecoder {
 						headers.putAll(map);
 					}
 				}
-				byteBuffer.reset();
+				buffer.reset();
 			}
 		}
 		else {
@@ -196,10 +195,9 @@ public class StompDecoder {
 
 	/**
 	 * Skip one ore more EOL characters at the start of the given ByteBuffer.
-	 * STOMP, section 2.1 says: "The NULL octet can be optionally followed by
-	 * multiple EOLs."
+	 * Those are STOMP heartbeat frames.
 	 */
-	protected void skipEol(ByteBuffer byteBuffer) {
+	protected void skipLeadingEol(ByteBuffer byteBuffer) {
 		while (true) {
 			if (!tryConsumeEndOfLine(byteBuffer)) {
 				break;
@@ -212,15 +210,10 @@ public class StompDecoder {
 		while (byteBuffer.remaining() > 0 && !tryConsumeEndOfLine(byteBuffer)) {
 			command.write(byteBuffer.get());
 		}
-		return StreamUtils.copyToString(command, StandardCharsets.UTF_8);
+		return new String(command.toByteArray(), StandardCharsets.UTF_8);
 	}
 
-	private void readHeaders(ByteBuffer byteBuffer, StompHeaderAccessor headerAccessor, StompCommand command) {
-
-		boolean shouldUnescape = (command != StompCommand.CONNECT &&
-				command != StompCommand.CONNECTED &&
-				command != StompCommand.STOMP);
-
+	private void readHeaders(ByteBuffer byteBuffer, StompHeaderAccessor headerAccessor) {
 		while (true) {
 			ByteArrayOutputStream headerStream = new ByteArrayOutputStream(256);
 			boolean headerComplete = false;
@@ -232,7 +225,7 @@ public class StompDecoder {
 				headerStream.write(byteBuffer.get());
 			}
 			if (headerStream.size() > 0 && headerComplete) {
-				String header = StreamUtils.copyToString(headerStream, StandardCharsets.UTF_8);
+				String header = new String(headerStream.toByteArray(), StandardCharsets.UTF_8);
 				int colonIndex = header.indexOf(':');
 				if (colonIndex <= 0) {
 					if (byteBuffer.remaining() > 0) {
@@ -241,8 +234,8 @@ public class StompDecoder {
 					}
 				}
 				else {
-					String headerName = shouldUnescape ? unescape(header.substring(0, colonIndex)) : header.substring(0, colonIndex);
-					String headerValue = shouldUnescape ? unescape(header.substring(colonIndex + 1)) : header.substring(colonIndex + 1);
+					String headerName = unescape(header.substring(0, colonIndex));
+					String headerValue = unescape(header.substring(colonIndex + 1));
 					try {
 						headerAccessor.addNativeHeader(headerName, headerValue);
 					}
@@ -264,15 +257,12 @@ public class StompDecoder {
 	 * <a href="https://stomp.github.io/stomp-specification-1.2.html#Value_Encoding">"Value Encoding"</a>.
 	 */
 	private String unescape(String inString) {
-		int index = inString.indexOf('\\');
-		if (index == -1) {
-			return inString;
-		}
 		StringBuilder sb = new StringBuilder(inString.length());
 		int pos = 0;  // position in the old string
+		int index = inString.indexOf('\\');
 
 		while (index >= 0) {
-			sb.append(inString, pos, index);
+			sb.append(inString.substring(pos, index));
 			if (index + 1 >= inString.length()) {
 				throw new StompConversionException("Illegal escape sequence at index " + index + ": " + inString);
 			}
@@ -360,7 +350,8 @@ public class StompDecoder {
 					throw new StompConversionException("'\\r' must be followed by '\\n'");
 				}
 			}
-			byteBuffer.position(byteBuffer.position() - 1);
+			// Explicit cast for compatibility with covariant return type on JDK 9's ByteBuffer
+			((Buffer) byteBuffer).position(byteBuffer.position() - 1);
 		}
 		return false;
 	}

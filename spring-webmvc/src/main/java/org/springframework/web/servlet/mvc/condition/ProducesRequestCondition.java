@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,10 @@
 
 package org.springframework.web.servlet.mvc.condition;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.MimeType;
-import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.HttpMediaTypeException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.accept.ContentNegotiationManager;
@@ -36,6 +27,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.servlet.mvc.condition.HeadersRequestCondition.HeaderExpression;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
 
 /**
  * A logical disjunction (' || ') request condition to match a request's 'Accept' header
@@ -90,40 +84,17 @@ public final class ProducesRequestCondition extends AbstractRequestCondition<Pro
 	/**
 	 * Same as {@link #ProducesRequestCondition(String[], String[])} but also
 	 * accepting a {@link ContentNegotiationManager}.
+	 *
 	 * @param produces expressions with syntax defined by {@link RequestMapping#produces()}
-	 * @param headers expressions with syntax defined by {@link RequestMapping#headers()}
-	 * @param manager used to determine requested media types
+	 * @param headers  expressions with syntax defined by {@link RequestMapping#headers()}
+	 * @param manager  used to determine requested media types
 	 */
 	public ProducesRequestCondition(String[] produces, @Nullable String[] headers,
-			@Nullable ContentNegotiationManager manager) {
+									@Nullable ContentNegotiationManager manager) {
 
-		this.expressions = parseExpressions(produces, headers);
-		if (this.expressions.size() > 1) {
-			Collections.sort(this.expressions);
-		}
+		this.expressions = new ArrayList<>(parseExpressions(produces, headers));
+		Collections.sort(this.expressions);
 		this.contentNegotiationManager = manager != null ? manager : DEFAULT_CONTENT_NEGOTIATION_MANAGER;
-	}
-
-	private List<ProduceMediaTypeExpression> parseExpressions(String[] produces, @Nullable String[] headers) {
-		Set<ProduceMediaTypeExpression> result = null;
-		if (!ObjectUtils.isEmpty(headers)) {
-			for (String header : headers) {
-				HeaderExpression expr = new HeaderExpression(header);
-				if ("Accept".equalsIgnoreCase(expr.name) && expr.value != null) {
-					for (MediaType mediaType : MediaType.parseMediaTypes(expr.value)) {
-						result = (result != null ? result : new LinkedHashSet<>());
-						result.add(new ProduceMediaTypeExpression(mediaType, expr.isNegated));
-					}
-				}
-			}
-		}
-		if (!ObjectUtils.isEmpty(produces)) {
-			for (String produce : produces) {
-				result = (result != null ? result : new LinkedHashSet<>());
-				result.add(new ProduceMediaTypeExpression(produce));
-			}
-		}
-		return (result != null ? new ArrayList<>(result) : Collections.emptyList());
 	}
 
 	/**
@@ -135,6 +106,24 @@ public final class ProducesRequestCondition extends AbstractRequestCondition<Pro
 		this.contentNegotiationManager = other.contentNegotiationManager;
 	}
 
+
+	private Set<ProduceMediaTypeExpression> parseExpressions(String[] produces, @Nullable String[] headers) {
+		Set<ProduceMediaTypeExpression> result = new LinkedHashSet<>();
+		if (headers != null) {
+			for (String header : headers) {
+				HeaderExpression expr = new HeaderExpression(header);
+				if ("Accept".equalsIgnoreCase(expr.name) && expr.value != null) {
+					for (MediaType mediaType : MediaType.parseMediaTypes(expr.value)) {
+						result.add(new ProduceMediaTypeExpression(mediaType, expr.isNegated));
+					}
+				}
+			}
+		}
+		for (String produce : produces) {
+			result.add(new ProduceMediaTypeExpression(produce));
+		}
+		return result;
+	}
 
 	/**
 	 * Return the contained "produces" expressions.
@@ -238,14 +227,13 @@ public final class ProducesRequestCondition extends AbstractRequestCondition<Pro
 	 * Compares this and another "produces" condition as follows:
 	 * <ol>
 	 * <li>Sort 'Accept' header media types by quality value via
-	 * {@link org.springframework.util.MimeTypeUtils#sortBySpecificity(List)}
-	 * and iterate the list.
+	 * {@link MediaType#sortByQualityValue(List)} and iterate the list.
 	 * <li>Get the first index of matching media types in each "produces"
 	 * condition first matching with {@link MediaType#equals(Object)} and
 	 * then with {@link MediaType#includes(MediaType)}.
 	 * <li>If a lower index is found, the condition at that index wins.
 	 * <li>If both indexes are equal, the media types at the index are
-	 * compared further with {@link MediaType#isMoreSpecific(MimeType)}.
+	 * compared further with {@link MediaType#SPECIFICITY_COMPARATOR}.
 	 * </ol>
 	 * <p>It is assumed that both instances have been obtained via
 	 * {@link #getMatchingCondition(HttpServletRequest)} and each instance
@@ -254,9 +242,6 @@ public final class ProducesRequestCondition extends AbstractRequestCondition<Pro
 	 */
 	@Override
 	public int compareTo(ProducesRequestCondition other, HttpServletRequest request) {
-		if (this.expressions.isEmpty() && other.expressions.isEmpty()) {
-			return 0;
-		}
 		try {
 			List<MediaType> acceptedMediaTypes = getAcceptedMediaTypes(request);
 			for (MediaType acceptedMediaType : acceptedMediaTypes) {
@@ -374,6 +359,17 @@ public final class ProducesRequestCondition extends AbstractRequestCondition<Pro
 				}
 			}
 			return false;
+		}
+
+		private boolean matchParameters(MediaType acceptedMediaType) {
+			for (String name : getMediaType().getParameters().keySet()) {
+				String s1 = getMediaType().getParameter(name);
+				String s2 = acceptedMediaType.getParameter(name);
+				if (StringUtils.hasText(s1) && StringUtils.hasText(s2) && !s1.equalsIgnoreCase(s2)) {
+					return false;
+				}
+			}
+			return true;
 		}
 	}
 

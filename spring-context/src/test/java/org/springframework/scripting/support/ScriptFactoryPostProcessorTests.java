@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,28 @@
 package org.springframework.scripting.support;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.FatalBeanException;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.testfixture.EnabledForTestGroups;
 import org.springframework.scripting.Messenger;
 import org.springframework.scripting.ScriptCompilationException;
 import org.springframework.scripting.groovy.GroovyScriptFactory;
+import org.springframework.tests.EnabledForTestGroups;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
-import static org.springframework.core.testfixture.TestGroup.LONG_RUNNING;
+import static org.springframework.tests.TestGroup.PERFORMANCE;
 
 /**
  * @author Rick Evans
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-@EnabledForTestGroups(LONG_RUNNING)
-class ScriptFactoryPostProcessorTests {
+@EnabledForTestGroups(PERFORMANCE)
+public class ScriptFactoryPostProcessorTests {
 
 	private static final String MESSAGE_TEXT = "Bingo";
 
@@ -48,50 +46,48 @@ class ScriptFactoryPostProcessorTests {
 
 	private static final String PROCESSOR_BEAN_NAME = "processor";
 
-	// quote the returned message (this is the change)...
-	private static final String CHANGED_SCRIPT = """
-			package org.springframework.scripting.groovy
-			import org.springframework.scripting.Messenger
-			class GroovyMessenger implements Messenger {
-				private String message = "Bingo"
-				public String getMessage() {
-					return "'"  + this.message + "'"
-				}
-				public void setMessage(String message) {
-					this.message = message
-				}
-			}""";
+	private static final String CHANGED_SCRIPT = "package org.springframework.scripting.groovy\n" +
+			"import org.springframework.scripting.Messenger\n" +
+			"class GroovyMessenger implements Messenger {\n" +
+			"  private String message = \"Bingo\"\n" +
+			"  public String getMessage() {\n" +
+			// quote the returned message (this is the change)...
+			"    return \"'\"  + this.message + \"'\"\n" +
+			"  }\n" +
+			"  public void setMessage(String message) {\n" +
+			"    this.message = message\n" +
+			"  }\n" +
+			"}";
 
 	private static final String EXPECTED_CHANGED_MESSAGE_TEXT = "'" + MESSAGE_TEXT + "'";
 
 	private static final int DEFAULT_SECONDS_TO_PAUSE = 1;
 
-	private static final String DELEGATING_SCRIPT = """
-			inline:package org.springframework.scripting;
-			class DelegatingMessenger implements Messenger {
-				private Messenger wrappedMessenger;
-				public String getMessage() {
-					return this.wrappedMessenger.getMessage()
-				}
-				public void setMessenger(Messenger wrappedMessenger) {
-					this.wrappedMessenger = wrappedMessenger
-				}
-			}""";
+	private static final String DELEGATING_SCRIPT = "inline:package org.springframework.scripting;\n" +
+			"class DelegatingMessenger implements Messenger {\n" +
+			"  private Messenger wrappedMessenger;\n" +
+			"  public String getMessage() {\n" +
+			"    return this.wrappedMessenger.getMessage()\n" +
+			"  }\n" +
+			"  public void setMessenger(Messenger wrappedMessenger) {\n" +
+			"    this.wrappedMessenger = wrappedMessenger\n" +
+			"  }\n" +
+			"}";
 
 
 	@Test
-	void testDoesNothingWhenPostProcessingNonScriptFactoryTypeBeforeInstantiation() {
+	public void testDoesNothingWhenPostProcessingNonScriptFactoryTypeBeforeInstantiation() throws Exception {
 		assertThat(new ScriptFactoryPostProcessor().postProcessBeforeInstantiation(getClass(), "a.bean")).isNull();
 	}
 
 	@Test
-	void testThrowsExceptionIfGivenNonAbstractBeanFactoryImplementation() {
+	public void testThrowsExceptionIfGivenNonAbstractBeanFactoryImplementation() throws Exception {
 		assertThatIllegalStateException().isThrownBy(() ->
-				new ScriptFactoryPostProcessor().setBeanFactory(mock()));
+				new ScriptFactoryPostProcessor().setBeanFactory(mock(BeanFactory.class)));
 	}
 
 	@Test
-	void testChangeScriptWithRefreshableBeanFunctionality() {
+	public void testChangeScriptWithRefreshableBeanFunctionality() throws Exception {
 		BeanDefinition processorBeanDefinition = createScriptFactoryPostProcessor(true);
 		BeanDefinition scriptedBeanDefinition = createScriptedGroovyBean();
 
@@ -112,7 +108,7 @@ class ScriptFactoryPostProcessorTests {
 	}
 
 	@Test
-	void testChangeScriptWithNoRefreshableBeanFunctionality() {
+	public void testChangeScriptWithNoRefreshableBeanFunctionality() throws Exception {
 		BeanDefinition processorBeanDefinition = createScriptFactoryPostProcessor(false);
 		BeanDefinition scriptedBeanDefinition = createScriptedGroovyBean();
 
@@ -132,7 +128,7 @@ class ScriptFactoryPostProcessorTests {
 	}
 
 	@Test
-	void testRefreshedScriptReferencePropagatesToCollaborators() {
+	public void testRefreshedScriptReferencePropagatesToCollaborators() throws Exception {
 		BeanDefinition processorBeanDefinition = createScriptFactoryPostProcessor(true);
 		BeanDefinition scriptedBeanDefinition = createScriptedGroovyBean();
 		BeanDefinitionBuilder collaboratorBuilder = BeanDefinitionBuilder.rootBeanDefinition(DefaultMessengerService.class);
@@ -160,8 +156,7 @@ class ScriptFactoryPostProcessorTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void testReferencesAcrossAContainerHierarchy() {
+	public void testReferencesAcrossAContainerHierarchy() throws Exception {
 		GenericApplicationContext businessContext = new GenericApplicationContext();
 		businessContext.registerBeanDefinition("messenger", BeanDefinitionBuilder.rootBeanDefinition(StubMessenger.class).getBeanDefinition());
 		businessContext.refresh();
@@ -177,14 +172,13 @@ class ScriptFactoryPostProcessorTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void testScriptHavingAReferenceToAnotherBean() {
+	public void testScriptHavingAReferenceToAnotherBean() throws Exception {
 		// just tests that the (singleton) script-backed bean is able to be instantiated with references to its collaborators
 		new ClassPathXmlApplicationContext("org/springframework/scripting/support/groovyReferences.xml");
 	}
 
 	@Test
-	void testForRefreshedScriptHavingErrorPickedUpOnFirstCall() {
+	public void testForRefreshedScriptHavingErrorPickedUpOnFirstCall() throws Exception {
 		BeanDefinition processorBeanDefinition = createScriptFactoryPostProcessor(true);
 		BeanDefinition scriptedBeanDefinition = createScriptedGroovyBean();
 		BeanDefinitionBuilder collaboratorBuilder = BeanDefinitionBuilder.rootBeanDefinition(DefaultMessengerService.class);
@@ -205,13 +199,13 @@ class ScriptFactoryPostProcessorTests {
 		// needs The Sundays compiler; must NOT throw any exception here...
 		source.setScript("I keep hoping you are the same as me, and I'll send you letters and come to your house for tea");
 		Messenger refreshedMessenger = (Messenger) ctx.getBean(MESSENGER_BEAN_NAME);
-		assertThatExceptionOfType(FatalBeanException.class).isThrownBy(refreshedMessenger::getMessage)
+		assertThatExceptionOfType(FatalBeanException.class).isThrownBy(() ->
+				refreshedMessenger.getMessage())
 			.matches(ex -> ex.contains(ScriptCompilationException.class));
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void testPrototypeScriptedBean() {
+	public void testPrototypeScriptedBean() throws Exception {
 		GenericApplicationContext ctx = new GenericApplicationContext();
 		ctx.registerBeanDefinition("messenger", BeanDefinitionBuilder.rootBeanDefinition(StubMessenger.class).getBeanDefinition());
 
@@ -230,7 +224,7 @@ class ScriptFactoryPostProcessorTests {
 		assertThat(messenger2).isNotSameAs(messenger1);
 	}
 
-	private static StaticScriptSource getScriptSource(GenericApplicationContext ctx) {
+	private static StaticScriptSource getScriptSource(GenericApplicationContext ctx) throws Exception {
 		ScriptFactoryPostProcessor processor = (ScriptFactoryPostProcessor) ctx.getBean(PROCESSOR_BEAN_NAME);
 		BeanDefinition bd = processor.scriptBeanFactory.getBeanDefinition("scriptedObject.messenger");
 		return (StaticScriptSource) bd.getConstructorArgumentValues().getIndexedArgumentValue(0, StaticScriptSource.class).getValue();
@@ -239,31 +233,30 @@ class ScriptFactoryPostProcessorTests {
 	private static BeanDefinition createScriptFactoryPostProcessor(boolean isRefreshable) {
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.rootBeanDefinition(ScriptFactoryPostProcessor.class);
 		if (isRefreshable) {
-			builder.addPropertyValue("defaultRefreshCheckDelay", 1L);
+			builder.addPropertyValue("defaultRefreshCheckDelay", new Long(1));
 		}
 		return builder.getBeanDefinition();
 	}
 
 	private static BeanDefinition createScriptedGroovyBean() {
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.rootBeanDefinition(GroovyScriptFactory.class);
-		builder.addConstructorArgValue("""
-				inline:package org.springframework.scripting;
-				class GroovyMessenger implements Messenger {
-					private String message = "Bingo"
-					public String getMessage() {
-						return this.message
-					}
-					public void setMessage(String message) {
-						this.message = message
-					}
-				}""");
+		builder.addConstructorArgValue("inline:package org.springframework.scripting;\n" +
+				"class GroovyMessenger implements Messenger {\n" +
+				"  private String message = \"Bingo\"\n" +
+				"  public String getMessage() {\n" +
+				"    return this.message\n" +
+				"  }\n" +
+				"  public void setMessage(String message) {\n" +
+				"    this.message = message\n" +
+				"  }\n" +
+				"}");
 		builder.addPropertyValue("message", MESSAGE_TEXT);
 		return builder.getBeanDefinition();
 	}
 
 	private static void pauseToLetRefreshDelayKickIn(int secondsToPause) {
 		try {
-			Thread.sleep(secondsToPause * 1000L);
+			Thread.sleep(secondsToPause * 1000);
 		}
 		catch (InterruptedException ignored) {
 		}

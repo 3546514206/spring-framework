@@ -67,7 +67,7 @@ public interface ClassMetadata {
 	/**
 	 * Determine whether the underlying class is independent, i.e. whether
 	 * it is a top-level class or a nested class (static inner class) that
-	 * can be constructed independently of an enclosing class.
+	 * can be constructed independently from an enclosing class.
 	 */
 	boolean isIndependent();
 
@@ -90,15 +90,15 @@ public interface ClassMetadata {
 	String getEnclosingClassName();
 
 	/**
-	 * Return whether the underlying class has a superclass.
+	 * Return whether the underlying class has a super class.
 	 */
 	default boolean hasSuperClass() {
 		return (getSuperClassName() != null);
 	}
 
 	/**
-	 * Return the name of the superclass of the underlying class,
-	 * or {@code null} if there is no superclass defined.
+	 * Return the name of the super class of the underlying class,
+	 * or {@code null} if there is no super class defined.
 	 */
 	@Nullable
 	String getSuperClassName();

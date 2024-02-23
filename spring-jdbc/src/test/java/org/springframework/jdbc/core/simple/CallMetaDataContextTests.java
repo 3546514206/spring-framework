@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,31 +45,34 @@ import static org.mockito.Mockito.verify;
  *
  * @author Thomas Risberg
  */
-class CallMetaDataContextTests {
+public class CallMetaDataContextTests {
 
-	private DataSource dataSource = mock();
+	private DataSource dataSource;
 
-	private Connection connection = mock();
+	private Connection connection;
 
-	private DatabaseMetaData databaseMetaData = mock();
+	private DatabaseMetaData databaseMetaData;
 
 	private CallMetaDataContext context = new CallMetaDataContext();
 
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
+		connection = mock(Connection.class);
+		databaseMetaData = mock(DatabaseMetaData.class);
 		given(connection.getMetaData()).willReturn(databaseMetaData);
+		dataSource = mock(DataSource.class);
 		given(dataSource.getConnection()).willReturn(connection);
 	}
 
 	@AfterEach
-	void verifyClosed() throws Exception {
+	public void verifyClosed() throws Exception {
 		verify(connection).close();
 	}
 
 
 	@Test
-	void testMatchParameterValuesAndSqlInOutParameters() throws Exception {
+	public void testMatchParameterValuesAndSqlInOutParameters() throws Exception {
 		final String TABLE = "customers";
 		final String USER = "me";
 		given(databaseMetaData.getDatabaseProductName()).willReturn("MyDB");
@@ -91,17 +94,17 @@ class CallMetaDataContextTests {
 		context.processParameters(parameters);
 
 		Map<String, Object> inParameters = context.matchInParameterValuesWithCallParameters(parameterSource);
-		assertThat(inParameters).as("Wrong number of matched in parameter values").hasSize(2);
+		assertThat(inParameters.size()).as("Wrong number of matched in parameter values").isEqualTo(2);
 		assertThat(inParameters.containsKey("id")).as("in parameter value missing").isTrue();
 		assertThat(inParameters.containsKey("name")).as("in out parameter value missing").isTrue();
 		boolean condition = !inParameters.containsKey("customer_no");
 		assertThat(condition).as("out parameter value matched").isTrue();
 
 		List<String> names = context.getOutParameterNames();
-		assertThat(names).as("Wrong number of out parameters").hasSize(2);
+		assertThat(names.size()).as("Wrong number of out parameters").isEqualTo(2);
 
 		List<SqlParameter> callParameters = context.getCallParameters();
-		assertThat(callParameters).as("Wrong number of call parameters").hasSize(3);
+		assertThat(callParameters.size()).as("Wrong number of call parameters").isEqualTo(3);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,9 @@
 package org.springframework.web.socket;
 
 import org.junit.jupiter.api.BeforeEach;
-
-import org.springframework.http.server.ServerHttpAsyncRequestControl;
-import org.springframework.http.server.ServerHttpRequest;
-import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.http.server.ServletServerHttpRequest;
-import org.springframework.http.server.ServletServerHttpResponse;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
+import org.springframework.http.server.*;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
 
 /**
  * Base class for tests using {@link ServerHttpRequest} and {@link ServerHttpResponse}.
@@ -45,7 +40,7 @@ public abstract class AbstractHttpRequestTests {
 
 
 	@BeforeEach
-	protected void setup() {
+	public void setup() {
 		resetRequestAndResponse();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.springframework.messaging.handler.annotation.support;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.InitializingBean;
@@ -34,6 +30,10 @@ import org.springframework.messaging.handler.invocation.HandlerMethodArgumentRes
 import org.springframework.messaging.handler.invocation.InvocableHandlerMethod;
 import org.springframework.util.Assert;
 import org.springframework.validation.Validator;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The default {@link MessageHandlerMethodFactory} implementation creating an
@@ -120,7 +120,8 @@ public class DefaultMessageHandlerMethodFactory
 	 * the ones configured by default. This is an advanced option. For most use cases
 	 * it should be sufficient to use {@link #setCustomArgumentResolvers(java.util.List)}.
 	 */
-	public void setArgumentResolvers(@Nullable List<HandlerMethodArgumentResolver> argumentResolvers) {
+	@SuppressWarnings("ConstantConditions")
+	public void setArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
 		if (argumentResolvers == null) {
 			this.argumentResolvers.clear();
 			return;
@@ -157,8 +158,8 @@ public class DefaultMessageHandlerMethodFactory
 
 	protected List<HandlerMethodArgumentResolver> initArgumentResolvers() {
 		List<HandlerMethodArgumentResolver> resolvers = new ArrayList<>();
-		ConfigurableBeanFactory beanFactory = (this.beanFactory instanceof ConfigurableBeanFactory cbf ?
-				cbf : null);
+		ConfigurableBeanFactory beanFactory = (this.beanFactory instanceof ConfigurableBeanFactory ?
+				(ConfigurableBeanFactory) this.beanFactory : null);
 
 		// Annotation-based argument resolution
 		resolvers.add(new HeaderMethodArgumentResolver(this.conversionService, beanFactory));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.core;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import kotlin.reflect.KFunction;
 import kotlin.reflect.KParameter;
@@ -30,13 +31,11 @@ import org.springframework.lang.Nullable;
  * {@link ParameterNameDiscoverer} implementation which uses Kotlin's reflection facilities
  * for introspecting parameter names.
  *
- * <p>Compared to {@link StandardReflectionParameterNameDiscoverer}, it allows in addition to
+ * Compared to {@link StandardReflectionParameterNameDiscoverer}, it allows in addition to
  * determine interface parameter names without requiring Java 8 -parameters compiler flag.
  *
  * @author Sebastien Deleuze
  * @since 5.0
- * @see StandardReflectionParameterNameDiscoverer
- * @see DefaultParameterNameDiscoverer
  */
 public class KotlinReflectionParameterNameDiscoverer implements ParameterNameDiscoverer {
 
@@ -74,17 +73,21 @@ public class KotlinReflectionParameterNameDiscoverer implements ParameterNameDis
 
 	@Nullable
 	private String[] getParameterNames(List<KParameter> parameters) {
-		String[] parameterNames = parameters.stream()
+		List<KParameter> filteredParameters = parameters
+				.stream()
 				// Extension receivers of extension methods must be included as they appear as normal method parameters in Java
 				.filter(p -> KParameter.Kind.VALUE.equals(p.getKind()) || KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()))
-				// extension receivers are not explicitly named, but require a name for Java interoperability
-				// $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here
-				.map(p -> KParameter.Kind.EXTENSION_RECEIVER.equals(p.getKind()) ? "$receiver" : p.getName())
-				.toArray(String[]::new);
-		for (String parameterName : parameterNames) {
-			if (parameterName == null) {
+				.collect(Collectors.toList());
+		String[] parameterNames = new String[filteredParameters.size()];
+		for (int i = 0; i < filteredParameters.size(); i++) {
+			KParameter parameter = filteredParameters.get(i);
+			// extension receivers are not explicitly named, but require a name for Java interoperability
+			// $receiver is not a valid Kotlin identifier, but valid in Java, so it can be used here
+			String name = KParameter.Kind.EXTENSION_RECEIVER.equals(parameter.getKind())  ? "$receiver" : parameter.getName();
+			if (name == null) {
 				return null;
 			}
+			parameterNames[i] = name;
 		}
 		return parameterNames;
 	}

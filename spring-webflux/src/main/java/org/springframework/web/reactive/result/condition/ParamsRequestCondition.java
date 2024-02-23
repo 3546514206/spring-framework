@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,16 @@
 
 package org.springframework.web.reactive.result.condition;
 
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.server.ServerWebExchange;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.server.ServerWebExchange;
-
 /**
- * A logical conjunction ({@code ' && '}) request condition that matches a request against
+ * A logical conjunction (' && ') request condition that matches a request against
  * a set parameter expressions with syntax defined in {@link RequestMapping#params()}.
  *
  * @author Rossen Stoyanchev
@@ -41,26 +38,27 @@ public final class ParamsRequestCondition extends AbstractRequestCondition<Param
 
 	/**
 	 * Create a new instance from the given param expressions.
+	 *
 	 * @param params expressions with syntax defined in {@link RequestMapping#params()};
-	 * 	if 0, the condition will match to every request.
+	 *               if 0, the condition will match to every request.
 	 */
 	public ParamsRequestCondition(String... params) {
-		this.expressions = parseExpressions(params);
+		this(parseExpressions(params));
 	}
 
-	private static Set<ParamExpression> parseExpressions(String... params) {
-		if (ObjectUtils.isEmpty(params)) {
-			return Collections.emptySet();
-		}
-		Set<ParamExpression> result = CollectionUtils.newLinkedHashSet(params.length);
-		for (String param : params) {
-			result.add(new ParamExpression(param));
-		}
-		return result;
+	private ParamsRequestCondition(Collection<ParamExpression> conditions) {
+		this.expressions = Collections.unmodifiableSet(new LinkedHashSet<>(conditions));
 	}
 
-	private ParamsRequestCondition(Set<ParamExpression> conditions) {
-		this.expressions = conditions;
+
+	private static Collection<ParamExpression> parseExpressions(String... params) {
+		Set<ParamExpression> expressions = new LinkedHashSet<>();
+		if (params != null) {
+			for (String param : params) {
+				expressions.add(new ParamExpression(param));
+			}
+		}
+		return expressions;
 	}
 
 
@@ -87,12 +85,6 @@ public final class ParamsRequestCondition extends AbstractRequestCondition<Param
 	 */
 	@Override
 	public ParamsRequestCondition combine(ParamsRequestCondition other) {
-		if (other.isEmpty()) {
-			return this;
-		}
-		else if (isEmpty()) {
-			return other;
-		}
 		Set<ParamExpression> set = new LinkedHashSet<>(this.expressions);
 		set.addAll(other.expressions);
 		return new ParamsRequestCondition(set);
@@ -103,7 +95,6 @@ public final class ParamsRequestCondition extends AbstractRequestCondition<Param
 	 * or {@code null} otherwise.
 	 */
 	@Override
-	@Nullable
 	public ParamsRequestCondition getMatchingCondition(ServerWebExchange exchange) {
 		for (ParamExpression expression : this.expressions) {
 			if (!expression.match(exchange)) {

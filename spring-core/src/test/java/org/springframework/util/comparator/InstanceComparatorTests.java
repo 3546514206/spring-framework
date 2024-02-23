@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ class InstanceComparatorTests {
 	private C4 c4 = new C4();
 
 	@Test
-	void shouldCompareClasses() {
+	void shouldCompareClasses() throws Exception {
 		Comparator<Object> comparator = new InstanceComparator<>(C1.class, C2.class);
 		assertThat(comparator.compare(c1, c1)).isEqualTo(0);
 		assertThat(comparator.compare(c1, c2)).isEqualTo(-1);
@@ -50,7 +50,7 @@ class InstanceComparatorTests {
 	}
 
 	@Test
-	void shouldCompareInterfaces() {
+	void shouldCompareInterfaces() throws Exception {
 		Comparator<Object> comparator = new InstanceComparator<>(I1.class, I2.class);
 		assertThat(comparator.compare(c1, c1)).isEqualTo(0);
 		assertThat(comparator.compare(c1, c2)).isEqualTo(0);
@@ -61,7 +61,7 @@ class InstanceComparatorTests {
 	}
 
 	@Test
-	void shouldCompareMix() {
+	void shouldCompareMix() throws Exception {
 		Comparator<Object> comparator = new InstanceComparator<>(I1.class, C3.class);
 		assertThat(comparator.compare(c1, c1)).isEqualTo(0);
 		assertThat(comparator.compare(c3, c4)).isEqualTo(-1);
@@ -69,11 +69,11 @@ class InstanceComparatorTests {
 		assertThat(comparator.compare(c4, null)).isEqualTo(0);
 	}
 
-	private interface I1 {
+	private static interface I1 {
 
 	}
 
-	private interface I2 {
+	private static interface I2 {
 
 	}
 

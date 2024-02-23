@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package org.springframework.test.context.testng.transaction.ejb;
 
-import jakarta.ejb.EJB;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import javax.ejb.EJB;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 4.0.1
  */
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
-abstract class AbstractEjbTxDaoTestNGTests extends AbstractTransactionalTestNGSpringContextTests {
+public abstract class AbstractEjbTxDaoTestNGTests extends AbstractTransactionalTestNGSpringContextTests {
 
 	protected static final String TEST_NAME = "test-name";
 
@@ -50,13 +51,13 @@ abstract class AbstractEjbTxDaoTestNGTests extends AbstractTransactionalTestNGSp
 
 
 	@Test
-	void test1InitialState() {
+	public void test1InitialState() {
 		int count = dao.getCount(TEST_NAME);
 		assertThat(count).as("New TestEntity should have count=0.").isEqualTo(0);
 	}
 
 	@Test(dependsOnMethods = "test1InitialState")
-	void test2IncrementCount1() {
+	public void test2IncrementCount1() {
 		int count = dao.incrementCount(TEST_NAME);
 		assertThat(count).as("Expected count=1 after first increment.").isEqualTo(1);
 	}
@@ -67,7 +68,7 @@ abstract class AbstractEjbTxDaoTestNGTests extends AbstractTransactionalTestNGSp
 	 * expected that the previous increment has been persisted in the database.
 	 */
 	@Test(dependsOnMethods = "test2IncrementCount1")
-	void test3IncrementCount2() {
+	public void test3IncrementCount2() {
 		int count = dao.getCount(TEST_NAME);
 		assertThat(count).as("Expected count=1 after test2IncrementCount1().").isEqualTo(1);
 
@@ -76,7 +77,7 @@ abstract class AbstractEjbTxDaoTestNGTests extends AbstractTransactionalTestNGSp
 	}
 
 	@AfterMethod(alwaysRun = true)
-	void synchronizePersistenceContext() {
+	public void synchronizePersistenceContext() {
 		em.flush();
 	}
 

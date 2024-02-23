@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.context.support;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -32,63 +31,60 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 03.02.2004
  */
-class ResourceBundleMessageSourceTests {
+public class ResourceBundleMessageSourceTests {
 
 	@Test
-	void messageAccessWithDefaultMessageSource() {
+	public void testMessageAccessWithDefaultMessageSource() {
 		doTestMessageAccess(false, true, false, false, false);
 	}
 
 	@Test
-	void messageAccessWithDefaultMessageSourceAndMessageFormat() {
+	public void testMessageAccessWithDefaultMessageSourceAndMessageFormat() {
 		doTestMessageAccess(false, true, false, false, true);
 	}
 
 	@Test
-	void messageAccessWithDefaultMessageSourceAndFallbackToGerman() {
+	public void testMessageAccessWithDefaultMessageSourceAndFallbackToGerman() {
 		doTestMessageAccess(false, true, true, true, false);
 	}
 
 	@Test
-	void messageAccessWithDefaultMessageSourceAndFallbackTurnedOff() {
+	public void testMessageAccessWithDefaultMessageSourceAndFallbackTurnedOff() {
 		doTestMessageAccess(false, false, false, false, false);
 	}
 
 	@Test
-	void messageAccessWithDefaultMessageSourceAndFallbackTurnedOffAndFallbackToGerman() {
+	public void testMessageAccessWithDefaultMessageSourceAndFallbackTurnedOffAndFallbackToGerman() {
 		doTestMessageAccess(false, false, true, true, false);
 	}
 
 	@Test
-	void messageAccessWithReloadableMessageSource() {
+	public void testMessageAccessWithReloadableMessageSource() {
 		doTestMessageAccess(true, true, false, false, false);
 	}
 
 	@Test
-	void messageAccessWithReloadableMessageSourceAndMessageFormat() {
+	public void testMessageAccessWithReloadableMessageSourceAndMessageFormat() {
 		doTestMessageAccess(true, true, false, false, true);
 	}
 
 	@Test
-	void messageAccessWithReloadableMessageSourceAndFallbackToGerman() {
+	public void testMessageAccessWithReloadableMessageSourceAndFallbackToGerman() {
 		doTestMessageAccess(true, true, true, true, false);
 	}
 
 	@Test
-	void messageAccessWithReloadableMessageSourceAndFallbackTurnedOff() {
+	public void testMessageAccessWithReloadableMessageSourceAndFallbackTurnedOff() {
 		doTestMessageAccess(true, false, false, false, false);
 	}
 
 	@Test
-	void messageAccessWithReloadableMessageSourceAndFallbackTurnedOffAndFallbackToGerman() {
+	public void testMessageAccessWithReloadableMessageSourceAndFallbackTurnedOffAndFallbackToGerman() {
 		doTestMessageAccess(true, false, true, true, false);
 	}
 
@@ -126,13 +122,14 @@ class ResourceBundleMessageSourceTests {
 		if (alwaysUseMessageFormat) {
 			pvs.add("alwaysUseMessageFormat", Boolean.TRUE);
 		}
-		Class<?> clazz = reloadable ? ReloadableResourceBundleMessageSource.class : ResourceBundleMessageSource.class;
+		Class<?> clazz = reloadable ?
+				(Class<?>) ReloadableResourceBundleMessageSource.class : ResourceBundleMessageSource.class;
 		ac.registerSingleton("messageSource", clazz, pvs);
 		ac.refresh();
 
 		Locale.setDefault(expectGermanFallback ? Locale.GERMAN : Locale.CANADA);
 		assertThat(ac.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
-		Object expected = (fallbackToSystemLocale && expectGermanFallback ? "nachricht2" : "message2");
+		Object expected = fallbackToSystemLocale && expectGermanFallback ? "nachricht2" : "message2";
 		assertThat(ac.getMessage("code2", null, Locale.ENGLISH)).isEqualTo(expected);
 
 		assertThat(ac.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
@@ -204,19 +201,15 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void defaultApplicationContextMessageSource() {
+	public void testDefaultApplicationContextMessageSource() {
 		GenericApplicationContext ac = new GenericApplicationContext();
 		ac.refresh();
 		assertThat(ac.getMessage("code1", null, "default", Locale.ENGLISH)).isEqualTo("default");
 		assertThat(ac.getMessage("code1", new Object[]{"value"}, "default {0}", Locale.ENGLISH)).isEqualTo("default value");
-		ac.close();
-		assertThatIllegalStateException().isThrownBy(() -> ac.getMessage("code1", null, "default", Locale.ENGLISH));
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void defaultApplicationContextMessageSourceWithParent() {
+	public void testDefaultApplicationContextMessageSourceWithParent() {
 		GenericApplicationContext ac = new GenericApplicationContext();
 		GenericApplicationContext parent = new GenericApplicationContext();
 		parent.refresh();
@@ -224,13 +217,10 @@ class ResourceBundleMessageSourceTests {
 		ac.refresh();
 		assertThat(ac.getMessage("code1", null, "default", Locale.ENGLISH)).isEqualTo("default");
 		assertThat(ac.getMessage("code1", new Object[]{"value"}, "default {0}", Locale.ENGLISH)).isEqualTo("default value");
-		ac.close();
-		assertThatIllegalStateException().isThrownBy(() -> ac.getMessage("code1", null, "default", Locale.ENGLISH));
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void staticApplicationContextMessageSourceWithStaticParent() {
+	public void testStaticApplicationContextMessageSourceWithStaticParent() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		StaticApplicationContext parent = new StaticApplicationContext();
 		parent.refresh();
@@ -238,13 +228,10 @@ class ResourceBundleMessageSourceTests {
 		ac.refresh();
 		assertThat(ac.getMessage("code1", null, "default", Locale.ENGLISH)).isEqualTo("default");
 		assertThat(ac.getMessage("code1", new Object[]{"value"}, "default {0}", Locale.ENGLISH)).isEqualTo("default value");
-		ac.close();
-		assertThatIllegalStateException().isThrownBy(() -> ac.getMessage("code1", null, "default", Locale.ENGLISH));
 	}
 
 	@Test
-	@SuppressWarnings("resource")
-	void staticApplicationContextMessageSourceWithDefaultParent() {
+	public void testStaticApplicationContextMessageSourceWithDefaultParent() {
 		StaticApplicationContext ac = new StaticApplicationContext();
 		GenericApplicationContext parent = new GenericApplicationContext();
 		parent.refresh();
@@ -252,12 +239,10 @@ class ResourceBundleMessageSourceTests {
 		ac.refresh();
 		assertThat(ac.getMessage("code1", null, "default", Locale.ENGLISH)).isEqualTo("default");
 		assertThat(ac.getMessage("code1", new Object[]{"value"}, "default {0}", Locale.ENGLISH)).isEqualTo("default value");
-		ac.close();
-		assertThatIllegalStateException().isThrownBy(() -> ac.getMessage("code1", null, "default", Locale.ENGLISH));
 	}
 
 	@Test
-	void resourceBundleMessageSourceStandalone() {
+	public void testResourceBundleMessageSourceStandalone() {
 		ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
@@ -265,7 +250,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void resourceBundleMessageSourceWithWhitespaceInBasename() {
+	public void testResourceBundleMessageSourceWithWhitespaceInBasename() {
 		ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
 		ms.setBasename("  org/springframework/context/support/messages  ");
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
@@ -273,7 +258,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void resourceBundleMessageSourceWithDefaultCharset() {
+	public void testResourceBundleMessageSourceWithDefaultCharset() {
 		ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setDefaultEncoding("ISO-8859-1");
@@ -282,7 +267,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void resourceBundleMessageSourceWithInappropriateDefaultCharset() {
+	public void testResourceBundleMessageSourceWithInappropriateDefaultCharset() {
 		ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setDefaultEncoding("argh");
@@ -292,7 +277,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceStandalone() {
+	public void testReloadableResourceBundleMessageSourceStandalone() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
@@ -300,36 +285,36 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithCacheSeconds() throws InterruptedException {
+	public void testReloadableResourceBundleMessageSourceWithCacheSeconds() throws InterruptedException {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
-		ms.setCacheMillis(100);
+		ms.setCacheSeconds(1);
 		// Initial cache attempt
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
 		assertThat(ms.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
-		Thread.sleep(200);
+		Thread.sleep(1100);
 		// Late enough for a re-cache attempt
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
 		assertThat(ms.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithNonConcurrentRefresh() throws InterruptedException {
+	public void testReloadableResourceBundleMessageSourceWithNonConcurrentRefresh() throws InterruptedException {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
-		ms.setCacheMillis(100);
+		ms.setCacheSeconds(1);
 		ms.setConcurrentRefresh(false);
 		// Initial cache attempt
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
 		assertThat(ms.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
-		Thread.sleep(200);
+		Thread.sleep(1100);
 		// Late enough for a re-cache attempt
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
 		assertThat(ms.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithCommonMessages() {
+	public void testReloadableResourceBundleMessageSourceWithCommonMessages() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		Properties commonMessages = new Properties();
 		commonMessages.setProperty("warning", "Do not do {0}");
@@ -342,7 +327,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithWhitespaceInBasename() {
+	public void testReloadableResourceBundleMessageSourceWithWhitespaceInBasename() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("  org/springframework/context/support/messages  ");
 		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
@@ -350,7 +335,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithDefaultCharset() {
+	public void testReloadableResourceBundleMessageSourceWithDefaultCharset() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setDefaultEncoding("ISO-8859-1");
@@ -359,7 +344,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithInappropriateDefaultCharset() {
+	public void testReloadableResourceBundleMessageSourceWithInappropriateDefaultCharset() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setDefaultEncoding("unicode");
@@ -372,7 +357,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithInappropriateEnglishCharset() {
+	public void testReloadableResourceBundleMessageSourceWithInappropriateEnglishCharset() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setFallbackToSystemLocale(false);
@@ -384,7 +369,7 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithInappropriateGermanCharset() {
+	public void testReloadableResourceBundleMessageSourceWithInappropriateGermanCharset() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		ms.setFallbackToSystemLocale(false);
@@ -396,55 +381,40 @@ class ResourceBundleMessageSourceTests {
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceFileNameCalculation() {
+	public void testReloadableResourceBundleMessageSourceFileNameCalculation() {
 		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
 
 		List<String> filenames = ms.calculateFilenamesForLocale("messages", Locale.ENGLISH);
-		assertThat(filenames).containsExactly("messages_en");
+		assertThat(filenames.size()).isEqualTo(1);
+		assertThat(filenames.get(0)).isEqualTo("messages_en");
 
 		filenames = ms.calculateFilenamesForLocale("messages", Locale.UK);
-		assertThat(filenames).containsExactly("messages_en_GB", "messages_en");
+		assertThat(filenames.size()).isEqualTo(2);
+		assertThat(filenames.get(1)).isEqualTo("messages_en");
+		assertThat(filenames.get(0)).isEqualTo("messages_en_GB");
 
 		filenames = ms.calculateFilenamesForLocale("messages", new Locale("en", "GB", "POSIX"));
-		assertThat(filenames).containsExactly("messages_en_GB_POSIX","messages_en_GB", "messages_en");
+		assertThat(filenames.size()).isEqualTo(3);
+		assertThat(filenames.get(2)).isEqualTo("messages_en");
+		assertThat(filenames.get(1)).isEqualTo("messages_en_GB");
+		assertThat(filenames.get(0)).isEqualTo("messages_en_GB_POSIX");
 
 		filenames = ms.calculateFilenamesForLocale("messages", new Locale("en", "", "POSIX"));
-		assertThat(filenames).containsExactly("messages_en__POSIX", "messages_en");
+		assertThat(filenames.size()).isEqualTo(2);
+		assertThat(filenames.get(1)).isEqualTo("messages_en");
+		assertThat(filenames.get(0)).isEqualTo("messages_en__POSIX");
 
 		filenames = ms.calculateFilenamesForLocale("messages", new Locale("", "UK", "POSIX"));
-		assertThat(filenames).containsExactly("messages__UK_POSIX", "messages__UK");
+		assertThat(filenames.size()).isEqualTo(2);
+		assertThat(filenames.get(1)).isEqualTo("messages__UK");
+		assertThat(filenames.get(0)).isEqualTo("messages__UK_POSIX");
 
 		filenames = ms.calculateFilenamesForLocale("messages", new Locale("", "", "POSIX"));
-		assertThat(filenames).isEmpty();
+		assertThat(filenames.size()).isEqualTo(0);
 	}
 
 	@Test
-	void reloadableResourceBundleMessageSourceWithCustomFileExtensions() {
-		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
-		ms.setBasename("org/springframework/context/support/messages");
-		ms.setFileExtensions(List.of(".toskip", ".custom"));
-		assertThat(ms.getMessage("code1", null, Locale.ENGLISH)).isEqualTo("message1");
-		assertThat(ms.getMessage("code2", null, Locale.GERMAN)).isEqualTo("nachricht2");
-	}
-
-	@Test
-	void reloadableResourceBundleMessageSourceWithEmptyCustomFileExtensions() {
-		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
-		assertThatThrownBy(() -> ms.setFileExtensions(Collections.emptyList()))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("At least one file extension is required");
-	}
-
-	@Test
-	void reloadableResourceBundleMessageSourceWithInvalidCustomFileExtensions() {
-		ReloadableResourceBundleMessageSource ms = new ReloadableResourceBundleMessageSource();
-		assertThatThrownBy(() -> ms.setFileExtensions(List.of("invalid")))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("File extension 'invalid' should start with '.'");
-	}
-
-	@Test
-	void messageSourceResourceBundle() {
+	public void testMessageSourceResourceBundle() {
 		ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
 		ms.setBasename("org/springframework/context/support/messages");
 		MessageSourceResourceBundle rbe = new MessageSourceResourceBundle(ms, Locale.ENGLISH);
@@ -457,7 +427,7 @@ class ResourceBundleMessageSourceTests {
 
 
 	@AfterEach
-	void tearDown() {
+	public void tearDown() {
 		ResourceBundle.clearCache();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.jms.core.support;
 
-import jakarta.jms.ConnectionFactory;
+import javax.jms.ConnectionFactory;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,7 +27,7 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.lang.Nullable;
 
 /**
- * Convenient superclass for application classes that need JMS access.
+ * Convenient super class for application classes that need JMS access.
  *
  * <p>Requires a ConnectionFactory or a JmsTemplate instance to be set.
  * It will create its own JmsTemplate if a ConnectionFactory is passed in.
@@ -53,7 +54,7 @@ public abstract class JmsGatewaySupport implements InitializingBean {
 	 * Set the JMS connection factory to be used by the gateway.
 	 * Will automatically create a JmsTemplate for the given ConnectionFactory.
 	 * @see #createJmsTemplate
-	 * @see #setConnectionFactory(jakarta.jms.ConnectionFactory)
+	 * @see #setConnectionFactory(javax.jms.ConnectionFactory)
 	 */
 	public final void setConnectionFactory(ConnectionFactory connectionFactory) {
 		this.jmsTemplate = createJmsTemplate(connectionFactory);
@@ -82,7 +83,7 @@ public abstract class JmsGatewaySupport implements InitializingBean {
 
 	/**
 	 * Set the JmsTemplate for the gateway.
-	 * @see #setConnectionFactory(jakarta.jms.ConnectionFactory)
+	 * @see #setConnectionFactory(javax.jms.ConnectionFactory)
 	 */
 	public final void setJmsTemplate(@Nullable JmsTemplate jmsTemplate) {
 		this.jmsTemplate = jmsTemplate;

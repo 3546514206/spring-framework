@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@
 
 package org.springframework.web.servlet.view;
 
-import java.util.List;
-import java.util.Map;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.web.servlet.support.BindStatus;
 import org.springframework.web.servlet.support.RequestContext;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriTemplate;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Dummy request context used for FreeMarker macro tests.
@@ -141,8 +139,8 @@ public class DummyMacroRequestContext {
 	 * @see org.springframework.web.servlet.support.RequestContext#getContextUrl(String, Map)
 	 */
 	public String getContextUrl(String relativeUrl, Map<String,String> params) {
-		UriComponents uric = UriComponentsBuilder.fromUriString(relativeUrl).buildAndExpand(params);
-		return getContextPath() + uric.toUri().toASCIIString();
+		UriTemplate template = new UriTemplate(relativeUrl);
+		return getContextPath() + template.expand(params).toASCIIString();
 	}
 
 	/**

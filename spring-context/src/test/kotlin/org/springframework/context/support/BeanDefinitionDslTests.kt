@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.beans.factory.getBean
-import org.springframework.beans.factory.getBeanProvider
 import org.springframework.context.support.BeanDefinitionDsl.*
-import org.springframework.core.Ordered
+import org.springframework.core.env.SimpleCommandLinePropertySource
 import org.springframework.core.env.get
-import org.springframework.core.testfixture.env.MockPropertySource
+import org.springframework.mock.env.MockPropertySource
 import java.util.stream.Collectors
 
 @Suppress("UNUSED_EXPRESSION")
@@ -44,7 +43,7 @@ class BeanDefinitionDslTests {
 			beans.initialize(this)
 			refresh()
 		}
-		
+
 		context.getBean<Foo>()
 		context.getBean<Bar>("bar")
 		assertThat(context.isPrototype("bar")).isTrue()
@@ -91,7 +90,7 @@ class BeanDefinitionDslTests {
 		}
 
 		val context = GenericApplicationContext().apply {
-			environment.propertySources.addFirst(org.springframework.core.env.SimpleCommandLinePropertySource("--name=foofoo"))
+			environment.propertySources.addFirst(SimpleCommandLinePropertySource("--name=foofoo"))
 			beans.initialize(this)
 			refresh()
 		}
@@ -157,7 +156,6 @@ class BeanDefinitionDslTests {
 		val beans = beans {
 			bean<Bar>()
 			bean(::baz)
-			bean(::foo)
 		}
 		val context = GenericApplicationContext().apply {
 			beans.initialize(this)
@@ -165,7 +163,7 @@ class BeanDefinitionDslTests {
 		}
 		context.getBean<Baz>()
 	}
-	
+
 
 	@Test
 	fun `Declare beans with accepted profiles`() {
@@ -198,25 +196,6 @@ class BeanDefinitionDslTests {
 		} catch (ignored: Exception) {
 		}
 	}
-
-	@Test
-	fun `Declare beans with ordering`() {
-		val beans = beans {
-			bean<FooFoo>(order = Ordered.LOWEST_PRECEDENCE) {
-				FooFoo("lowest")
-			}
-			bean<FooFoo>(order = Ordered.HIGHEST_PRECEDENCE) {
-				FooFoo("highest")
-			}
-		}
-
-		val context = GenericApplicationContext().apply {
-			beans.initialize(this)
-			refresh()
-		}
-
-		assertThat(context.getBeanProvider<FooFoo>().orderedStream().map { it.name }).containsExactly("highest", "lowest")
-	}
 }
 
 class Foo
@@ -226,4 +205,3 @@ class FooFoo(val name: String)
 class BarBar(val foos: Collection<Foo>)
 
 fun baz(bar: Bar) = Baz(bar)
-fun foo() = Foo()

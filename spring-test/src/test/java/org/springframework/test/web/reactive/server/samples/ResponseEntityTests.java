@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ import static org.springframework.http.MediaType.TEXT_EVENT_STREAM;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-class ResponseEntityTests {
+public class ResponseEntityTests {
 
 	private final WebTestClient client = WebTestClient.bindToController(new PersonController())
 			.configureClient()
@@ -58,7 +58,7 @@ class ResponseEntityTests {
 
 
 	@Test
-	void entity() {
+	public void entity() {
 		this.client.get().uri("/John")
 				.exchange()
 				.expectStatus().isOk()
@@ -67,7 +67,7 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityMatcher() {
+	public void entityMatcher() {
 		this.client.get().uri("/John")
 				.exchange()
 				.expectStatus().isOk()
@@ -76,7 +76,7 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityWithConsumer() {
+	public void entityWithConsumer() {
 		this.client.get().uri("/John")
 				.exchange()
 				.expectStatus().isOk()
@@ -86,7 +86,8 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityList() {
+	public void entityList() {
+
 		List<Person> expected = Arrays.asList(
 				new Person("Jane"), new Person("Jason"), new Person("John"));
 
@@ -98,7 +99,8 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityListWithConsumer() {
+	public void entityListWithConsumer() {
+
 		this.client.get()
 				.exchange()
 				.expectStatus().isOk()
@@ -109,7 +111,8 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityMap() {
+	public void entityMap() {
+
 		Map<String, Person> map = new LinkedHashMap<>();
 		map.put("Jane", new Person("Jane"));
 		map.put("Jason", new Person("Jason"));
@@ -122,7 +125,8 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void entityStream() {
+	public void entityStream() {
+
 		FluxExchangeResult<Person> result = this.client.get()
 				.accept(TEXT_EVENT_STREAM)
 				.exchange()
@@ -139,7 +143,7 @@ class ResponseEntityTests {
 	}
 
 	@Test
-	void postEntity() {
+	public void postEntity() {
 		this.client.post()
 				.bodyValue(new Person("John"))
 				.exchange()

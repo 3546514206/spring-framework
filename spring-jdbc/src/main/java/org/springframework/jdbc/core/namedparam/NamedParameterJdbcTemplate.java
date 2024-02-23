@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,21 @@
 
 package org.springframework.jdbc.core.namedparam;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
-import javax.sql.DataSource;
-
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.support.DataAccessUtils;
-import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.ColumnMapRowMapper;
-import org.springframework.jdbc.core.JdbcOperations;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.PreparedStatementCallback;
-import org.springframework.jdbc.core.PreparedStatementCreator;
-import org.springframework.jdbc.core.PreparedStatementCreatorFactory;
-import org.springframework.jdbc.core.ResultSetExtractor;
-import org.springframework.jdbc.core.RowCallbackHandler;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SingleColumnRowMapper;
-import org.springframework.jdbc.core.SqlParameter;
-import org.springframework.jdbc.core.SqlRowSetResultSetExtractor;
+import org.springframework.jdbc.core.*;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ConcurrentLruCache;
+
+import javax.sql.DataSource;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Template class with a basic set of JDBC operations, allowing the use
@@ -55,25 +41,16 @@ import org.springframework.util.ConcurrentLruCache;
  * done at execution time. It also allows for expanding a {@link java.util.List}
  * of values to the appropriate number of placeholders.
  *
- * <p>An instance of this template class is thread-safe once configured.
- * The underlying {@link org.springframework.jdbc.core.JdbcTemplate} is
+ * <p>The underlying {@link org.springframework.jdbc.core.JdbcTemplate} is
  * exposed to allow for convenient access to the traditional
  * {@link org.springframework.jdbc.core.JdbcTemplate} methods.
  *
- * <p><b>NOTE: As of 6.1, there is a unified JDBC access facade available in
- * the form of {@link org.springframework.jdbc.core.simple.JdbcClient}.</b>
- * {@code JdbcClient} provides a fluent API style for common JDBC queries/updates
- * with flexible use of indexed or named parameters. It delegates to a
- * {@code JdbcTemplate}/{@code NamedParameterJdbcTemplate} for actual execution.
+ * <p><b>NOTE: An instance of this class is thread-safe once configured.</b>
  *
  * @author Thomas Risberg
  * @author Juergen Hoeller
  * @since 2.0
  * @see NamedParameterJdbcOperations
- * @see SqlParameterSource
- * @see ResultSetExtractor
- * @see RowCallbackHandler
- * @see RowMapper
  * @see org.springframework.jdbc.core.JdbcTemplate
  */
 public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations {
@@ -85,9 +62,17 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 	/** The JdbcTemplate we are wrapping. */
 	private final JdbcOperations classicJdbcTemplate;
 
+	private volatile int cacheLimit = DEFAULT_CACHE_LIMIT;
+
 	/** Cache of original SQL String to ParsedSql representation. */
-	private volatile ConcurrentLruCache<String, ParsedSql> parsedSqlCache =
-			new ConcurrentLruCache<>(DEFAULT_CACHE_LIMIT, NamedParameterUtils::parseSqlStatement);
+	@SuppressWarnings("serial")
+	private final Map<String, ParsedSql> parsedSqlCache =
+			new LinkedHashMap<String, ParsedSql>(DEFAULT_CACHE_LIMIT, 0.75f, true) {
+				@Override
+				protected boolean removeEldestEntry(Map.Entry<String, ParsedSql> eldest) {
+					return size() > getCacheLimit();
+				}
+			};
 
 
 	/**
@@ -134,17 +119,17 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 
 	/**
 	 * Specify the maximum number of entries for this template's SQL cache.
-	 * Default is 256. 0 indicates no caching, always parsing each statement.
+	 * Default is 256.
 	 */
 	public void setCacheLimit(int cacheLimit) {
-		this.parsedSqlCache = new ConcurrentLruCache<>(cacheLimit, NamedParameterUtils::parseSqlStatement);
+		this.cacheLimit = cacheLimit;
 	}
 
 	/**
 	 * Return the maximum number of entries for this template's SQL cache.
 	 */
 	public int getCacheLimit() {
-		return this.parsedSqlCache.capacity();
+		return this.cacheLimit;
 	}
 
 
@@ -228,20 +213,6 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 	@Override
 	public <T> List<T> query(String sql, RowMapper<T> rowMapper) throws DataAccessException {
 		return query(sql, EmptySqlParameterSource.INSTANCE, rowMapper);
-	}
-
-	@Override
-	public <T> Stream<T> queryForStream(String sql, SqlParameterSource paramSource, RowMapper<T> rowMapper)
-			throws DataAccessException {
-
-		return getJdbcOperations().queryForStream(getPreparedStatementCreator(sql, paramSource), rowMapper);
-	}
-
-	@Override
-	public <T> Stream<T> queryForStream(String sql, Map<String, ?> paramMap, RowMapper<T> rowMapper)
-			throws DataAccessException {
-
-		return queryForStream(sql, new MapSqlParameterSource(paramMap), rowMapper);
 	}
 
 	@Override
@@ -366,6 +337,11 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 	}
 
 	@Override
+	public int[] batchUpdate(String sql, Map<String, ?>[] batchValues) {
+		return batchUpdate(sql, SqlParameterSourceUtils.createBatch(batchValues));
+	}
+
+	@Override
 	public int[] batchUpdate(String sql, SqlParameterSource[] batchArgs) {
 		if (batchArgs.length == 0) {
 			return new int[0];
@@ -389,49 +365,6 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 				});
 	}
 
-	@Override
-	public int[] batchUpdate(String sql, Map<String, ?>[] batchValues) {
-		return batchUpdate(sql, SqlParameterSourceUtils.createBatch(batchValues));
-	}
-
-	@Override
-	public int[] batchUpdate(String sql, SqlParameterSource[] batchArgs, KeyHolder generatedKeyHolder) {
-		return batchUpdate(sql, batchArgs, generatedKeyHolder, null);
-	}
-
-	@Override
-	public int[] batchUpdate(String sql, SqlParameterSource[] batchArgs, KeyHolder generatedKeyHolder,
-			@Nullable String[] keyColumnNames) {
-
-		if (batchArgs.length == 0) {
-			return new int[0];
-		}
-
-		ParsedSql parsedSql = getParsedSql(sql);
-		SqlParameterSource paramSource = batchArgs[0];
-		PreparedStatementCreatorFactory pscf = getPreparedStatementCreatorFactory(parsedSql, paramSource);
-		if (keyColumnNames != null) {
-			pscf.setGeneratedKeysColumnNames(keyColumnNames);
-		}
-		else {
-			pscf.setReturnGeneratedKeys(true);
-		}
-		Object[] params = NamedParameterUtils.buildValueArray(parsedSql, paramSource, null);
-		PreparedStatementCreator psc = pscf.newPreparedStatementCreator(params);
-		return getJdbcOperations().batchUpdate(psc, new BatchPreparedStatementSetter() {
-			@Override
-			public void setValues(PreparedStatement ps, int i) throws SQLException {
-				Object[] values = NamedParameterUtils.buildValueArray(parsedSql, batchArgs[i], null);
-				pscf.newPreparedStatementSetter(values).setValues(ps);
-			}
-
-			@Override
-			public int getBatchSize() {
-				return batchArgs.length;
-			}
-		}, generatedKeyHolder);
-	}
-
 
 	/**
 	 * Build a {@link PreparedStatementCreator} based on the given SQL and named parameters.
@@ -453,7 +386,7 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 	 * @param sql the SQL statement to execute
 	 * @param paramSource container of arguments to bind
 	 * @param customizer callback for setting further properties on the
-	 * {@link PreparedStatementCreatorFactory} in use, applied before the
+	 * {@link PreparedStatementCreatorFactory} in use), applied before the
 	 * actual {@code newPreparedStatementCreator} call
 	 * @return the corresponding {@link PreparedStatementCreator}
 	 * @since 5.0.5
@@ -480,8 +413,17 @@ public class NamedParameterJdbcTemplate implements NamedParameterJdbcOperations 
 	 * @return a representation of the parsed SQL statement
 	 */
 	protected ParsedSql getParsedSql(String sql) {
-		Assert.notNull(sql, "SQL must not be null");
-		return this.parsedSqlCache.get(sql);
+		if (getCacheLimit() <= 0) {
+			return NamedParameterUtils.parseSqlStatement(sql);
+		}
+		synchronized (this.parsedSqlCache) {
+			ParsedSql parsedSql = this.parsedSqlCache.get(sql);
+			if (parsedSql == null) {
+				parsedSql = NamedParameterUtils.parseSqlStatement(sql);
+				this.parsedSqlCache.put(sql, parsedSql);
+			}
+			return parsedSql;
+		}
 	}
 
 	/**

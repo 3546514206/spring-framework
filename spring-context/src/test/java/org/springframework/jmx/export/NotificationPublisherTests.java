@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,19 @@ package org.springframework.jmx.export;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
 import javax.management.DynamicMBean;
+import javax.management.InvalidAttributeValueException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanConstructorInfo;
+import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanNotificationInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.Notification;
 import javax.management.NotificationBroadcasterSupport;
 import javax.management.NotificationListener;
+import javax.management.ReflectionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,12 +48,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rob Harrop
  * @author Juergen Hoeller
  */
-class NotificationPublisherTests extends AbstractMBeanServerTests {
+public class NotificationPublisherTests extends AbstractMBeanServerTests {
 
 	private CountingNotificationListener listener = new CountingNotificationListener();
 
 	@Test
-	void testSimpleBean() throws Exception {
+	public void testSimpleBean() throws Exception {
 		// start the MBeanExporter
 		ConfigurableApplicationContext ctx = loadContext("org/springframework/jmx/export/notificationPublisherTests.xml");
 		this.server.addNotificationListener(ObjectNameManager.getInstance("spring:type=Publisher"), listener, null,
@@ -62,7 +66,7 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testSimpleBeanRegisteredManually() throws Exception {
+	public void testSimpleBeanRegisteredManually() throws Exception {
 		// start the MBeanExporter
 		ConfigurableApplicationContext ctx = loadContext("org/springframework/jmx/export/notificationPublisherTests.xml");
 		MBeanExporter exporter = (MBeanExporter) ctx.getBean("exporter");
@@ -77,7 +81,7 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 	}
 
 	@Test
-	void testMBean() throws Exception {
+	public void testMBean() throws Exception {
 		// start the MBeanExporter
 		ConfigurableApplicationContext ctx = loadContext("org/springframework/jmx/export/notificationPublisherTests.xml");
 		this.server.addNotificationListener(ObjectNameManager.getInstance("spring:type=PublisherMBean"), listener,
@@ -90,7 +94,7 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 
 	/*
 	@Test
-	void testStandardMBean() throws Exception {
+	public void testStandardMBean() throws Exception {
 		// start the MBeanExporter
 		ApplicationContext ctx = new ClassPathXmlApplicationContext("org/springframework/jmx/export/notificationPublisherTests.xml");
 		this.server.addNotificationListener(ObjectNameManager.getInstance("spring:type=PublisherStandardMBean"), listener, null, null);
@@ -102,7 +106,7 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 	*/
 
 	@Test
-	void testLazyInit() throws Exception {
+	public void testLazyInit() throws Exception {
 		// start the MBeanExporter
 		ConfigurableApplicationContext ctx = loadContext("org/springframework/jmx/export/notificationPublisherLazyTests.xml");
 		assertThat(ctx.getBeanFactory().containsSingleton("publisher")).as("Should not have instantiated the bean yet").isFalse();
@@ -166,12 +170,14 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 	public static class MyNotificationPublisherMBean extends NotificationBroadcasterSupport implements DynamicMBean {
 
 		@Override
-		public Object getAttribute(String attribute) {
+		public Object getAttribute(String attribute) throws AttributeNotFoundException, MBeanException,
+				ReflectionException {
 			return null;
 		}
 
 		@Override
-		public void setAttribute(Attribute attribute) {
+		public void setAttribute(Attribute attribute) throws AttributeNotFoundException,
+				InvalidAttributeValueException, MBeanException, ReflectionException {
 		}
 
 		@Override
@@ -185,7 +191,8 @@ class NotificationPublisherTests extends AbstractMBeanServerTests {
 		}
 
 		@Override
-		public Object invoke(String actionName, Object[] params, String[] signature) {
+		public Object invoke(String actionName, Object[] params, String[] signature) throws MBeanException,
+				ReflectionException {
 			return null;
 		}
 

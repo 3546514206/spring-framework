@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.jdbc.support;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -36,79 +38,62 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Sam Brannen
  * @since July 18, 2004
  */
-class KeyHolderTests {
+@SuppressWarnings("serial")
+public class KeyHolderTests {
 
 	private final KeyHolder kh = new GeneratedKeyHolder();
 
 
 	@Test
-	void getKeyForSingleNumericKey() {
-		kh.getKeyList().add(singletonMap("key", 1));
+	public void singleKey() {
+		kh.getKeyList().addAll(singletonList(singletonMap("key", 1)));
 
-		assertThat(kh.getKey()).as("single key should be returned").isEqualTo(1);
+		assertThat(kh.getKey().intValue()).as("single key should be returned").isEqualTo(1);
 	}
 
 	@Test
-	void getKeyForSingleNonNumericKey() {
-		kh.getKeyList().add(singletonMap("key", "ABC"));
+	public void singleKeyNonNumeric() {
+		kh.getKeyList().addAll(singletonList(singletonMap("key", "1")));
 
-		assertThatExceptionOfType(DataRetrievalFailureException.class)
-			.isThrownBy(kh::getKey)
-			.withMessage("The generated key type is not supported. Unable to cast [java.lang.String] to [java.lang.Number].");
+		assertThatExceptionOfType(DataRetrievalFailureException.class).isThrownBy(() ->
+				kh.getKey().intValue())
+			.withMessageStartingWith("The generated key is not of a supported numeric type.");
 	}
 
 	@Test
-	void getKeyWithNoKeysInMap() {
-		kh.getKeyList().add(emptyMap());
+	public void noKeyReturnedInMap() {
+		kh.getKeyList().addAll(singletonList(emptyMap()));
 
-		assertThatExceptionOfType(DataRetrievalFailureException.class)
-			.isThrownBy(kh::getKey)
+		assertThatExceptionOfType(DataRetrievalFailureException.class).isThrownBy(() ->
+				kh.getKey())
 			.withMessageStartingWith("Unable to retrieve the generated key.");
 	}
 
 	@Test
-	void getKeyWithMultipleKeysInMap() {
-		kh.getKeyList().add(Map.of("key", 1, "seq", 2));
+	public void multipleKeys() {
+		Map<String, Object> m = new HashMap<String, Object>() {{
+			put("key", 1);
+			put("seq", 2);
+		}};
+		kh.getKeyList().addAll(singletonList(m));
 
-		assertThat(kh.getKeys()).as("two keys should be in the map").hasSize(2);
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-			.isThrownBy(kh::getKey)
+		assertThat(kh.getKeys().size()).as("two keys should be in the map").isEqualTo(2);
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
+				kh.getKey())
 			.withMessageStartingWith("The getKey method should only be used when a single key is returned.");
 	}
 
 	@Test
-	void getKeyAsStringForSingleKey() {
-		kh.getKeyList().add(singletonMap("key", "ABC"));
-
-		assertThat(kh.getKeyAs(String.class)).as("single key should be returned").isEqualTo("ABC");
-	}
-
-	@Test
-	void getKeyAsWrongType() {
-		kh.getKeyList().add(singletonMap("key", "ABC"));
-
-		assertThatExceptionOfType(DataRetrievalFailureException.class)
-			.isThrownBy(() -> kh.getKeyAs(Integer.class))
-			.withMessage("The generated key type is not supported. Unable to cast [java.lang.String] to [java.lang.Integer].");
-	}
-
-	@Test
-	void getKeyAsIntegerWithNullValue() {
-		kh.getKeyList().add(singletonMap("key", null));
-
-		assertThatExceptionOfType(DataRetrievalFailureException.class)
-			.isThrownBy(() -> kh.getKeyAs(Integer.class))
-			.withMessage("The generated key type is not supported. Unable to cast [null] to [java.lang.Integer].");
-	}
-
-	@Test
-	void getKeysWithMultipleKeyRows() {
-		Map<String, Object> m = Map.of("key", 1, "seq", 2);
+	public void multipleKeyRows() {
+		Map<String, Object> m = new HashMap<String, Object>() {{
+			put("key", 1);
+			put("seq", 2);
+		}};
 		kh.getKeyList().addAll(asList(m, m));
 
-		assertThat(kh.getKeyList()).as("two rows should be in the list").hasSize(2);
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-			.isThrownBy(kh::getKeys)
+		assertThat(kh.getKeyList().size()).as("two rows should be in the list").isEqualTo(2);
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() ->
+				kh.getKeys())
 			.withMessageStartingWith("The getKeys method should only be used when keys for a single row are returned.");
 	}
 

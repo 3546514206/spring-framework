@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,19 @@
 package org.springframework.http.client;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.Set;
 
-import org.apache.hc.client5.http.classic.HttpClient;
-import org.apache.hc.core5.function.Supplier;
-import org.apache.hc.core5.http.ClassicHttpRequest;
-import org.apache.hc.core5.http.ClassicHttpResponse;
-import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.protocol.HttpContext;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
@@ -49,16 +44,16 @@ import org.springframework.util.StringUtils;
  * @since 3.1
  * @see HttpComponentsClientHttpRequestFactory#createRequest(URI, HttpMethod)
  */
-final class HttpComponentsClientHttpRequest extends AbstractStreamingClientHttpRequest {
+final class HttpComponentsClientHttpRequest extends AbstractBufferingClientHttpRequest {
 
 	private final HttpClient httpClient;
 
-	private final ClassicHttpRequest httpRequest;
+	private final HttpUriRequest httpRequest;
 
 	private final HttpContext httpContext;
 
 
-	HttpComponentsClientHttpRequest(HttpClient client, ClassicHttpRequest request, HttpContext context) {
+	HttpComponentsClientHttpRequest(HttpClient client, HttpUriRequest request, HttpContext context) {
 		this.httpClient = client;
 		this.httpRequest = request;
 		this.httpContext = context;
@@ -66,128 +61,52 @@ final class HttpComponentsClientHttpRequest extends AbstractStreamingClientHttpR
 
 
 	@Override
-	public HttpMethod getMethod() {
-		return HttpMethod.valueOf(this.httpRequest.getMethod());
+	public String getMethodValue() {
+		return this.httpRequest.getMethod();
 	}
 
 	@Override
 	public URI getURI() {
-		try {
-			return this.httpRequest.getUri();
-		}
-		catch (URISyntaxException ex) {
-			throw new IllegalStateException(ex.getMessage(), ex);
-		}
+		return this.httpRequest.getURI();
 	}
 
 	HttpContext getHttpContext() {
 		return this.httpContext;
 	}
 
+
 	@Override
-	protected ClientHttpResponse executeInternal(HttpHeaders headers, @Nullable Body body) throws IOException {
+	protected ClientHttpResponse executeInternal(HttpHeaders headers, byte[] bufferedOutput) throws IOException {
 		addHeaders(this.httpRequest, headers);
 
-		if (body != null) {
-			HttpEntity requestEntity = new BodyEntity(headers, body);
-			this.httpRequest.setEntity(requestEntity);
+		if (this.httpRequest instanceof HttpEntityEnclosingRequest) {
+			HttpEntityEnclosingRequest entityEnclosingRequest = (HttpEntityEnclosingRequest) this.httpRequest;
+			HttpEntity requestEntity = new ByteArrayEntity(bufferedOutput);
+			entityEnclosingRequest.setEntity(requestEntity);
 		}
-		ClassicHttpResponse httpResponse = this.httpClient.executeOpen(null, this.httpRequest, this.httpContext);
+		HttpResponse httpResponse = this.httpClient.execute(this.httpRequest, this.httpContext);
 		return new HttpComponentsClientHttpResponse(httpResponse);
 	}
+
 
 	/**
 	 * Add the given headers to the given HTTP request.
 	 * @param httpRequest the request to add the headers to
 	 * @param headers the headers to add
 	 */
-	static void addHeaders(ClassicHttpRequest httpRequest, HttpHeaders headers) {
+	static void addHeaders(HttpUriRequest httpRequest, HttpHeaders headers) {
 		headers.forEach((headerName, headerValues) -> {
 			if (HttpHeaders.COOKIE.equalsIgnoreCase(headerName)) {  // RFC 6265
 				String headerValue = StringUtils.collectionToDelimitedString(headerValues, "; ");
 				httpRequest.addHeader(headerName, headerValue);
 			}
-			else if (!HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(headerName) &&
-					!HttpHeaders.TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
+			else if (!HTTP.CONTENT_LEN.equalsIgnoreCase(headerName) &&
+					!HTTP.TRANSFER_ENCODING.equalsIgnoreCase(headerName)) {
 				for (String headerValue : headerValues) {
 					httpRequest.addHeader(headerName, headerValue);
 				}
 			}
 		});
-	}
-
-
-	private static class BodyEntity implements HttpEntity {
-
-		private final HttpHeaders headers;
-
-		private final Body body;
-
-
-		public BodyEntity(HttpHeaders headers, Body body) {
-			this.headers = headers;
-			this.body = body;
-		}
-
-
-		@Override
-		public long getContentLength() {
-			return this.headers.getContentLength();
-		}
-
-		@Override
-		@Nullable
-		public String getContentType() {
-			return this.headers.getFirst(HttpHeaders.CONTENT_TYPE);
-		}
-
-		@Override
-		public InputStream getContent() {
-			throw new UnsupportedOperationException();
-		}
-
-		@Override
-		public void writeTo(OutputStream outStream) throws IOException {
-			this.body.writeTo(outStream);
-		}
-
-		@Override
-		public boolean isRepeatable() {
-			return this.body.repeatable();
-		}
-
-		@Override
-		public boolean isStreaming() {
-			return false;
-		}
-
-		@Override
-		@Nullable
-		public Supplier<List<? extends Header>> getTrailers() {
-			return null;
-		}
-
-		@Override
-		@Nullable
-		public String getContentEncoding() {
-			return this.headers.getFirst(HttpHeaders.CONTENT_ENCODING);
-		}
-
-		@Override
-		public boolean isChunked() {
-			return false;
-		}
-
-		@Override
-		@Nullable
-		public Set<String> getTrailerNames() {
-			return null;
-		}
-
-		@Override
-		public void close() {
-		}
-
 	}
 
 }

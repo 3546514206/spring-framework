@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,19 @@
 
 package org.springframework.web.filter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.Test;
-
+import org.springframework.mock.web.test.MockFilterConfig;
+import org.springframework.mock.web.test.MockHttpServletRequest;
+import org.springframework.mock.web.test.MockHttpServletResponse;
+import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.testfixture.servlet.MockFilterConfig;
-import org.springframework.web.testfixture.servlet.MockHttpServletRequest;
-import org.springframework.web.testfixture.servlet.MockHttpServletResponse;
-import org.springframework.web.testfixture.servlet.MockServletContext;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -36,15 +37,15 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
  * @author Rod Johnson
  * @author Juergen Hoeller
  */
-class RequestContextFilterTests {
+public class RequestContextFilterTests {
 
 	@Test
-	void happyPath() throws Exception {
+	public void happyPath() throws Exception {
 		testFilterInvocation(null);
 	}
 
 	@Test
-	void withException() throws Exception {
+	public void withException() throws Exception {
 		testFilterInvocation(new ServletException());
 	}
 
@@ -57,7 +58,7 @@ class RequestContextFilterTests {
 		class DummyFilterChain implements FilterChain {
 			public int invocations = 0;
 			@Override
-			public void doFilter(ServletRequest req, ServletResponse resp) throws ServletException {
+			public void doFilter(ServletRequest req, ServletResponse resp) throws IOException, ServletException {
 				++invocations;
 				if (invocations == 1) {
 					assertThat(RequestContextHolder.currentRequestAttributes().getAttribute("myAttr", RequestAttributes.SCOPE_REQUEST)).isSameAs("myValue");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.ui.freemarker;
 
-import java.io.IOException;
-import java.io.StringWriter;
-
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+
+import java.io.IOException;
+import java.io.StringWriter;
 
 /**
  * Utility class for working with FreeMarker.
@@ -46,7 +46,7 @@ public abstract class FreeMarkerTemplateUtils {
 	public static String processTemplateIntoString(Template template, Object model)
 			throws IOException, TemplateException {
 
-		StringWriter result = new StringWriter(1024);
+		StringWriter result = new StringWriter();
 		template.process(model, result);
 		return result.toString();
 	}

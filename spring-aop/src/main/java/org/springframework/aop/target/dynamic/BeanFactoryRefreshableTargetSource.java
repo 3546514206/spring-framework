@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @author Mark Fisher
  * @since 2.0
- * @see org.springframework.beans.factory.BeanFactory
+ * @see BeanFactory
  * @see #requiresRefresh()
  * @see #setRefreshCheckDelay
  */
@@ -63,7 +63,7 @@ public class BeanFactoryRefreshableTargetSource extends AbstractRefreshableTarge
 	 */
 	@Override
 	protected final Object freshTarget() {
-		return obtainFreshBean(this.beanFactory, this.beanName);
+		return this.obtainFreshBean(this.beanFactory, this.beanName);
 	}
 
 	/**
@@ -71,7 +71,8 @@ public class BeanFactoryRefreshableTargetSource extends AbstractRefreshableTarge
 	 * fresh target object for the given bean factory and bean name.
 	 * <p>This default implementation fetches a new target bean
 	 * instance from the bean factory.
-	 * @see org.springframework.beans.factory.BeanFactory#getBean
+	 *
+	 * @see BeanFactory#getBean
 	 */
 	protected Object obtainFreshBean(BeanFactory beanFactory, String beanName) {
 		return beanFactory.getBean(beanName);

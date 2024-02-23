@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package org.springframework.test.context.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Utility methods for working with resources within the <em>Spring TestContext
@@ -48,11 +47,12 @@ public abstract class TestContextResourceUtils {
 
 	private static final String SLASH = "/";
 
-	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(".*\\$\\{[^}]+\\}.*");
+	private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile(".*\\$\\{[^\\}]+\\}.*");
 
 
 	/**
 	 * Convert the supplied paths to classpath resource paths.
+	 *
 	 * <p>Delegates to {@link #convertToClasspathResourcePaths(Class, boolean, String...)}
 	 * with {@code false} supplied for the {@code preservePlaceholders} flag.
 	 * @param clazz the class with which the paths are associated
@@ -136,13 +136,13 @@ public abstract class TestContextResourceUtils {
 	 * the given {@link ResourceLoader}.
 	 * @param resourceLoader the {@code ResourceLoader} to use to convert the paths
 	 * @param paths the paths to be converted
-	 * @return a new, mutable list of resources
+	 * @return a new list of resources
 	 * @since 4.2
 	 * @see #convertToResources(ResourceLoader, String...)
 	 * @see #convertToClasspathResourcePaths
 	 */
 	public static List<Resource> convertToResourceList(ResourceLoader resourceLoader, String... paths) {
-		return stream(resourceLoader, paths).collect(Collectors.toCollection(ArrayList::new));
+		return stream(resourceLoader, paths).collect(Collectors.toList());
 	}
 
 	private static Stream<Resource> stream(ResourceLoader resourceLoader, String... paths) {

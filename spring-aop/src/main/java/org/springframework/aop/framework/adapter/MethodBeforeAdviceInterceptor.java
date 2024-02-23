@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,18 @@
 
 package org.springframework.aop.framework.adapter;
 
-import java.io.Serializable;
-
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-
 import org.springframework.aop.BeforeAdvice;
 import org.springframework.aop.MethodBeforeAdvice;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.io.Serializable;
+
 /**
- * Interceptor to wrap a {@link MethodBeforeAdvice}.
- * <p>Used internally by the AOP framework; application developers should not
- * need to use this class directly.
+ * Interceptor to wrap am {@link org.springframework.aop.MethodBeforeAdvice}.
+ * Used internally by the AOP framework; application developers should not need
+ * to use this class directly.
  *
  * @author Rod Johnson
  * @see AfterReturningAdviceInterceptor
@@ -52,7 +50,6 @@ public class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeA
 
 
 	@Override
-	@Nullable
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis());
 		return mi.proceed();

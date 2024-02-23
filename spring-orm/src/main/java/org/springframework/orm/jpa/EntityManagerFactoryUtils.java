@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,37 +16,13 @@
 
 package org.springframework.orm.jpa;
 
-import java.util.Map;
-
-import jakarta.persistence.EntityExistsException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.LockTimeoutException;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.NonUniqueResultException;
-import jakarta.persistence.OptimisticLockException;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.PessimisticLockException;
-import jakarta.persistence.Query;
-import jakarta.persistence.QueryTimeoutException;
-import jakarta.persistence.SynchronizationType;
-import jakarta.persistence.TransactionRequiredException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.core.Ordered;
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.*;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.ResourceHolderSynchronization;
@@ -54,6 +30,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import javax.persistence.QueryTimeoutException;
+import javax.persistence.*;
+import java.util.Map;
 
 /**
  * Helper class featuring methods for JPA EntityManager handling,
@@ -106,8 +86,8 @@ public abstract class EntityManagerFactoryUtils {
 					BeanFactoryUtils.beanNamesForTypeIncludingAncestors(beanFactory, EntityManagerFactory.class);
 			for (String candidateName : candidateNames) {
 				EntityManagerFactory emf = (EntityManagerFactory) beanFactory.getBean(candidateName);
-				if (emf instanceof EntityManagerFactoryInfo emfInfo &&
-						unitName.equals(emfInfo.getPersistenceUnitName())) {
+				if (emf instanceof EntityManagerFactoryInfo &&
+						unitName.equals(((EntityManagerFactoryInfo) emf).getPersistenceUnitName())) {
 					return emf;
 				}
 			}
@@ -167,8 +147,8 @@ public abstract class EntityManagerFactoryUtils {
 	 * @param properties the properties to be passed into the {@code createEntityManager}
 	 * call (may be {@code null})
 	 * @return the EntityManager, or {@code null} if none found
-	 * @throws jakarta.persistence.PersistenceException if the EntityManager couldn't be created
-	 * @see #getTransactionalEntityManager(jakarta.persistence.EntityManagerFactory)
+	 * @throws javax.persistence.PersistenceException if the EntityManager couldn't be created
+	 * @see #getTransactionalEntityManager(javax.persistence.EntityManagerFactory)
 	 * @see JpaTransactionManager
 	 */
 	@Nullable
@@ -188,8 +168,8 @@ public abstract class EntityManagerFactoryUtils {
 	 * @param synchronizedWithTransaction whether to automatically join ongoing
 	 * transactions (according to the JPA 2.1 SynchronizationType rules)
 	 * @return the EntityManager, or {@code null} if none found
-	 * @throws jakarta.persistence.PersistenceException if the EntityManager couldn't be created
-	 * @see #getTransactionalEntityManager(jakarta.persistence.EntityManagerFactory)
+	 * @throws javax.persistence.PersistenceException if the EntityManager couldn't be created
+	 * @see #getTransactionalEntityManager(javax.persistence.EntityManagerFactory)
 	 * @see JpaTransactionManager
 	 */
 	@Nullable
@@ -302,7 +282,8 @@ public abstract class EntityManagerFactoryUtils {
 	 */
 	@Nullable
 	private static Object prepareTransaction(EntityManager em, EntityManagerFactory emf) {
-		if (emf instanceof EntityManagerFactoryInfo emfInfo) {
+		if (emf instanceof EntityManagerFactoryInfo) {
+			EntityManagerFactoryInfo emfInfo = (EntityManagerFactoryInfo) emf;
 			JpaDialect jpaDialect = emfInfo.getJpaDialect();
 			if (jpaDialect != null) {
 				return jpaDialect.prepareTransaction(em,
@@ -321,7 +302,8 @@ public abstract class EntityManagerFactoryUtils {
 	 * @see JpaDialect#cleanupTransaction
 	 */
 	private static void cleanupTransaction(@Nullable Object transactionData, EntityManagerFactory emf) {
-		if (emf instanceof EntityManagerFactoryInfo emfInfo) {
+		if (emf instanceof EntityManagerFactoryInfo) {
+			EntityManagerFactoryInfo emfInfo = (EntityManagerFactoryInfo) emf;
 			JpaDialect jpaDialect = emfInfo.getJpaDialect();
 			if (jpaDialect != null) {
 				jpaDialect.cleanupTransaction(transactionData);
@@ -331,7 +313,7 @@ public abstract class EntityManagerFactoryUtils {
 
 	/**
 	 * Apply the current transaction timeout, if any, to the given JPA Query object.
-	 * <p>This method sets the JPA query hint "jakarta.persistence.query.timeout" accordingly.
+	 * <p>This method sets the JPA 2.0 query hint "javax.persistence.query.timeout" accordingly.
 	 * @param query the JPA Query object
 	 * @param emf the JPA EntityManagerFactory that the Query was created for
 	 */
@@ -340,7 +322,7 @@ public abstract class EntityManagerFactoryUtils {
 		if (emHolder != null && emHolder.hasTimeout()) {
 			int timeoutValue = (int) emHolder.getTimeToLiveInMillis();
 			try {
-				query.setHint("jakarta.persistence.query.timeout", timeoutValue);
+				query.setHint("javax.persistence.query.timeout", timeoutValue);
 			}
 			catch (IllegalArgumentException ex) {
 				// oh well, at least we tried...
@@ -372,8 +354,8 @@ public abstract class EntityManagerFactoryUtils {
 		}
 
 		// Check for well-known PersistenceException subclasses.
-		if (ex instanceof EntityNotFoundException entityNotFoundException) {
-			return new JpaObjectRetrievalFailureException(entityNotFoundException);
+		if (ex instanceof EntityNotFoundException) {
+			return new JpaObjectRetrievalFailureException((EntityNotFoundException) ex);
 		}
 		if (ex instanceof NoResultException) {
 			return new EmptyResultDataAccessException(ex.getMessage(), 1, ex);
@@ -390,8 +372,8 @@ public abstract class EntityManagerFactoryUtils {
 		if (ex instanceof PessimisticLockException) {
 			return new PessimisticLockingFailureException(ex.getMessage(), ex);
 		}
-		if (ex instanceof OptimisticLockException optimisticLockException) {
-			return new JpaOptimisticLockingFailureException(optimisticLockException);
+		if (ex instanceof OptimisticLockException) {
+			return new JpaOptimisticLockingFailureException((OptimisticLockException) ex);
 		}
 		if (ex instanceof EntityExistsException) {
 			return new DataIntegrityViolationException(ex.getMessage(), ex);
@@ -415,7 +397,7 @@ public abstract class EntityManagerFactoryUtils {
 	 * Close the given JPA EntityManager,
 	 * catching and logging any cleanup exceptions thrown.
 	 * @param em the JPA EntityManager to close (may be {@code null})
-	 * @see jakarta.persistence.EntityManager#close()
+	 * @see javax.persistence.EntityManager#close()
 	 */
 	public static void closeEntityManager(@Nullable EntityManager em) {
 		if (em != null) {
@@ -423,9 +405,10 @@ public abstract class EntityManagerFactoryUtils {
 				if (em.isOpen()) {
 					em.close();
 				}
-			}
-			catch (Throwable ex) {
-				logger.error("Failed to release JPA EntityManager", ex);
+			} catch (PersistenceException ex) {
+				logger.debug("Could not close JPA EntityManager", ex);
+			} catch (Throwable ex) {
+				logger.debug("Unexpected exception on closing JPA EntityManager", ex);
 			}
 		}
 	}
@@ -454,7 +437,8 @@ public abstract class EntityManagerFactoryUtils {
 
 			super(emHolder, emf);
 			this.transactionData = txData;
-			this.jpaDialect = (emf instanceof EntityManagerFactoryInfo emfInfo ? emfInfo.getJpaDialect() : null);
+			this.jpaDialect = (emf instanceof EntityManagerFactoryInfo ?
+					((EntityManagerFactoryInfo) emf).getJpaDialect() : null);
 			this.newEntityManager = newEm;
 		}
 
@@ -466,8 +450,8 @@ public abstract class EntityManagerFactoryUtils {
 		@Override
 		protected void flushResource(EntityManagerHolder resourceHolder) {
 			EntityManager em = resourceHolder.getEntityManager();
-			if (em instanceof EntityManagerProxy emProxy) {
-				EntityManager target = emProxy.getTargetEntityManager();
+			if (em instanceof EntityManagerProxy) {
+				EntityManager target = ((EntityManagerProxy) em).getTargetEntityManager();
 				if (TransactionSynchronizationManager.hasResource(target)) {
 					// ExtendedEntityManagerSynchronization active after joinTransaction() call:
 					// flush synchronization already registered.
